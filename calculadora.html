@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de preço · beculture</title>
+<style>
+  :root{
+    --primary-50:#fdf6e1; --primary-100:#f9e7b0; --primary-200:#f3d585;
+    --primary-500:#e9a90c; --primary-600:#cf9407; --primary-700:#9a7305;
+    --g50:#f9fafb; --g100:#f3f4f6; --g150:#eceef1; --g200:#e5e7eb; --g300:#d1d5db;
+    --g400:#9ca3af; --g500:#6b7280; --g600:#4b5563; --g700:#374151; --g800:#1f2937;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:#f5f6f8;color:var(--g700);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.45;padding:32px 0;}
+  .wrap{max-width:56rem;margin:0 auto;padding:0 16px;}
+  .head{text-align:center;margin-bottom:20px;}
+  .logo{display:inline-flex;align-items:center;gap:8px;font-size:26px;font-weight:700;color:var(--g700);}
+  .logo .b{width:34px;height:34px;border-radius:9px;background:var(--primary-500);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .logo .culture{color:var(--g800);} .logo .be{color:var(--primary-500);}
+  h2{font-size:24px;font-weight:600;color:var(--g600);margin:14px 0 2px;}
+  .sub{color:var(--g400);font-size:14px;margin:0;}
+  .card{background:#fff;border:1px solid var(--g200);border-radius:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04);padding:24px;margin-top:18px;}
+  @media(min-width:1024px){.card{padding:28px;}}
+  /* contrato bar */
+  .contrato{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid var(--g200);border-radius:10px;padding:12px;margin-bottom:24px;}
+  .contrato .lbl{font-size:14px;font-weight:500;color:var(--g700);}
+  .contrato .desc{font-size:12px;color:var(--g400);margin-top:2px;}
+  .toggle{display:inline-flex;border:1px solid var(--g200);border-radius:9px;padding:2px;background:#fff;}
+  .toggle button{border:0;background:transparent;cursor:pointer;border-radius:7px;padding:6px 12px;
+    font-size:12px;font-weight:500;color:var(--g500);text-transform:capitalize;}
+  .toggle button.on{background:var(--primary-500);color:#fff;}
+  .toggle .disc{color:var(--primary-600);} .toggle button.on .disc{color:rgba(255,255,255,.85);}
+  /* section heading */
+  .sh{display:flex;align-items:flex-start;gap:10px;}
+  .sh .n{width:20px;height:20px;border-radius:50%;background:var(--primary-500);color:#fff;
+    font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .sh .t{font-size:14px;font-weight:500;color:var(--g700);}
+  .sh .s{font-size:12px;color:var(--g400);}
+  /* modules grid */
+  .grid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start;margin-top:12px;}
+  @media(min-width:1024px){.grid{grid-template-columns:1fr 1fr;}}
+  .mod{border:1px solid var(--g200);border-radius:10px;overflow:hidden;background:#fff;transition:.15s;}
+  .mod.on{border-color:var(--primary-500);background:var(--primary-50);}
+  .mod-head{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer;width:100%;
+    border:0;background:transparent;text-align:left;}
+  .mod-ic{width:36px;height:36px;border-radius:9px;background:var(--g100);color:var(--g500);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
+  .mod.on .mod-ic{background:var(--primary-500);}
+  .mod-tt{flex:1;min-width:0;} .mod-tt .nm{display:block;font-size:14px;font-weight:500;color:var(--g700);}
+  .mod-tt .ds{display:block;font-size:12px;color:var(--g400);}
+  .chk{width:20px;height:20px;border-radius:50%;border:2px solid var(--g300);flex:0 0 auto;}
+  .mod.on .chk{border-color:var(--primary-500);background:var(--primary-500);position:relative;}
+  .mod.on .chk::after{content:"";position:absolute;left:5px;top:2px;width:5px;height:9px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
+  .body{border-top:1px solid var(--primary-200);padding:12px;display:flex;flex-direction:column;gap:16px;}
+  .plans{display:flex;flex-wrap:wrap;gap:6px;}
+  .plans button{border:1px solid var(--g200);background:#fff;color:var(--g600);cursor:pointer;
+    border-radius:9px;padding:6px 12px;font-size:12px;font-weight:500;}
+  .plans button.on{border-color:var(--primary-500);background:var(--primary-500);color:#fff;}
+  .star{color:var(--primary-500);font-size:10px;margin-left:3px;} .plans button.on .star{color:rgba(255,255,255,.85);}
+  .qty{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .qty .lbl{font-size:12px;color:var(--g500);}
+  .qty .field{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--g300);border-radius:8px;
+    padding:7px 10px;width:130px;background:#fff;}
+  .qty .field span{color:var(--g400);} .qty input{border:0;outline:0;width:100%;font-size:14px;color:var(--g700);background:transparent;}
+  .feat .cap{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.04em;color:var(--g400);margin-bottom:6px;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;margin:0;}
+  .chips li{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--g200);
+    border-radius:7px;padding:2px 8px;font-size:12px;color:var(--g600);}
+  .chips .ok{color:var(--primary-500);font-weight:700;}
+  .subt{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border-top:1px solid var(--primary-200);padding-top:10px;}
+  .subt .l{display:flex;align-items:center;gap:8px;} .subt .l .t{font-size:12px;color:var(--g400);}
+  .badge{background:var(--primary-100);color:var(--primary-700);font-size:10px;font-weight:500;
+    border-radius:5px;padding:2px 6px;}
+  .subt .v{font-size:14px;font-weight:600;color:var(--g800);}
+  .subt .u{font-size:11px;color:var(--g400);font-weight:400;margin-left:4px;}
+  /* resumo */
+  .resumo{border:1px solid var(--g200);border-radius:10px;padding:18px;margin-top:12px;}
+  .rlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
+  .rlist li{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .rlist .nm{font-size:14px;font-weight:500;color:var(--g700);}
+  .rlist .meta{font-size:12px;color:var(--g400);}
+  .rlist .val{font-size:14px;font-weight:600;color:var(--g800);white-space:nowrap;}
+  .rlist .val .u{font-size:12px;font-weight:400;color:var(--g400);}
+  .total{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--g150);
+    margin-top:16px;padding-top:12px;}
+  .total .t{font-size:14px;font-weight:500;color:var(--g700);}
+  .total .v{font-size:20px;font-weight:600;color:var(--g800);}
+  .total .u{font-size:12px;color:var(--g400);margin-left:4px;}
+  .foot{text-align:center;color:var(--g400);font-size:11px;margin-top:16px;}
+  .mt6{margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo"><span class="b">b</span><span><span class="be">be</span><span class="culture">culture</span></span></div>
+    <h2>Calculadora de preço</h2>
+    <p class="sub">Cada módulo no seu próprio plano · teste grátis de 14 dias</p>
+  </div>
+  <div class="card" id="app"></div>
+</div>
+
+<script>
+const PRECOS = [{"modulo": "performance", "contrato": "mensal", "plano": "basico", "min": 1, "max": 10, "preco": 14.9}, {"modulo": "learning", "contrato": "mensal", "plano": "basico", "min": 1, "max": 10, "preco": 14.9}, {"modulo": "projetos", "contrato": "mensal", "plano": "basico", "min": 1, "max": 10, "preco": 14.9}, {"modulo": "performance", "contrato": "anual", "plano": "basico", "min": 1, "max": 10, "preco": 12.665}, {"modulo": "learning", "contrato": "anual", "plano": "basico", "min": 1, "max": 10, "preco": 12.665}, {"modulo": "projetos", "contrato": "anual", "plano": "basico", "min": 1, "max": 10, "preco": 12.665}, {"modulo": "performance", "contrato": "mensal", "plano": "profissional", "min": 1, "max": 10, "preco": 24.9}, {"modulo": "learning", "contrato": "mensal", "plano": "profissional", "min": 1, "max": 10, "preco": 24.9}, {"modulo": "projetos", "contrato": "mensal", "plano": "profissional", "min": 1, "max": 10, "preco": 24.9}, {"modulo": "performance", "contrato": "anual", "plano": "profissional", "min": 1, "max": 10, "preco": 21.165}, {"modulo": "learning", "contrato": "anual", "plano": "profissional", "min": 1, "max": 10, "preco": 21.165}, {"modulo": "projetos", "contrato": "anual", "plano": "profissional", "min": 1, "max": 10, "preco": 21.165}, {"modulo": "performance", "contrato": "mensal", "plano": "corporativo", "min": 1, "max": 10, "preco": 38.9}, {"modulo": "learning", "contrato": "mensal", "plano": "corporativo", "min": 1, "max": 10, "preco": 38.9}, {"modulo": "projetos", "contrato": "mensal", "plano": "corporativo", "min": 1, "max": 10, "preco": 38.9}, {"modulo": "performance", "contrato": "anual", "plano": "corporativo", "min": 1, "max": 10, "preco": 33.065}, {"modulo": "learning", "contrato": "anual", "plano": "corporativo", "min": 1, "max": 10, "preco": 33.065}, {"modulo": "projetos", "contrato": "anual", "plano": "corporativo", "min": 1, "max": 10, "preco": 33.065}, {"modulo": "performance", "contrato": "mensal", "plano": "basico", "min": 11, "max": 25, "preco": 13.7}, {"modulo": "learning", "contrato": "mensal", "plano": "basico", "min": 11, "max": 25, "preco": 13.7}, {"modulo": "projetos", "contrato": "mensal", "plano": "basico", "min": 11, "max": 25, "preco": 13.7}, {"modulo": "performance", "contrato": "anual", "plano": "basico", "min": 11, "max": 25, "preco": 11.645}, {"modulo": "learning", "contrato": "anual", "plano": "basico", "min": 11, "max": 25, "preco": 11.645}, {"modulo": "projetos", "contrato": "anual", "plano": "basico", "min": 11, "max": 25, "preco": 11.645}, {"modulo": "performance", "contrato": "mensal", "plano": "profissional", "min": 11, "max": 25, "preco": 23.7}, {"modulo": "learning", "contrato": "mensal", "plano": "profissional", "min": 11, "max": 25, "preco": 23.7}, {"modulo": "projetos", "contrato": "mensal", "plano": "profissional", "min": 11, "max": 25, "preco": 23.7}, {"modulo": "performance", "contrato": "anual", "plano": "profissional", "min": 11, "max": 25, "preco": 20.145}, {"modulo": "learning", "contrato": "anual", "plano": "profissional", "min": 11, "max": 25, "preco": 20.145}, {"modulo": "projetos", "contrato": "anual", "plano": "profissional", "min": 11, "max": 25, "preco": 20.145}, {"modulo": "performance", "contrato": "mensal", "plano": "corporativo", "min": 11, "max": 25, "preco": 37.7}, {"modulo": "learning", "contrato": "mensal", "plano": "corporativo", "min": 11, "max": 25, "preco": 37.7}, {"modulo": "projetos", "contrato": "mensal", "plano": "corporativo", "min": 11, "max": 25, "preco": 37.7}, {"modulo": "performance", "contrato": "anual", "plano": "corporativo", "min": 11, "max": 25, "preco": 32.045}, {"modulo": "learning", "contrato": "anual", "plano": "corporativo", "min": 11, "max": 25, "preco": 32.045}, {"modulo": "projetos", "contrato": "anual", "plano": "corporativo", "min": 11, "max": 25, "preco": 32.045}, {"modulo": "performance", "contrato": "mensal", "plano": "basico", "min": 26, "max": 50, "preco": 12.6}, {"modulo": "learning", "contrato": "mensal", "plano": "basico", "min": 26, "max": 50, "preco": 12.6}, {"modulo": "projetos", "contrato": "mensal", "plano": "basico", "min": 26, "max": 50, "preco": 12.6}, {"modulo": "performance", "contrato": "anual", "plano": "basico", "min": 26, "max": 50, "preco": 10.71}, {"modulo": "learning", "contrato": "anual", "plano": "basico", "min": 26, "max": 50, "preco": 10.71}, {"modulo": "projetos", "contrato": "anual", "plano": "basico", "min": 26, "max": 50, "preco": 10.71}, {"modulo": "performance", "contrato": "mensal", "plano": "profissional", "min": 26, "max": 50, "preco": 22.6}, {"modulo": "learning", "contrato": "mensal", "plano": "profissional", "min": 26, "max": 50, "preco": 22.6}, {"modulo": "projetos", "contrato": "mensal", "plano": "profissional", "min": 26, "max": 50, "preco": 22.6}, {"modulo": "performance", "contrato": "anual", "plano": "profissional", "min": 26, "max": 50, "preco": 19.21}, {"modulo": "learning", "contrato": "anual", "plano": "profissional", "min": 26, "max": 50, "preco": 19.21}, {"modulo": "projetos", "contrato": "anual", "plano": "profissional", "min": 26, "max": 50, "preco": 19.21}, {"modulo": "performance", "contrato": "mensal", "plano": "corporativo", "min": 26, "max": 50, "preco": 36.6}, {"modulo": "learning", "contrato": "mensal", "plano": "corporativo", "min": 26, "max": 50, "preco": 36.6}, {"modulo": "projetos", "contrato": "mensal", "plano": "corporativo", "min": 26, "max": 50, "preco": 36.6}, {"modulo": "performance", "contrato": "anual", "plano": "corporativo", "min": 26, "max": 50, "preco": 31.11}, {"modulo": "learning", "contrato": "anual", "plano": "corporativo", "min": 26, "max": 50, "preco": 31.11}, {"modulo": "projetos", "contrato": "anual", "plano": "corporativo", "min": 26, "max": 50, "preco": 31.11}, {"modulo": "performance", "contrato": "mensal", "plano": "basico", "min": 51, "max": 100, "preco": 11.5}, {"modulo": "learning", "contrato": "mensal", "plano": "basico", "min": 51, "max": 100, "preco": 11.5}, {"modulo": "projetos", "contrato": "mensal", "plano": "basico", "min": 51, "max": 100, "preco": 11.5}, {"modulo": "performance", "contrato": "anual", "plano": "basico", "min": 51, "max": 100, "preco": 9.775}, {"modulo": "learning", "contrato": "anual", "plano": "basico", "min": 51, "max": 100, "preco": 9.775}, {"modulo": "projetos", "contrato": "anual", "plano": "basico", "min": 51, "max": 100, "preco": 9.775}, {"modulo": "performance", "contrato": "mensal", "plano": "profissional", "min": 51, "max": 100, "preco": 21.5}, {"modulo": "learning", "contrato": "mensal", "plano": "profissional", "min": 51, "max": 100, "preco": 21.5}, {"modulo": "projetos", "contrato": "mensal", "plano": "profissional", "min": 51, "max": 100, "preco": 21.5}, {"modulo": "performance", "contrato": "anual", "plano": "profissional", "min": 51, "max": 100, "preco": 18.275}, {"modulo": "learning", "contrato": "anual", "plano": "profissional", "min": 51, "max": 100, "preco": 18.275}, {"modulo": "projetos", "contrato": "anual", "plano": "profissional", "min": 51, "max": 100, "preco": 18.275}, {"modulo": "performance", "contrato": "mensal", "plano": "corporativo", "min": 51, "max": 100, "preco": 35.5}, {"modulo": "learning", "contrato": "mensal", "plano": "corporativo", "min": 51, "max": 100, "preco": 35.5}, {"modulo": "projetos", "contrato": "mensal", "plano": "corporativo", "min": 51, "max": 100, "preco": 35.5}, {"modulo": "performance", "contrato": "anual", "plano": "corporativo", "min": 51, "max": 100, "preco": 30.175}, {"modulo": "learning", "contrato": "anual", "plano": "corporativo", "min": 51, "max": 100, "preco": 30.175}, {"modulo": "projetos", "contrato": "anual", "plano": "corporativo", "min": 51, "max": 100, "preco": 30.175}, {"modulo": "performance", "contrato": "mensal", "plano": "basico", "min": 101, "max": null, "preco": 10.5}, {"modulo": "learning", "contrato": "mensal", "plano": "basico", "min": 101, "max": null, "preco": 10.5}, {"modulo": "projetos", "contrato": "mensal", "plano": "basico", "min": 101, "max": null, "preco": 10.5}, {"modulo": "performance", "contrato": "anual", "plano": "basico", "min": 101, "max": null, "preco": 8.925}, {"modulo": "learning", "contrato": "anual", "plano": "basico", "min": 101, "max": null, "preco": 8.925}, {"modulo": "projetos", "contrato": "anual", "plano": "basico", "min": 101, "max": null, "preco": 8.925}, {"modulo": "performance", "contrato": "mensal", "plano": "profissional", "min": 101, "max": null, "preco": 20.5}, {"modulo": "learning", "contrato": "mensal", "plano": "profissional", "min": 101, "max": null, "preco": 20.5}, {"modulo": "projetos", "contrato": "mensal", "plano": "profissional", "min": 101, "max": null, "preco": 20.5}, {"modulo": "performance", "contrato": "anual", "plano": "profissional", "min": 101, "max": null, "preco": 17.425}, {"modulo": "learning", "contrato": "anual", "plano": "profissional", "min": 101, "max": null, "preco": 17.425}, {"modulo": "projetos", "contrato": "anual", "plano": "profissional", "min": 101, "max": null, "preco": 17.425}, {"modulo": "performance", "contrato": "mensal", "plano": "corporativo", "min": 101, "max": null, "preco": 34.5}, {"modulo": "learning", "contrato": "mensal", "plano": "corporativo", "min": 101, "max": null, "preco": 34.5}, {"modulo": "projetos", "contrato": "mensal", "plano": "corporativo", "min": 101, "max": null, "preco": 34.5}, {"modulo": "performance", "contrato": "anual", "plano": "corporativo", "min": 101, "max": null, "preco": 29.325}, {"modulo": "learning", "contrato": "anual", "plano": "corporativo", "min": 101, "max": null, "preco": 29.325}, {"modulo": "projetos", "contrato": "anual", "plano": "corporativo", "min": 101, "max": null, "preco": 29.325}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "basico", "min": 1, "max": 2, "preco": 249.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "basico", "min": 1, "max": 2, "preco": 212.415}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "profissional", "min": 1, "max": 2, "preco": 299.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "profissional", "min": 1, "max": 2, "preco": 254.915}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "corporativo", "min": 1, "max": 2, "preco": 349.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "corporativo", "min": 1, "max": 2, "preco": 297.415}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "basico", "min": 3, "max": 4, "preco": 239.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "basico", "min": 3, "max": 4, "preco": 203.915}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "profissional", "min": 3, "max": 4, "preco": 289.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "profissional", "min": 3, "max": 4, "preco": 246.415}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "corporativo", "min": 3, "max": 4, "preco": 339.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "corporativo", "min": 3, "max": 4, "preco": 288.915}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "basico", "min": 5, "max": 8, "preco": 229.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "basico", "min": 5, "max": 8, "preco": 195.415}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "profissional", "min": 5, "max": 8, "preco": 279.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "profissional", "min": 5, "max": 8, "preco": 237.915}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "corporativo", "min": 5, "max": 8, "preco": 329.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "corporativo", "min": 5, "max": 8, "preco": 280.415}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "basico", "min": 9, "max": null, "preco": 219.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "basico", "min": 9, "max": null, "preco": 186.915}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "profissional", "min": 9, "max": null, "preco": 269.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "profissional", "min": 9, "max": null, "preco": 229.415}, {"modulo": "recrutamento", "contrato": "mensal", "plano": "corporativo", "min": 9, "max": null, "preco": 319.9}, {"modulo": "recrutamento", "contrato": "anual", "plano": "corporativo", "min": 9, "max": null, "preco": 271.915}];
+const CONTEUDO = {"projetos": {"basico": ["Squads", "Projetos", "Alocação de horas", "Alocação de custos", "Gestão de habilidade e papéis", "Tarefas", "Dashboards", "Gestão de Tarefas"], "profissional": ["Squads", "Projetos", "Alocação de horas", "Alocação de custos", "Gestão de habilidade e papéis", "Tarefas", "Dashboards", "Feed", "Comunidades", "Pesquisa", "Eventos", "Documentos", "Organograma", "Calendário", "FAQ", "Chat", "Gestão de Tarefas"], "corporativo": ["Squads", "Projetos", "Alocação de horas", "Alocação de custos", "Gestão de habilidade e papéis", "Tarefas", "Dashboards", "Feed", "Comunidades", "Pesquisa", "Eventos", "Documentos", "Organograma", "Calendário", "FAQ", "Chat", "Integrações", "IA", "Gestão de Tarefas"]}, "performance": {"basico": ["Auto Avaliação", "Avaliação 180º", "Avaliação 360º", "PDI", "One on One", "9-box", "Metas", "OKR's", "Dashboards", "Gestão de Tarefas"], "profissional": ["Auto Avaliação", "Avaliação 180º", "Avaliação 360º", "PDI", "One on One", "9-box", "Metas", "OKR's", "Dashboards", "Feed", "Comunidades", "Pesquisa", "Eventos", "Documentos", "Organograma", "Calendário", "FAQ", "Chat", "Gestão de Tarefas"], "corporativo": ["Auto Avaliação", "Avaliação 180º", "Avaliação 360º", "PDI", "One on One", "9-box", "Metas", "OKR's", "Dashboards", "Feed", "Comunidades", "Pesquisa", "Eventos", "Documentos", "Organograma", "Calendário", "FAQ", "Chat", "Integrações", "IA", "Gestão de Tarefas"]}, "learning": {"basico": ["Universidade Corporativa", "Trilhas", "Avaliação", "Fóruns", "Certificados", "Tarefas", "Dashboards", "Gestão de Tarefas"], "profissional": ["Universidade Corporativa", "Trilhas", "Avaliação", "Fóruns", "Dashboards", "Feed", "Comunidades", "Pesquisa", "Eventos", "Documentos", "Organograma", "Calendário", "FAQ", "Chat", "Gestão de Tarefas"], "corporativo": ["Universidade Corporativa", "Trilhas", "Avaliação", "Fóruns", "Dashboards", "Feed", "Comunidades", "Pesquisa", "Eventos", "Documentos", "Organograma", "Calendário", "FAQ", "Chat", "Integrações", "IA", "Gestão de Tarefas"]}, "recrutamento": {"basico": ["Criação de vaga", "Multiposting +100 canais", "Portal de carreiras", "Triagem com IA", "Scorecards", "Testes & avaliações"], "profissional": ["Criação de vaga", "Multiposting +100 canais", "Portal de carreiras", "Triagem com IA", "Scorecards", "Testes & avaliações", "Banco de talentos vivo", "Agenda de entrevistas", "Dashboards"], "corporativo": ["Criação de vaga", "Multiposting +100 canais", "Portal de carreiras", "Triagem com IA", "Scorecards", "Testes & avaliações", "Banco de talentos vivo", "Agenda de entrevistas", "Dashboards", "WhatsApp integrado"]}};
+
+const MODULOS = [
+  {code:'performance', nome:'Performance', desc:'Avaliações, OKRs e 1:1s', un:'usuarios', ic:'📊'},
+  {code:'learning', nome:'Learning', desc:'Trilhas de aprendizagem e LMS', un:'usuarios', ic:'🎓'},
+  {code:'recrutamento', nome:'Hiring', desc:'Vagas, triagem e pipeline', un:'posicoes', ic:'💼'},
+  {code:'projetos', nome:'Project Management', desc:'Gestão de projetos e tarefas', un:'usuarios', ic:'🗂️'},
+];
+const PLANOS = [{code:'basico',nome:'Basic'},{code:'profissional',nome:'Profissional',star:true},{code:'corporativo',nome:'Expert'}];
+const PLANO_NOME = {basico:'Basic', profissional:'Profissional', corporativo:'Expert'};
+const CICLOS = ['mensal','anual'];
+
+const fmt = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:2});
+const brl = n => fmt.format(n||0);
+const unLabel = (u,pl)=> u==='posicoes' ? (pl?'posições':'posição') : (pl?'usuários':'usuário');
+const meta = c => MODULOS.find(m=>m.code===c);
+
+function q(n){ return Number.isFinite(n)&&n>0 ? Math.floor(n):0; }
+function round2(n){ return Math.round(n*100)/100; }
+function faixa(mod,plano,contr,qq){
+  return PRECOS.find(e=>e.modulo===mod&&e.plano===plano&&e.contrato===contr&&qq>=e.min&&(e.max==null||qq<=e.max));
+}
+function calcular(cfgs){
+  const usr = cfgs.filter(c=>c.modulo!=='recrutamento');
+  const hir = cfgs.filter(c=>c.modulo==='recrutamento');
+  const cheios = usr.map(c=>{ const qn=q(c.quantidade); const f=faixa(c.modulo,c.plano,c.contrato,qn);
+    const ok=!!f&&f.preco>0; return {c,qn,ok,unit:ok?f.preco:0}; });
+  let ai=-1, best=-1;
+  cheios.forEach((f,i)=>{ const s=f.ok?f.unit*f.qn:-1; if(f.ok&&s>best){best=s;ai=i;} });
+  const linhas=[];
+  cheios.forEach((f,i)=>{
+    const b={modulo:f.c.modulo,plano:f.c.plano,quantidade:f.qn};
+    if(i===ai){ linhas.push({...b,unitario:f.unit,total:round2(f.unit*f.qn),ancora:true,desc:false,sob:!f.ok}); }
+    else { const fb=faixa(f.c.modulo,'basico',f.c.contrato,f.qn); const okB=!!fb&&fb.preco>0; const u=okB?fb.preco:0;
+      linhas.push({...b,unitario:u,total:round2(u*f.qn),ancora:false,desc:okB&&f.c.plano!=='basico',sob:!okB}); }
+  });
+  hir.forEach(c=>{ const qn=q(c.quantidade); const f=faixa('recrutamento',c.plano,c.contrato,qn); const sob=!f||f.preco<=0;
+    linhas.push({modulo:'recrutamento',plano:c.plano,quantidade:qn,unitario:sob?0:f.preco,total:sob?0:round2(f.preco*qn),ancora:false,desc:false,sob:sob}); });
+  return {linhas, total:round2(linhas.reduce((s,l)=>s+l.total,0)), sob:linhas.some(l=>l.sob)};
+}
+
+const state = {
+  sel:['performance'], ciclo:'anual',
+  cfg: MODULOS.reduce((a,m)=>{a[m.code]={plano:'profissional', quantidade:m.code==='recrutamento'?2:50};return a;},{}),
+  focus:null,
+};
+
+function preco(){
+  const ativos = MODULOS.filter(m=>state.sel.includes(m.code));
+  return calcular(ativos.map(m=>({modulo:m.code, plano:state.cfg[m.code].plano, contrato:state.ciclo, quantidade:state.cfg[m.code].quantidade})));
+}
+
+function render(){
+  const p = preco();
+  const lin = {}; p.linhas.forEach(l=>lin[l.modulo]=l);
+
+  let modsHtml = MODULOS.map(m=>{
+    const on = state.sel.includes(m.code);
+    let body='';
+    if(on){
+      const cfg = state.cfg[m.code]; const l = lin[m.code]; const u = m.un;
+      const plans = PLANOS.map(pl=>`<button data-act="plano" data-code="${m.code}" data-plano="${pl.code}" class="${cfg.plano===pl.code?'on':''}">${pl.nome}${pl.star?'<span class="star">★</span>':''}</button>`).join('');
+      const itens = (CONTEUDO[m.code]&&CONTEUDO[m.code][cfg.plano])||[];
+      const chips = itens.map(i=>`<li><span class="ok">✓</span>${i}</li>`).join('');
+      const qv = Number.isFinite(cfg.quantidade)?cfg.quantidade:'';
+      const sub = l && l.sob ? '<span class="v">Sob consulta</span>'
+        : `<span class="v">${brl(l?l.total:0)}<span class="u">/mês · ${brl(l?l.unitario:0)}/${unLabel(u,false)}</span></span>`;
+      const badge = l&&l.desc ? '<span class="badge">preço de pacote</span>' : '';
+      body = `<div class="body">
+        <div class="plans">${plans}</div>
+        <div class="qty"><span class="lbl">${u==='posicoes'?'Posições':'Usuários'}</span>
+          <label class="field"><span>${u==='posicoes'?'💼':'👥'}</span>
+          <input type="number" min="1" data-qty="${m.code}" value="${qv}"></label></div>
+        ${itens.length?`<div class="feat"><div class="cap">Incluído no plano ${PLANO_NOME[cfg.plano]}</div><ul class="chips">${chips}</ul></div>`:''}
+        <div class="subt"><div class="l"><span class="t">Subtotal</span>${badge}</div>${sub}</div>
+      </div>`;
+    }
+    return `<div class="mod ${on?'on':''}">
+      <button class="mod-head" data-act="toggle" data-code="${m.code}">
+        <span class="mod-ic">${m.ic}</span>
+        <span class="mod-tt"><span class="nm">${m.nome}</span><span class="ds">${m.desc}</span></span>
+        <span class="chk"></span>
+      </button>${body}</div>`;
+  }).join('');
+
+  let rlist = p.linhas.map(l=>{
+    const m = meta(l.modulo); const u=m.un;
+    const tag = (l.ancora&&p.linhas.length>1?' · âncora':'') + (l.desc?' · pacote (Básico)':'');
+    const val = l.sob ? '<span class="val">Sob consulta</span>' : `<span class="val">${brl(l.total)}<span class="u">/mês</span></span>`;
+    return `<li><div><div class="nm">${m.nome}</div><div class="meta">${PLANO_NOME[l.plano]} · ${l.quantidade} ${unLabel(u,l.quantidade!==1)}${tag}</div></div>${val}</li>`;
+  }).join('');
+  const totalV = p.sob ? '<span class="v">Sob consulta</span>' : `<span class="v">${brl(p.total)}<span class="u">/mês após o teste</span></span>`;
+
+  const cic = CICLOS.map(c=>`<button data-act="ciclo" data-ciclo="${c}" class="${state.ciclo===c?'on':''}">${c}${c==='anual'?' <span class="disc">-15%</span>':''}</button>`).join('');
+
+  document.getElementById('app').innerHTML = `
+    <div class="contrato">
+      <div><div class="lbl">Contrato</div><div class="desc">Mensal ou anual — aplica-se a todos os módulos.</div></div>
+      <div class="toggle">${cic}</div>
+    </div>
+    <div class="sh"><span class="n">1</span><div><div class="t">Módulos</div><div class="s">Selecione os módulos e configure plano e quantidade de cada um.</div></div></div>
+    <div class="grid">${modsHtml}</div>
+    <div class="mt6 sh"><span class="n">2</span><div><div class="t">Resumo</div><div class="s">Cada módulo é cobrado pelo seu próprio plano e quantidade, no contrato escolhido acima.</div></div></div>
+    <div class="resumo"><ul class="rlist">${rlist}</ul>
+      <div class="total"><span class="t">Total estimado</span>${totalV}</div></div>`;
+
+  if(state.focus){ const el=document.querySelector(`[data-qty="${state.focus}"]`); if(el){const v=el.value;el.focus();el.value='';el.value=v;} state.focus=null; }
+}
+
+document.getElementById('app').addEventListener('click', e=>{
+  const b = e.target.closest('[data-act]'); if(!b) return;
+  const act=b.dataset.act;
+  if(act==='toggle'){ const c=b.dataset.code; const i=state.sel.indexOf(c);
+    if(i>=0){ if(state.sel.length>1) state.sel.splice(i,1); } else state.sel.push(c); render(); }
+  else if(act==='plano'){ state.cfg[b.dataset.code].plano=b.dataset.plano; render(); }
+  else if(act==='ciclo'){ state.ciclo=b.dataset.ciclo; render(); }
+});
+document.getElementById('app').addEventListener('input', e=>{
+  const inp = e.target.closest('[data-qty]'); if(!inp) return;
+  const n = parseInt(inp.value,10);
+  state.cfg[inp.dataset.qty].quantidade = Number.isFinite(n)?Math.max(1,Math.floor(n)):NaN;
+  state.focus = inp.dataset.qty; render();
+});
+render();
+</script>
+</body>
+</html>

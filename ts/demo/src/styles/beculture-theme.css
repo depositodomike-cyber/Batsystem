@@ -1,0 +1,121 @@
+/* ============================================================
+   beculture-theme — skin de marca sobre o Tailux (Tailwind v4)
+   ------------------------------------------------------------
+   Reskina o Tailux com a paleta oficial beculture® SEM editar
+   componentes. Funciona sobrescrevendo as rampas-fonte de cor
+   que o Tailux referencia via var().
+
+   Fonte canônica: Guia para Parceiros beculture (§4 · Cores).
+
+   Sistema oficial:
+   - Amber 400 (#FFCA28) — Primary (cor de assinatura).
+   - Slate 900 (#0F172B) — Structure (texto/estrutura/fundo dark).
+   - Branco (#FFFFFF)     — Canvas.
+   - Amber 600 (#FFB300)  — Primary Dark / hover.
+   - Green 500 (#10B981)  — Sucesso.  Red 500 (#EF4444) — Erro.
+
+   Regra de ouro (§4.6): CTA é sempre "Slate 900 sobre Amber 400"
+   ou "Amber 400 sobre Slate 900" — NUNCA texto branco sobre amber
+   (contraste insuficiente). Por isso o botão primary preenchido
+   recebe texto slate abaixo (não o text-white padrão do Tailux).
+
+   Proibido (§9.2): Amber Tailwind antigo (#FBBF24), teal, roxo,
+   azul/verde de legado, gradiente multicor.
+
+   Integração:
+   1. Importar este arquivo como ÚLTIMA linha do index.css.
+   2. configs/theme.ts → DEFAULT_PRIMARY_COLOR = "amber".
+   ============================================================ */
+
+@theme {
+  /* ---- AMBER (Primary) — escala oficial Material/beculture ----
+     O tema "amber" do Tailux mapeia --color-primary-* →
+     var(--color-amber-*), então primary passa a usar o amber da
+     marca automaticamente. 400 = #FFCA28 (assinatura). */
+  --color-amber-50:  #FFF8E1;
+  --color-amber-100: #FFECB3;
+  --color-amber-200: #FFE082;
+  --color-amber-300: #FFD54F;
+  --color-amber-400: #FFCA28; /* Primary — Amber 400 (assinatura) */
+  --color-amber-500: #FFC107;
+  --color-amber-600: #FFB300; /* Primary Dark / hover */
+  --color-amber-700: #FFA000;
+  --color-amber-800: #FF8F00;
+  --color-amber-900: #FF6F00;
+
+  /* ---- SLATE (Structure) — neutros beculture ----
+     --color-gray-* já aponta para slate no @theme do Tailux, então
+     sobrescrever a fonte slate reskina todos os neutros. 900 é o
+     Slate 900 (#0F172B) — texto/estrutura e fundo do dark mode. */
+  --color-slate-50:  #F8FAFC;
+  --color-slate-100: #F1F5F9;
+  --color-slate-200: #E2E8F0;
+  --color-slate-300: #CBD5E1;
+  --color-slate-400: #94A3B8;
+  --color-slate-500: #64748B;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1E293B;
+  --color-slate-900: #0F172B; /* Slate 900 — Structure beculture */
+  --color-slate-950: #020617;
+
+  /* ---- SEMÂNTICAS ---- */
+  /* Success = Green 500 (#10B981). */
+  --color-success-lighter: #34D399;
+  --color-success-light:   #10B981; /* Green 500 canônico */
+  --color-success:         #059669;
+  --color-success-darker:  #047857;
+
+  /* Error = Red 500 (#EF4444). */
+  --color-error-lighter: #F87171;
+  --color-error-light:   #EF4444; /* Red 500 canônico */
+  --color-error:         #DC2626;
+  --color-error-darker:  #B91C1C;
+
+  /* Warning = escala amber da marca (a paleta não define um warning
+     próprio; mantém-se dentro do amber oficial). */
+  --color-warning-lighter: #FFD54F;
+  --color-warning-light:   #FFC107;
+  --color-warning:         #FFB300;
+  --color-warning-darker:  #FFA000;
+  /* info: mantém o sky padrão do Tailux (sinal informativo neutro). */
+
+  /* ---- SHADOW — sombras em tom slate (estrutura beculture) ---- */
+  --shadow-soft:
+    0 1px 2px rgba(15, 23, 43, 0.06),
+    0 12px 24px -4px rgba(15, 23, 43, 0.10);
+  --shadow-soft-dark: 0 3px 10px 0 rgb(2 6 23 / 40%);
+}
+
+/* ---- CTA / botão primary preenchido — texto slate sobre amber ----
+   O Tailux aplica `text-white` no variant filled de QUALQUER cor. Em
+   amber brilhante (#FFCA28) isso quebra o contraste. `bg-this` é a
+   utility exclusiva do variant filled, e `.this:primary` marca a cor
+   primary — então este seletor atinge só o botão primary preenchido.
+   Regra fora de @layer → vence as utilities na cascata sem !important.
+   Segue a regra de ouro §4.6: "Slate 900 sobre Amber 400". */
+.this\:primary.bg-this {
+  color: var(--color-slate-900);
+}
+
+/* ---- DARK MODE — fundo Slate 900 beculture ----
+   O Tailux define --color-dark-* como HEX literais por scheme. Aqui
+   cravamos uma rampa navy/slate ancorada no Slate 900 (#0F172B) como
+   fundo, independente do scheme escolhido. Importado por último para
+   vencer o colors.css. */
+@layer base {
+  .dark {
+    --color-dark-50:  #E2E8F0;
+    --color-dark-100: #CBD5E1;
+    --color-dark-200: #94A3B8;
+    --color-dark-300: #64748B; /* texto secundário */
+    --color-dark-400: #4A5A73;
+    --color-dark-450: #3E4C63;
+    --color-dark-500: #334155;
+    --color-dark-600: #273458;
+    --color-dark-700: #1E2A48; /* cards / elevated */
+    --color-dark-750: #1A2540;
+    --color-dark-800: #16203A;
+    --color-dark-900: #0F172B; /* fundo — Slate 900 beculture */
+  }
+}

@@ -1,0 +1,595 @@
+// Schema do beculture — multi-tenant (Empresa = tenant) + billing.
+// Espelha os tipos que o frontend já define em:
+//   ts/demo/src/app/contexts/companies/context.ts
+//   ts/demo/src/services/billing/types.ts
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" cobre o dev local (macOS); "debian-openssl-3.0.x" cobre o
+  // container de produção (node:20-slim / Railway / Render).
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums (códigos compartilhados com o front) ----------
+
+enum TipoPessoa {
+  pj
+  pf
+}
+
+enum PlanoCode {
+  basico
+  profissional
+  corporativo
+}
+
+enum CicloCobranca {
+  mensal
+  anual
+}
+
+enum ModuloCode {
+  ia_pessoal
+  performance
+  learning
+  recrutamento
+  projetos
+}
+
+enum UserRole {
+  owner
+  admin
+  membro
+}
+
+enum ConviteStatus {
+  pendente
+  aceito
+}
+
+enum StatusAssinatura {
+  trial
+  ativa
+  inadimplente
+  expirada
+  cancelada
+}
+
+enum MetodoPagamento {
+  pix
+  cartao
+  boleto
+}
+
+enum AiProvider {
+  anthropic
+  openai
+}
+
+enum AiConnectionStatus {
+  ativa
+  invalida
+}
+
+enum AiMediaKind {
+  image
+  video
+}
+
+enum MemoriaConfianca {
+  alta
+  media
+  baixa
+}
+
+// ---------- Modelos ----------
+
+/// O tenant que contrata (identidade + plano escolhido).
+model Empresa {
+  id                    String        @id @default(cuid())
+  tipoPessoa            TipoPessoa
+  documento             String // CNPJ (PJ) ou CPF (PF), com máscara
+  razaoSocial           String
+  nomeFantasia          String?
+  plano                 PlanoCode
+  ciclo                 CicloCobranca
+  modulos               ModuloCode[]
+  setor                 String?
+  onboardingConcluidoEm DateTime?
+  criadoEm              DateTime      @default(now())
+
+  usuarios     Usuario[]
+  convites     Convite[]
+  assinatura   Assinatura?
+  aiConnection AiConnection?
+  aiMediaConnections AiMediaConnection[]
+  memorias     Memoria[]
+  insights     Insight[]
+  vaultNotas   VaultNota[]
+  conversas    Conversa[]
+  conectores   EmpresaConector[]
+  mcpApiKeys   McpApiKey[]
+  aiUsage      AiUsage[]
+
+  @@map("empresas")
+}
+
+/// Quem faz login; o trial (14 dias) é contado por usuário.
+model Usuario {
+  id            String   @id @default(cuid())
+  empresaId     String
+  nome          String
+  email         String   @unique
+  senhaHash     String
+  telefone      String?
+  avatarUrl     String?
+  role          UserRole @default(membro)
+  trialStartsAt DateTime
+  trialEndsAt   DateTime
+  criadoEm      DateTime @default(now())
+
+  empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  squadPins SquadPin[]
+  conversas Conversa[]
+  aiUsage   AiUsage[]
+
+  @@index([empresaId])
+  @@map("usuarios")
+}
+
+/// Convite de um membro do time (criado no onboarding).
+model Convite {
+  id        String        @id @default(cuid())
+  empresaId String
+  email     String
+  role      UserRole      @default(membro)
+  status    ConviteStatus @default(pendente)
+  criadoEm  DateTime      @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, email])
+  @@index([empresaId])
+  @@map("convites")
+}
+
+/// Assinatura/cobrança da empresa (1:1). Snapshot de preços no momento.
+model Assinatura {
+  id              String           @id @default(cuid())
+  empresaId       String           @unique
+  plano           PlanoCode
+  ciclo           CicloCobranca
+  modulos         ModuloCode[]
+  /// Plano e quantidade por módulo (modelo da calculadora): [{modulo, plano, quantidade}].
+  configuracoes   Json?
+  status          StatusAssinatura @default(trial)
+  usuarios        Int              @default(0)
+  posicoes        Int              @default(0)
+  precoUsuario    Float            @default(0)
+  precoPosicao    Float            @default(0)
+  total           Float            @default(0)
+  sobConsulta     Boolean          @default(false)
+  trialStartsAt   DateTime
+  trialEndsAt     DateTime
+  criadoEm        DateTime         @default(now())
+  ativadaEm       DateTime?
+  metodoPagamento MetodoPagamento?
+  gatewayRef      String? // referência do objeto na Iugu
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("assinaturas")
+}
+
+/// Conexão de IA do tenant (BYOK). 1 por empresa. Chave criptografada em repouso.
+model AiConnection {
+  id              String             @id @default(cuid())
+  empresaId       String             @unique
+  provider        AiProvider
+  model           String
+  /// Chave de API do provedor, criptografada (AES-256-GCM). NUNCA exposta crua.
+  apiKeyEncrypted String
+  /// Últimos 4 dígitos da chave, apenas para exibição.
+  keyLast4        String
+  status          AiConnectionStatus @default(ativa)
+  validatedAt     DateTime?
+  criadoEm        DateTime           @default(now())
+  atualizadoEm    DateTime           @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@map("ai_connections")
+}
+
+/// Conexão de IA de mídia (BYOK), separada por modalidade. Diferente da
+/// AiConnection (texto/LLM): a de `image` é usada SÓ em "Criar Imagem" e a de
+/// `video` SÓ em "Criar Vídeo". O provedor é texto livre (não é um LLM), então
+/// não usa o enum AiProvider. Até 1 conexão por (empresa, modalidade).
+model AiMediaConnection {
+  id              String             @id @default(cuid())
+  empresaId       String
+  kind            AiMediaKind
+  /// Id do provedor de mídia (ex.: "openai", "stability", "heygen").
+  provider        String
+  model           String
+  /// Chave de API do provedor, criptografada (AES-256-GCM). NUNCA exposta crua.
+  apiKeyEncrypted String
+  /// Últimos 4 dígitos da chave, apenas para exibição.
+  keyLast4        String
+  status          AiConnectionStatus @default(ativa)
+  validatedAt     DateTime?
+  criadoEm        DateTime           @default(now())
+  atualizadoEm    DateTime           @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, kind])
+  @@map("ai_media_connections")
+}
+
+// ---------- Catálogo de Squads (Business Partner IA) ----------
+// Catálogo GLOBAL da plataforma (não por tenant). Espelha os tipos do front:
+//   ts/demo/src/app/navigation/ceoOs.ts    -> squadCatalog (id, slug, title, icon)
+//   ts/demo/src/app/data/squadDetails.ts   -> description, starterQuestions, agents
+// Seed: prisma/data/squads.json (gerado a partir do xlsx) via `npm run db:seed`.
+//
+// Por que tabelas e não JSON estático:
+//   - permite CRUD/admin (criar, editar, ativar/desativar squads e agentes);
+//   - ordenação explícita (campo `order`) e soft-delete (`active`);
+//   - cada agente pode ter override de modelo de IA (`model`);
+//   - pins por usuário deixam de viver só no client (SquadPin).
+// Extensão futura (multi-tenant): um `empresaId String?` em Squad/SquadAgent
+// permitiria squads custom por empresa sem quebrar o catálogo global (empresaId = null).
+
+/// Um squad do catálogo (grupo de agentes especialistas de uma área).
+model Squad {
+  id           String   @id // code do catálogo, ex.: "bp.com-interna"
+  slug         String   @unique // ex.: "comunicacao-interna"
+  title        String // ex.: "Comunicação Interna"
+  icon         String? // chave de ícone do front, ex.: "ceo.com-interna"
+  /// "Quando utilizar" — descreve o contexto de uso do squad.
+  description  String
+  order        Int      @default(0) // ordem de exibição no catálogo
+  active       Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  agents           SquadAgent[]
+  starterQuestions SquadStarterQuestion[]
+  starterActions   SquadStarterAction[]
+  pins             SquadPin[]
+
+  @@index([active, order])
+  @@map("squads")
+}
+
+/// Um agente (referência humana personificada) dentro de um squad.
+model SquadAgent {
+  id           String   @id // ex.: "bp.com-interna.simon-sinek"
+  squadId      String
+  /// Papel do agente no squad, ex.: "Comunicação Inspiradora".
+  position     String
+  /// Referência humana que o agente personifica, ex.: "Simon Sinek".
+  reference    String
+  /// "Quem é" — frase curta sobre o agente.
+  who          String
+  /// "Contribuição" — o que o agente entrega ao squad.
+  contribution String
+  /// Prompt-base (system/developer) usado para invocar o agente.
+  prompt       String
+  /// Override opcional de modelo de IA; se null, usa o AiConnection da empresa.
+  model        String?
+  order        Int      @default(0)
+  active       Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([squadId, order])
+  @@map("squad_agents")
+}
+
+/// Pergunta inicial / ponto de partida sugerido para um squad (as "FAQ" do xlsx).
+model SquadStarterQuestion {
+  id      String @id @default(cuid())
+  squadId String
+  text    String
+  order   Int    @default(0)
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([squadId, order])
+  @@map("squad_starter_questions")
+}
+
+/// Ação executável sugerida para um squad — uma tarefa que um agente de IA
+/// pode realizar e entregar (ex.: "Gerar uma matriz de riscos estratégicos").
+model SquadStarterAction {
+  id      String @id @default(cuid())
+  squadId String
+  text    String
+  order   Int    @default(0)
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@index([squadId, order])
+  @@map("squad_starter_actions")
+}
+
+/// Squad fixado por um usuário no menu lateral (substitui o estado client-side).
+model SquadPin {
+  id        String   @id @default(cuid())
+  usuarioId String
+  squadId   String
+  order     Int      @default(0) // ordem em que o usuário fixou
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  squad   Squad   @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, squadId])
+  @@index([usuarioId])
+  @@map("squad_pins")
+}
+
+// ---------- Memória da IA (por tenant) ----------
+// Base de conhecimento de longo prazo do BeHuman por empresa. Cada memória
+// ativa é injetada no contexto das respostas dos squads/chat. Espelha o front:
+//   ts/demo/src/app/data/memoria.ts -> MemoryItem
+// O tema (`categoria`) referencia o slug de um squad do catálogo (ex.: "cultura",
+// "gestao-de-pessoas") OU um tema transversal: "estrategico" | "hierarquico" |
+// "historico". É um texto livre de propósito — não há FK para Squad porque os
+// temas transversais não são squads e o catálogo pode evoluir.
+
+/// Um fato que a IA "lembra" sobre a empresa.
+model Memoria {
+  id           String           @id @default(cuid())
+  empresaId    String
+  /// Tema: slug de um squad ou id de tema transversal.
+  categoria    String
+  /// Resumo curto (uma linha).
+  titulo       String
+  /// O fato em si, como a IA o registrou.
+  conteudo     String
+  /// De onde a memória veio (ex.: "Chat · Onboarding", "Manual").
+  origem       String           @default("Manual")
+  confianca    MemoriaConfianca @default(alta)
+  /// Quando ativa, a IA usa esta memória nas respostas.
+  ativa        Boolean          @default(true)
+  /// Definição corporativa (read-only): não pode ser desativada, alterada ou
+  /// removida pelo usuário. Memórias criadas pelo usuário têm `false`.
+  corporativa  Boolean          @default(false)
+  /// Data em que a IA aprendeu/atualizou o fato (exibida no card).
+  aprendidaEm  DateTime         @default(now())
+  criadoEm     DateTime         @default(now())
+  atualizadoEm DateTime         @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, ativa])
+  @@map("memorias")
+}
+
+// ---------- Insights da IA (por tenant) ----------
+// Sinais estratégicos que a IA gera a partir do material das áreas — hoje, a
+// partir de cada ata/resumo de reunião salvo na Memória. Espelha o front:
+//   ts/demo/src/app/data/insights.ts -> Insight
+// A página de Insights (Business Partner) lê estes registros. `severidade`
+// define a cor/urgência do card; `liderado`, quando presente, é a pessoa (ou
+// "Todos") a que o insight se refere.
+
+/// Severidade do insight — controla a cor do card no front.
+enum InsightSeveridade {
+  secondary // Ação necessária
+  warning // Atenção
+  success // Sucesso
+  light // Para refletir
+}
+
+/// Um sinal estratégico gerado pela IA para o líder.
+model Insight {
+  id         String            @id @default(cuid())
+  empresaId  String
+  /// Título curto (uma linha).
+  titulo     String
+  /// Explicação/implicação para o negócio.
+  descricao  String
+  /// Rótulo do tipo exibido no badge (ex.: "Rotatividade", "Engajamento").
+  tipo       String            @default("Insight")
+  severidade InsightSeveridade @default(light)
+  /// Pessoa ou time a que o insight se refere (nome ou "Todos"). Opcional.
+  liderado   String?
+  /// De onde o insight veio (ex.: "Áudio", "Transcrição", "Manual").
+  origem     String            @default("Manual")
+  /// Memória de origem (ata/resumo) que gerou o insight, quando houver.
+  memoriaId  String?
+  criadoEm   DateTime          @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("insights")
+}
+
+// ---------- Vault de notas (.md) por tenant ----------
+// A "Memória" do usuário no sentido literal: os arquivos .md da pasta que ele
+// abre na tela Memória (o mesmo conjunto que gera o grafo). O front lê os .md
+// no navegador (File System Access API) e sincroniza aqui, um registro por
+// arquivo. O /ai/prompt recupera as notas relevantes por busca textual
+// (Postgres full-text) e as injeta no contexto. Distinto de `Memoria`, que são
+// as diretrizes/regras curadas.
+
+/// Uma nota .md sincronizada do vault do usuário.
+model VaultNota {
+  id        String   @id @default(cuid())
+  empresaId String
+  /// Caminho relativo dentro da pasta (ex.: "Reuniões/2026-01.md"). Único por empresa.
+  path      String
+  /// Título derivado (frontmatter `título`/`title` ou nome do arquivo).
+  titulo    String
+  /// Conteúdo integral do arquivo (texto).
+  conteudo  String
+  /// Hash do conteúdo, para pular o reprocessamento de arquivos inalterados.
+  hash      String
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, path])
+  @@index([empresaId])
+  @@map("vault_notas")
+}
+
+// ---------- Conectores (integrações) por tenant ----------
+// O catálogo de conectores é estático e global (espelha o front em
+// ts/demo/src/app/data/conectores.ts; cópia do backend em
+// src/conectores/catalog.ts). Aqui guardamos apenas o ESTADO por empresa:
+// a existência da linha significa "conectado". `connectorId` é texto livre
+// validado contra o catálogo no service (sem FK, mesmo critério de Memoria).
+
+/// Um conector ativado por uma empresa.
+model EmpresaConector {
+  id          String   @id @default(cuid())
+  empresaId   String
+  /// Id do conector no catálogo (ex.: "slack", "gupy").
+  connectorId String
+  /// Como a conexão foi feita: "app" (UI), "mcp" (ferramenta MCP) ou
+  /// "oauth" (fluxo de autorização no provedor).
+  origem      String   @default("app")
+  criadoEm    DateTime @default(now())
+
+  // --- Credenciais OAuth (conectores com integração real: Slack, e-mail) ---
+  /// Token de acesso do provedor, criptografado (AES-256-GCM). NUNCA exposto.
+  accessTokenEncrypted String?
+  /// Refresh token criptografado, nos provedores cujo acesso expira
+  /// (Gmail/Outlook). O Slack usa token de bot sem validade.
+  refreshTokenEncrypted String?
+  /// Quando o access token expira — antes disso renovamos pelo refresh.
+  tokenExpiresAt       DateTime?
+  /// Workspace/conta autorizada no provedor (ex.: nome do time Slack ou
+  /// e-mail da caixa autorizada).
+  teamId               String?
+  teamName             String?
+  /// Scopes concedidos na autorização, separados por vírgula.
+  scopes               String?
+
+  // --- Token da pessoa que autorizou (Slack: OAuth v2 `authed_user`) ---
+  /// Criptografado. É o único que lê as conversas da pessoa — DMs e canais em
+  /// que ela está. O token de bot só enxerga onde o app foi adicionado, e as
+  /// DMs que ele vê são as do próprio app, quase sempre vazias.
+  userTokenEncrypted   String?
+  /// Id da pessoa que autorizou, no provedor.
+  userId               String?
+  /// Scopes do token de usuário, separados por vírgula.
+  userScopes           String?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, connectorId])
+  @@index([empresaId])
+  @@map("empresa_conectores")
+}
+
+// ---------- API keys do servidor MCP (por tenant) ----------
+// Credencial que clientes MCP externos (Claude, Cursor etc.) usam para se
+// conectar ao endpoint /mcp. A chave crua só é exibida UMA vez, na criação;
+// em repouso guardamos apenas o hash SHA-256 (a chave tem alta entropia,
+// então hash simples sem salt é suficiente).
+
+/// Uma chave de acesso ao servidor MCP da empresa.
+model McpApiKey {
+  id         String    @id @default(cuid())
+  empresaId  String
+  /// Rótulo dado pelo usuário (ex.: "Claude do CEO").
+  nome       String
+  /// SHA-256 (hex) da chave crua. Lookup é feito por este hash.
+  keyHash    String    @unique
+  /// Últimos 4 caracteres da chave, apenas para exibição.
+  last4      String
+  criadoEm   DateTime  @default(now())
+  /// Último uso (atualizado de forma assíncrona a cada request MCP).
+  lastUsedAt DateTime?
+  /// Quando revogada, a chave deixa de autenticar (soft-delete para auditoria).
+  revogadaEm DateTime?
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("mcp_api_keys")
+}
+
+// ---------- Conversas de chat (por usuário/tenant) ----------
+// Histórico das conversas com os squads. Cada conversa guarda seus turnos
+// (Mensagem). O squad/agente são referenciados por código (texto livre, sem FK)
+// porque o catálogo é global e pode evoluir — mesmo critério de Memoria.
+
+enum MensagemRole {
+  user
+  assistant
+}
+
+/// Uma conversa de chat com um squad (ou um agente específico).
+model Conversa {
+  id           String   @id @default(cuid())
+  empresaId    String
+  usuarioId    String
+  /// Código do squad (Squad.id) consultado nesta conversa.
+  squadId      String
+  /// Agente específico (SquadAgent.id), quando a conversa é com um único agente.
+  agentId      String?
+  /// Título exibido no histórico (derivado da 1ª mensagem do usuário).
+  titulo       String
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagens Mensagem[]
+
+  @@index([empresaId, usuarioId, atualizadoEm])
+  @@map("conversas")
+}
+
+/// Um turno de uma conversa: pergunta do usuário ou resposta da IA.
+model Mensagem {
+  id         String       @id @default(cuid())
+  conversaId String
+  role       MensagemRole
+  conteudo   String
+  criadoEm   DateTime     @default(now())
+
+  conversa Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)
+
+  @@index([conversaId, criadoEm])
+  @@map("mensagens")
+}
+
+/// Consumo de tokens da IA: um evento por chamada ao modelo. Alimenta o contador
+/// de uso do header (janelas de 1h/24h/7d). O escopo é por usuário (usuarioId),
+/// dentro da empresa. Eventos com mais de 7 dias são podados (a maior janela).
+model AiUsage {
+  id        String   @id @default(cuid())
+  empresaId String
+  usuarioId String
+  /// Tokens de entrada (inclui leitura/criação de cache).
+  entrada   Int
+  /// Tokens de saída (geração).
+  saida     Int
+  /// Rótulo de diagnóstico da origem (ex.: "chat", "completar", "web").
+  fonte     String?
+  criadoEm  DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, criadoEm])
+  @@index([empresaId])
+  @@map("ai_usage")
+}

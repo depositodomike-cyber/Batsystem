@@ -1,0 +1,60 @@
+import { NavigationTree } from "@/@types/navigation";
+
+export const settings: NavigationTree = {
+  id: "settings",
+  type: "item",
+  path: "/settings",
+  title: "Settings",
+  transKey: "nav.settings.settings",
+  icon: "settings",
+  childs: [
+    {
+      id: "general",
+      type: "item",
+      path: "/settings/general",
+      title: "General",
+      transKey: "nav.settings.general",
+      icon: "settings.general",
+    },
+    {
+      id: "appearance",
+      type: "item",
+      path: "/settings/appearance",
+      title: "Appearance",
+      transKey: "nav.settings.appearance",
+      icon: "settings.appearance",
+    },
+    {
+      id: "billing",
+      type: "item",
+      path: "/settings/billing",
+      title: "Billing",
+      transKey: "nav.settings.billing",
+      icon: "settings.billing",
+    },
+    {
+      id: "notifications",
+      type: "item",
+      path: "/settings/notifications",
+      title: "Notifications",
+      transKey: "nav.settings.notifications",
+      icon: "settings.notifications",
+    },
+    {
+      id: "applications",
+      type: "item",
+      path: "/settings/applications",
+      title: "Applications",
+      transKey: "nav.settings.applications",
+      icon: "settings.applications",
+    },
+    {
+      id: "sessions",
+      type: "item",
+      path: "/settings/sessions",
+      title: "Sessions & Password",
+      transKey: "nav.settings.sessions",
+      icon: "settings.sessions",
+    },
+  ],
+};

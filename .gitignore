@@ -1,0 +1,34 @@
+# macOS
+.DS_Store
+
+# Dependencies / builds (defesa em profundidade — subprojetos já têm gitignore)
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code: ignora configurações pessoais e locks de runtime; mantém launch.json compartilhado.
+**/.claude/settings.local.json
+**/.claude/scheduled_tasks.lock
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Excel temp/lock files
+~$*
+
+# Credenciais de deploy (FTP) — nunca versionar
+.deploy.env

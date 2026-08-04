@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 72" width="330" height="72">
+  <defs><clipPath id="bc-sig-person"><circle cx="45" cy="42" r="16.8"/></clipPath></defs>
+  <svg x="0" y="6" width="60" height="60" viewBox="8 2 72 72">
+    <g fill="#F4C627">
+      <path d="M12.5 45C12.5 48.6 15 51.2 18.25 51.2 21.5 51.2 24 48.6 24 45L24 13.5C24 8 26 4 20.5 4 17 4 12.5 6 12.5 12Z"/>
+      <path fill-rule="evenodd" d="M45 11.5a30.5 30.5 0 1 0 0.01 0ZM45 25.2a16.8 16.8 0 1 1 -0.01 0Z"/>
+    </g>
+    <g fill="#0D1829" clip-path="url(#bc-sig-person)">
+      <circle cx="45" cy="35.5" r="7"/>
+      <circle cx="45" cy="60" r="14.5"/>
+    </g>
+  </svg>
+  <text x="70" y="52" font-family="Poppins, 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="50" letter-spacing="-1.5">
+    <tspan fill="#F4C627">be</tspan><tspan fill="#0D1829">culture</tspan>
+  </text>
+</svg>

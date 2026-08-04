@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "public",
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 300,
+      "includeFiles": "{dist/**,node_modules/.prisma/client/**,node_modules/@prisma/client/**}"
+    }
+  }
+}

@@ -15,8 +15,10 @@
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:memorias": "ts-node prisma/seed-memorias.ts",
-    "db:diretrizes:limpar": "ts-node prisma/limpar-diretrizes.ts"
+    "db:diretrizes:limpar": "ts-node prisma/limpar-diretrizes.ts",
+    "vercel-build": "prisma generate && prisma migrate deploy && (npm run db:seed || echo 'seed do catalogo falhou, seguindo') && nest build"
   },
+
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },

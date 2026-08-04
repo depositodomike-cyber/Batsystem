@@ -5,14 +5,18 @@
 
 generator client {
   provider      = "prisma-client-js"
-  // "native" cobre o dev local (macOS); "debian-openssl-3.0.x" cobre o
-  // container de produção (node:20-slim / Railway / Render).
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  // "native" cobre o dev local; "debian-openssl-3.0.x" cobre o container
+  // (node:20-slim / Railway / Render); "rhel-openssl-3.0.x" cobre a
+  // Amazon Linux das Vercel Functions.
+  binaryTargets = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime usa a URL pooled do Neon; migrations usam a conexão direta
+  // (o pooler não suporta DDL).
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ---------- Enums (códigos compartilhados com o front) ----------

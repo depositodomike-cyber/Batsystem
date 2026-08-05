@@ -19,28 +19,13 @@ import { coletarReferencia } from "@/services/referencia";
 import { marcarBuscaMemoria } from "@/utils/memoriaBusca";
 import { AnswerWindow, type Turno } from "./AnswerWindow";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
-const MODOS: { id: ModoBusca; label: string; title: string }[] = [
-  { id: "vault", label: "Memória", title: "Buscar na sua Memória" },
-  { id: "web", label: "Web", title: "Buscar na web" },
-  { id: "auto", label: "Auto", title: "Deixar a IA decidir a fonte" },
-];
-
-const ROTULO: Record<ModoBusca, string> = {
-  vault: "buscando na Memória…",
-  web: "buscando na web…",
-  auto: "roteando…",
-};
-
 const ACEITA_ANEXO = ".txt,.md,.csv,.json,.log,.markdown,text/*";
 
-// O interceptor do axios (utils/axios.ts) rejeita com `error.response.data` —
-// no NestJS, { message: string | string[] } — ou uma string. Extraímos a
-// mensagem real para o usuário ver o motivo (ex.: chave de IA inválida) em vez
-// de um "Erro na busca." genérico.
-function msgErro(e: unknown, fallback = "Erro na busca."): string {
+function msgErro(e: unknown, fallback: string): string {
   if (typeof e === "string") return e;
   if (e instanceof Error) return e.message;
   if (e && typeof e === "object" && "message" in e) {
@@ -70,6 +55,7 @@ type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 // ----------------------------------------------------------------------
 
 export function PromptBar() {
+  const { t, i18n } = useTranslation();
   const [modo, setModo] = useState<ModoBusca>("vault");
   const [value, setValue] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -90,6 +76,30 @@ export function PromptBar() {
   const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const origem = conversa?.[0]?.origem ?? "vault";
+
+  const MODOS: { id: ModoBusca; label: string; title: string }[] = [
+    {
+      id: "vault",
+      label: t("chrome.modeMemory"),
+      title: t("chrome.modeMemoryTitle"),
+    },
+    {
+      id: "web",
+      label: t("chrome.modeWeb"),
+      title: t("chrome.modeWebTitle"),
+    },
+    {
+      id: "auto",
+      label: t("chrome.modeAuto"),
+      title: t("chrome.modeAutoTitle"),
+    },
+  ];
+
+  const ROTULO: Record<ModoBusca, string> = {
+    vault: t("chrome.searchingMemory"),
+    web: t("chrome.searchingWeb"),
+    auto: t("chrome.routing"),
+  };
 
   // ⌘K / "/" foca a barra (herda o atalho da antiga busca).
   useHotkeys("mod+k", () => inputRef.current?.focus(), {
@@ -136,7 +146,7 @@ export function PromptBar() {
       return;
     }
     const rec = new Ctor();
-    rec.lang = "pt-BR";
+    rec.lang = i18n.language?.startsWith("en") ? "en-US" : "pt-BR";
     rec.interimResults = true;
     rec.continuous = false;
     rec.onresult = (e) => {
@@ -208,7 +218,7 @@ export function PromptBar() {
         true,
       );
     } catch (e) {
-      flashStatus("✕ " + msgErro(e), "err");
+      flashStatus("✕ " + msgErro(e, t("chrome.searchError")), "err");
     } finally {
       if (animaGrafo) marcarBuscaMemoria(false);
       setLoading(false);
@@ -256,7 +266,7 @@ export function PromptBar() {
         ),
       );
     } catch (e) {
-      const msg = "✕ " + msgErro(e);
+      const msg = "✕ " + msgErro(e, t("chrome.searchError"));
       setConversa((c) =>
         (c ?? []).map((t) =>
           t === pendente ? { ...t, resposta: msg, pendente: false } : t,
@@ -349,7 +359,7 @@ export function PromptBar() {
             ref={inputRef}
             rows={1}
             value={value}
-            placeholder="Pergunte à sua Memória…"
+            placeholder={t("chrome.promptPlaceholder")}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

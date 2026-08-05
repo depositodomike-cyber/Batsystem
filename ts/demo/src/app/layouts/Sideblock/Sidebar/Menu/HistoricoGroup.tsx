@@ -14,21 +14,14 @@ import { useProjectsContext } from "@/app/contexts/projects/context";
 import { useMoverChatParaGrupo } from "@/app/pages/ceo/useGrupoMemoria";
 import { SidebarListItem } from "./SidebarListItem";
 import { GroupChevron } from "./GroupChevron";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
 const MAX_VISIBLE = 5;
 
-const deleteMessages = {
-  pending: {
-    title: "Excluir chat?",
-    description:
-      "Tem certeza de que deseja excluir este chat do histórico? Esta ação não pode ser desfeita.",
-    actionText: "Excluir",
-  },
-};
-
 export function HistoricoGroup({ product }: { product: string }) {
+  const { t } = useTranslation();
   const [isOpened, { toggle }] = useDisclosure(true);
   const { cardSkin } = useThemeContext();
   const { lgAndDown } = useBreakpointsContext();
@@ -37,6 +30,15 @@ export function HistoricoGroup({ product }: { product: string }) {
   const { projectsByProduct } = useProjectsContext();
   const moverChatParaGrupo = useMoverChatParaGrupo();
   const [showAll, setShowAll] = useState(false);
+
+  const deleteMessages = {
+    pending: {
+      title: t("sidebar.deleteChatTitle"),
+      description:
+        "Tem certeza de que deseja excluir este chat do histórico? Esta ação não pode ser desfeita.",
+      actionText: t("sidebar.delete"),
+    },
+  };
 
   // Histórico mostra apenas chats soltos; os movidos para um grupo somem daqui
   // e passam a aparecer na página do grupo.
@@ -63,7 +65,7 @@ export function HistoricoGroup({ product }: { product: string }) {
             className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 flex cursor-pointer items-center gap-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase outline-hidden hover:text-gray-900 focus:text-gray-900"
           >
             <GroupChevron open={isOpened} />
-            <span>Histórico</span>
+            <span>{t("sidebar.history")}</span>
           </button>
         </div>
         <div
@@ -78,7 +80,7 @@ export function HistoricoGroup({ product }: { product: string }) {
         <div className="flex flex-col space-y-0.5">
           {chats.length === 0 ? (
             <p className="dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400">
-              Nenhum chat ainda. Envie uma pergunta a um squad.
+              {t("sidebar.noChats")}
             </p>
           ) : (
             visibleChats.map((chat) => (
@@ -90,7 +92,7 @@ export function HistoricoGroup({ product }: { product: string }) {
                 onNavigate={handleItemClick}
                 onRename={(title) => renameChat(chat.id, title)}
                 onDelete={() => removeChat(chat.id)}
-                renameLabel="Renomear chat"
+                renameLabel={t("sidebar.renameChat")}
                 confirmMessages={deleteMessages}
                 groups={groups}
                 currentGroupId={chat.projectId}
@@ -108,8 +110,10 @@ export function HistoricoGroup({ product }: { product: string }) {
               className="dark:text-dark-400 dark:hover:bg-dark-300/10 dark:hover:text-dark-200 mx-3 mt-0.5 cursor-pointer rounded-md px-3 py-1 text-start text-xs font-medium tracking-wide text-gray-400 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-600"
             >
               {showAll
-                ? "Mostrar menos"
-                : `Mostrar mais (${chats.length - MAX_VISIBLE})`}
+                ? t("sidebar.showLess")
+                : t("sidebar.showMore", {
+                    count: chats.length - MAX_VISIBLE,
+                  })}
             </button>
           )}
         </div>

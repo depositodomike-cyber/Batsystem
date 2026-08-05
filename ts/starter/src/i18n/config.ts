@@ -8,8 +8,8 @@ import { type LocaleCode, supportedLanguages } from "./langs";
 
 // ----------------------------------------------------------------------
 
-export const defaultLang: LocaleCode = "en";
-export const fallbackLang: LocaleCode = "en";
+export const defaultLang: LocaleCode = "pt";
+export const fallbackLang: LocaleCode = "pt";
 
 i18n
   .use(LanguageDetector)

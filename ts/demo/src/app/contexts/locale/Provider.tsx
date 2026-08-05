@@ -26,9 +26,19 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       // Dynamically load the locale and update dependencies
       if (locales[newLocale]) {
         await locales[newLocale].dayjs();
-        dayjs.locale(newLocale);
-        const i18nResources = await locales[newLocale].i18n();
-        i18n.addResourceBundle(newLocale, "translations", i18nResources);
+        dayjs.locale(newLocale === "pt" ? "pt-br" : newLocale);
+        const mod = await locales[newLocale].i18n();
+        const resources =
+          mod && typeof mod === "object" && "default" in mod
+            ? (mod as { default: object }).default
+            : mod;
+        i18n.addResourceBundle(
+          newLocale,
+          "translations",
+          resources,
+          true,
+          true,
+        );
       }
       i18n.changeLanguage(newLocale);
       setLocale(newLocale);
@@ -39,11 +49,21 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Load the initial locale resources
+  // Load BOTH sidebar languages up front so switching PT↔EN never falls back
+  // to hardcoded Portuguese labels (defaultValue) before the bundle arrives.
   useLayoutEffect(() => {
-    if (locale) {
-      updateLocale(locale);
-    }
+    void (async () => {
+      for (const code of ["pt", "en"] as const) {
+        if (!locales[code]) continue;
+        const mod = await locales[code].i18n();
+        const resources =
+          mod && typeof mod === "object" && "default" in mod
+            ? (mod as { default: object }).default
+            : mod;
+        i18n.addResourceBundle(code, "translations", resources, true, true);
+      }
+      if (locale) await updateLocale(locale);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -13,21 +13,14 @@ import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import { useProjectsContext } from "@/app/contexts/projects/context";
 import { SidebarListItem } from "./SidebarListItem";
 import { GroupChevron } from "./GroupChevron";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
 const MAX_VISIBLE = 5;
 
-const deleteMessages = {
-  pending: {
-    title: "Excluir grupo?",
-    description:
-      "Tem certeza de que deseja excluir este grupo? As instruções, fontes e memória vinculadas serão perdidas. Esta ação não pode ser desfeita.",
-    actionText: "Excluir",
-  },
-};
-
 export function AgrupamentosGroup({ product }: { product: string }) {
+  const { t } = useTranslation();
   const [isOpened, { toggle }] = useDisclosure(true);
   const { cardSkin } = useThemeContext();
   const { lgAndDown } = useBreakpointsContext();
@@ -35,6 +28,15 @@ export function AgrupamentosGroup({ product }: { product: string }) {
   const { projectsByProduct, openCreate, renameProject, removeProject } =
     useProjectsContext();
   const [showAll, setShowAll] = useState(false);
+
+  const deleteMessages = {
+    pending: {
+      title: t("sidebar.deleteGroupTitle"),
+      description:
+        "Tem certeza de que deseja excluir este grupo? As instruções, fontes e memória vinculadas serão perdidas. Esta ação não pode ser desfeita.",
+      actionText: t("sidebar.delete"),
+    },
+  };
 
   const projects = projectsByProduct(product);
   const visibleProjects = showAll ? projects : projects.slice(0, MAX_VISIBLE);
@@ -55,12 +57,12 @@ export function AgrupamentosGroup({ product }: { product: string }) {
             className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 flex cursor-pointer items-center gap-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase outline-hidden hover:text-gray-900 focus:text-gray-900"
           >
             <GroupChevron open={isOpened} />
-            <span>Grupos</span>
+            <span>{t("sidebar.groups")}</span>
           </button>
           <button
             onClick={openCreate}
-            aria-label="Criar grupo"
-            title="Criar grupo"
+            aria-label={t("sidebar.createGroup")}
+            title={t("sidebar.createGroup")}
             className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900"
           >
             <PlusIcon className="size-4" />
@@ -78,7 +80,7 @@ export function AgrupamentosGroup({ product }: { product: string }) {
         <div className="flex flex-col space-y-0.5">
           {projects.length === 0 ? (
             <p className="dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400">
-              Nenhum grupo. Use o + para criar.
+              {t("sidebar.noGroups")}
             </p>
           ) : (
             visibleProjects.map((project) => (
@@ -90,7 +92,7 @@ export function AgrupamentosGroup({ product }: { product: string }) {
                 onNavigate={handleItemClick}
                 onRename={(title) => renameProject(project.id, title)}
                 onDelete={() => removeProject(project.id)}
-                renameLabel="Renomear grupo"
+                renameLabel={t("sidebar.renameGroup")}
                 confirmMessages={deleteMessages}
               />
             ))
@@ -103,8 +105,10 @@ export function AgrupamentosGroup({ product }: { product: string }) {
               className="dark:text-dark-400 dark:hover:bg-dark-300/10 dark:hover:text-dark-200 mx-3 mt-0.5 cursor-pointer rounded-md px-3 py-1 text-start text-xs font-medium tracking-wide text-gray-400 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-600"
             >
               {showAll
-                ? "Mostrar menos"
-                : `Mostrar mais (${projects.length - MAX_VISIBLE})`}
+                ? t("sidebar.showLess")
+                : t("sidebar.showMore", {
+                    count: projects.length - MAX_VISIBLE,
+                  })}
             </button>
           )}
         </div>

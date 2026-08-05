@@ -26,7 +26,8 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       // Dynamically load the locale and update dependencies
       if (locales[newLocale]) {
         await locales[newLocale].dayjs();
-        dayjs.locale(newLocale);
+        // pt usa o pacote dayjs "pt-br"
+        dayjs.locale(newLocale === "pt" ? "pt-br" : newLocale);
         const i18nResources = await locales[newLocale].i18n();
         i18n.addResourceBundle(newLocale, "translations", i18nResources);
       }

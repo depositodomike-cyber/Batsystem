@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { NavLink } from "react-router";
 import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 
 // Local Imports
 import { Collapse } from "@/components/ui";
@@ -13,10 +14,6 @@ import { AiFunction, FUNCTIONS } from "@/app/pages/ceo/ia-functions";
 import { GroupChevron } from "./GroupChevron";
 
 // ----------------------------------------------------------------------
-// AI Studio — bloco da sidebar que expõe as funções da tela de IA como
-// subitens. Cada item navega para `/<produto>/ia?fn=<id>`, e a página de IA
-// (Ia.tsx) abre o modal correspondente ao ler o parâmetro `fn`.
-// ----------------------------------------------------------------------
 
 function AiStudioItem({
   item,
@@ -27,7 +24,10 @@ function AiStudioItem({
   to: string;
   onNavigate: () => void;
 }) {
-  const { label, Icon, tint } = item;
+  const { t } = useTranslation();
+  const { Icon, tint, id, label: fallback } = item;
+  const label = t(`ai.${id}`, { defaultValue: fallback });
+
   return (
     <div className="relative flex px-3">
       <NavLink
@@ -50,6 +50,7 @@ function AiStudioItem({
 }
 
 export function AiStudioGroup({ product }: { product: string }) {
+  const { t, i18n } = useTranslation();
   const [isOpened, { toggle }] = useDisclosure(true);
   const { cardSkin } = useThemeContext();
   const { lgAndDown } = useBreakpointsContext();
@@ -58,14 +59,14 @@ export function AiStudioGroup({ product }: { product: string }) {
   const handleItemClick = () => lgAndDown && closeSidebar();
   const itemPath = (id: string) => `/${product}/ia?fn=${id}`;
 
-  // Subitens em ordem alfabética (ignorando acentos/caixa); a ordem do
-  // catálogo é preservada para os cards da tela de IA.
   const items = useMemo(
     () =>
-      [...FUNCTIONS].sort((a, b) =>
-        a.label.localeCompare(b.label, "pt-BR", { sensitivity: "base" }),
-      ),
-    [],
+      [...FUNCTIONS].sort((a, b) => {
+        const la = t(`ai.${a.id}`, { defaultValue: a.label });
+        const lb = t(`ai.${b.id}`, { defaultValue: b.label });
+        return la.localeCompare(lb, i18n.language, { sensitivity: "base" });
+      }),
+    [t, i18n.language],
   );
 
   return (
@@ -76,13 +77,15 @@ export function AiStudioGroup({ product }: { product: string }) {
           cardSkin === "bordered" ? "dark:bg-dark-900" : "dark:bg-dark-750",
         )}
       >
-        {/* Cabeçalho: o chevron recolhe/expande o grupo e o rótulo "AI Studio"
-            navega para a tela de IA (/<produto>/ia). */}
         <div className="mb-1.5 flex w-full items-center gap-2 pt-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
           <button
             type="button"
             onClick={toggle}
-            aria-label={isOpened ? "Recolher AI Studio" : "Expandir AI Studio"}
+            aria-label={
+              isOpened
+                ? t("sidebar.collapseAiStudio")
+                : t("sidebar.expandAiStudio")
+            }
             className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 flex cursor-pointer items-center outline-hidden hover:text-gray-900 focus:text-gray-900"
           >
             <GroupChevron open={isOpened} />
@@ -92,13 +95,15 @@ export function AiStudioGroup({ product }: { product: string }) {
             onClick={handleItemClick}
             className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 min-w-0 flex-1 cursor-pointer truncate outline-hidden hover:text-gray-900 focus:text-gray-900"
           >
-            AI Studio
+            {t("sidebar.aiStudio")}
           </NavLink>
         </div>
         <div
           className={clsx(
             "pointer-events-none absolute inset-x-0 -bottom-3 h-3 bg-linear-to-b from-white to-transparent",
-            cardSkin === "bordered" ? "dark:from-dark-900" : "dark:from-dark-750",
+            cardSkin === "bordered"
+              ? "dark:from-dark-900"
+              : "dark:from-dark-750",
           )}
         ></div>
       </div>

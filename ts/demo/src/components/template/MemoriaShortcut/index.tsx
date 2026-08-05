@@ -8,20 +8,21 @@ import {
   getProductCodeFromPath,
   systemAreaPath,
 } from "@/app/navigation/ceoOs";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
-// Atalho fixo para a área de Diretrizes no menu superior.
-// É um ícone permanente (não gerenciado pelo menu "Funcionalidades").
 export function MemoriaShortcut() {
   const { pathname } = useLocation();
   const productCode = getProductCodeFromPath(pathname);
+  const { t } = useTranslation();
+  const label = t("chrome.guidelines");
 
   return (
     <NavLink
       to={systemAreaPath(productCode, "memoria")}
-      title="Diretrizes"
-      aria-label="Diretrizes"
+      title={label}
+      aria-label={label}
       className={({ isActive }) =>
         clsx(
           "grid size-9 place-items-center rounded-full outline-hidden transition-colors",

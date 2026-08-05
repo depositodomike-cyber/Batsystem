@@ -4,6 +4,7 @@ import { useLocation, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
+import { useTranslation } from "react-i18next";
 
 // Local Imports
 import { Page } from "@/components/shared/Page";
@@ -14,24 +15,31 @@ import { IA_MODALS_BY_ID } from "@/app/contexts/ia-modals/registry";
 import { AiFunction, FUNCTIONS } from "./ia-functions";
 
 // ----------------------------------------------------------------------
-// IA — widget migrado do beculture/Confi. Funções nativas de inteligência
-// (criar apresentação, editar vídeo, melhorar texto…).
-//
-// Os modais são montados globalmente pelo <IaModalsHostProvider> (App.tsx), de
-// modo que continuam vivos ao navegar entre telas e podem ser minimizados para
-// o rodapé. Aqui só disparamos a abertura — pelo clique nos cards ou pelo query
-// param `?fn=<id>` (usado pelos subitens do AI Studio / Memória na sidebar).
-// ----------------------------------------------------------------------
 
-function AiCard({ item, onRun }: { item: AiFunction; onRun: (item: AiFunction) => void }) {
-  const { label, desc, Icon, tint } = item;
+function AiCard({
+  item,
+  onRun,
+}: {
+  item: AiFunction;
+  onRun: (item: AiFunction) => void;
+}) {
+  const { t } = useTranslation();
+  const { Icon, tint, id } = item;
+  const label = t(`ai.${id}`, { defaultValue: item.label });
+  const desc = t(`ai.${id}Desc`, { defaultValue: item.desc });
+
   return (
     <button
       type="button"
       onClick={() => onRun(item)}
       className="dark:border-dark-600 dark:hover:border-dark-400 dark:bg-dark-700 group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-start transition-colors hover:border-gray-300"
     >
-      <span className={clsx("grid size-11 shrink-0 place-items-center rounded-lg bg-current/10", tint)}>
+      <span
+        className={clsx(
+          "grid size-11 shrink-0 place-items-center rounded-lg bg-current/10",
+          tint,
+        )}
+      >
         <Icon className={clsx("size-6 stroke-[1.5]", tint)} />
       </span>
       <span className="min-w-0 flex-1">
@@ -49,6 +57,7 @@ function AiCard({ item, onRun }: { item: AiFunction; onRun: (item: AiFunction) =
 // ----------------------------------------------------------------------
 
 export default function Ia() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const product = getCurrentProduct(pathname);
@@ -59,14 +68,11 @@ export default function Ia() {
       open(fn.id);
       return;
     }
-    toast(fn.label, {
-      description: "Função de IA — execução disponível no beculture.",
+    toast(t(`ai.${fn.id}`, { defaultValue: fn.label }), {
+      description: t("ai.unavailable"),
     });
   };
 
-  // Abre o modal quando a função é indicada na URL (ex.: subitem do AI Studio na
-  // sidebar → /behuman/ia?fn=apresentacao). Limpa o parâmetro em seguida para
-  // que o modal não reabra ao fechar.
   const fnParam = searchParams.get("fn");
   useEffect(() => {
     if (!fnParam) return;
@@ -83,9 +89,8 @@ export default function Ia() {
   }, [fnParam]);
 
   return (
-    <Page title={`IA · ${product.name}`}>
+    <Page title={`${t("ai.title")} · ${product.name}`}>
       <div className="transition-content w-full px-(--margin-x) py-6">
-        {/* Cabeçalho */}
         <div className="flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-xl bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400">
             <SparklesIcon className="size-6 stroke-[1.5]" />
@@ -95,24 +100,23 @@ export default function Ia() {
               help={{
                 description: (
                   <>
-                    <p><strong>AI Studio</strong> reúne as funções nativas de inteligência para criar e transformar conteúdo — como criar apresentação, editar vídeo e melhorar texto.</p>
-                    <p>Clique em uma função para abri-la. Os fluxos rodam em modais que continuam ativos ao navegar entre telas e podem ser minimizados para o rodapé.</p>
+                    <p>{t("ai.help1")}</p>
+                    <p>{t("ai.help2")}</p>
                   </>
                 ),
               }}
             >
-              AI Studio
+              {t("ai.title")}
             </PageTitle>
             <p className="dark:text-dark-300 text-sm text-gray-400">
-              Funções nativas de inteligência para criar e transformar conteúdo.
+              {t("ai.subtitle")}
             </p>
           </div>
         </div>
 
-        {/* Funções */}
         <section className="mt-6">
           <h3 className="dark:text-dark-200 mb-3 text-tiny-plus font-semibold uppercase tracking-wider text-gray-500">
-            Funções
+            {t("ai.functions")}
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {FUNCTIONS.map((fn) => (

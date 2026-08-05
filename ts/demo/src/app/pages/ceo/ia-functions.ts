@@ -20,6 +20,7 @@ import {
   SparklesIcon,
   ChartBarSquareIcon,
 } from "@heroicons/react/24/outline";
+import i18n from "@/i18n/config";
 
 export interface AiFunction {
   id: string;
@@ -58,5 +59,6 @@ export const ALL_AI_FUNCTIONS: AiFunction[] = [...FUNCTIONS, ...UPLOAD_FUNCTIONS
 
 /** Rótulo de uma ação do AI Studio pelo id (ex.: "artigo" → "Criar artigo"). */
 export function aiFunctionLabel(id: string): string {
-  return ALL_AI_FUNCTIONS.find((f) => f.id === id)?.label ?? id;
+  const fallback = ALL_AI_FUNCTIONS.find((f) => f.id === id)?.label ?? id;
+  return i18n.t(`ai.${id}`, { defaultValue: fallback });
 }

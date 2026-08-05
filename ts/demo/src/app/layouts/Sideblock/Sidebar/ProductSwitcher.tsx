@@ -14,6 +14,7 @@ import clsx from "clsx";
 import { products, getCurrentProduct } from "@/app/navigation/ceoOs";
 import becultureLogo from "@/assets/branding/beculture-logo.svg";
 import becultureLogoDark from "@/assets/branding/beculture-logo-dark.svg";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
@@ -23,6 +24,7 @@ export function ProductSwitcher() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const current = getCurrentProduct(pathname);
+  const { t } = useTranslation();
 
   const goTo = (code: string) => navigate(`/${code}`);
 
@@ -34,7 +36,6 @@ export function ProductSwitcher() {
           "focus-visible:ring-primary-500/50 focus-visible:ring-2",
         )}
       >
-        {/* Símbolo sem fundo nos dois temas: navy+âmbar no claro, âmbar+branco no escuro. */}
         <img
           src={becultureLogo}
           alt="beculture"
@@ -63,7 +64,7 @@ export function ProductSwitcher() {
           className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 w-56 rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
         >
           <p className="dark:text-dark-300 px-2.5 py-1 text-tiny-plus font-semibold tracking-wider text-gray-400 uppercase">
-            Produtos
+            {t("chrome.products")}
           </p>
           {switcherItems.map((p) => {
             const active = p.code === current.code;

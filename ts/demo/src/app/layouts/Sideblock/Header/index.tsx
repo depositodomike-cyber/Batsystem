@@ -15,6 +15,7 @@ import {
   getProductCodeFromPath,
   systemAreaPath,
 } from "@/app/navigation/ceoOs";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
@@ -22,6 +23,7 @@ export function Header() {
   const { cardSkin } = useThemeContext();
   const { pathname } = useLocation();
   const productCode = getProductCodeFromPath(pathname);
+  const { t } = useTranslation();
 
   return (
     <header
@@ -34,14 +36,10 @@ export function Header() {
         <SidebarToggleBtn />
       </div>
 
-      {/* Prompt "Pergunte à sua Memória" (esquerda) */}
       <div className="min-w-0 flex-1">
         <PromptBar />
       </div>
 
-      {/* Opções do sistema (direita) — apenas os ícones fixos: Diretrizes,
-          Conectores, Configurações e Notificações. O menu "Funcionalidades"
-          (e os itens que o usuário fixava por lá) está oculto. */}
       <div className="flex items-center gap-1">
         <div className="ms-4 me-4">
           <TokenUsage />
@@ -50,13 +48,13 @@ export function Header() {
         <SystemAreaLink
           productCode={productCode}
           slug="conectores"
-          label="Conectores"
+          label={t("chrome.connectors")}
           icon={LinkIcon}
         />
         <SystemAreaLink
           productCode={productCode}
           slug="configuracoes"
-          label="Configurações"
+          label={t("chrome.settings")}
           icon={Cog6ToothIcon}
         />
         <Notifications />

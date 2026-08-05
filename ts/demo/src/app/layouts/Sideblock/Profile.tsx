@@ -16,13 +16,14 @@ import { Link } from "react-router";
 // Local Imports
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { Avatar, AvatarDot, type AvatarProps, Button } from "@/components/ui";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
 interface LinkItem {
   id: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   to: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   color: AvatarProps["initialColor"];
@@ -31,16 +32,16 @@ interface LinkItem {
 const links: LinkItem[] = [
   {
     id: "1",
-    title: "Profile",
-    description: "Your profile Setting",
+    titleKey: "profile.profile",
+    descriptionKey: "profile.profileDesc",
     to: "/settings/general",
     Icon: TbUser,
     color: "warning",
   },
   {
     id: "2",
-    title: "Reset Password",
-    description: "Update your password",
+    titleKey: "profile.resetPassword",
+    descriptionKey: "profile.resetPasswordDesc",
     to: "/settings/sessions",
     Icon: KeyIcon,
     color: "info",
@@ -49,6 +50,7 @@ const links: LinkItem[] = [
 
 export function Profile() {
   const { logout } = useAuthContext();
+  const { t } = useTranslation();
 
   return (
     <Popover className="relative flex">
@@ -111,10 +113,10 @@ export function Profile() {
                     </Avatar>
                     <div>
                       <h2 className="group-hover:text-primary-600 group-focus:text-primary-600 dark:text-dark-100 dark:group-hover:text-primary-400 dark:group-focus:text-primary-400 font-medium text-gray-800 transition-colors">
-                        {link.title}
+                        {t(link.titleKey)}
                       </h2>
                       <div className="dark:text-dark-300 truncate text-xs text-gray-400">
-                        {link.description}
+                        {t(link.descriptionKey)}
                       </div>
                     </div>
                   </Link>
@@ -122,7 +124,7 @@ export function Profile() {
                 <div className="px-4 pt-4">
                   <Button className="w-full gap-2" onClick={() => logout()}>
                     <ArrowLeftStartOnRectangleIcon className="size-4.5" />
-                    <span>Logout</span>
+                    <span>{t("profile.logout")}</span>
                   </Button>
                 </div>
               </div>

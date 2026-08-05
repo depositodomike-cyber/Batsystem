@@ -43,7 +43,7 @@ export function Menu() {
   return (
     <SimpleBar
       scrollableNodeProps={{ ref }}
-      className="h-full overflow-x-hidden pb-6"
+      className="min-h-0 flex-1 overflow-x-hidden pb-6"
     >
       <Accordion value={expanded} onChange={setExpanded} className="space-y-1">
         {navigation.map((nav) => (

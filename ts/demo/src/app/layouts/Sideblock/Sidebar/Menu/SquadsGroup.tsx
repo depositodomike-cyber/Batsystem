@@ -21,12 +21,14 @@ import { useSquadsContext } from "@/app/contexts/squads/context";
 import { squadPath } from "@/app/navigation/ceoOs";
 import { navigationIcons } from "@/app/navigation/icons";
 import { GroupChevron } from "./GroupChevron";
+import { useTranslation } from "react-i18next";
 
 // ----------------------------------------------------------------------
 
 const MAX_VISIBLE = 5;
 
 export function SquadsGroup() {
+  const { t } = useTranslation();
   const [isOpened, { toggle }] = useDisclosure(true);
   const { cardSkin } = useThemeContext();
   const { lgAndDown } = useBreakpointsContext();
@@ -55,7 +57,7 @@ export function SquadsGroup() {
             className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 flex cursor-pointer items-center gap-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase outline-hidden hover:text-gray-900 focus:text-gray-900"
           >
             <GroupChevron open={isOpened} />
-            <span>Squads</span>
+            <span>{t("sidebar.squads")}</span>
           </button>
 
           {/* Botão "+" abre o catálogo de squads para fixar no menu. */}
@@ -81,7 +83,7 @@ export function SquadsGroup() {
                 className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 max-h-[20rem] w-60 overflow-y-auto rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
               >
                 <p className="dark:text-dark-300 px-2.5 py-1 text-tiny-plus font-semibold tracking-wider text-gray-400 uppercase">
-                  Todos os squads
+                  {t("sidebar.allSquads")}
                 </p>
                 {catalog.map((squad) => {
                   const Icon = navigationIcons[squad.icon];
@@ -124,7 +126,7 @@ export function SquadsGroup() {
         <div className="flex flex-col space-y-0.5">
           {pinnedSquads.length === 0 ? (
             <p className="dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400">
-              Nenhum squad fixado. Use o + para adicionar.
+              {t("sidebar.noPinnedSquads")}
             </p>
           ) : (
             visibleSquads.map((squad) => {
@@ -191,8 +193,10 @@ export function SquadsGroup() {
               className="dark:text-dark-400 dark:hover:bg-dark-300/10 dark:hover:text-dark-200 mx-3 mt-0.5 cursor-pointer rounded-md px-3 py-1 text-start text-xs font-medium tracking-wide text-gray-400 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-600"
             >
               {showAll
-                ? "Mostrar menos"
-                : `Mostrar mais (${pinnedSquads.length - MAX_VISIBLE})`}
+                ? t("sidebar.showLess")
+                : t("sidebar.showMore", {
+                    count: pinnedSquads.length - MAX_VISIBLE,
+                  })}
             </button>
           )}
         </div>

@@ -10,7 +10,11 @@ import { useDisclosure } from "@/hooks";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
 import { useSidebarContext } from "@/app/contexts/sidebar/context";
-import { AiFunction, FUNCTIONS } from "@/app/pages/ceo/ia-functions";
+import {
+  AiFunction,
+  AI_STUDIO_DISABLED,
+  FUNCTIONS,
+} from "@/app/pages/ceo/ia-functions";
 import { GroupChevron } from "./GroupChevron";
 
 // ----------------------------------------------------------------------
@@ -19,32 +23,49 @@ function AiStudioItem({
   item,
   to,
   onNavigate,
+  disabled,
 }: {
   item: AiFunction;
   to: string;
   onNavigate: () => void;
+  disabled: boolean;
 }) {
   const { t } = useTranslation();
   const { Icon, tint, id, label: fallback } = item;
   const label = t(`ai.${id}`, { defaultValue: fallback });
 
+  const content = (
+    <div className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide">
+      <Icon
+        className={clsx(
+          "size-4.5 shrink-0 stroke-[1.5]",
+          disabled ? "opacity-80" : "opacity-80 group-hover:opacity-100",
+          tint,
+        )}
+      />
+      <span className="truncate">{label}</span>
+    </div>
+  );
+
   return (
     <div className="relative flex px-3">
-      <NavLink
-        to={to}
-        onClick={onNavigate}
-        className="group dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 min-w-0 flex-1 rounded-md px-3 py-1 font-medium text-gray-800 outline-hidden transition-colors ease-in-out hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950"
-      >
-        <div className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide">
-          <Icon
-            className={clsx(
-              "size-4.5 shrink-0 stroke-[1.5] opacity-80 group-hover:opacity-100",
-              tint,
-            )}
-          />
-          <span className="truncate">{label}</span>
+      {disabled ? (
+        <div
+          aria-disabled="true"
+          title={t("ai.unavailable")}
+          className="dark:text-dark-200 min-w-0 flex-1 cursor-not-allowed rounded-md px-3 py-1 font-medium text-gray-800 opacity-40 outline-hidden"
+        >
+          {content}
         </div>
-      </NavLink>
+      ) : (
+        <NavLink
+          to={to}
+          onClick={onNavigate}
+          className="group dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 min-w-0 flex-1 rounded-md px-3 py-1 font-medium text-gray-800 outline-hidden transition-colors ease-in-out hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950"
+        >
+          {content}
+        </NavLink>
+      )}
     </div>
   );
 }
@@ -116,6 +137,7 @@ export function AiStudioGroup({ product }: { product: string }) {
               item={item}
               to={itemPath(item.id)}
               onNavigate={handleItemClick}
+              disabled={AI_STUDIO_DISABLED}
             />
           ))}
         </div>

@@ -16,8 +16,18 @@ import {
   systemAreaPath,
 } from "@/app/navigation/ceoOs";
 import { useTranslation } from "react-i18next";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+  type TemporarilyDisabledFeature,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
+
+const SYSTEM_AREA_FEATURE: Partial<Record<string, TemporarilyDisabledFeature>> =
+  {
+    conectores: "connectors",
+  };
 
 export function Header() {
   const { cardSkin } = useThemeContext();
@@ -78,6 +88,26 @@ function SystemAreaLink({
   label: string;
   icon: React.ElementType;
 }) {
+  const feature = SYSTEM_AREA_FEATURE[slug];
+  const disabled =
+    feature != null && isFeatureTemporarilyDisabled(feature);
+
+  if (disabled) {
+    return (
+      <span
+        aria-disabled="true"
+        title={label}
+        aria-label={label}
+        className={clsx(
+          "dark:text-dark-200 grid size-9 place-items-center rounded-full text-gray-500 outline-hidden",
+          DISABLED_MENU_CLASS,
+        )}
+      >
+        <Icon className="size-5 stroke-[1.5]" />
+      </span>
+    );
+  }
+
   return (
     <NavLink
       to={systemAreaPath(productCode, slug)}

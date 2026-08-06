@@ -26,6 +26,7 @@ import {
   ConfirmModal,
   type ConfirmMessages,
 } from "@/components/shared/ConfirmModal";
+import { DISABLED_MENU_CLASS } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -57,6 +58,11 @@ interface SidebarListItemProps {
   currentGroupId?: string;
   /** Rótulo opcional exibido como badge antes do menu (ex.: nome do squad). */
   badge?: string;
+  /**
+   * Quando true, o item fica visível e opaco, sem navegação nem ações
+   * (desabilitação temporária — ver temporarilyDisabledFeatures).
+   */
+  disabled?: boolean;
 }
 
 export function SidebarListItem({
@@ -72,6 +78,7 @@ export function SidebarListItem({
   onMoveToGroup,
   currentGroupId,
   badge,
+  disabled = false,
 }: SidebarListItemProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const [draft, setDraft] = useState(title);
@@ -115,7 +122,7 @@ export function SidebarListItem({
     onDelete();
   };
 
-  if (isRenaming) {
+  if (isRenaming && !disabled) {
     return (
       <div className="px-3">
         <input
@@ -131,41 +138,55 @@ export function SidebarListItem({
     );
   }
 
+  const itemBody = (isActive: boolean) => (
+    <>
+      <div
+        data-menu-active={disabled ? false : isActive}
+        className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide"
+      >
+        <Icon
+          className={clsx(
+            "size-4.5 shrink-0 stroke-[1.5]",
+            !disabled && !isActive && "opacity-80 group-hover:opacity-100",
+          )}
+        />
+        <span className="truncate">{title}</span>
+      </div>
+      {!disabled && isActive && (
+        <div className="bg-primary-600 dark:bg-primary-400 absolute top-1 bottom-1 w-1 ltr:left-0 ltr:rounded-r-full rtl:right-0 rtl:rounded-l-lg" />
+      )}
+    </>
+  );
+
   return (
     <>
       <div className="group/item relative flex items-center px-3">
-        <NavLink
-          to={to}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            clsx(
-              "group min-w-0 flex-1 rounded-md py-1 pr-1 pl-3 font-medium outline-hidden transition-colors ease-in-out",
-              isActive
-                ? "text-primary-600 dark:text-primary-400"
-                : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
-            )
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <div
-                data-menu-active={isActive}
-                className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide"
-              >
-                <Icon
-                  className={clsx(
-                    "size-4.5 shrink-0 stroke-[1.5]",
-                    !isActive && "opacity-80 group-hover:opacity-100",
-                  )}
-                />
-                <span className="truncate">{title}</span>
-              </div>
-              {isActive && (
-                <div className="bg-primary-600 dark:bg-primary-400 absolute top-1 bottom-1 w-1 ltr:left-0 ltr:rounded-r-full rtl:right-0 rtl:rounded-l-lg" />
-              )}
-            </>
-          )}
-        </NavLink>
+        {disabled ? (
+          <div
+            aria-disabled="true"
+            className={clsx(
+              "dark:text-dark-200 min-w-0 flex-1 rounded-md py-1 pr-1 pl-3 font-medium text-gray-800 outline-hidden",
+              DISABLED_MENU_CLASS,
+            )}
+          >
+            {itemBody(false)}
+          </div>
+        ) : (
+          <NavLink
+            to={to}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              clsx(
+                "group min-w-0 flex-1 rounded-md py-1 pr-1 pl-3 font-medium outline-hidden transition-colors ease-in-out",
+                isActive
+                  ? "text-primary-600 dark:text-primary-400"
+                  : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
+              )
+            }
+          >
+            {({ isActive }) => itemBody(isActive)}
+          </NavLink>
+        )}
 
         {badge && (
           <Badge
@@ -177,6 +198,7 @@ export function SidebarListItem({
           </Badge>
         )}
 
+        {!disabled && (
         <Menu as="div" className="shrink-0">
           {({ open }) => (
             <>
@@ -299,15 +321,18 @@ export function SidebarListItem({
             </>
           )}
         </Menu>
+        )}
       </div>
 
-      <ConfirmModal
-        show={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        onOk={confirmDelete}
-        messages={confirmMessages}
-        state="pending"
-      />
+      {!disabled && (
+        <ConfirmModal
+          show={deleteOpen}
+          onClose={() => setDeleteOpen(false)}
+          onOk={confirmDelete}
+          messages={confirmMessages}
+          state="pending"
+        />
+      )}
     </>
   );
 }

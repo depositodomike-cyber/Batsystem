@@ -21,6 +21,7 @@ import {
   ChartBarSquareIcon,
 } from "@heroicons/react/24/outline";
 import i18n from "@/i18n/config";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 export interface AiFunction {
   id: string;
@@ -29,6 +30,14 @@ export interface AiFunction {
   Icon: ElementType;
   tint: string;
 }
+
+/**
+ * Quando true, as funções do AI Studio ficam visíveis mas não clicáveis
+ * (padrão: `cursor-not-allowed opacity-40` + `disabled`).
+ * Uploads da Memória (UPLOAD_FUNCTIONS) não são afetados.
+ * Fonte: `temporarilyDisabledFeatures.ts` — não remova as funções.
+ */
+export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
 
 // Funções nativas de inteligência (criar apresentação, editar vídeo, melhorar
 // texto…). Cada uma abre um modal na tela de IA.
@@ -56,6 +65,11 @@ export const UPLOAD_FUNCTIONS: AiFunction[] = [
 
 /** Todas as ações do AI Studio (grade + uploads). */
 export const ALL_AI_FUNCTIONS: AiFunction[] = [...FUNCTIONS, ...UPLOAD_FUNCTIONS];
+
+/** Indica se o id é uma função da grade do AI Studio (não upload). */
+export function isAiStudioFunction(id: string): boolean {
+  return FUNCTIONS.some((f) => f.id === id);
+}
 
 /** Rótulo de uma ação do AI Studio pelo id (ex.: "artigo" → "Criar artigo"). */
 export function aiFunctionLabel(id: string): string {

@@ -22,6 +22,10 @@ import { squadPath } from "@/app/navigation/ceoOs";
 import { navigationIcons } from "@/app/navigation/icons";
 import { GroupChevron } from "./GroupChevron";
 import { useTranslation } from "react-i18next";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -36,6 +40,7 @@ export function SquadsGroup() {
   const { catalog, pinnedSquads, isPinned, toggleSquad, unpinSquad } =
     useSquadsContext();
   const [showAll, setShowAll] = useState(false);
+  const disabled = isFeatureTemporarilyDisabled("squads");
 
   const handleItemClick = () => lgAndDown && closeSidebar();
 
@@ -61,6 +66,19 @@ export function SquadsGroup() {
           </button>
 
           {/* Botão "+" abre o catálogo de squads para fixar no menu. */}
+          {disabled ? (
+            <span
+              aria-disabled="true"
+              aria-label="Adicionar squad"
+              title="Adicionar squad"
+              className={clsx(
+                "-mr-1 grid size-5 shrink-0 place-items-center rounded-full text-gray-500 outline-hidden",
+                DISABLED_MENU_CLASS,
+              )}
+            >
+              <PlusIcon className="size-4" />
+            </span>
+          ) : (
           <Popover className="relative inline-flex">
             <PopoverButton
               aria-label="Adicionar squad"
@@ -112,6 +130,7 @@ export function SquadsGroup() {
               </PopoverPanel>
             </Transition>
           </Popover>
+          )}
         </div>
 
         <div
@@ -125,68 +144,90 @@ export function SquadsGroup() {
       <Collapse in={isOpened}>
         <div className="flex flex-col space-y-0.5">
           {pinnedSquads.length === 0 ? (
-            <p className="dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400">
+            <p
+              className={clsx(
+                "dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400",
+                disabled && DISABLED_MENU_CLASS,
+              )}
+            >
               {t("sidebar.noPinnedSquads")}
             </p>
           ) : (
             visibleSquads.map((squad) => {
               const Icon = navigationIcons[squad.icon];
+              const body = (isActive: boolean) => (
+                <>
+                  <div
+                    data-menu-active={disabled ? false : isActive}
+                    className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide"
+                  >
+                    {Icon && (
+                      <Icon
+                        className={clsx(
+                          "size-4.5 shrink-0 stroke-[1.5]",
+                          !disabled &&
+                            !isActive &&
+                            "opacity-80 group-hover:opacity-100",
+                        )}
+                      />
+                    )}
+                    <span className="truncate">{squad.title}</span>
+                  </div>
+                  {!disabled && isActive && (
+                    <div className="bg-primary-600 dark:bg-primary-400 absolute bottom-1 top-1 w-1 ltr:left-0 ltr:rounded-r-full rtl:right-0 rtl:rounded-l-lg" />
+                  )}
+                </>
+              );
               return (
                 <div
                   key={squad.id}
                   className="group/squad relative flex items-center px-3"
                 >
-                  <NavLink
-                    to={squadPath(squad)}
-                    onClick={handleItemClick}
-                    className={({ isActive }) =>
-                      clsx(
-                        "group min-w-0 flex-1 rounded-md px-3 py-1 font-medium outline-hidden transition-colors ease-in-out",
-                        isActive
-                          ? "text-primary-600 dark:text-primary-400"
-                          : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <div
-                          data-menu-active={isActive}
-                          className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide"
-                        >
-                          {Icon && (
-                            <Icon
-                              className={clsx(
-                                "size-4.5 shrink-0 stroke-[1.5]",
-                                !isActive && "opacity-80 group-hover:opacity-100",
-                              )}
-                            />
-                          )}
-                          <span className="truncate">{squad.title}</span>
-                        </div>
-                        {isActive && (
-                          <div className="bg-primary-600 dark:bg-primary-400 absolute bottom-1 top-1 w-1 ltr:left-0 ltr:rounded-r-full rtl:right-0 rtl:rounded-l-lg" />
-                        )}
-                      </>
-                    )}
-                  </NavLink>
+                  {disabled ? (
+                    <div
+                      aria-disabled="true"
+                      className={clsx(
+                        "dark:text-dark-200 min-w-0 flex-1 rounded-md px-3 py-1 font-medium text-gray-800 outline-hidden",
+                        DISABLED_MENU_CLASS,
+                      )}
+                    >
+                      {body(false)}
+                    </div>
+                  ) : (
+                    <NavLink
+                      to={squadPath(squad)}
+                      onClick={handleItemClick}
+                      className={({ isActive }) =>
+                        clsx(
+                          "group min-w-0 flex-1 rounded-md px-3 py-1 font-medium outline-hidden transition-colors ease-in-out",
+                          isActive
+                            ? "text-primary-600 dark:text-primary-400"
+                            : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
+                        )
+                      }
+                    >
+                      {({ isActive }) => body(isActive)}
+                    </NavLink>
+                  )}
 
                   {/* Remover squad fixado do menu. */}
-                  <button
-                    type="button"
-                    onClick={() => unpinSquad(squad.id)}
-                    aria-label={`Remover ${squad.title}`}
-                    title="Remover do menu"
-                    className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-400 opacity-0 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover/squad:opacity-100"
-                  >
-                    <XMarkIcon className="size-4" />
-                  </button>
+                  {!disabled && (
+                    <button
+                      type="button"
+                      onClick={() => unpinSquad(squad.id)}
+                      aria-label={`Remover ${squad.title}`}
+                      title="Remover do menu"
+                      className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-400 opacity-0 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover/squad:opacity-100"
+                    >
+                      <XMarkIcon className="size-4" />
+                    </button>
+                  )}
                 </div>
               );
             })
           )}
 
-          {pinnedSquads.length > MAX_VISIBLE && (
+          {pinnedSquads.length > MAX_VISIBLE && !disabled && (
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}

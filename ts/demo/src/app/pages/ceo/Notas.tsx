@@ -45,6 +45,7 @@ import {
   salvarConteudoNaMemoria,
 } from "./memoria-conteudo";
 import { setIaPrefill } from "@/utils/iaPrefill";
+import { AI_STUDIO_DISABLED } from "./ia-functions";
 import clsx from "clsx";
 
 // ----------------------------------------------------------------------
@@ -298,6 +299,7 @@ export default function Notas() {
 
   // ---- Ações de IA (abrem a função na tela de IA com a nota preenchida) ----
   const acaoIa = (fn: "apresentacao" | "artigo" | "melhorar") => {
+    if (AI_STUDIO_DISABLED) return;
     const tema = eTitulo.trim() || tituloAuto(eCorpo);
     const contexto = eCorpo.trim();
     if (!contexto) {
@@ -656,7 +658,11 @@ export default function Notas() {
                   <Button
                     variant="flat"
                     onClick={() => acaoIa("apresentacao")}
-                    className="gap-1.5"
+                    disabled={AI_STUDIO_DISABLED}
+                    className={clsx(
+                      "gap-1.5",
+                      AI_STUDIO_DISABLED && "cursor-not-allowed opacity-40",
+                    )}
                   >
                     <PresentationChartBarIcon className="size-4.5" />
                     Apresentação
@@ -664,7 +670,11 @@ export default function Notas() {
                   <Button
                     variant="flat"
                     onClick={() => acaoIa("artigo")}
-                    className="gap-1.5"
+                    disabled={AI_STUDIO_DISABLED}
+                    className={clsx(
+                      "gap-1.5",
+                      AI_STUDIO_DISABLED && "cursor-not-allowed opacity-40",
+                    )}
                   >
                     <DocumentTextIcon className="size-4.5" />
                     Artigo
@@ -672,7 +682,11 @@ export default function Notas() {
                   <Button
                     variant="flat"
                     onClick={() => acaoIa("melhorar")}
-                    className="gap-1.5"
+                    disabled={AI_STUDIO_DISABLED}
+                    className={clsx(
+                      "gap-1.5",
+                      AI_STUDIO_DISABLED && "cursor-not-allowed opacity-40",
+                    )}
                   >
                     <SparklesIcon className="size-4.5" />
                     Melhorar

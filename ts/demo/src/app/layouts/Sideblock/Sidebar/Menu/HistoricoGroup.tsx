@@ -15,6 +15,10 @@ import { useMoverChatParaGrupo } from "@/app/pages/ceo/useGrupoMemoria";
 import { SidebarListItem } from "./SidebarListItem";
 import { GroupChevron } from "./GroupChevron";
 import { useTranslation } from "react-i18next";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -30,6 +34,7 @@ export function HistoricoGroup({ product }: { product: string }) {
   const { projectsByProduct } = useProjectsContext();
   const moverChatParaGrupo = useMoverChatParaGrupo();
   const [showAll, setShowAll] = useState(false);
+  const disabled = isFeatureTemporarilyDisabled("history");
 
   const deleteMessages = {
     pending: {
@@ -79,7 +84,12 @@ export function HistoricoGroup({ product }: { product: string }) {
       <Collapse in={isOpened}>
         <div className="flex flex-col space-y-0.5">
           {chats.length === 0 ? (
-            <p className="dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400">
+            <p
+              className={clsx(
+                "dark:text-dark-400 px-6 py-1.5 text-xs text-gray-400",
+                disabled && DISABLED_MENU_CLASS,
+              )}
+            >
               {t("sidebar.noChats")}
             </p>
           ) : (
@@ -99,11 +109,12 @@ export function HistoricoGroup({ product }: { product: string }) {
                 onMoveToGroup={(groupId) =>
                   moverChatParaGrupo(chat.id, groupId)
                 }
+                disabled={disabled}
               />
             ))
           )}
 
-          {chats.length > MAX_VISIBLE && (
+          {chats.length > MAX_VISIBLE && !disabled && (
             <button
               type="button"
               onClick={() => setShowAll((v) => !v)}

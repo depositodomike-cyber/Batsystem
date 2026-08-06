@@ -12,16 +12,23 @@ import { PageTitle } from "@/components/shared/PageTitle";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useIaModals } from "@/app/contexts/ia-modals/context";
 import { IA_MODALS_BY_ID } from "@/app/contexts/ia-modals/registry";
-import { AiFunction, FUNCTIONS } from "./ia-functions";
+import {
+  AiFunction,
+  AI_STUDIO_DISABLED,
+  FUNCTIONS,
+  isAiStudioFunction,
+} from "./ia-functions";
 
 // ----------------------------------------------------------------------
 
 function AiCard({
   item,
   onRun,
+  disabled,
 }: {
   item: AiFunction;
   onRun: (item: AiFunction) => void;
+  disabled: boolean;
 }) {
   const { t } = useTranslation();
   const { Icon, tint, id } = item;
@@ -32,7 +39,14 @@ function AiCard({
     <button
       type="button"
       onClick={() => onRun(item)}
-      className="dark:border-dark-600 dark:hover:border-dark-400 dark:bg-dark-700 group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-start transition-colors hover:border-gray-300"
+      disabled={disabled}
+      title={disabled ? t("ai.unavailable") : undefined}
+      className={clsx(
+        "dark:border-dark-600 dark:bg-dark-700 group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-start transition-colors",
+        disabled
+          ? "cursor-not-allowed opacity-40"
+          : "dark:hover:border-dark-400 hover:border-gray-300",
+      )}
     >
       <span
         className={clsx(
@@ -64,6 +78,7 @@ export default function Ia() {
   const { open } = useIaModals();
 
   const run = (fn: AiFunction) => {
+    if (AI_STUDIO_DISABLED) return;
     if (IA_MODALS_BY_ID[fn.id]) {
       open(fn.id);
       return;
@@ -76,7 +91,9 @@ export default function Ia() {
   const fnParam = searchParams.get("fn");
   useEffect(() => {
     if (!fnParam) return;
-    if (IA_MODALS_BY_ID[fnParam]) open(fnParam);
+    const blocked =
+      AI_STUDIO_DISABLED && isAiStudioFunction(fnParam);
+    if (!blocked && IA_MODALS_BY_ID[fnParam]) open(fnParam);
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -120,7 +137,12 @@ export default function Ia() {
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {FUNCTIONS.map((fn) => (
-              <AiCard key={fn.id} item={fn} onRun={run} />
+              <AiCard
+                key={fn.id}
+                item={fn}
+                onRun={run}
+                disabled={AI_STUDIO_DISABLED}
+              />
             ))}
           </div>
         </section>

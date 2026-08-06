@@ -18,6 +18,7 @@ import {
   FUNCTIONS,
   isAiStudioFunction,
 } from "./ia-functions";
+import { isMemoryUploadFnTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -92,7 +93,8 @@ export default function Ia() {
   useEffect(() => {
     if (!fnParam) return;
     const blocked =
-      AI_STUDIO_DISABLED && isAiStudioFunction(fnParam);
+      (AI_STUDIO_DISABLED && isAiStudioFunction(fnParam)) ||
+      isMemoryUploadFnTemporarilyDisabled(fnParam);
     if (!blocked && IA_MODALS_BY_ID[fnParam]) open(fnParam);
     setSearchParams(
       (prev) => {

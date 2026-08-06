@@ -34,8 +34,8 @@ export interface AiFunction {
 /**
  * Quando true, as funções do AI Studio ficam visíveis mas não clicáveis
  * (padrão: `cursor-not-allowed opacity-40` + `disabled`).
- * Uploads da Memória (UPLOAD_FUNCTIONS) não são afetados.
- * Fonte: `temporarilyDisabledFeatures.ts` — não remova as funções.
+ * Uploads da Memória (áudio/transcrição) têm flags próprias em
+ * `temporarilyDisabledFeatures.ts` — não remova as funções.
  */
 export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
 
@@ -58,8 +58,8 @@ export const FUNCTIONS: AiFunction[] = [
 // subitens da Memória na sidebar), mas produzem conteúdo como as demais e por
 // isso entram no registro de janelas e no envio para grupos.
 export const UPLOAD_FUNCTIONS: AiFunction[] = [
-  { id: "transcricao", label: "Upload Transcrição", desc: "Transcrição colada → ata estratégica.", Icon: DocumentCheckIcon, tint: "text-emerald-500" },
   { id: "documento", label: "Upload Documento", desc: "Documento bruto → documento de referência.", Icon: DocumentTextIcon, tint: "text-sky-500" },
+  { id: "transcricao", label: "Upload Transcrição", desc: "Transcrição colada → ata estratégica.", Icon: DocumentCheckIcon, tint: "text-emerald-500" },
   { id: "audio", label: "Upload Áudio", desc: "Áudio/vídeo → transcrição e ata.", Icon: MicrophoneIcon, tint: "text-rose-500" },
 ];
 

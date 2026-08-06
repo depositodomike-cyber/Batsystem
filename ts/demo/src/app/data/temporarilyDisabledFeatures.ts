@@ -18,7 +18,13 @@ export type TemporarilyDisabledFeature =
   | "email"
   | "slack"
   | "calendar"
-  | "connectors";
+  | "connectors"
+  | "notifications"
+  | "settingsAppearance"
+  | "settingsVoice"
+  | "settingsMemory"
+  | "memoryUploadAudio"
+  | "memoryUploadTranscript";
 
 export const TEMPORARILY_DISABLED: Record<
   TemporarilyDisabledFeature,
@@ -34,6 +40,12 @@ export const TEMPORARILY_DISABLED: Record<
   slack: true,
   calendar: true,
   connectors: true,
+  notifications: true,
+  settingsAppearance: true,
+  settingsVoice: true,
+  settingsMemory: true,
+  memoryUploadAudio: true,
+  memoryUploadTranscript: true,
 };
 
 /** Classe Tailwind do estado desabilitado (padrão do produto). */
@@ -59,6 +71,8 @@ export function isNavItemTemporarilyDisabled(
     email: "email",
     slack: "slack",
     agenda: "calendar",
+    "upload-audio": "memoryUploadAudio",
+    "upload-transcricao": "memoryUploadTranscript",
   };
 
   const suffix = id.split(".").pop() ?? "";
@@ -66,10 +80,32 @@ export function isNavItemTemporarilyDisabled(
   if (fromId && TEMPORARILY_DISABLED[fromId]) return true;
 
   if (path) {
-    const seg = path.split("/").filter(Boolean).pop() ?? "";
+    const seg = path.split("/").filter(Boolean).pop()?.split("?")[0] ?? "";
     const fromPath = bySuffix[seg];
     if (fromPath && TEMPORARILY_DISABLED[fromPath]) return true;
+
+    // Deep links /ia?fn=audio|transcricao (uploads sob Memória).
+    if (
+      /[?&]fn=audio(?:&|$)/.test(path) &&
+      TEMPORARILY_DISABLED.memoryUploadAudio
+    ) {
+      return true;
+    }
+    if (
+      /[?&]fn=transcricao(?:&|$)/.test(path) &&
+      TEMPORARILY_DISABLED.memoryUploadTranscript
+    ) {
+      return true;
+    }
   }
 
+  return false;
+}
+
+/** Bloqueia abertura de modal de upload da Memória via `?fn=`. */
+export function isMemoryUploadFnTemporarilyDisabled(fnId: string): boolean {
+  if (fnId === "audio") return TEMPORARILY_DISABLED.memoryUploadAudio;
+  if (fnId === "transcricao")
+    return TEMPORARILY_DISABLED.memoryUploadTranscript;
   return false;
 }

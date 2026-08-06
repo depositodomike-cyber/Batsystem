@@ -28,6 +28,11 @@ import {
 } from "@/utils/beculturePrefs";
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+  type TemporarilyDisabledFeature,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 // Configurações — porta o painel ⚙ do beculture/Confi (app antigo) para o SaaS.
@@ -42,18 +47,48 @@ import { AiConnectionCard } from "./AiConnectionCard";
 // ----------------------------------------------------------------------
 
 const SECOES = [
-  { id: "aparencia", titulo: "Aparência", icon: SwatchIcon },
-  { id: "voz", titulo: "Voz", icon: SpeakerWaveIcon },
-  { id: "ia", titulo: "IA & API", icon: CpuChipIcon },
-  { id: "memoria", titulo: "Memória", icon: CircleStackIcon },
+  {
+    id: "aparencia",
+    titulo: "Aparência",
+    icon: SwatchIcon,
+    feature: "settingsAppearance" as TemporarilyDisabledFeature,
+  },
+  {
+    id: "voz",
+    titulo: "Voz",
+    icon: SpeakerWaveIcon,
+    feature: "settingsVoice" as TemporarilyDisabledFeature,
+  },
+  {
+    id: "ia",
+    titulo: "IA & API",
+    icon: CpuChipIcon,
+    feature: null,
+  },
+  {
+    id: "memoria",
+    titulo: "Memória",
+    icon: CircleStackIcon,
+    feature: "settingsMemory" as TemporarilyDisabledFeature,
+  },
 ] as const;
+
+type SecaoId = (typeof SECOES)[number]["id"];
+
+function secaoEstaDesabilitada(secao: (typeof SECOES)[number]): boolean {
+  return (
+    secao.feature != null && isFeatureTemporarilyDisabled(secao.feature)
+  );
+}
+
+function primeiraSecaoAtiva(): SecaoId {
+  return SECOES.find((s) => !secaoEstaDesabilitada(s))?.id ?? "ia";
+}
 
 export default function Configuracoes() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
-  const [active, setActive] = useState<(typeof SECOES)[number]["id"]>(
-    "aparencia",
-  );
+  const [active, setActive] = useState<SecaoId>(primeiraSecaoAtiva);
 
   return (
     <Page title={`Configurações · ${product.name}`}>
@@ -83,22 +118,36 @@ export default function Configuracoes() {
           <nav className="lg:w-56 lg:shrink-0">
             <ul className="dark:border-dark-600 dark:bg-dark-700 flex gap-1.5 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5 lg:flex-col lg:gap-1">
               {SECOES.map((s) => {
-                const isActive = active === s.id;
+                const disabled = secaoEstaDesabilitada(s);
+                const isActive = !disabled && active === s.id;
                 return (
                   <li key={s.id} className="shrink-0 lg:shrink">
-                    <button
-                      type="button"
-                      onClick={() => setActive(s.id)}
-                      className={clsx(
-                        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-primary-600 text-white dark:bg-primary-500"
-                          : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
-                      )}
-                    >
-                      <s.icon className="size-4.5 shrink-0" />
-                      {s.titulo}
-                    </button>
+                    {disabled ? (
+                      <div
+                        aria-disabled="true"
+                        className={clsx(
+                          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 dark:text-dark-200",
+                          DISABLED_MENU_CLASS,
+                        )}
+                      >
+                        <s.icon className="size-4.5 shrink-0" />
+                        {s.titulo}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setActive(s.id)}
+                        className={clsx(
+                          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-primary-600 text-white dark:bg-primary-500"
+                            : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
+                        )}
+                      >
+                        <s.icon className="size-4.5 shrink-0" />
+                        {s.titulo}
+                      </button>
+                    )}
                   </li>
                 );
               })}

@@ -99,20 +99,20 @@ const behumanHome = (base: string): NavigationTree => ({
       icon: "ceo.memoria",
       childs: [
         {
-          id: `${base}.upload-audio`,
-          type: "item",
-          path: `/${base}/ia?fn=audio`,
-          title: "Upload Áudio",
-          transKey: k("uploadAudio"),
-          icon: "ceo.upload-audio",
-        },
-        {
           id: `${base}.upload-documento`,
           type: "item",
           path: `/${base}/ia?fn=documento`,
           title: "Upload Documento",
           transKey: k("uploadDocument"),
           icon: "ceo.upload-documento",
+        },
+        {
+          id: `${base}.upload-audio`,
+          type: "item",
+          path: `/${base}/ia?fn=audio`,
+          title: "Upload Áudio",
+          transKey: k("uploadAudio"),
+          icon: "ceo.upload-audio",
         },
         {
           id: `${base}.upload-transcricao`,

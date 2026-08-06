@@ -34,6 +34,10 @@ import { useThemeContext } from "@/app/contexts/theme/context";
 import { NotificationType } from "@/@types/common";
 import AlarmIcon from "@/assets/dualicons/alarm.svg?react";
 import GirlEmptyBox from "@/assets/illustrations/girl-empty-box.svg?react";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -137,6 +141,22 @@ export function Notifications() {
   const [notifications, setNotifications] =
     useState<Notification[]>(fakeNotifications);
   const [activeTab, setActiveTab] = useState<number>(0);
+
+  if (isFeatureTemporarilyDisabled("notifications")) {
+    return (
+      <span
+        aria-disabled="true"
+        aria-label="Notifications"
+        title="Notifications"
+        className={clsx(
+          "relative flex size-9 items-center justify-center rounded-full outline-hidden",
+          DISABLED_MENU_CLASS,
+        )}
+      >
+        <AlarmIcon className="size-6 text-gray-900 dark:text-dark-100" />
+      </span>
+    );
+  }
 
   const filteredNotifications = notifications.filter(
     (notification) => notification.type === typesKey[activeTab - 1],

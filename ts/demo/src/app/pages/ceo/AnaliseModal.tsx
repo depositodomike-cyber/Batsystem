@@ -37,7 +37,7 @@ import { PASTA_MEMORIA } from "./memoria-pastas";
 // ----------------------------------------------------------------------
 
 const FONTES: [string, string][] = [
-  ["memoria", "Memória"],
+  ["memoria", "Contexto"],
   ["notas", "Notas"],
   ["insights", "Insights"],
   ["todos", "To-do's"],

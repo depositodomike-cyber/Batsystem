@@ -159,9 +159,9 @@ function CreateProjectForm({
       memoryIds,
     });
 
-    // Todo grupo tem uma pasta própria na Memória: é ali que suas conversas e
+    // Todo grupo tem uma pasta própria no Contexto: é ali que suas conversas e
     // documentos viram .md. Criamos aqui, ainda dentro do gesto do clique — é o
-    // que permite pedir a permissão de escrita na Pasta da Memória.
+    // que permite pedir a permissão de escrita na Pasta do Contexto.
     if (memoriaVaultSupported()) {
       criarPastaDoGrupo({
         titulo: nome,
@@ -174,7 +174,7 @@ function CreateProjectForm({
       }).then((r) => {
         if (r.ok) {
           toast("Grupo criado", {
-            description: `Pasta “${r.pasta}” criada na Memória.`,
+            description: `Pasta “${r.pasta}” criada no Contexto.`,
           });
         } else {
           avisarFalhaMemoria(r.reason);
@@ -376,7 +376,7 @@ function CreateProjectForm({
         </Section>
 
         <Section
-          title="Memória"
+          title="Contexto"
           description="Itens da memória executiva que devem alimentar este grupo. Selecione um a um."
         >
           {memoryMock.length === 0 ? (

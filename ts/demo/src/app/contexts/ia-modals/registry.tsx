@@ -55,7 +55,7 @@ export const IA_MODALS: IaModalEntry[] = [
   { ...fn("video"), Component: VideoModal },
   { ...fn("melhorar"), Component: MelhorarModal },
   { ...fn("dashboard"), Component: DashboardModal },
-  // Modais de upload — acessíveis pelos subitens da Memória na sidebar.
+  // Modais de upload — acessíveis pelos subitens do Contexto na sidebar.
   { ...fn("transcricao"), Component: TranscricaoModal },
   { ...fn("documento"), Component: DocumentoModal },
   { ...fn("audio"), Component: AudioModal },

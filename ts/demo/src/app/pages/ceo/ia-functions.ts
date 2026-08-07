@@ -34,7 +34,7 @@ export interface AiFunction {
 /**
  * Quando true, as funções do AI Studio ficam visíveis mas não clicáveis
  * (padrão: `cursor-not-allowed opacity-40` + `disabled`).
- * Uploads da Memória (áudio/transcrição) têm flags próprias em
+ * Uploads do Contexto (áudio/transcrição) têm flags próprias em
  * `temporarilyDisabledFeatures.ts` — não remova as funções.
  */
 export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
@@ -55,7 +55,7 @@ export const FUNCTIONS: AiFunction[] = [
 ];
 
 // Ações de upload — não aparecem na grade do AI Studio (são abertas pelos
-// subitens da Memória na sidebar), mas produzem conteúdo como as demais e por
+// subitens do Contexto na sidebar), mas produzem conteúdo como as demais e por
 // isso entram no registro de janelas e no envio para grupos.
 export const UPLOAD_FUNCTIONS: AiFunction[] = [
   { id: "documento", label: "Upload Documento", desc: "Documento bruto → documento de referência.", Icon: DocumentTextIcon, tint: "text-sky-500" },
@@ -69,6 +69,11 @@ export const ALL_AI_FUNCTIONS: AiFunction[] = [...FUNCTIONS, ...UPLOAD_FUNCTIONS
 /** Indica se o id é uma função da grade do AI Studio (não upload). */
 export function isAiStudioFunction(id: string): boolean {
   return FUNCTIONS.some((f) => f.id === id);
+}
+
+/** Indica se o id é uma ação de upload do Contexto (aberta pela sidebar). */
+export function isUploadFunction(id: string | null): boolean {
+  return id !== null && UPLOAD_FUNCTIONS.some((f) => f.id === id);
 }
 
 /** Rótulo de uma ação do AI Studio pelo id (ex.: "artigo" → "Criar artigo"). */

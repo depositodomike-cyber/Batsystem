@@ -34,7 +34,7 @@ import { nomesDeParticipantes } from "@/utils/memoriaVault";
 // ----------------------------------------------------------------------
 // Criar Ata — portado do beculture/Confi. Sobe um arquivo (ou cola a
 // transcrição) → a IA redige uma ata executiva editável. Opção "Memória"
-// formata com frontmatter + [[wikilinks]] às diretrizes existentes.
+// formata com frontmatter + [[wikilinks]] às regras existentes.
 // ----------------------------------------------------------------------
 
 const ACCEPT = ".txt,.md,.markdown,.pdf,.docx,.csv,.json,.log";
@@ -286,7 +286,7 @@ export function AtaModal({ isOpen, close, onMinimize }: Props) {
 
                     <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
                       <Checkbox checked={memoria} onChange={(e) => setMemoria(e.target.checked)} className="size-4" />
-                      Formatar para a Memória <span className="text-gray-400">(frontmatter + [[relacionamentos]])</span>
+                      Formatar para o Contexto <span className="text-gray-400">(frontmatter + [[relacionamentos]])</span>
                     </label>
 
                     {erro && (

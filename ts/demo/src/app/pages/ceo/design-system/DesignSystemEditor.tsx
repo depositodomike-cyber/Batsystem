@@ -36,7 +36,7 @@ import {
 // ----------------------------------------------------------------------
 // Editor completo do design system — portado do beculture/Confi
 // (public/design-system.js). Todas as seções de uma marca (identidade, cores,
-// tipografia, espaçamento, componentes, elementos visuais, tokens/diretrizes e
+// tipografia, espaçamento, componentes, elementos visuais, tokens/regras e
 // logos), já pré-preenchidas com sugestões, com preview ao vivo, escala
 // tipográfica calculada e checagem de contraste WCAG.
 // ----------------------------------------------------------------------
@@ -507,7 +507,7 @@ export function DesignSystemEditor({ brandId, isOpen, close }: Props) {
                       </Campo>
                     </Secao>
 
-                    <Secao titulo="Tokens e diretrizes">
+                    <Secao titulo="Tokens e regras">
                       <Campo label="Modo">
                         <select className={inputCls} value={ds.tokens.modo} onChange={(e) => set("tokens", { modo: e.target.value })}>
                           {MODOS.map((m) => (

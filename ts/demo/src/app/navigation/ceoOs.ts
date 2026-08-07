@@ -94,7 +94,7 @@ const behumanHome = (base: string): NavigationTree => ({
       id: `${base}.memoria-grafo`,
       type: "collapse",
       path: `/${base}/memoria-grafo`,
-      title: "Memória",
+      title: "Contexto",
       transKey: k("memory"),
       icon: "ceo.memoria",
       childs: [
@@ -492,7 +492,7 @@ export const systemAreas: SystemArea[] = [
   { slug: "comunidades", title: "Comunidades", transKey: k("communities"), icon: "ceo.comunidades" },
   { slug: "organograma", title: "Organograma", transKey: k("orgChart"), icon: "ceo.organograma" },
   { slug: "pesquisas", title: "Pesquisas", transKey: k("surveys"), icon: "ceo.pesquisas" },
-  { slug: "memoria", title: "Diretrizes", transKey: k("guidelines"), icon: "ceo.memoria" },
+  { slug: "memoria", title: "Regras", transKey: k("guidelines"), icon: "ceo.memoria" },
   { slug: "conectores", title: "Conectores", transKey: k("connectors"), icon: "ceo.conectores" },
   { slug: "agentes", title: "Agentes", transKey: k("agents"), icon: "ceo.agentes" },
   { slug: "chat", title: "Chat", transKey: k("chat"), icon: "ceo.chat" },

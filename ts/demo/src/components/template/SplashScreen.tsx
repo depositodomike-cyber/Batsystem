@@ -8,6 +8,12 @@ import { useEffect, useRef, useState } from "react";
 // refresh/novas visitas não exibem de novo até um próximo logout + login.
 export const SPLASH_AFTER_LOGIN_KEY = "splashAfterLogin";
 
+// Tempo mínimo que a animação fica em cena, para o logotipo se formar mesmo
+// quando a sessão inicializa na hora. Enquanto ela roda o Root não monta o
+// resto da árvore — inclusive o <Toaster/> —, então quem precisa avisar algo
+// logo após o login tem de esperar este tempo.
+export const SPLASH_MIN_DURATION = 4000;
+
 // Animação oficial da marca beculture (partículas de pessoas que convergem no
 // logotipo "beculture"). Servida de /public/videos.
 const LOADER_SRC = "/videos/beculture-loader.mp4";

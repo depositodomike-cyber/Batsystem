@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Hooks que mantêm a pasta da Memória do grupo em dia (ver memoria-grupos.ts).
+// Hooks que mantêm a pasta do Contexto do grupo em dia (ver memoria-grupos.ts).
 //
 // Existem dois momentos em que uma conversa passa a pertencer a um grupo:
 // nasce dentro dele (ChatDetail grava a cada resposta) ou é movida para ele

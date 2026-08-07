@@ -51,7 +51,7 @@ const FEATURES: Feature[] = [
   { slug: "conectores", label: "Conectores", Icon: LinkIcon, tint: "text-indigo-500" },
   { slug: "documentos", label: "Documentos", Icon: DocumentTextIcon, tint: "text-orange-500" },
   { slug: "organograma", label: "Organograma", Icon: ShareIcon, tint: "text-indigo-500" },
-  { slug: "memoria", label: "Diretrizes", Icon: BookOpenIcon, tint: "text-rose-500" },
+  { slug: "memoria", label: "Regras", Icon: BookOpenIcon, tint: "text-rose-500" },
   { slug: "tour", label: "Tour", Icon: MapIcon, tint: "text-emerald-500" },
 ];
 

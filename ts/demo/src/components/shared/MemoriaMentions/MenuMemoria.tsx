@@ -56,14 +56,14 @@ export function MenuMemoria({
       onMouseDown={(e) => e.preventDefault()}
     >
       <p className="dark:border-dark-500 dark:text-dark-300 border-b border-gray-100 px-3 py-1.5 text-tiny text-gray-400">
-        Conectar à Memória {termo ? `· “${termo}”` : ""}
+        Conectar ao Contexto {termo ? `· “${termo}”` : ""}
       </p>
 
       {itens.length === 0 ? (
         <p className="dark:text-dark-300 px-3 py-3 text-xs-plus text-gray-500">
           {termo
             ? "Nenhuma nota com esse nome. ↵ cria o link mesmo assim."
-            : "Nenhuma nota na Memória ainda."}
+            : "Nenhuma nota no Contexto ainda."}
         </p>
       ) : (
         <ul ref={listaRef} className="max-h-64 overflow-y-auto py-1">
@@ -101,7 +101,7 @@ export function MenuMemoria({
                       : "dark:bg-dark-600 dark:text-dark-200 bg-gray-100 text-gray-500",
                   )}
                 >
-                  {item.tipo === "nota" ? "nota" : "diretriz"}
+                  {item.tipo === "nota" ? "nota" : "regra"}
                 </span>
               </button>
             </li>

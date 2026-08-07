@@ -7,18 +7,18 @@ import { listarPastasMemoria } from "@/utils/memoriaVault";
 import { PASTA_MEMORIA } from "./memoria-pastas";
 
 // ----------------------------------------------------------------------
-// Temas da Memória = pastas da Memória.
+// Temas do Contexto = pastas do Contexto.
 //
-// Regra única da aplicação: em QUALQUER opção de gravar na Memória (Diretrizes,
+// Regra única da aplicação: em QUALQUER opção de gravar no Contexto (Regras,
 // Notas, E-mail, Slack, IA Studio…) a lista de temas oferecida é a das pastas
-// disponíveis na Pasta da Memória — nunca uma lista paralela (squads, temas
+// disponíveis na Pasta do Contexto — nunca uma lista paralela (squads, temas
 // fixos…). Este hook é a fonte dessa lista.
 //
 // Fallback: quando a pasta ainda não foi escolhida, o navegador não suporta a
 // File System Access API, a permissão não está concedida ou o vault está vazio,
 // usamos os nomes canônicos de PASTA_MEMORIA — são exatamente as pastas que a
 // aplicação cria na primeira gravação, então o tema escolhido continua sendo
-// uma pasta válida da Memória e o seletor nunca fica vazio.
+// uma pasta válida do Contexto e o seletor nunca fica vazio.
 // ----------------------------------------------------------------------
 
 const PASTAS_PADRAO = Object.values(PASTA_MEMORIA) as string[];

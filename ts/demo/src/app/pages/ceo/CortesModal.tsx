@@ -213,7 +213,7 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
   };
 
   // O MP4 já está no navegador (blob: URL do ffmpeg.wasm) — o fetch só o
-  // recupera para gravar o arquivo na pasta da Memória.
+  // recupera para gravar o arquivo na pasta do Contexto.
   const prepararMemoria = async () => {
     const dados = await (await fetch(resultUrl)).blob();
     const segs = trechos.length ? trechos : [{ inicio: 0, fim: duration }];

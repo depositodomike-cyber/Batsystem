@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------
-// Campos com conexão à Memória — troque `<textarea>` por `<MemoriaTextarea>`
+// Campos com conexão ao Contexto — troque `<textarea>` por `<MemoriaTextarea>`
 // (ou `<input>` por `<MemoriaInput>`) e o campo passa a abrir a lista de notas
-// e diretrizes quando a pessoa digita "[[".
+// e regras quando a pessoa digita "[[".
 //
 // São drop-in: recebem exatamente as mesmas props do elemento nativo, inclusive
 // `value`/`onChange` controlados. A inserção do wikilink usa o setter nativo do

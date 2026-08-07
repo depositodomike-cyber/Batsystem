@@ -1,7 +1,7 @@
 import axios from "@/utils/axios";
 
 // Upload Documento (IA) — chama o backend ts/api (POST /ai/documento,
-// multipart). Organiza um documento e o SALVA na Memória (Documentos).
+// multipart). Organiza um documento e o SALVA no Contexto (Documentos).
 // Portado do beculture/Confi.
 
 export interface DocumentoResult {

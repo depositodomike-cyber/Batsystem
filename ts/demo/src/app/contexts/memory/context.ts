@@ -2,8 +2,8 @@ import { createSafeContext } from "@/utils/createSafeContext";
 import type { MemoryItem } from "@/app/data/memoria";
 
 /**
- * Campos editáveis ao criar uma nova diretriz. `category` é opcional: a tela de
- * Diretrizes não pede tema, e a API grava o tema padrão quando ele não vem.
+ * Campos editáveis ao criar uma nova regra. `category` é opcional: a tela de
+ * Regras não pede tema, e a API grava o tema padrão quando ele não vem.
  */
 export type NewMemoryInput = Pick<MemoryItem, "title" | "content"> &
   Partial<Pick<MemoryItem, "category" | "source" | "confidence">> & {

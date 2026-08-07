@@ -19,6 +19,8 @@ import { SquadsGroup } from "./SquadsGroup";
 import { AgrupamentosGroup } from "./AgrupamentosGroup";
 import { HistoricoGroup } from "./HistoricoGroup";
 import { CreateProjectModal } from "./CreateProjectModal";
+import { ContextSection } from "./ContextSection";
+import { UploadSection } from "./UploadSection";
 
 // Produtos que exibem os grupos "Agrupamentos" e "Histórico" na sidebar.
 const PRODUCTS_WITH_GROUPINGS = ["behuman"];
@@ -34,6 +36,11 @@ export function Menu() {
   const productCode = getProductCodeFromPath(pathname);
   const showGroupings = PRODUCTS_WITH_GROUPINGS.includes(productCode);
   const showSquads = productCode === SQUADS_PRODUCT_CODE;
+  const contextNav = navigation
+    .flatMap((group) => group.childs ?? [])
+    .find((item) => item.id.endsWith(".memoria-grafo"));
+  const uploadItems = contextNav?.childs ?? [];
+  const showContextSections = productCode === "behuman" && !!contextNav;
 
   const activeGroup = navigation.find((item) => {
     if (item.path) return isRouteActive(item.path, pathname);
@@ -63,9 +70,11 @@ export function Menu() {
       className="min-h-0 flex-1 overflow-x-hidden pb-6"
     >
       <Accordion value={expanded} onChange={setExpanded} className="space-y-1">
+        {showContextSections && <ContextSection product={productCode} />}
         {navigation.map((nav) => (
           <Group key={nav.id} data={nav} />
         ))}
+        {showContextSections && <UploadSection items={uploadItems} />}
         {showSquads && <AiStudioGroup product={productCode} />}
         {showSquads && <SquadsGroup />}
         {showGroupings && <AgrupamentosGroup product={productCode} />}

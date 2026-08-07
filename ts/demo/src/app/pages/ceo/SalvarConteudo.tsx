@@ -20,7 +20,7 @@ import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 
 // ----------------------------------------------------------------------
 // Os dois destinos de qualquer conteúdo trazido por um conector (E-mail,
-// Slack…): a Memória da IA e um Grupo. Os modais moram aqui porque as páginas
+// Slack…): o Contexto da IA e um Grupo. Os modais moram aqui porque as páginas
 // dos conectores só diferem no que colocam dentro de `ConteudoParaSalvar` —
 // ver pages/ceo/Email.tsx e pages/ceo/Slack.tsx.
 // ----------------------------------------------------------------------
@@ -43,14 +43,14 @@ export interface GrupoOpcao {
   jaTem: boolean;
 }
 
-/** Tema = pasta da Memória. Monte a lista com `usePastasMemoria`. */
+/** Tema = pasta do Contexto. Monte a lista com `usePastasMemoria`. */
 interface TemaOpcao {
   id: string;
   label: string;
 }
 
 // ----------------------------------------------------------------------
-// "Salvar na Memória" — deixa escolher o tema (uma das pastas disponíveis na
+// "Salvar no Contexto" — deixa escolher o tema (uma das pastas disponíveis na
 // Memória) e revisar título/conteúdo antes de gravar. A revisão importa:
 // conteúdo de conector vem com assinatura, citação e ruído que não deveriam
 // entrar na memória da IA.
@@ -103,8 +103,8 @@ export function SalvarNaMemoriaModal({
       show={!!item}
       close={close}
       icon={CpuChipIcon}
-      title="Salvar na Memória"
-      description="O conteúdo vira uma memória da IA e passa a aparecer no grafo."
+      title="Salvar no Contexto"
+      description="O conteúdo vira um contexto da IA e passa a aparecer no grafo."
       footer={
         <>
           <Button variant="outlined" className="rounded-lg" onClick={close}>
@@ -117,7 +117,7 @@ export function SalvarNaMemoriaModal({
             disabled={salvando || !podeSalvar}
           >
             {salvando && <Spinner className="size-4" />}
-            {salvando ? "Gravando…" : "Gravar na Memória"}
+            {salvando ? "Gravando…" : "Gravar no Contexto"}
           </Button>
         </>
       }
@@ -131,7 +131,7 @@ export function SalvarNaMemoriaModal({
           value={tema}
           onChange={(e) => setTema(e.target.value)}
           data={temas.map((t) => ({ label: t.label, value: t.id }))}
-          description="Os temas são as pastas disponíveis na Memória."
+          description="Os temas são as pastas disponíveis no Contexto."
         />
         <Input
           label="Título"
@@ -146,7 +146,7 @@ export function SalvarNaMemoriaModal({
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
             setConteudo(e.target.value)
           }
-          description="Edite antes de gravar — “[[” conecta o trecho a uma nota da Memória."
+          description="Edite antes de gravar — “[[” conecta o trecho a uma nota do Contexto."
         />
       </div>
     </ModalShell>

@@ -162,7 +162,7 @@ export function EnviarParaGrupoButton({
       memoryIds: [],
     });
     setNovoGrupo("");
-    // Grupo novo, pasta nova na Memória — antes de gravar o documento nela.
+    // Grupo novo, pasta nova no Contexto — antes de gravar o documento nela.
     if (memoriaVaultSupported()) {
       const r = await criarPastaDoGrupo({ titulo: projeto.title });
       if (!r.ok) avisarFalhaMemoria(r.reason);

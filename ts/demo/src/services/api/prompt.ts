@@ -1,11 +1,11 @@
 import axios from "@/utils/axios";
 
-// Prompt "Pergunte à sua Memória" — chama o backend ts/api (POST /ai/prompt),
+// Prompt "Pergunte ao seu Contexto" — chama o backend ts/api (POST /ai/prompt),
 // portado do beculture/Confi. Três modos: Memória (vault), Web e Auto.
 
 export type ModoBusca = "vault" | "web" | "auto";
 
-/** Fonte da resposta: título de item da Memória, ou página web citada. */
+/** Fonte da resposta: título de item do Contexto, ou página web citada. */
 export type Fonte = string | { titulo: string; url: string };
 
 export interface HistoricoTurno {
@@ -59,7 +59,7 @@ export function fonteLabel(f: Fonte): string {
   return typeof f === "string" ? f : f.titulo || f.url;
 }
 
-/** URL de uma fonte web (null para fontes da Memória). */
+/** URL de uma fonte web (null para fontes do Contexto). */
 export function fonteUrl(f: Fonte): string | null {
   return typeof f === "string" ? null : f.url || null;
 }

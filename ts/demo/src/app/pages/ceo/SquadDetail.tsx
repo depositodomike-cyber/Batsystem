@@ -234,7 +234,7 @@ export default function SquadDetail() {
   const handleSaveAsDocument = (msg: ChatMessage) => {
     if (msg.role !== "assistant" || msg.documentId) return;
     // Quando a conversa pertence a um grupo, o documento pertence ao grupo — e
-    // por isso também vira .md na pasta do grupo na Memória.
+    // por isso também vira .md na pasta do grupo no Contexto.
     const chat = chatId ? getChat(chatId) : undefined;
     const grupo = chat?.projectId ? getProject(chat.projectId) : undefined;
     const title =

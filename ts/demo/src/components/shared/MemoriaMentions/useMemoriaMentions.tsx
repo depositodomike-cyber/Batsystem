@@ -1,8 +1,8 @@
 // ----------------------------------------------------------------------
-// Gatilho "[[" — conectar o que está sendo escrito à Memória.
+// Gatilho "[[" — conectar o que está sendo escrito ao Contexto.
 //
 // Regra do produto: em todo conteúdo editável (AI Studio, E-mail, Slack,
-// respostas de squad e prompts), digitar "[[" abre a lista de alvos da Memória
+// respostas de squad e prompts), digitar "[[" abre a lista de alvos do Contexto
 // e a escolha insere um [[wikilink]] — o mesmo formato que o grafo já lê para
 // desenhar as arestas (ver memoria-grupos.ts e conexoes-vault.ts no backend).
 //
@@ -89,14 +89,14 @@ export function useMemoriaMentions<T extends Campo = Campo>(
 
   const aberto = !desabilitado && gatilho !== null && pos !== null;
 
-  // Diretrizes ativas (store /memorias) — já estão em memória no contexto.
+  // Regras ativas (store /memorias) — já estão em memória no contexto.
   const diretrizes = useMemo<AlvoMemoria[]>(
     () =>
       memories
         .filter((m) => m.active !== false)
         .map((m) => ({
           titulo: m.title,
-          detalhe: m.category || "Diretriz",
+          detalhe: m.category || "Regra",
           tipo: "diretriz" as const,
         })),
     [memories],

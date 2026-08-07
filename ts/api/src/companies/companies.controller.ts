@@ -12,6 +12,7 @@ import { Throttle } from '@nestjs/throttler';
 import { CompaniesService } from './companies.service';
 import { CadastroDto } from './dto/cadastro.dto';
 import { ConvidarDto } from './dto/convidar.dto';
+import { RegistrarDto } from './dto/registrar.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { Roles, RolesGuard } from '@/common/roles.guard';
@@ -27,6 +28,16 @@ export class CompaniesController {
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   cadastrar(@Body() dto: CadastroDto) {
     return this.companies.cadastrar(dto);
+  }
+
+  /**
+   * POST /registrar → cadastro mínimo (nome, e-mail, senha, workspace).
+   * Público. Mesmo resultado do /cadastro, sem cobrança/documento.
+   */
+  @Post('registrar')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  registrar(@Body() dto: RegistrarDto) {
+    return this.companies.registrar(dto);
   }
 
   /** GET /cadastro/email-disponivel?email= → { disponivel }. Público. */

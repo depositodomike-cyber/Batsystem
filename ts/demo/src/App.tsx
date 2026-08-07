@@ -17,6 +17,7 @@ import { MemoryProvider } from "@/app/contexts/memory/Provider";
 import { IaModalsHostProvider } from "@/app/contexts/ia-modals/Provider";
 import { SidebarProvider } from "@/app/contexts/sidebar/Provider";
 import { ThemeProvider } from "@/app/contexts/theme/Provider";
+import { PrototipoContasProvider } from "@/app/pages/prototypes/contas/model/Provider";
 import router from "./app/router/router";
 
 // ----------------------------------------------------------------------
@@ -29,25 +30,27 @@ function App() {
           <BreakpointProvider>
             <SidebarProvider>
               <CompaniesProvider>
-                <ProjectsProvider>
-                  <SquadsProvider>
-                    <ChatsProvider>
-                      <DocumentsProvider>
-                        <LikesProvider>
-                          <CommentsProvider>
-                            <ConnectorsProvider>
-                              <MemoryProvider>
-                                <IaModalsHostProvider>
-                                  <RouterProvider router={router} />
-                                </IaModalsHostProvider>
-                              </MemoryProvider>
-                            </ConnectorsProvider>
-                          </CommentsProvider>
-                        </LikesProvider>
-                      </DocumentsProvider>
-                    </ChatsProvider>
-                  </SquadsProvider>
-                </ProjectsProvider>
+                <PrototipoContasProvider>
+                  <ProjectsProvider>
+                    <SquadsProvider>
+                      <ChatsProvider>
+                        <DocumentsProvider>
+                          <LikesProvider>
+                            <CommentsProvider>
+                              <ConnectorsProvider>
+                                <MemoryProvider>
+                                  <IaModalsHostProvider>
+                                    <RouterProvider router={router} />
+                                  </IaModalsHostProvider>
+                                </MemoryProvider>
+                              </ConnectorsProvider>
+                            </CommentsProvider>
+                          </LikesProvider>
+                        </DocumentsProvider>
+                      </ChatsProvider>
+                    </SquadsProvider>
+                  </ProjectsProvider>
+                </PrototipoContasProvider>
               </CompaniesProvider>
             </SidebarProvider>
           </BreakpointProvider>

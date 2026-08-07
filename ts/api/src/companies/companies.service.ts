@@ -6,6 +6,7 @@ import { BillingService } from '@/billing/billing.service';
 import { AuthService } from '@/auth/auth.service';
 import { TRIAL_DIAS } from '@/billing/pricing';
 import { CadastroDto } from './dto/cadastro.dto';
+import { RegistrarDto } from './dto/registrar.dto';
 
 /** Usuário no formato do front (ts/demo .../companies/context.ts), sem senha. */
 export type UsuarioPublico = Omit<Usuario, 'senhaHash'>;
@@ -98,6 +99,35 @@ export class CompaniesService {
       assinatura,
       authToken: this.auth.signToken(usuario),
     };
+  }
+
+  /**
+   * Cadastro mínimo: empresa PF + owner + trial do plano básico.
+   * Usado pelo fluxo novo de contas (sem precificador/documento).
+   */
+  async registrar(dto: RegistrarDto): Promise<CadastroResult> {
+    const workspace =
+      dto.workspaceNome?.trim() || dto.nome.trim() || 'Meu workspace';
+
+    return this.cadastrar({
+      tipoPessoa: 'pf',
+      // Placeholder: cobrança real ainda não entra neste fluxo.
+      documento: '000.000.000-00',
+      razaoSocial: workspace,
+      nomeFantasia: workspace,
+      plano: 'basico',
+      ciclo: 'mensal',
+      modulos: ['ia_pessoal'],
+      configuracoes: [{ modulo: 'ia_pessoal', plano: 'basico', quantidade: 1 }],
+      usuarios: 1,
+      posicoes: 0,
+      responsavel: {
+        nome: dto.nome.trim(),
+        email: dto.email.trim().toLowerCase(),
+        telefone: '',
+        senha: dto.senha,
+      },
+    });
   }
 
   async emailJaCadastrado(email: string): Promise<boolean> {

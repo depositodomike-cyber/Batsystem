@@ -262,6 +262,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.divulgacao": HiWindowIcon,
   "ceo.campanhas": HiMegaphoneIcon,
   "ceo.memoria": CircleStackIcon,
+  "ceo.grafo": ShareIcon,
   "ceo.conectores": LinkIcon,
   "ceo.agentes": CpuChipIcon,
   "ceo.config": Cog6ToothIcon,
@@ -284,7 +285,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.agenda": CalendarDaysIcon,
   "ceo.notas": PencilSquareIcon,
   "ceo.todo": CheckDoubleIcon,
-  // Uploads da Memória (subitens que abrem o modal correspondente na tela de IA)
+  // Uploads do Contexto (subitens que abrem o modal correspondente na tela de IA)
   "ceo.upload-audio": MicrophoneIcon,
   "ceo.upload-documento": DocumentArrowUpIcon,
   "ceo.upload-transcricao": ArrowUpTrayIcon,

@@ -332,12 +332,12 @@ export default function MemoriaGrafo() {
         setSync({ state: "syncing", done, total }),
       );
       setSync({ state: "done", done: r.total, total: r.total });
-      toast.success("Memória sincronizada", {
+      toast.success("Contexto sincronizado", {
         description: `${r.total} notas disponíveis para a IA.`,
       });
     } catch {
       setSync({ state: "error", done: 0, total: 0 });
-      toast.error("Falha ao sincronizar a Memória com a IA.", {
+      toast.error("Falha ao sincronizar o Contexto com a IA.", {
         description: "O grafo foi montado, mas as notas não chegaram ao servidor.",
       });
     }
@@ -354,7 +354,7 @@ export default function MemoriaGrafo() {
         if (files.length === 0) {
           toast("Nenhuma nota .md encontrada", { description: `A pasta “${handle.name}” não tem arquivos .md.` });
         } else {
-          toast("Memória carregada", { description: `${notas} notas · ${g.links.length} conexões` });
+          toast("Contexto carregado", { description: `${notas} notas · ${g.links.length} conexões` });
           void syncToBackend(files);
           // Só pergunta quando o carregamento veio de um upload do usuário.
           if (opts?.fromUpload) {
@@ -375,7 +375,7 @@ export default function MemoriaGrafo() {
     const picker = (window as unknown as { showDirectoryPicker?: () => Promise<FSDirHandle> }).showDirectoryPicker;
     if (!picker) {
       toast("Navegador sem suporte", {
-        description: "Use o Chrome ou Edge para selecionar a pasta da Memória.",
+        description: "Use o Chrome ou Edge para selecionar a pasta do Contexto.",
       });
       return;
     }
@@ -932,7 +932,7 @@ export default function MemoriaGrafo() {
   }, [graph, isDark]);
 
   return (
-    <Page title={`Memória · ${product.name}`}>
+    <Page title={`Contexto · ${product.name}`}>
       {/* Grafo solto na página, em tela cheia (abaixo do header de 65px) */}
       <div
         ref={wrapRef}
@@ -1005,7 +1005,7 @@ export default function MemoriaGrafo() {
                   <FolderIcon className="size-7 stroke-[1.5]" />
                 </span>
                 <p className="text-sm text-gray-500 dark:text-slate-300">
-                  Escolha a pasta onde ficam as notas <span className="font-mono">.md</span> da sua Memória. O grafo é montado a partir dos <span className="font-mono">[[wikilinks]]</span>, tags e pastas.
+                  Escolha a pasta onde ficam as notas <span className="font-mono">.md</span> do seu Contexto. O grafo é montado a partir dos <span className="font-mono">[[wikilinks]]</span>, tags e pastas.
                 </p>
                 <Button onClick={pickFolder} color="primary" className="gap-2">
                   <FolderIcon className="size-5" />
@@ -1044,7 +1044,7 @@ export default function MemoriaGrafo() {
         }}
       />
 
-      {/* Pergunta pós-upload: gerar atividades ou insights a partir da Memória. */}
+      {/* Pergunta pós-upload: gerar atividades ou insights a partir do Contexto. */}
       <SugerirPosUploadModal
         isOpen={sugerirOpen}
         close={() => setSugerirOpen(false)}

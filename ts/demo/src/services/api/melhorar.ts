@@ -9,7 +9,7 @@ export interface Melhorado {
   resumo: string;
   /**
    * Bloco "## 🔗 Conexões no Vault" ([[wikilinks]] para outros assuntos da
-   * Memória). Fica fora do texto melhorado — é anexado só à nota da Memória,
+   * Memória). Fica fora do texto melhorado — é anexado só à nota do Contexto,
    * para não voltar ao textarea nem à área de transferência.
    */
   conexoes: string;

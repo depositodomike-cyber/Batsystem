@@ -1,6 +1,13 @@
 // Import Dependencies
-import { useEffect } from "react";
-import { useLocation, useSearchParams } from "react-router";
+import { Fragment, useEffect } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import {
+  Dialog,
+  DialogPanel,
+  DialogTitle,
+  Transition,
+  TransitionChild,
+} from "@headlessui/react";
 import { toast } from "sonner";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
@@ -9,6 +16,7 @@ import { useTranslation } from "react-i18next";
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
+import { Button } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useIaModals } from "@/app/contexts/ia-modals/context";
 import { IA_MODALS_BY_ID } from "@/app/contexts/ia-modals/registry";
@@ -17,6 +25,7 @@ import {
   AI_STUDIO_DISABLED,
   FUNCTIONS,
   isAiStudioFunction,
+  isUploadFunction,
 } from "./ia-functions";
 import { isMemoryUploadFnTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
@@ -69,6 +78,80 @@ function AiCard({
   );
 }
 
+/**
+ * Aviso de lançamento: a grade desabilitada fica atrás, e a única saída é o
+ * botão que leva ao Grafo. `onClose` é no-op de propósito — clique fora e Esc
+ * não fecham.
+ */
+function AiStudioComingSoonModal({
+  open,
+  grafoPath,
+}: {
+  open: boolean;
+  grafoPath: string;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  return (
+    <Transition appear show={open} as={Fragment}>
+      <Dialog
+        as="div"
+        open={open}
+        className="relative z-[80]"
+        onClose={() => {
+          /* modal bloqueante: só sai pelo botão do Grafo */
+        }}
+      >
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-200"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-150"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/40" />
+        </TransitionChild>
+
+        <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4 sm:p-6">
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
+          >
+            <DialogPanel className="dark:bg-dark-700 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+              <DialogTitle className="dark:text-dark-50 flex items-center gap-2.5 text-base font-semibold text-gray-800">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400">
+                  <SparklesIcon className="size-5 stroke-[1.5]" />
+                </span>
+                {t("ai.comingSoonTitle")}
+              </DialogTitle>
+              <p className="dark:text-dark-300 mt-3 text-sm text-gray-500">
+                {t("ai.comingSoonBody")}
+              </p>
+
+              <div className="mt-6 flex justify-end">
+                <Button
+                  color="primary"
+                  onClick={() => navigate(grafoPath)}
+                >
+                  {t("ai.comingSoonCta")}
+                </Button>
+              </div>
+            </DialogPanel>
+          </TransitionChild>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+}
+
 // ----------------------------------------------------------------------
 
 export default function Ia() {
@@ -76,7 +159,8 @@ export default function Ia() {
   const { pathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const product = getCurrentProduct(pathname);
-  const { open } = useIaModals();
+  const { open, states } = useIaModals();
+  const grafoPath = `/${product.code}/memoria-grafo`;
 
   const run = (fn: AiFunction) => {
     if (AI_STUDIO_DISABLED) return;
@@ -106,6 +190,13 @@ export default function Ia() {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fnParam]);
+
+  // Os uploads do Contexto reaproveitam esta rota (`?fn=documento`), então o
+  // aviso do AI Studio fica escondido enquanto houver janela de upload ativa.
+  const avisoVisivel =
+    AI_STUDIO_DISABLED &&
+    !isUploadFunction(fnParam) &&
+    Object.keys(states).length === 0;
 
   return (
     <Page title={`${t("ai.title")} · ${product.name}`}>
@@ -149,6 +240,8 @@ export default function Ia() {
           </div>
         </section>
       </div>
+
+      <AiStudioComingSoonModal open={avisoVisivel} grafoPath={grafoPath} />
     </Page>
   );
 }

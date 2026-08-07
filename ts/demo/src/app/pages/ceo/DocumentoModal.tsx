@@ -30,7 +30,7 @@ import { PASTA_MEMORIA } from "./memoria-pastas";
 
 // ----------------------------------------------------------------------
 // Upload Documento — portado do beculture/Confi. Cola/sobe um documento → a IA
-// organiza num documento de referência bem estruturado e o SALVA na Memória
+// organiza num documento de referência bem estruturado e o SALVA no Contexto
 // (Documentos).
 // ----------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ export function DocumentoModal({ isOpen, close, onMinimize }: Props) {
   const [titulo, setTitulo] = useState("");
   const [conteudo, setConteudo] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
-  // Pergunta pós-upload: só abre quando o documento foi de fato salvo na Memória.
+  // Pergunta pós-upload: só abre quando o documento foi de fato salvo no Contexto.
   const [sugerirOpen, setSugerirOpen] = useState(false);
 
   const fechar = () => {
@@ -78,8 +78,8 @@ export function DocumentoModal({ isOpen, close, onMinimize }: Props) {
       setTitulo(data.titulo);
       setConteudo(data.conteudo);
       setSalvo(data.salvo);
-      toast(data.salvo ? "Documento salvo na Memória" : "Documento gerado", {
-        description: data.salvo ? "Guardado em Documentos." : "Não foi possível salvar na Memória.",
+      toast(data.salvo ? "Documento salvo no Contexto" : "Documento gerado", {
+        description: data.salvo ? "Guardado em Documentos." : "Não foi possível salvar no Contexto.",
       });
       if (data.salvo) setSugerirOpen(true);
     } catch (err) {
@@ -159,7 +159,7 @@ export function DocumentoModal({ isOpen, close, onMinimize }: Props) {
                         <h3 className="dark:text-dark-50 truncate text-base font-semibold text-gray-800">{titulo}</h3>
                         {salvo && (
                           <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                            <CheckCircleIcon className="size-4" /> Salvo na Memória · Documentos
+                            <CheckCircleIcon className="size-4" /> Salvo no Contexto · Documentos
                           </p>
                         )}
                       </div>
@@ -200,7 +200,7 @@ export function DocumentoModal({ isOpen, close, onMinimize }: Props) {
                 ) : (
                   <form onSubmit={(e) => { e.preventDefault(); gerar(); }} className="flex flex-col gap-3">
                     <p className="dark:border-primary-500/20 dark:bg-primary-500/10 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs-plus text-gray-600 dark:text-dark-200">
-                      A IA formata o conteúdo num <b>documento de referência</b> bem estruturado e o <b>salva na Memória</b> (Documentos), com <span className="font-mono">[[relacionamentos]]</span> às diretrizes existentes.
+                      A IA formata o conteúdo num <b>documento de referência</b> bem estruturado e o <b>salva no Contexto</b> (Documentos), com <span className="font-mono">[[relacionamentos]]</span> às regras existentes.
                     </p>
 
                     <div>

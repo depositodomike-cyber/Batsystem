@@ -24,15 +24,15 @@ import { lerNotaMemoria, salvarNotaMemoria, type VaultFalha } from "@/utils/memo
 import { syncVaultBatch } from "@/services/api/vault";
 
 // ----------------------------------------------------------------------
-// Nota da Memória aberta a partir de um nó do grafo. Lê o .md direto da Pasta
-// da Memória (File System Access API), deixa editar e regrava o arquivo. Ao
+// Nota do Contexto aberta a partir de um nó do grafo. Lê o .md direto da Pasta
+// do Contexto (File System Access API), deixa editar e regrava o arquivo. Ao
 // salvar, a nota também é reenviada ao backend para a IA ver a versão nova.
 // ----------------------------------------------------------------------
 
 interface Props {
   isOpen: boolean;
   close: () => void;
-  /** Caminho relativo à Pasta da Memória — é o id do nó no grafo. */
+  /** Caminho relativo à Pasta do Contexto — é o id do nó no grafo. */
   path: string | null;
   /** Título do nó (frontmatter ou nome do arquivo), usado no cabeçalho. */
   titulo?: string;
@@ -41,10 +41,10 @@ interface Props {
 }
 
 const MOTIVO: Record<VaultFalha, string> = {
-  "no-folder": "Nenhuma pasta da Memória selecionada. Use “Sincronizar” para escolher a pasta.",
-  denied: "Permissão negada para acessar a pasta da Memória.",
-  unsupported: "Use o Chrome ou o Edge para abrir e editar as notas da Memória.",
-  "not-found": "Arquivo não encontrado na pasta. Sincronize a Memória e tente de novo.",
+  "no-folder": "Nenhuma pasta do Contexto selecionada. Use “Sincronizar” para escolher a pasta.",
+  denied: "Permissão negada para acessar a pasta do Contexto.",
+  unsupported: "Use o Chrome ou o Edge para abrir e editar as notas do Contexto.",
+  "not-found": "Arquivo não encontrado na pasta. Sincronize o Contexto e tente de novo.",
   error: "Não foi possível gravar o arquivo.",
 };
 

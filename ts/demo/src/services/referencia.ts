@@ -1,7 +1,7 @@
-// Coleta a "referência" do cliente para cruzar com a Memória no prompt
-// ("Pergunte à sua Memória"). São os dados que o usuário mantém localmente no
+// Coleta a "referência" do cliente para cruzar com o Contexto no prompt
+// ("Pergunte ao seu Contexto"). São os dados que o usuário mantém localmente no
 // navegador — Notas e To-do's — e que o backend (/ai/prompt) aceita no campo
-// `referencia`. Sem isto, a barra enviava só a Memória (Diretrizes) do backend
+// `referencia`. Sem isto, a barra enviava só o Contexto (Regras) do backend
 // e ignorava o que o usuário escreveu em Notas/To-do.
 //
 // Insights ficam de fora de propósito: hoje são dados estáticos de exemplo
@@ -69,7 +69,7 @@ function lerTarefas(): string[] {
 
 /**
  * Monta o bloco de referência (Notas + To-do) para enviar ao /ai/prompt.
- * Retorna "" quando não há nada — o backend então usa só a Memória.
+ * Retorna "" quando não há nada — o backend então usa só o Contexto.
  */
 export function coletarReferencia(): string {
   const partes: string[] = [];

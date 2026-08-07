@@ -43,7 +43,7 @@ import {
 //     consumo de tokens do usuário (GET /uso/tokens).
 //   • Memória — pasta de dados que alimenta o grafo/memória. No SaaS web isso é
 //     um diretório escolhido pelo navegador (File System Access API), persistido
-//     no MESMO IndexedDB usado pela tela Memória, então a escolha vale nas duas.
+//     no MESMO IndexedDB usado pela telo Contexto, então a escolha vale nas duas.
 // ----------------------------------------------------------------------
 
 const SECOES = [
@@ -67,7 +67,7 @@ const SECOES = [
   },
   {
     id: "memoria",
-    titulo: "Memória",
+    titulo: "Contexto",
     icon: CircleStackIcon,
     feature: "settingsMemory" as TemporarilyDisabledFeature,
   },
@@ -99,8 +99,8 @@ export default function Configuracoes() {
             help={{
               description: (
                 <>
-                  <p><strong>Configurações</strong> reúne as preferências do painel em quatro seções: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens) e <strong>Memória</strong> (a pasta de dados que alimenta o grafo da Memória).</p>
-                  <p>As preferências de aparência e voz ficam salvas só neste navegador, e a pasta da Memória é lida localmente — nenhum arquivo é enviado a servidores.</p>
+                  <p><strong>Configurações</strong> reúne as preferências do painel em quatro seções: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens) e <strong>Memória</strong> (a pasta de dados que alimenta o grafo do Contexto).</p>
+                  <p>As preferências de aparência e voz ficam salvas só neste navegador, e a pasta do Contexto é lida localmente — nenhum arquivo é enviado a servidores.</p>
                 </>
               ),
             }}
@@ -109,7 +109,7 @@ export default function Configuracoes() {
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
             Preferências de aparência, voz, inteligência artificial e a pasta de
-            dados que alimenta a Memória.
+            dados que alimenta o Contexto.
           </p>
         </div>
 
@@ -410,7 +410,7 @@ function TokenUsagePanel() {
 // ----------------------------------------------------------------------
 // Memória — pasta de dados (File System Access API + IndexedDB)
 //
-// Usa o MESMO banco/chave da tela Memória (ceo-memoria/kv/dir-handle), de modo
+// Usa o MESMO banco/chave da telo Contexto (ceo-memoria/kv/dir-handle), de modo
 // que selecionar a pasta aqui reflete lá e vice-versa. Roda 100% no navegador.
 
 const IDB_DB = "ceo-memoria";
@@ -486,7 +486,7 @@ function MemoriaSection() {
     ).showDirectoryPicker;
     if (!picker) {
       toast("Navegador sem suporte", {
-        description: "Use o Chrome ou Edge para selecionar a pasta da Memória.",
+        description: "Use o Chrome ou Edge para selecionar a pasta do Contexto.",
       });
       return;
     }
@@ -494,8 +494,8 @@ function MemoriaSection() {
       const handle = await picker();
       await idbSet(handle);
       setFolderName(handle.name);
-      toast.success(`Pasta da Memória definida: “${handle.name}”.`, {
-        description: "Abra a tela Memória para carregar o grafo desta pasta.",
+      toast.success(`Pasta do Contexto definida: “${handle.name}”.`, {
+        description: "Abra a telo Contexto para carregar o grafo desta pasta.",
       });
     } catch {
       /* usuário cancelou a seleção */
@@ -504,8 +504,8 @@ function MemoriaSection() {
 
   return (
     <SectionCard
-      titulo="Pasta da Memória"
-      descricao="Onde ficam os arquivos que a Memória conecta — reuniões, insights, notas e documentos. O grafo lê os arquivos .md desta pasta."
+      titulo="Pasta do Contexto"
+      descricao="Onde ficam os arquivos que o Contexto conecta — reuniões, insights, notas e documentos. O grafo lê os arquivos .md desta pasta."
     >
       <div className="dark:border-dark-500 dark:bg-dark-600 flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
@@ -518,8 +518,8 @@ function MemoriaSection() {
             </p>
             <p className="dark:text-dark-300 text-xs-plus text-gray-500">
               {folderName
-                ? "Pasta atual da Memória neste navegador."
-                : "Selecione a pasta que a Memória deve usar como fonte."}
+                ? "Pasta atual do Contexto neste navegador."
+                : "Selecione a pasta que o Contexto deve usar como fonte."}
             </p>
           </div>
         </div>
@@ -542,7 +542,7 @@ function MemoriaSection() {
 
       <p className="dark:text-dark-300 mt-4 text-xs-plus text-gray-400">
         A pasta é lida localmente pelo navegador — nenhum arquivo é enviado a
-        servidores. A escolha é compartilhada com a tela Memória.
+        servidores. A escolha é compartilhada com a telo Contexto.
       </p>
     </SectionCard>
   );

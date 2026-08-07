@@ -24,7 +24,11 @@ export type TemporarilyDisabledFeature =
   | "settingsVoice"
   | "settingsMemory"
   | "memoryUploadAudio"
-  | "memoryUploadTranscript";
+  | "memoryUploadTranscript"
+  // Funil legado de criação de conta — ver bloco no fim deste arquivo.
+  | "legacySignup"
+  | "legacyOnboarding"
+  | "legacyPriceCalculator";
 
 export const TEMPORARILY_DISABLED: Record<
   TemporarilyDisabledFeature,
@@ -46,6 +50,9 @@ export const TEMPORARILY_DISABLED: Record<
   settingsMemory: true,
   memoryUploadAudio: true,
   memoryUploadTranscript: true,
+  legacySignup: true,
+  legacyOnboarding: true,
+  legacyPriceCalculator: true,
 };
 
 /** Classe Tailwind do estado desabilitado (padrão do produto). */
@@ -102,10 +109,56 @@ export function isNavItemTemporarilyDisabled(
   return false;
 }
 
-/** Bloqueia abertura de modal de upload da Memória via `?fn=`. */
+/** Bloqueia abertura de modal de upload do Contexto via `?fn=`. */
 export function isMemoryUploadFnTemporarilyDisabled(fnId: string): boolean {
   if (fnId === "audio") return TEMPORARILY_DISABLED.memoryUploadAudio;
   if (fnId === "transcricao")
     return TEMPORARILY_DISABLED.memoryUploadTranscript;
   return false;
+}
+
+// ----------------------------------------------------------------------
+// Funil legado de criação de conta
+//
+// O modelo de contas mudou: a criação de conta passa a ser só nome/e-mail/senha,
+// a organização (com o pagador CPF ou CNPJ) é uma etapa separada, e a
+// classificação de cobrança B2C/B2B é DERIVADA do pagador — nunca uma escolha do
+// usuário. O funil antigo contradiz isso em cheio: `/cadastro` é um precificador
+// completo com um toggle explícito "Empresa (CNPJ)" / "Pessoa física (CPF)"
+// dentro do próprio cadastro.
+//
+// Por isso ele fica OCULTO, não removido. As páginas seguem intactas no
+// repositório — parte delas será reaproveitada no modelo novo (a lógica PF/PJ é
+// justamente a base da etapa de pagador). Para reativar o funil inteiro, mude as
+// três flags abaixo para `false`.
+
+/**
+ * Primeiro segmento de rota do funil legado → feature correspondente.
+ *
+ * Usa o PRIMEIRO segmento (e não o último, como `isNavItemTemporarilyDisabled`)
+ * para que `/cadastro/qualquer-coisa` também caia no bloqueio.
+ */
+const LEGACY_FUNNEL_FEATURE_BY_SEGMENT: Record<
+  string,
+  TemporarilyDisabledFeature
+> = {
+  cadastro: "legacySignup",
+  onboarding: "legacyOnboarding",
+  calculadora: "legacyPriceCalculator",
+};
+
+/** Feature do funil legado correspondente a um pathname (ou null). */
+export function legacyFunnelFeatureForPath(
+  pathname: string,
+): TemporarilyDisabledFeature | null {
+  const seg = pathname.split("/").filter(Boolean)[0]?.split("?")[0] ?? "";
+  return LEGACY_FUNNEL_FEATURE_BY_SEGMENT[seg] ?? null;
+}
+
+/** Bloqueia deep links para /cadastro, /onboarding e /calculadora. */
+export function isLegacyFunnelPathTemporarilyDisabled(
+  pathname: string,
+): boolean {
+  const feature = legacyFunnelFeatureForPath(pathname);
+  return feature != null && TEMPORARILY_DISABLED[feature];
 }

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Pastas da Memória por ação de IA — fonte única de verdade.
+// Pastas do Contexto por ação de IA — fonte única de verdade.
 //
 // Cada ação do IA Studio grava o conteúdo gerado numa subpasta com o nome da
 // própria ação ("Artigos", "Imagens", "Dashboards"…). A subpasta é criada na

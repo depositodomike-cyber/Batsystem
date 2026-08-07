@@ -112,7 +112,7 @@ export function MelhorarModal({ isOpen, close, onMinimize }: Props) {
     }
   };
 
-  // Não há título nesta ação — a nota da Memória usa a primeira linha do texto.
+  // Não há título nesta ação — a nota do Contexto usa a primeira linha do texto.
   const titulo = texto.trim().split("\n")[0]?.slice(0, 60).trim() || "Texto melhorado";
 
   return (

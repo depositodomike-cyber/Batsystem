@@ -206,7 +206,7 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
     setStatusText("");
   };
 
-  // O MP4 fica no CDN do HeyGen: tentamos baixá-lo para a pasta da Memória e,
+  // O MP4 fica no CDN do HeyGen: tentamos baixá-lo para a pasta do Contexto e,
   // se o CORS barrar, a nota guarda o roteiro + o link (que expira em dias).
   const prepararMemoria = async () => {
     const base = `**Roteiro**\n\n${script.trim()}`;

@@ -1,10 +1,10 @@
 // ----------------------------------------------------------------------
-// Alvos de conexão com a Memória — o que a lista de "[[" oferece.
+// Alvos de conexão com o Contexto — o que a lista de "[[" oferece.
 //
 // São duas origens, na ordem em que aparecem:
-//  • Notas (.md do vault): o que desenha o grafo da Memória. Um [[Título]] aqui
+//  • Notas (.md do vault): o que desenha o grafo do Contexto. Um [[Título]] aqui
 //    vira aresta no grafo, exatamente como no Obsidian.
-//  • Diretrizes (store /memorias): as memórias que a IA usa como contexto.
+//  • Regras (store /memorias): as memórias que a IA usa como contexto.
 //
 // A lista de notas é buscada UMA vez e filtrada no navegador (digitar não pode
 // disparar uma requisição por tecla). Quando o filtro local devolve pouco — ou
@@ -17,7 +17,7 @@ import { buscarNotasVault, type VaultNotaRef } from "@/services/api/vault";
 export interface AlvoMemoria {
   /** Texto inserido dentro dos colchetes. */
   titulo: string;
-  /** Pasta da nota ou tema da diretriz — contexto na lista. */
+  /** Pasta da nota ou tema da regra — contexto na lista. */
   detalhe: string;
   tipo: "nota" | "diretriz";
 }
@@ -33,7 +33,7 @@ let carregando: Promise<AlvoMemoria[]> | null = null;
 /** Pasta da nota ("Reuniões/2026-01.md" → "Reuniões"). */
 function pastaDaNota(path: string): string {
   const partes = path.split("/").filter(Boolean);
-  return partes.length > 1 ? partes[0] : "Memória";
+  return partes.length > 1 ? partes[0] : "Contexto";
 }
 
 function paraAlvo(nota: VaultNotaRef): AlvoMemoria {
@@ -58,7 +58,7 @@ export function carregarNotas(): Promise<AlvoMemoria[]> {
     })
     .catch(() => {
       // Vault não sincronizado, offline ou sem permissão: a lista fica só com
-      // as diretrizes. Silencioso de propósito — é um autocomplete, não uma ação.
+      // as regras. Silencioso de propósito — é um autocomplete, não uma ação.
       cache = { em: Date.now(), alvos: [] };
       return [];
     })

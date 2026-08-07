@@ -30,7 +30,7 @@ import { PASTA_MEMORIA } from "./memoria-pastas";
 
 // ----------------------------------------------------------------------
 // Upload Áudio — sobe um áudio/vídeo → a IA transcreve (OpenAI Whisper) e gera
-// um RESUMO (terminando com as conexões Obsidian), salvo na Memória (Reuniões).
+// um RESUMO (terminando com as conexões Obsidian), salvo no Contexto (Reuniões).
 // ----------------------------------------------------------------------
 
 function errMessage(err: unknown): string {
@@ -58,7 +58,7 @@ export function AudioModal({ isOpen, close, onMinimize }: Props) {
   const [transcricao, setTranscricao] = useState("");
   const [salvo, setSalvo] = useState(false);
   const [verTranscricao, setVerTranscricao] = useState(false);
-  // Pergunta pós-upload: só abre quando o resumo foi de fato salvo na Memória.
+  // Pergunta pós-upload: só abre quando o resumo foi de fato salvo no Contexto.
   const [sugerirOpen, setSugerirOpen] = useState(false);
 
   const fechar = () => {
@@ -76,8 +76,8 @@ export function AudioModal({ isOpen, close, onMinimize }: Props) {
       setResumo(data.resumo);
       setTranscricao(data.transcricao);
       setSalvo(data.salvo);
-      toast(data.salvo ? "Resumo salvo na Memória" : "Resumo gerado", {
-        description: data.salvo ? "Guardado em Reuniões." : "Não foi possível salvar na Memória.",
+      toast(data.salvo ? "Resumo salvo no Contexto" : "Resumo gerado", {
+        description: data.salvo ? "Guardado em Reuniões." : "Não foi possível salvar no Contexto.",
       });
       if (data.salvo) setSugerirOpen(true);
     } catch (err) {
@@ -159,7 +159,7 @@ export function AudioModal({ isOpen, close, onMinimize }: Props) {
                         <h3 className="dark:text-dark-50 truncate text-base font-semibold text-gray-800">{titulo}</h3>
                         {salvo && (
                           <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                            <CheckCircleIcon className="size-4" /> Salvo na Memória · Reuniões
+                            <CheckCircleIcon className="size-4" /> Salvo no Contexto · Reuniões
                           </p>
                         )}
                       </div>
@@ -217,7 +217,7 @@ export function AudioModal({ isOpen, close, onMinimize }: Props) {
                 ) : (
                   <form onSubmit={(e) => { e.preventDefault(); gerar(); }} className="flex flex-col gap-3">
                     <p className="dark:border-primary-500/20 dark:bg-primary-500/10 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs-plus text-gray-600 dark:text-dark-200">
-                      A IA <b>transcreve o áudio</b> (OpenAI Whisper) e gera um <b>resumo</b> (com as conexões Obsidian ao final), salvo na Memória (Reuniões).
+                      A IA <b>transcreve o áudio</b> (OpenAI Whisper) e gera um <b>resumo</b> (com as conexões Obsidian ao final), salvo no Contexto (Reuniões).
                     </p>
 
                     <div>

@@ -7,6 +7,7 @@ import { useAuthContext } from "@/app/contexts/auth/context";
 import {
   SplashScreen,
   SPLASH_AFTER_LOGIN_KEY,
+  SPLASH_MIN_DURATION,
 } from "@/components/template/SplashScreen";
 import { Loadable } from "@/components/shared/Loadable";
 import { Progress } from "@/components/template/Progress";
@@ -17,11 +18,6 @@ const Customizer = Loadable(
   lazy(() => import("@/components/template/Customizer")),
 );
 const Tooltip = Loadable(lazy(() => import("@/components/template/Tooltip")));
-
-// Minimum time the splash screen stays visible so the brand animation can
-// play through, even when auth initializes almost instantly.
-// O logo se forma em ~2s e depois respira; mantemos a tela até este tempo.
-const SPLASH_MIN_DURATION = 4000;
 
 // ----------------------------------------------------------------------
 

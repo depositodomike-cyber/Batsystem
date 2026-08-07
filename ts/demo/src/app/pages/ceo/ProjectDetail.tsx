@@ -133,7 +133,7 @@ export default function ProjectDetail() {
             )}
           </Card>
 
-          <Card title="Memória">
+          <Card title="Contexto">
             {project.memoryIds.length > 0 ? (
               <ul className="flex flex-col gap-2">
                 {project.memoryIds.map((id) => {

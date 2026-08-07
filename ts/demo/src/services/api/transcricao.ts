@@ -2,7 +2,7 @@ import axios from "@/utils/axios";
 
 // Upload Transcrição (IA) — chama o backend ts/api (POST /ai/transcricao,
 // multipart). Gera uma ATA estratégica detalhada a partir de uma transcrição e
-// a SALVA na Memória (Reuniões). Portado do beculture/Confi.
+// a SALVA no Contexto (Reuniões). Portado do beculture/Confi.
 
 export interface AtaTranscricao {
   titulo: string;

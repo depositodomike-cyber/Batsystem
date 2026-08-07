@@ -331,7 +331,7 @@ export function totalRespostas(m: SlackMensagem): number {
 }
 
 /**
- * Texto de uma mensagem para gravar na Memória / no Grupo. Com `comThread`,
+ * Texto de uma mensagem para gravar no Contexto / no Grupo. Com `comThread`,
  * inclui as respostas identadas logo abaixo — é assim que a conversa continua
  * fazendo sentido fora do Slack.
  */

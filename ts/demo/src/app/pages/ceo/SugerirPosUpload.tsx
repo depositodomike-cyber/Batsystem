@@ -25,7 +25,7 @@ import { MarkdownView } from "./MarkdownView";
 import { perguntarPromptApi } from "@/services/api/prompt";
 
 // ----------------------------------------------------------------------
-// Pergunta pós-upload da Memória. Toda vez que um upload é salvo na Memória
+// Pergunta pós-upload do Contexto. Toda vez que um upload é salvo no Contexto
 // (Documento, Áudio, Transcrição ou a pasta do grafo), este modal pergunta se o
 // usuário quer que a IA gere ATIVIDADES ou INSIGHTS a respeito do conteúdo.
 // A geração usa o mesmo endpoint /ai/prompt (modo Memória) que a PromptBar.
@@ -101,8 +101,8 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
     const base = conteudo
       ? `\n\n---\nTítulo: ${titulo || "(sem título)"}\n\nConteúdo:\n${conteudo.slice(0, 8000)}`
       : titulo
-        ? `\n\nUse como base o material recém-adicionado à Memória ("${titulo}") e as diretrizes já existentes.`
-        : "\n\nUse como base o material recém-adicionado à Memória e as diretrizes já existentes.";
+        ? `\n\nUse como base o material recém-adicionado ao Contexto ("${titulo}") e as regras já existentes.`
+        : "\n\nUse como base o material recém-adicionado ao Contexto e as regras já existentes.";
     const texto = `${meta.instrucao} Responda em português do Brasil, em Markdown.${base}`;
     try {
       const data = await perguntarPromptApi({ texto, modo: "vault" });
@@ -152,7 +152,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
               <div className="dark:border-dark-600 flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-3.5">
                 <DialogTitle className="dark:text-dark-50 flex items-center gap-2 text-base font-semibold text-gray-800">
                   <SparklesIcon className="size-5 text-primary-500" />
-                  Gerar a partir da Memória
+                  Gerar a partir do Contexto
                 </DialogTitle>
                 <Button
                   onClick={fechar}
@@ -170,7 +170,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                 {etapa === "escolha" && (
                   <div className="flex flex-col gap-4">
                     <p className="dark:text-dark-200 text-sm text-gray-600">
-                      Conteúdo salvo na Memória
+                      Conteúdo salvo no Contexto
                       {titulo ? (
                         <>
                           {" "}
@@ -230,7 +230,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                       <Spinner className="size-6" />
                       <p className="dark:text-dark-200 text-sm text-gray-600">
                         Gerando {kind ? META[kind].label.toLowerCase() : "sugestões"} a
-                        partir da Memória…
+                        partir do Contexto…
                       </p>
                     </div>
                   </div>

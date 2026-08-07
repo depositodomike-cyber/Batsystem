@@ -1,5 +1,7 @@
 import { RouteObject } from "react-router";
 
+import LegacyFunnelGuard from "@/middleware/LegacyFunnelGuard";
+
 /**
  * Public routes configuration
  * These routes are accessible without authentication
@@ -8,27 +10,83 @@ import { RouteObject } from "react-router";
 const publicRoutes: RouteObject = {
   id: "public",
   children: [
+    // Funil legado de criação de conta (cadastro + precificador + onboarding).
+    // O código das páginas permanece no repositório para reuso; o guard só as
+    // torna inacessíveis enquanto as flags `legacy*` estiverem `true`.
     {
-      path: "cadastro",
-      lazy: async () => ({
-        Component: (await import("@/app/pages/cadastro")).default,
-      }),
-    },
-    {
-      path: "calculadora",
-      lazy: async () => ({
-        Component: (await import("@/app/pages/calculadora")).default,
-      }),
-    },
-    {
-      path: "onboarding",
-      lazy: async () => ({
-        Component: (await import("@/app/pages/onboarding")).default,
-      }),
+      id: "legacy-funnel",
+      Component: LegacyFunnelGuard,
+      children: [
+        {
+          path: "cadastro",
+          lazy: async () => ({
+            Component: (await import("@/app/pages/cadastro")).default,
+          }),
+        },
+        {
+          path: "calculadora",
+          lazy: async () => ({
+            Component: (await import("@/app/pages/calculadora")).default,
+          }),
+        },
+        {
+          path: "onboarding",
+          lazy: async () => ({
+            Component: (await import("@/app/pages/onboarding")).default,
+          }),
+        },
+      ],
     },
     {
       path: "prototypes",
       children: [
+        // Protótipo do novo modelo de contas: criação de conta → workspace →
+        // seletor de contexto. A entrada é o login único da app (`/login`);
+        // este fluxo é só o cadastro.
+        {
+          path: "contas",
+          lazy: async () => ({
+            Component: (await import("@/app/pages/prototypes/contas")).default,
+          }),
+          children: [
+            {
+              index: true,
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/prototypes/contas/screens/Roteiro")
+                ).default,
+              }),
+            },
+            {
+              path: "criar-conta",
+              lazy: async () => ({
+                Component: (
+                  await import("@/app/pages/prototypes/contas/screens/CriarConta")
+                ).default,
+              }),
+            },
+            {
+              path: "organizacao",
+              lazy: async () => ({
+                Component: (
+                  await import(
+                    "@/app/pages/prototypes/contas/screens/ConfigurarOrganizacao"
+                  )
+                ).default,
+              }),
+            },
+            {
+              path: "repositorios",
+              lazy: async () => ({
+                Component: (
+                  await import(
+                    "@/app/pages/prototypes/contas/screens/SelecionarRepositorio"
+                  )
+                ).default,
+              }),
+            },
+          ],
+        },
         {
           path: "errors",
           children: [

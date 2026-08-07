@@ -13,8 +13,10 @@ export class AuthController {
   /** POST /login → { authToken, user } (contrato do front). */
   @Post('login')
   @HttpCode(200)
-  // Limite estrito contra força bruta de credenciais.
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  // Limite contra força bruta. O contador é por IP e não distingue acerto de
+  // erro, então 5/min derrubava quem só errou a senha uma vez ou recarregou a
+  // tela; 10/min continua lento demais para um ataque.
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   login(@Body() dto: LoginDto) {
     return this.auth.login(dto.username, dto.password);
   }

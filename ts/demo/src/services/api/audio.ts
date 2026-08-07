@@ -2,7 +2,7 @@ import axios from "@/utils/axios";
 
 // Upload Áudio (IA) — chama o backend ts/api (POST /ai/audio, multipart). O
 // áudio é transcrito (OpenAI Whisper) e vira um RESUMO (terminando com as
-// conexões Obsidian) salvo na Memória (Reuniões).
+// conexões Obsidian) salvo no Contexto (Reuniões).
 
 export interface AudioResult {
   titulo: string;

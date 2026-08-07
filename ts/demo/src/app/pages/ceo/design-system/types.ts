@@ -2,7 +2,7 @@
 // Design System das marcas — portado do beculture/Confi (public/design-system.js).
 //
 // Um design system descreve a marca (identidade, cores, tipografia, espaçamento,
-// componentes, elementos visuais e tokens/diretrizes) e é usado por TODAS as
+// componentes, elementos visuais e tokens/regras) e é usado por TODAS as
 // ferramentas do AI Studio: o que a IA gera sai na cara da marca escolhida.
 //
 // O usuário pode manter várias marcas; uma fica ativa por vez.

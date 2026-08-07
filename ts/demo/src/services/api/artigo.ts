@@ -10,7 +10,7 @@ export interface Artigo {
   conteudo: string;
   /**
    * Bloco "## 🔗 Conexões no Vault" ([[wikilinks]] para outros assuntos da
-   * Memória). Vem separado do artigo: entra na nota ao salvar na Memória (e no
+   * Memória). Vem separado do artigo: entra na nota ao salvar no Contexto (e no
    * .md baixado), sem poluir o texto que o usuário copia para publicar.
    */
   conexoes: string;

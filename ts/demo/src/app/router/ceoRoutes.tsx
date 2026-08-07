@@ -84,7 +84,7 @@ const squadRoute: RouteObject = {
 };
 
 // Acessar a raiz de um produto redireciona para a sua página inicial. No behuman
-// a home é a Memória; nos demais produtos continua sendo o Insights.
+// a home é o Contexto; nos demais produtos continua sendo o Insights.
 const productHome: Record<string, string> = {
   behuman: "memoria-grafo",
 };

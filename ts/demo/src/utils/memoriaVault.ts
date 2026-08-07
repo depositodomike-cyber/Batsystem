@@ -1,6 +1,6 @@
-// Gravação de notas na "Pasta da Memória" (File System Access API).
+// Gravação de notas na "Pasta do Contexto" (File System Access API).
 //
-// A tela Memória (grafo) monta os nós a partir dos arquivos .md de uma pasta
+// A telo Contexto (grafo) monta os nós a partir dos arquivos .md de uma pasta
 // local que o usuário seleciona; o handle dessa pasta é persistido no IndexedDB
 // (ceo-memoria/kv/dir-handle) — o MESMO banco/chave usado por MemoriaGrafo e
 // Configuracoes. Este utilitário reaproveita esse handle para ESCREVER novas
@@ -84,7 +84,7 @@ export interface AnexoMemoria {
 
 export type VaultFalha = "no-folder" | "denied" | "unsupported" | "not-found" | "error";
 
-// Pega o handle da Pasta da Memória já com a permissão pedida. `requestPermission`
+// Pega o handle da Pasta do Contexto já com a permissão pedida. `requestPermission`
 // só funciona a partir de um gesto do usuário — daí as chamadas partirem sempre
 // de um clique (salvar/abrir nó do grafo).
 async function pastaComPermissao(
@@ -121,8 +121,8 @@ async function pastaDoCaminho(
 }
 
 /**
- * Pastas de primeiro nível da Pasta da Memória — é ESTA a lista de "temas"
- * oferecida em toda opção de gravar na Memória (Diretrizes, Notas, conectores,
+ * Pastas de primeiro nível da Pasta do Contexto — é ESTA a lista de "temas"
+ * oferecida em toda opção de gravar no Contexto (Regras, Notas, conectores,
  * IA Studio). Primeiro nível porque é o que o grafo trata como "pasta" de um nó
  * (usa o primeiro segmento do caminho), então cada pasta daqui é um hub de cor
  * própria; subpastas de grupo ("Plano LATAM/Conversas") são gravadas pelos
@@ -159,7 +159,7 @@ export async function listarPastasMemoria(): Promise<
 }
 
 /**
- * Cria (quando ainda não existe) uma subpasta da Memória, inclusive aninhada
+ * Cria (quando ainda não existe) uma subpasta do Contexto, inclusive aninhada
  * ("Plano LATAM/Conversas"). Usado ao criar um grupo, para a pasta do grupo
  * existir no vault antes mesmo da primeira conversa.
  */
@@ -190,7 +190,7 @@ async function arquivoDoCaminho(
   return atual.getFileHandle(nome, { create });
 }
 
-/** Lê o .md de um nó do grafo (caminho relativo à Pasta da Memória). */
+/** Lê o .md de um nó do grafo (caminho relativo à Pasta do Contexto). */
 export async function lerNotaMemoria(
   path: string,
 ): Promise<{ ok: true; conteudo: string } | { ok: false; reason: VaultFalha }> {
@@ -362,7 +362,7 @@ export type WriteResult =
   | { ok: false; reason: "no-folder" | "denied" | "unsupported" | "error" };
 
 /**
- * Grava uma nota .md na Pasta da Memória, dentro da subpasta indicada (ex.:
+ * Grava uma nota .md na Pasta do Contexto, dentro da subpasta indicada (ex.:
  * "Reuniões" ou, para grupos, "Plano LATAM/Conversas"). A subpasta é criada
  * quando ainda não existe — inclusive aninhada. Escreve um
  * frontmatter mínimo (título + tags) para o grafo resolver o título do nó e as
@@ -386,7 +386,7 @@ export async function escreverNotaMemoria(opts: {
   const handle = await idbGet<FSDirHandle>();
   if (!handle) return { ok: false, reason: "no-folder" };
 
-  // Precisa de permissão de escrita — o handle da tela Memória é só de leitura.
+  // Precisa de permissão de escrita — o handle da telo Contexto é só de leitura.
   try {
     const query = handle.queryPermission
       ? await handle.queryPermission({ mode: "readwrite" })

@@ -321,7 +321,7 @@ export function DashboardModal({ isOpen, close, onMinimize }: Props) {
 
                     <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
                       <Checkbox checked={usarMemoria} onChange={(e) => setUsarMemoria(e.target.checked)} className="size-4" />
-                      Usar a Memória como referência
+                      Usar o Contexto como referência
                     </label>
 
                     {erro && (

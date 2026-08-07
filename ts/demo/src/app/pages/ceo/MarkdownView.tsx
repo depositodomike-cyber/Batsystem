@@ -3,7 +3,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// As notas geradas para a Memória (Documento, Ata, Áudio) começam com um
+// As notas geradas para o Contexto (Documento, Ata, Áudio) começam com um
 // frontmatter YAML no estilo Obsidian (---\n...\n---). O react-markdown não
 // entende frontmatter e o renderiza como um <hr> seguido de um heading setext
 // gigante (o "---" de fechamento transforma o bloco inteiro num H2), quebrando

@@ -66,7 +66,7 @@ export default function Memoria() {
     toggleActive,
   } = useMemoryContext();
 
-  // Só admin/owner pode "fixar" diretrizes (criar como definição corporativa).
+  // Só admin/owner pode "fixar" regras (criar como definição corporativa).
   const { user } = useAuthContext();
   const isAdmin = user?.role === "admin" || user?.role === "owner";
 
@@ -109,15 +109,15 @@ export default function Memoria() {
   );
 
   return (
-    <Page title={`Diretrizes · ${product.name}`}>
+    <Page title={`Regras · ${product.name}`}>
       <div className="transition-content w-full px-(--margin-x) py-6">
         {/* Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
             <PageTitle help={{ description: (<>
-              <p>As <strong>Diretrizes</strong> são as regras que a IA deve seguir em toda resposta — o que ela aprendeu nas conversas, conectores e squads, reunido em um só lugar sob o seu controle.</p>
-              <p>Cada diretriz pode ser ativada ou desativada; só as ativas entram no contexto da IA. Use a busca e os filtros para gerenciar, ou crie uma nova. Administradores podem fixar diretrizes como definição corporativa.</p>
-            </>) }}>Diretrizes</PageTitle>
+              <p>As <strong>Regras</strong> definem o que a IA deve seguir em toda resposta — o que ela aprendeu nas conversas, conectores e squads, reunido em um só lugar sob o seu controle.</p>
+              <p>Cada regra pode ser ativada ou desativada; só as ativas entram no contexto da IA. Use a busca e os filtros para gerenciar, ou crie uma nova. Administradores podem fixar regras como definição corporativa.</p>
+            </>) }}>Regras</PageTitle>
             <p className="dark:text-dark-300 text-sm whitespace-nowrap text-gray-500">
               Tudo o que a IA aprendeu nas conversas, conectores e squads — em um
               só lugar, sob o seu controle.
@@ -129,7 +129,7 @@ export default function Memoria() {
             <StatCard
               icon={CircleStackIcon}
               value={memories.length}
-              label="Diretrizes"
+              label="Regras"
               tint="text-primary-500"
             />
             <StatCard
@@ -143,7 +143,7 @@ export default function Memoria() {
               value={`~${estimatedTokens.toLocaleString("pt-BR")}`}
               label="Tokens (est.)"
               tint="text-indigo-500"
-              hint="Estimativa do total de tokens que as diretrizes ativas adicionam ao contexto da IA (~4 caracteres por token)."
+              hint="Estimativa do total de tokens que as regras ativas adicionam ao contexto da IA (~4 caracteres por token)."
             />
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function Memoria() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar nas diretrizes…"
+                placeholder="Buscar nas regras…"
                 className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-full border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
               />
               {query && (
@@ -207,7 +207,7 @@ export default function Memoria() {
                 onClick={() => setCreating(true)}
               >
                 <PlusIcon className="size-4.5" />
-                <span className="max-sm:sr-only">Nova diretriz</span>
+                <span className="max-sm:sr-only">Nova regra</span>
               </Button>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function Memoria() {
         {loading ? (
           <div className="dark:text-dark-300 mt-8 flex items-center justify-center gap-2 py-16 text-sm text-gray-400">
             <Spinner className="size-5" />
-            Carregando diretrizes…
+            Carregando regras…
           </div>
         ) : hasResults ? (
           <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -235,10 +235,10 @@ export default function Memoria() {
           <div className="dark:border-dark-600 mt-8 grid place-items-center rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center">
             <CircleStackIcon className="dark:text-dark-400 size-10 text-gray-300" />
             <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
-              Nenhuma diretriz encontrada
+              Nenhuma regra encontrada
             </p>
             <p className="dark:text-dark-300 mt-1 text-xs-plus text-gray-400">
-              Ajuste a busca/filtros ou registre uma nova diretriz para a IA.
+              Ajuste a busca/filtros ou registre uma nova regra para a IA.
             </p>
             <Button
               color="primary"
@@ -246,7 +246,7 @@ export default function Memoria() {
               onClick={() => setCreating(true)}
             >
               <PlusIcon className="size-4.5" />
-              Nova diretriz
+              Nova regra
             </Button>
           </div>
         )}
@@ -373,7 +373,7 @@ function MemoryCard({
           {memory.source}
         </span>
         <span
-          title="Tokens estimados desta diretriz (~4 caracteres por token)."
+          title="Tokens estimados desta regra (~4 caracteres por token)."
           className="dark:bg-dark-600 dark:text-dark-200 inline-flex shrink-0 items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500"
         >
           <CpuChipIcon className="size-3" />~
@@ -419,7 +419,7 @@ function NewMemoryModal({
   onCreate,
 }: {
   open: boolean;
-  /** Se o usuário (admin/owner) pode "fixar" a diretriz como corporativa. */
+  /** Se o usuário (admin/owner) pode "fixar" a regra como corporativa. */
   canFix: boolean;
   close: () => void;
   onCreate: (input: {
@@ -475,7 +475,7 @@ function NewMemoryModal({
                   </span>
                   <div>
                     <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
-                      Nova diretriz
+                      Nova regra
                     </DialogTitle>
                     <p className="dark:text-dark-300 text-xs-plus text-gray-500">
                       Defina uma regra que a IA deve seguir em toda resposta.
@@ -495,7 +495,7 @@ function NewMemoryModal({
 
               <div className="mt-5 space-y-4">
                 <Input
-                  label="Resumo"
+                  label="Título"
                   value={title}
                   maxLength={160}
                   onChange={(e) => setTitle(e.target.value)}
@@ -503,21 +503,16 @@ function NewMemoryModal({
                 />
                 <Textarea
                   component={MemoriaTextarea}
-                  label="O que a IA deve seguir"
+                  label="Descrição"
                   rows={3}
                   value={content}
                   maxLength={2000}
                   onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                     setContent(e.target.value)
                   }
-                  placeholder="Descreva a regra… (“[[” conecta a uma nota da Memória)"
+                  placeholder="Descreva a regra… (“[[” conecta a uma nota do Contexto)"
                 />
-                <Input
-                  label="Origem (opcional)"
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  placeholder="Ex.: Manual, Chat · Onboarding…"
-                />
+                {/* Origem oculta temporariamente — o campo e o estado `source` permanecem. */}
 
                 {/* Fixar como corporativa — só admin/owner */}
                 {canFix && (
@@ -577,7 +572,7 @@ function NewMemoryModal({
                   }
                 >
                   <PlusIcon className="size-4.5" />
-                  Salvar diretriz
+                  Salvar regra
                 </Button>
               </div>
             </DialogPanel>
@@ -599,7 +594,7 @@ function MemoryDrawer({
   onToggleActive,
 }: {
   memory: MemoryItem | null;
-  /** Admin/owner pode gerenciar (ativar/desativar/excluir) mesmo diretriz corporativa. */
+  /** Admin/owner pode gerenciar (ativar/desativar/excluir) mesmo regra corporativa. */
   canManage: boolean;
   close: () => void;
   onSave: (patch: Partial<MemoryItem>) => void;
@@ -636,7 +631,7 @@ function MemoryDrawer({
               <div className="dark:border-dark-600 flex shrink-0 items-start justify-between gap-3 border-b border-gray-200 px-5 py-4">
                 <div>
                   <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
-                    Detalhes da diretriz
+                    Detalhes da regra
                   </DialogTitle>
                 </div>
                 <Button

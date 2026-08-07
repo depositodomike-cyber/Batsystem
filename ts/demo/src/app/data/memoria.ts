@@ -8,14 +8,14 @@
 //
 // Os "temas" das memórias são as PASTAS DA MEMÓRIA — as pastas de primeiro
 // nível do vault que alimenta o grafo (ver utils/memoriaVault.ts
-// `listarPastasMemoria`). Vale para TODA opção de gravar na Memória: o tema
+// `listarPastasMemoria`). Vale para TODA opção de gravar no Contexto: o tema
 // escolhido é sempre uma pasta existente, nunca uma lista paralela. A lista é
 // montada em runtime pelo hook `usePastasMemoria` (pages/ceo), que passa as
 // pastas para `buildMemoryCategories(pastas)`.
 // ----------------------------------------------------------------------
 
 export interface MemoryCategory {
-  /** Id do tema = nome da pasta na Memória (ex.: "Reuniões", "Plano LATAM"). */
+  /** Id do tema = nome da pasta no Contexto (ex.: "Reuniões", "Plano LATAM"). */
   id: string;
   label: string;
   /** Descrição curta exibida no cabeçalho/filtro. */
@@ -44,7 +44,7 @@ const PASTA_TINTS = [
 ];
 
 /**
- * Monta a lista de temas da Memória a partir das pastas do vault: um tema por
+ * Monta a lista de temas do Contexto a partir das pastas do vault: um tema por
  * pasta (id = nome da pasta), em ordem alfabética. Duplicatas são descartadas
  * para a lista sobreviver a uma união de fontes (pastas do vault + padrão).
  */
@@ -54,7 +54,7 @@ export function buildMemoryCategories(pastas: string[]): MemoryCategory[] {
     .map((pasta, i) => ({
       id: pasta,
       label: pasta,
-      description: `Memórias guardadas na pasta ${pasta}.`,
+      description: `Contextos guardados na pasta ${pasta}.`,
       tint: PASTA_TINTS[i % PASTA_TINTS.length]!,
     }));
 }
@@ -64,7 +64,7 @@ export type MemoryConfidence = "alta" | "media" | "baixa";
 
 export interface MemoryItem {
   id: string;
-  /** Tema da memória = pasta da Memória em que ela se encaixa. */
+  /** Tema da memória = pasta do Contexto em que ela se encaixa. */
   category: string;
   /** Resumo curto da memória (uma linha). */
   title: string;

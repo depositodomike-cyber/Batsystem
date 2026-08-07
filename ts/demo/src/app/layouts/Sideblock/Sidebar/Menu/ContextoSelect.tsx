@@ -1,8 +1,8 @@
 /**
- * Select de contextos do workspace aberto agora.
+ * Select de contextos da organização aberta agora.
  *
  * Substitui o collapse "Contexto" na sidebar: lista só os contextos da
- * organização/workspace ativa. Trocar o valor abre aquele contexto.
+ * organização ativa. Trocar o valor abre aquele contexto.
  */
 
 import {

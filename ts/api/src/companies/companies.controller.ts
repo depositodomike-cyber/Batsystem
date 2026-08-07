@@ -31,7 +31,7 @@ export class CompaniesController {
   }
 
   /**
-   * POST /registrar → cadastro mínimo (nome, e-mail, senha, workspace).
+   * POST /registrar → cadastro mínimo (nome, e-mail, senha, organização).
    * Público. Mesmo resultado do /cadastro, sem cobrança/documento.
    */
   @Post('registrar')

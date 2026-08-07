@@ -14,6 +14,17 @@ import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import { syncVault, getVaultStatus } from "@/services/api/vault";
 import { buscandoMemoria, onBuscaMemoria } from "@/utils/memoriaBusca";
+import {
+  escolherPastaContexto,
+  lerArquivosMd,
+  notasParaVault,
+  parseNotaMd,
+  pastaContextoSalva,
+  permissaoDeLeitura,
+  tituloPadrao,
+  type ArquivoMd,
+  type FSDirHandle,
+} from "./memoria-inventario";
 
 // ----------------------------------------------------------------------
 // Memória — grafo force-directed migrado do beculture/Confi (graph.js + a
@@ -21,6 +32,10 @@ import { buscandoMemoria, onBuscaMemoria } from "@/utils/memoriaBusca";
 // o usuário seleciona: lê os arquivos .md, extrai [[wikilinks]], tags e pastas
 // e monta nós/arestas com a MESMA lógica do beculture. Roda 100% no navegador
 // (File System Access API), sem backend.
+//
+// A leitura da pasta (handle, permissão, varredura dos .md, frontmatter) vem de
+// memoria-inventario.ts — o mesmo módulo que alimenta a Lista do Contexto, para
+// as duas telas mostrarem sempre o mesmo conjunto de notas.
 // ----------------------------------------------------------------------
 
 type Kind = "nota" | "pasta" | "tag";
@@ -48,20 +63,6 @@ interface GLink {
 interface Graph {
   nodes: GNode[];
   links: GLink[];
-}
-
-// Tipos mínimos da File System Access API (não estão no lib.dom padrão do TS).
-interface FSFileHandle {
-  kind: "file";
-  name: string;
-  getFile(): Promise<File>;
-}
-interface FSDirHandle {
-  kind: "directory";
-  name: string;
-  entries(): AsyncIterableIterator<[string, FSFileHandle | FSDirHandle]>;
-  queryPermission?: (o: { mode: string }) => Promise<PermissionState>;
-  requestPermission?: (o: { mode: string }) => Promise<PermissionState>;
 }
 
 // ---- Cores (paleta de marca beculture) ----
@@ -107,63 +108,13 @@ function raio(n: GNode): number {
 }
 
 // ----------------------------------------------------------------------
-// Leitura da pasta + construção do grafo (espelha grafo() de lib/vault.js).
+// Construção do grafo (espelha grafo() de lib/vault.js).
 // ----------------------------------------------------------------------
 
-interface RawFile {
-  path: string;
-  name: string;
-  text: string;
-}
-
-async function readAllMd(dir: FSDirHandle, prefix = "", acc: RawFile[] = []): Promise<RawFile[]> {
-  for await (const [name, handle] of dir.entries()) {
-    if (name.startsWith(".")) continue; // ignora ocultos (.obsidian, .git…)
-    if (handle.kind === "file") {
-      if (!name.toLowerCase().endsWith(".md")) continue;
-      try {
-        const file = await handle.getFile();
-        acc.push({ path: prefix + name, name, text: await file.text() });
-      } catch {
-        /* arquivo ilegível — ignora */
-      }
-    } else {
-      await readAllMd(handle, prefix + name + "/", acc);
-    }
-  }
-  return acc;
-}
-
-function parseNote(text: string): { titulo: string; tags: string[]; body: string } {
-  let titulo = "";
-  let tags: string[] = [];
-  let body = text;
-  const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-  if (fm) {
-    const yaml = fm[1];
-    body = text.slice(fm[0].length);
-    const tm = yaml.match(/^\s*t[íi]tulo\s*:\s*(.+)$/im) || yaml.match(/^\s*title\s*:\s*(.+)$/im);
-    if (tm) titulo = tm[1].trim().replace(/^["']|["']$/g, "");
-    const inline = yaml.match(/^\s*tags\s*:\s*\[(.*)\]\s*$/im);
-    if (inline) {
-      tags = inline[1].split(",").map((s) => s.trim().replace(/^["']|["']$/g, "").replace(/^#/, "")).filter(Boolean);
-    } else {
-      const block = yaml.match(/^\s*tags\s*:\s*\r?\n((?:\s*-\s*.+\r?\n?)+)/im);
-      if (block) {
-        tags = block[1].split(/\r?\n/).map((l) => l.replace(/^\s*-\s*/, "").trim().replace(/^["']|["']$/g, "").replace(/^#/, "")).filter(Boolean);
-      } else {
-        const csv = yaml.match(/^\s*tags\s*:\s*(.+)$/im);
-        if (csv && !csv[1].includes("[")) tags = csv[1].split(/[,\s]+/).map((s) => s.replace(/^#/, "").trim()).filter(Boolean);
-      }
-    }
-  }
-  return { titulo, tags, body };
-}
-
-function buildGraph(files: RawFile[]): Graph {
+function buildGraph(files: ArquivoMd[]): Graph {
   const notas = files.map((f) => {
-    const { titulo, tags, body } = parseNote(f.text);
-    const base = f.name.replace(/\.md$/i, "");
+    const { titulo, tags, body } = parseNotaMd(f.text);
+    const base = tituloPadrao(f.name);
     const seg = f.path.split("/");
     const pasta = seg.length > 1 ? seg[0] : "Raiz";
     return { id: f.path, titulo: titulo || base, base, tags, body, pasta };
@@ -240,48 +191,6 @@ function buildGraph(files: RawFile[]): Graph {
   return { nodes, links };
 }
 
-// ---- Persistência do handle da pasta (IndexedDB) ----
-const IDB_DB = "ceo-memoria";
-const IDB_STORE = "kv";
-const IDB_KEY = "dir-handle";
-
-function idbGet<T>(): Promise<T | undefined> {
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction(IDB_STORE, "readonly");
-        const g = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        g.onsuccess = () => resolve(g.result as T);
-        g.onerror = () => resolve(undefined);
-      };
-      req.onerror = () => resolve(undefined);
-    } catch {
-      resolve(undefined);
-    }
-  });
-}
-function idbSet(val: unknown): Promise<void> {
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(val, IDB_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      };
-      req.onerror = () => resolve();
-    } catch {
-      resolve();
-    }
-  });
-}
-
 // ----------------------------------------------------------------------
 
 export default function MemoriaGrafo() {
@@ -320,15 +229,10 @@ export default function MemoriaGrafo() {
 
   // Envia os .md ao backend para que o /ai/prompt possa consultá-los. Roda em
   // segundo plano após montar o grafo — não bloqueia a visualização.
-  const syncToBackend = useCallback(async (files: RawFile[]) => {
+  const syncToBackend = useCallback(async (files: ArquivoMd[]) => {
     setSync({ state: "syncing", done: 0, total: files.length });
     try {
-      const notas = files.map((f) => {
-        const { titulo } = parseNote(f.text);
-        const base = f.name.replace(/\.md$/i, "");
-        return { path: f.path, titulo: titulo || base, conteudo: f.text };
-      });
-      const r = await syncVault(notas, (done, total) =>
+      const r = await syncVault(notasParaVault(files), (done, total) =>
         setSync({ state: "syncing", done, total }),
       );
       setSync({ state: "done", done: r.total, total: r.total });
@@ -347,7 +251,7 @@ export default function MemoriaGrafo() {
     async (handle: FSDirHandle, opts?: { fromUpload?: boolean }) => {
       setLoading(true);
       try {
-        const files = await readAllMd(handle);
+        const files = await lerArquivosMd(handle);
         const g = buildGraph(files);
         setGraph(g);
         const notas = g.nodes.filter((n) => n.kind === "nota").length;
@@ -372,20 +276,17 @@ export default function MemoriaGrafo() {
   );
 
   const pickFolder = useCallback(async () => {
-    const picker = (window as unknown as { showDirectoryPicker?: () => Promise<FSDirHandle> }).showDirectoryPicker;
-    if (!picker) {
-      toast("Navegador sem suporte", {
-        description: "Use o Chrome ou Edge para selecionar a pasta do Contexto.",
-      });
+    const escolha = await escolherPastaContexto();
+    if (!escolha.ok) {
+      // Cancelar a seleção não merece aviso; navegador sem suporte, sim.
+      if (escolha.reason === "unsupported") {
+        toast("Navegador sem suporte", {
+          description: "Use o Chrome ou Edge para selecionar a pasta do Contexto.",
+        });
+      }
       return;
     }
-    try {
-      const handle = await picker();
-      await idbSet(handle);
-      await loadFromHandle(handle, { fromUpload: true });
-    } catch {
-      /* usuário cancelou a seleção */
-    }
+    await loadFromHandle(escolha.dir, { fromUpload: true });
   }, [loadFromHandle]);
 
   // Sincronização manual (botão "Sincronizar"): relê a pasta já escolhida e
@@ -393,23 +294,8 @@ export default function MemoriaGrafo() {
   // tiver sido revogada — cai no seletor de pasta. `requestPermission` só pode
   // ser chamado a partir de um gesto do usuário, e o clique no botão é um.
   const sincronizar = useCallback(async () => {
-    const handle = await idbGet<FSDirHandle>();
-    if (!handle) {
-      await pickFolder();
-      return;
-    }
-    try {
-      let perm: PermissionState = handle.queryPermission
-        ? await handle.queryPermission({ mode: "read" })
-        : "granted";
-      if (perm !== "granted" && handle.requestPermission) {
-        perm = await handle.requestPermission({ mode: "read" });
-      }
-      if (perm !== "granted") {
-        await pickFolder();
-        return;
-      }
-    } catch {
+    const handle = await pastaContextoSalva();
+    if (!handle || !(await permissaoDeLeitura(handle, { pedir: true }))) {
       await pickFolder();
       return;
     }
@@ -440,14 +326,8 @@ export default function MemoriaGrafo() {
   // Restaura a última pasta se a permissão ainda estiver concedida.
   useEffect(() => {
     (async () => {
-      const handle = await idbGet<FSDirHandle>();
-      if (!handle) return;
-      try {
-        const perm = handle.queryPermission ? await handle.queryPermission({ mode: "read" }) : "prompt";
-        if (perm === "granted") await loadFromHandle(handle);
-      } catch {
-        /* handle inválido */
-      }
+      const handle = await pastaContextoSalva();
+      if (handle && (await permissaoDeLeitura(handle))) await loadFromHandle(handle);
     })();
   }, [loadFromHandle]);
 
@@ -1033,8 +913,8 @@ export default function MemoriaGrafo() {
           // O título pode ter mudado no frontmatter — atualiza o rótulo do nó
           // sem reler a pasta inteira. As conexões ([[wikilinks]], tags) só são
           // reconstruídas no próximo "Sincronizar".
-          const base = nota.path.split("/").pop()!.replace(/\.md$/i, "");
-          const novo = parseNote(conteudo).titulo || base;
+          const base = tituloPadrao(nota.path.split("/").pop()!);
+          const novo = parseNotaMd(conteudo).titulo || base;
           if (novo === nota.titulo) return;
           setNota({ ...nota, titulo: novo });
           setGraph((g) => ({

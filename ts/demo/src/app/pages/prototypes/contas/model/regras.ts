@@ -34,7 +34,7 @@ export function classificarCobranca(
 }
 
 /**
- * Em conta B2C o workspace tem um único usuário, que é automaticamente admin e
+ * Em conta B2C a organização tem um único usuário, que é automaticamente admin e
  * NÃO pode convidar mais ninguém. Derivado — nunca um flag armazenado.
  */
 export function podeConvidar(pagador: Pick<Pagador, "tipo">): boolean {
@@ -70,7 +70,7 @@ export function rotuloPagador(tipo: Pagador["tipo"]): string {
  * como `title` nos elementos desabilitados (padrão do produto).
  */
 export const MOTIVO_SEM_CONVITES =
-  "Workspaces com pagador pessoa física têm um único usuário, que já é admin.";
+  "Organizações com pagador pessoa física têm um único usuário, que já é admin.";
 
 /** Motivo padrão de funcionalidade ainda não liberada. */
 export const MOTIVO_EM_BREVE = "Em breve — não disponível nesta versão.";

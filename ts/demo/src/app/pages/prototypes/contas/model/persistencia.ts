@@ -14,8 +14,8 @@ import { estadoSemeado } from "./fixtures";
 import type { EstadoPrototipo } from "./types";
 
 /**
- * v8: descarta as contas e os workspaces criados durante os testes. Contas
- * apagadas no backend não somem daqui sozinhas — workspaces e contextos só
+ * v8: descarta as contas e as organizações criadas durante os testes. Contas
+ * apagadas no backend não somem daqui sozinhas — organizações e contextos só
  * existem neste armazenamento —, então trocar a chave é o que devolve a
  * demonstração ao zero em TODO navegador, não só no que foi limpo à mão.
  */

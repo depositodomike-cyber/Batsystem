@@ -42,11 +42,15 @@ export type AcaoPrototipo =
       tipo: "organizacao/alterarPapel";
       payload: { membroId: string; papel: PapelNaOrganizacao };
     }
+  | {
+      tipo: "organizacao/excluir";
+      payload: { organizacaoId: string };
+    }
   | { tipo: "sessao/login"; payload: { email: string } }
   /**
    * Garante uma sessão para um usuário autenticado na app real: reaproveita a
    * conta do protótipo com esse e-mail ou cria uma, sempre com apenas o
-   * workspace pessoal.
+   * escopo pessoal (sem organização ainda).
    */
   | { tipo: "sessao/garantir"; payload: { nome: string; email: string } }
   | { tipo: "sessao/logout" }
@@ -103,8 +107,8 @@ export function reducer(
 ): EstadoPrototipo {
   switch (acao.tipo) {
     /**
-     * Tela 1. Cria SÓ o usuário e o repositório pessoal. Nenhuma organização,
-     * nenhum pagador, nenhum tipo de conta — a organização é a etapa seguinte.
+     * Tela 1. Cria SÓ o usuário e a sessão. A primeira organização nasce na
+     * etapa seguinte (`organizacao/configurar`) — pessoal ou corporativo.
      */
     case "conta/criar": {
       const email = acao.payload.email.trim();
@@ -129,7 +133,6 @@ export function reducer(
       }
 
       const usuarioId = novoId("u");
-      const repoId = novoId("rep");
       const criadoEm = agora();
 
       return {
@@ -144,25 +147,16 @@ export function reducer(
             criadoEm,
           },
         ],
-        repositorios: [
-          ...estado.repositorios,
-          {
-            id: repoId,
-            nome: "Meu contexto",
-            escopo: { tipo: "pessoal", usuarioId },
-            criadoEm,
-          },
-        ],
-        conteudo: { ...estado.conteudo, [repoId]: conteudoVazio() },
         sessao: { usuarioId },
-        contexto: { repositorioId: repoId },
+        contexto: null,
         demo: { papelForcado: null },
       };
     }
 
     /**
      * Tela 2. Cria pagador + organização + membership do criador e o primeiro
-     * repositório da organização, já abrindo-o.
+     * repositório da organização, já abrindo-o. Essa é a PRIMEIRA organização da
+     * conta — remove qualquer contexto pessoal residual do Step 1 antigo.
      *
      * O criador é admin AUTOMATICAMENTE — não é uma escolha oferecida a ele.
      */
@@ -193,6 +187,24 @@ export function reducer(
             }))
         : [];
 
+      // A organização do cadastro substitui o "Meu contexto" pessoal legado.
+      const reposPessoaisAntigos = new Set(
+        estado.repositorios
+          .filter(
+            (r) =>
+              r.escopo.tipo === "pessoal" &&
+              r.escopo.usuarioId === sessao.usuarioId,
+          )
+          .map((r) => r.id),
+      );
+      const repositoriosSemPessoal = estado.repositorios.filter(
+        (r) => !reposPessoaisAntigos.has(r.id),
+      );
+      const conteudoSemPessoal = { ...estado.conteudo };
+      for (const id of reposPessoaisAntigos) {
+        delete conteudoSemPessoal[id];
+      }
+
       return {
         ...estado,
         pagadores: [
@@ -214,7 +226,7 @@ export function reducer(
           },
         ],
         repositorios: [
-          ...estado.repositorios,
+          ...repositoriosSemPessoal,
           {
             id: repoId,
             nome: `${acao.payload.nome} — geral`,
@@ -222,7 +234,7 @@ export function reducer(
             criadoEm,
           },
         ],
-        conteudo: { ...estado.conteudo, [repoId]: conteudoVazio() },
+        conteudo: { ...conteudoSemPessoal, [repoId]: conteudoVazio() },
         convites: [...estado.convites, ...convites],
         contexto: { repositorioId: repoId },
         demo: { papelForcado: null },
@@ -277,6 +289,77 @@ export function reducer(
     }
 
     /**
+     * Remove a organização e tudo que depende dela: membros, repositórios,
+     * conteúdo, convites e o pagador exclusivo. Se o contexto ativo era dessa
+     * org, abre a próxima organização acessível da sessão.
+     */
+    case "organizacao/excluir": {
+      const sessao = estado.sessao;
+      invariant(sessao, "[protótipo/contas] Excluir organização sem sessão.");
+
+      const { organizacaoId } = acao.payload;
+      const org = estado.organizacoes.find((o) => o.id === organizacaoId);
+      invariant(org, "[protótipo/contas] Organização inexistente.");
+
+      const membro = estado.membros.find(
+        (m) =>
+          m.usuarioId === sessao.usuarioId &&
+          m.organizacaoId === organizacaoId,
+      );
+      invariant(
+        membro?.papel === "admin",
+        "[protótipo/contas] Só o admin pode excluir a organização.",
+      );
+
+      const repoIds = new Set(
+        estado.repositorios
+          .filter(
+            (r) =>
+              r.escopo.tipo === "organizacao" &&
+              r.escopo.organizacaoId === organizacaoId,
+          )
+          .map((r) => r.id),
+      );
+
+      const conteudo = { ...estado.conteudo };
+      for (const id of repoIds) delete conteudo[id];
+
+      const pagadorAindaUsado = estado.organizacoes.some(
+        (o) => o.id !== organizacaoId && o.pagadorId === org.pagadorId,
+      );
+
+      const proximo: EstadoPrototipo = {
+        ...estado,
+        organizacoes: estado.organizacoes.filter((o) => o.id !== organizacaoId),
+        pagadores: pagadorAindaUsado
+          ? estado.pagadores
+          : estado.pagadores.filter((p) => p.id !== org.pagadorId),
+        membros: estado.membros.filter(
+          (m) => m.organizacaoId !== organizacaoId,
+        ),
+        repositorios: estado.repositorios.filter((r) => !repoIds.has(r.id)),
+        conteudo,
+        convites: estado.convites.filter(
+          (c) => c.organizacaoId !== organizacaoId,
+        ),
+        demo: { papelForcado: null },
+      };
+
+      const contextoAtivoEraDesta =
+        estado.contexto !== null && repoIds.has(estado.contexto.repositorioId);
+
+      if (!contextoAtivoEraDesta) {
+        return proximo;
+      }
+
+      const primeiro = primeiroRepositorioDoUsuario(proximo, sessao.usuarioId);
+      return {
+        ...proximo,
+        contexto: primeiro ? { repositorioId: primeiro.id } : null,
+      };
+    }
+
+    /**
      * Login da aplicação (`/login`). Só entra se o e-mail existir — sem
      * fallback para outro usuário (isso fazia a tela de contextos mostrar a
      * conta errada). A senha é validada antes, em `autenticar`.
@@ -320,10 +403,10 @@ export function reducer(
       const repoPessoalId = novoId("rep");
       const criadoEm = agora();
 
-      // Nenhuma membership automática: uma conta nova entra SÓ com o workspace
+      // Nenhuma membership automática: uma conta nova entra SÓ com o escopo
       // pessoal. Herdar a primeira organização existente fazia a conta nova ver
-      // os workspaces de contas criadas antes — workspaces são de quem os criou
-      // ou de quem foi convidado, nunca de quem apenas chegou depois.
+      // as organizações de contas criadas antes — organizações são de quem as
+      // criou ou de quem foi convidado, nunca de quem apenas chegou depois.
       return {
         ...estado,
         usuarios: [

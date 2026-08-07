@@ -1,10 +1,10 @@
 /**
- * Stepper de duas etapas: Conta → Espaço.
+ * Stepper de duas etapas: Conta → Organização.
  *
  * Clone do `Stepper` de `@/app/pages/onboarding` (mesmas classes de círculo,
  * mesmos estados concluído/ativo/neutro), adaptado para os dois passos deste
- * fluxo. Existe para deixar visualmente óbvio que criar a conta e configurar o
- * espaço (pessoal ou organização) são etapas SEPARADAS.
+ * fluxo. Existe para deixar visualmente óbvio que criar a conta e configurar a
+ * organização (pessoal ou corporativa) são etapas SEPARADAS.
  */
 
 import { BuildingOffice2Icon, CheckIcon, UserIcon } from "@heroicons/react/24/outline";
@@ -12,13 +12,13 @@ import clsx from "clsx";
 
 const STEPS = [
   { key: "conta", titulo: "Sua conta", Icon: UserIcon },
-  { key: "organizacao", titulo: "Seu espaço", Icon: BuildingOffice2Icon },
+  { key: "organizacao", titulo: "Sua organização", Icon: BuildingOffice2Icon },
 ] as const;
 
 export function StepperConta({ stepIndex }: { stepIndex: number }) {
   return (
     // Colunas de mesma largura e conector alinhado ao centro do círculo: sem
-    // isso os rótulos ("Sua conta" × "Seu workspace") têm larguras diferentes e
+    // isso os rótulos ("Sua conta" × "Sua organização") têm larguras diferentes e
     // o eixo dos círculos sai do centro da moldura.
     <div className="mt-6 flex items-start justify-center">
       {STEPS.map((s, i) => {

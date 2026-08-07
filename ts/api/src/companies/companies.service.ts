@@ -106,15 +106,15 @@ export class CompaniesService {
    * Usado pelo fluxo novo de contas (sem precificador/documento).
    */
   async registrar(dto: RegistrarDto): Promise<CadastroResult> {
-    const workspace =
-      dto.workspaceNome?.trim() || dto.nome.trim() || 'Meu workspace';
+    const organizacao =
+      dto.organizacaoNome?.trim() || dto.nome.trim() || 'Minha organização';
 
     return this.cadastrar({
       tipoPessoa: 'pf',
       // Placeholder: cobrança real ainda não entra neste fluxo.
       documento: '000.000.000-00',
-      razaoSocial: workspace,
-      nomeFantasia: workspace,
+      razaoSocial: organizacao,
+      nomeFantasia: organizacao,
       plano: 'basico',
       ciclo: 'mensal',
       modulos: ['ia_pessoal'],

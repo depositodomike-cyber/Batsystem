@@ -71,7 +71,7 @@ export default function SignIn() {
         nome: usuario.nome,
         email: usuario.email,
         senha: data.password,
-        workspaceNome: org?.nome,
+        organizacaoNome: org?.nome,
       });
 
       if (sessao.tipo === "conflito") {

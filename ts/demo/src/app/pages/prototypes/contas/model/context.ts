@@ -89,7 +89,7 @@ export function useCapacidades() {
   return capacidades(estado);
 }
 
-/** Contextos do workspace aberto agora — usado pelo item "Contexto". */
+/** Contextos da organização aberta agora — usado pelo item "Contexto". */
 export function useRepositoriosDoEscopoAtivo() {
   const { estado } = usePrototipoContas();
   return repositoriosDoEscopoAtivo(estado);

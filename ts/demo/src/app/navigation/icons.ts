@@ -53,6 +53,7 @@ import {
   DocumentArrowUpIcon,
   EnvelopeIcon,
   HashtagIcon,
+  ListBulletIcon,
 } from "@heroicons/react/24/outline";
 import { TbCoins, TbDevices, TbPalette } from "react-icons/tb";
 
@@ -263,6 +264,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.campanhas": HiMegaphoneIcon,
   "ceo.memoria": CircleStackIcon,
   "ceo.grafo": ShareIcon,
+  "ceo.contexto-lista": ListBulletIcon,
   "ceo.conectores": LinkIcon,
   "ceo.agentes": CpuChipIcon,
   "ceo.config": Cog6ToothIcon,

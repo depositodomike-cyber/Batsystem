@@ -11,7 +11,7 @@ export interface RegistrarContaInput {
   nome: string;
   email: string;
   senha: string;
-  workspaceNome?: string;
+  organizacaoNome?: string;
 }
 
 /**
@@ -75,7 +75,7 @@ export async function registrarContaApi(
     nome: input.nome,
     email: input.email,
     senha: input.senha,
-    workspaceNome: input.workspaceNome,
+    organizacaoNome: input.organizacaoNome,
   });
   return { authToken: data.authToken, user: usuarioApiParaUser(data.usuario) };
 }

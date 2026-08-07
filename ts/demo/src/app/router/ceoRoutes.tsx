@@ -13,6 +13,7 @@ import Ia from "@/app/pages/ceo/Ia";
 import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
 import MemoriaGrafo from "@/app/pages/ceo/MemoriaGrafo";
+import MemoriaLista from "@/app/pages/ceo/MemoriaLista";
 import Configuracoes from "@/app/pages/ceo/Configuracoes";
 import Feed from "@/app/pages/ceo/Feed";
 import FeedDetail from "@/app/pages/ceo/FeedDetail";
@@ -93,6 +94,15 @@ const productRedirects: RouteObject[] = products.map((p) => ({
   element: <Navigate to={`/${p.code}/${productHome[p.code] ?? "insights"}`} replace />,
 }));
 
+// Contexto tem duas telas sobre a MESMA pasta de notas .md: o Grafo (item da
+// árvore de navegação, logo já coberto por leafRoutes) e a Lista, que a seção
+// Context da sidebar renderiza à parte — por não estar na árvore, a rota dela é
+// declarada aqui.
+const memoriaListaRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/memoria-lista`,
+  Component: MemoriaLista,
+}));
+
 // Detalhe de um projeto criado no grupo "Agrupamentos".
 const projectRoutes: RouteObject[] = products.map((p) => ({
   path: `${p.code}/agrupamentos/:projectId`,
@@ -134,6 +144,7 @@ const legacyRedirects: RouteObject[] = [
 export const ceoRoutes: RouteObject[] = [
   ...legacyRedirects,
   ...productRedirects,
+  ...memoriaListaRoutes,
   ...projectRoutes,
   ...chatRoutes,
   ...feedDetailRoutes,

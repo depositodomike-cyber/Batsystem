@@ -5,9 +5,9 @@
  * pagador (`pf` = pessoal/B2C, `pj` = empresa/B2B) no submit. Facilita
  * acrescentar novas intenções sem mudar a forma do reducer.
  */
-export type WorkspaceType = "personal" | "organization";
+export type TipoUso = "personal" | "organization";
 
-export const WORKSPACE_TYPE_OPTIONS = [
+export const TIPO_USO_OPTIONS = [
   {
     value: "personal" as const,
     label: "Uso pessoal",

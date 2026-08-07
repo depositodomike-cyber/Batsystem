@@ -1,11 +1,11 @@
 /**
- * Menu da bolinha de perfil: lista APENAS os workspaces do usuário.
+ * Menu da bolinha de perfil: lista APENAS as organizações do usuário.
  *
- * Os contextos de cada workspace ficam no item "Contexto" da
+ * Os contextos de cada organização ficam no item "Contexto" da
  * sidebar — aqui a escolha é de escopo, não de conteúdo.
  */
 
-import { useEffect } from "react";
+import { useEffect, type MouseEvent } from "react";
 import {
   Popover,
   PopoverButton,
@@ -16,10 +16,13 @@ import {
   ArrowLeftStartOnRectangleIcon,
   BuildingOffice2Icon,
   CheckCircleIcon,
+  PlusIcon,
+  TrashIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { getProductCodeFromPath } from "@/app/navigation/ceoOs";
@@ -80,10 +83,26 @@ export function ProfileMenu({
   const escopoPessoalAtivo =
     repositorioAtivo?.escopo.tipo === "pessoal" || repositorioAtivo == null;
 
-  const abrirWorkspace = (organizacaoId: string | null, close: () => void) => {
+  const abrirOrganizacao = (organizacaoId: string | null, close: () => void) => {
     despachar({ tipo: "contexto/abrirOrganizacao", payload: { organizacaoId } });
     navigate(`/${getProductCodeFromPath(pathname)}`);
     close();
+  };
+
+  const excluirOrganizacao = (
+    organizacaoId: string,
+    rotulo: string,
+    e: MouseEvent,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    despachar({
+      tipo: "organizacao/excluir",
+      payload: { organizacaoId },
+    });
+    toast.message("Organização excluída", {
+      description: rotulo,
+    });
   };
 
   return (
@@ -132,12 +151,12 @@ export function ProfileMenu({
 
               <div className="max-h-[min(22rem,65vh)] overflow-y-auto px-2 py-3">
                 <p className="text-tiny-plus dark:text-dark-300 px-2 pb-1.5 font-semibold tracking-wider text-gray-400 uppercase">
-                  Workspaces
+                  Organizações
                 </p>
 
                 {grupos.length === 0 ? (
                   <p className="dark:text-dark-300 px-2 py-2 text-xs text-gray-400">
-                    Nenhum workspace nesta sessão.
+                    Nenhuma organização nesta sessão.
                   </p>
                 ) : (
                   <ul className="space-y-0.5">
@@ -147,56 +166,99 @@ export function ProfileMenu({
                         ? escopoPessoalAtivo
                         : grupo.organizacaoId === organizacaoAtiva?.id;
                       const Icon = isPessoal ? UserIcon : BuildingOffice2Icon;
+                      const podeExcluir =
+                        grupo.organizacaoId != null && grupo.papel === "admin";
 
                       return (
                         <li key={grupo.chave}>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              abrirWorkspace(grupo.organizacaoId ?? null, close)
-                            }
+                          <div
                             className={clsx(
-                              "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-hidden transition-colors",
+                              "group relative flex items-center gap-1 rounded-lg transition-colors",
                               isAtiva
                                 ? "bg-primary-600/10 dark:bg-primary-400/10"
                                 : "hover:bg-gray-100 dark:hover:bg-dark-600",
                             )}
                           >
-                            <Icon
-                              className={clsx(
-                                "size-4 shrink-0",
-                                isAtiva
-                                  ? "text-primary-600 dark:text-primary-400"
-                                  : "dark:text-dark-300 text-gray-400",
-                              )}
-                              strokeWidth="1.8"
-                            />
-                            <span className="min-w-0 flex-1">
-                              <span
+                            <button
+                              type="button"
+                              onClick={() =>
+                                abrirOrganizacao(
+                                  grupo.organizacaoId ?? null,
+                                  close,
+                                )
+                              }
+                              className="flex min-w-0 flex-1 items-center gap-2.5 px-2 py-2 text-left outline-hidden"
+                            >
+                              <Icon
                                 className={clsx(
-                                  "block truncate text-sm font-medium",
+                                  "size-4 shrink-0",
                                   isAtiva
                                     ? "text-primary-600 dark:text-primary-400"
-                                    : "dark:text-dark-100 text-gray-800",
+                                    : "dark:text-dark-300 text-gray-400",
                                 )}
+                                strokeWidth="1.8"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span
+                                  className={clsx(
+                                    "block truncate text-sm font-medium",
+                                    isAtiva
+                                      ? "text-primary-600 dark:text-primary-400"
+                                      : "dark:text-dark-100 text-gray-800",
+                                  )}
+                                >
+                                  {grupo.rotulo}
+                                </span>
+                                <span className="dark:text-dark-300 block text-tiny-plus text-gray-400">
+                                  {grupo.papel
+                                    ? rotuloPapel(grupo.papel, "prosa")
+                                    : "Somente você"}
+                                </span>
+                              </span>
+                              {isAtiva && !podeExcluir && (
+                                <CheckCircleIcon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+                              )}
+                            </button>
+                            {podeExcluir && (
+                              <button
+                                type="button"
+                                aria-label={`Excluir ${grupo.rotulo}`}
+                                title="Excluir organização"
+                                onClick={(e) =>
+                                  excluirOrganizacao(
+                                    grupo.organizacaoId!,
+                                    grupo.rotulo,
+                                    e,
+                                  )
+                                }
+                                className="mr-1.5 shrink-0 rounded-md p-1 text-gray-300 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500 focus:opacity-100 dark:text-dark-400 dark:hover:text-red-400"
                               >
-                                {grupo.rotulo}
-                              </span>
-                              <span className="dark:text-dark-300 block text-tiny-plus text-gray-400">
-                                {grupo.papel
-                                  ? rotuloPapel(grupo.papel, "prosa")
-                                  : "Somente você"}
-                              </span>
-                            </span>
-                            {isAtiva && (
-                              <CheckCircleIcon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+                                <TrashIcon className="size-4" strokeWidth="1.8" />
+                              </button>
                             )}
-                          </button>
+                          </div>
                         </li>
                       );
                     })}
                   </ul>
                 )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    navigate("/prototypes/contas/organizacao?novo=1");
+                  }}
+                  className="mt-1.5 flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-hidden transition-colors hover:bg-gray-100 dark:hover:bg-dark-600"
+                >
+                  <PlusIcon
+                    className="dark:text-dark-300 size-4 shrink-0 text-gray-400"
+                    strokeWidth="1.8"
+                  />
+                  <span className="dark:text-dark-100 text-sm font-medium text-gray-800">
+                    Criar organização
+                  </span>
+                </button>
               </div>
 
               <div className="dark:border-dark-600 border-t border-gray-150 px-4 py-3">

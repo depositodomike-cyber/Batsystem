@@ -1,6 +1,6 @@
 import * as Yup from "yup";
 
-import type { WorkspaceType } from "./workspaceType";
+import type { TipoUso } from "./tipoUso";
 
 /**
  * Tela 2 — intenção de uso + campos condicionais.
@@ -9,20 +9,20 @@ import type { WorkspaceType } from "./workspaceType";
  * Em `organization`, nome é obrigatório e e-mails de convite são opcionais.
  */
 export interface OrganizacaoFormValues {
-  workspaceType: WorkspaceType;
+  tipoUso: TipoUso;
   nomeOrganizacao: string;
   emails: string[];
 }
 
 export const organizacaoSchema: Yup.ObjectSchema<OrganizacaoFormValues> =
   Yup.object({
-    workspaceType: Yup.mixed<WorkspaceType>()
+    tipoUso: Yup.mixed<TipoUso>()
       .oneOf(["personal", "organization"])
       .required("Escolha como pretende utilizar a plataforma."),
     nomeOrganizacao: Yup.string()
       .trim()
       .defined()
-      .when("workspaceType", {
+      .when("tipoUso", {
         is: "organization",
         then: (schema) =>
           schema.required("Informe o nome da organização."),

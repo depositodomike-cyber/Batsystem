@@ -215,9 +215,26 @@ export interface GrupoDeRepositorios {
   repositorios: Repositorio[];
 }
 
+/** True se o usuário da sessão pertence a alguma organização com pagador PJ. */
+export function usuarioTemOrganizacaoCorporativa(s: EstadoPrototipo): boolean {
+  const usuario = usuarioDaSessao(s);
+  if (!usuario) return false;
+  return s.membros.some((m) => {
+    if (m.usuarioId !== usuario.id) return false;
+    const org = s.organizacoes.find((o) => o.id === m.organizacaoId);
+    if (!org) return false;
+    const pagador = s.pagadores.find((p) => p.id === org.pagadorId);
+    return pagador?.tipo === "pj";
+  });
+}
+
 /**
  * Todos os repositórios que o usuário da sessão pode abrir, JÁ PARTICIONADOS.
  * Nenhum consumidor recebe um array misto — não há como confundir escopos.
+ *
+ * Depois do cadastro o usuário tem exatamente as organizações a que pertence
+ * (a criada no Step 2 é a primeira). O grupo "Organização pessoal" só aparece
+ * como fallback quando ainda não há nenhuma organização (ex.: `sessao/garantir`).
  */
 export function gruposDeRepositorios(
   s: EstadoPrototipo,
@@ -225,40 +242,39 @@ export function gruposDeRepositorios(
   const usuario = usuarioDaSessao(s);
   if (!usuario) return [];
 
-  const pessoais = s.repositorios.filter(
-    (r) => r.escopo.tipo === "pessoal" && r.escopo.usuarioId === usuario.id,
-  );
-
-  // Sempre há workspace pessoal — mesmo sem repositórios ainda.
-  const grupos: GrupoDeRepositorios[] = [
-    {
-      chave: "pessoal",
-      rotulo: "Workspace pessoal",
-      escopo: "pessoal",
-      repositorios: pessoais,
-    },
-  ];
-
-  for (const org of organizacoesDoUsuario(s)) {
-    grupos.push({
+  const orgs = organizacoesDoUsuario(s);
+  if (orgs.length > 0) {
+    return orgs.map((org) => ({
       chave: org.id,
       rotulo: org.nome,
-      escopo: "organizacao",
+      escopo: "organizacao" as const,
       papel: org.papel,
       organizacaoId: org.id,
       repositorios: s.repositorios.filter(
         (r) =>
           r.escopo.tipo === "organizacao" && r.escopo.organizacaoId === org.id,
       ),
-    });
+    }));
   }
 
-  return grupos;
+  const pessoais = s.repositorios.filter(
+    (r) => r.escopo.tipo === "pessoal" && r.escopo.usuarioId === usuario.id,
+  );
+  if (pessoais.length === 0) return [];
+
+  return [
+    {
+      chave: "pessoal",
+      rotulo: "Organização pessoal",
+      escopo: "pessoal",
+      repositorios: pessoais,
+    },
+  ];
 }
 
 /**
- * Repositórios (contextos) do escopo ATIVO — o workspace aberto agora, ou o
- * workspace pessoal quando o contexto é pessoal.
+ * Repositórios (contextos) do escopo ATIVO — a organização aberta agora, ou o
+ * escopo pessoal quando o contexto é pessoal.
  */
 export function repositoriosDoEscopoAtivo(s: EstadoPrototipo): Repositorio[] {
   const usuario = usuarioDaSessao(s);

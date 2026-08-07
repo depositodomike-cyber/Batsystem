@@ -1,19 +1,20 @@
 /**
- * TELA 2 — Intenção de uso + configuração do espaço.
+ * TELA 2 — Intenção de uso + configuração da organização.
  *
- * Mesma rota de antes: a UI se adapta à escolha (pessoal vs empresa/equipe).
- * Pessoal cria organização automática com o nome do usuário (pagador pf).
- * Empresa pede nome + convites opcionais (pagador pj).
+ * Usada no cadastro e também em `?novo=1` (criar organização pelo menu de perfil).
+ * Cadastro: pessoal → produto; corporativo → seletor.
+ * Perfil (`novo=1`): sempre → seletor com as organizações existentes.
  */
 
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { Button, InputErrorMsg } from "@/components/ui";
+import { HOME_PATH } from "@/constants/app";
 import {
   descricaoModoLocal,
   garantirSessaoBackend,
@@ -23,7 +24,7 @@ import { InviteMembersField } from "../components/InviteMembersField";
 import { MolduraAuth } from "../components/MolduraAuth";
 import { OrganizationFields } from "../components/OrganizationFields";
 import { StepperConta } from "../components/StepperConta";
-import { WorkspaceTypeSelector } from "../components/WorkspaceTypeSelector";
+import { TipoUsoSelector } from "../components/TipoUsoSelector";
 import { usePrototipoContas, useUsuario } from "../model/context";
 import {
   organizacaoSchema,
@@ -32,6 +33,8 @@ import {
 
 export default function ConfigurarOrganizacao() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const novaOrganizacao = searchParams.get("novo") === "1";
   const usuario = useUsuario();
   const { despachar } = usePrototipoContas();
   const { adoptSession, establishSession } = useAuthContext();
@@ -47,13 +50,13 @@ export default function ConfigurarOrganizacao() {
   } = useForm<OrganizacaoFormValues>({
     resolver: yupResolver(organizacaoSchema),
     defaultValues: {
-      workspaceType: "personal",
+      tipoUso: "personal",
       nomeOrganizacao: "",
       emails: [],
     },
   });
 
-  const workspaceType = useWatch({ control, name: "workspaceType" });
+  const tipoUso = useWatch({ control, name: "tipoUso" });
   const emails = useWatch({ control, name: "emails" }) ?? [];
 
   if (!usuario) return <Navigate to="../criar-conta" replace />;
@@ -62,7 +65,7 @@ export default function ConfigurarOrganizacao() {
     setErroBackend(null);
     setEnviando(true);
 
-    const pessoal = valores.workspaceType === "personal";
+    const pessoal = valores.tipoUso === "personal";
     const nome = pessoal
       ? usuario.nome.trim()
       : valores.nomeOrganizacao.trim();
@@ -84,7 +87,7 @@ export default function ConfigurarOrganizacao() {
       nome: usuario.nome,
       email: usuario.email,
       senha: usuario.senha,
-      workspaceNome: nome,
+      organizacaoNome: nome,
     });
     setEnviando(false);
 
@@ -101,65 +104,70 @@ export default function ConfigurarOrganizacao() {
         name: usuario.nome,
         email: usuario.email,
       });
-      toast.message("Conta criada em modo local", {
-        description: descricaoModoLocal(sessao.motivo),
-      });
+      toast.message(
+        novaOrganizacao
+          ? "Organização criada em modo local"
+          : "Conta criada em modo local",
+        {
+          description: descricaoModoLocal(sessao.motivo),
+        },
+      );
     }
 
-    navigate("../repositorios");
+    // Pelo perfil sempre vai ao seletor; no cadastro, pessoal entra direto.
+    if (novaOrganizacao || !pessoal) {
+      navigate("../repositorios");
+    } else {
+      navigate(HOME_PATH);
+    }
   };
 
   return (
     <MolduraAuth
-      tituloPagina="Configurar espaço"
-      kicker="Etapa 2 · Seu espaço"
-      titulo="Como você pretende utilizar a plataforma?"
-      subtitulo="Escolha o tipo de uso. Campos extras só aparecem se forem necessários."
-      antesDoCard={<StepperConta stepIndex={1} />}
+      tituloPagina={
+        novaOrganizacao ? "Nova organização" : "Configurar organização"
+      }
+      kicker={
+        novaOrganizacao ? "Nova organização" : "Etapa 2 · Sua organização"
+      }
+      titulo="Como você quer usar a beculture?"
+      subtitulo="Isso ajuda a personalizar sua experiência"
+      antesDoCard={
+        novaOrganizacao ? undefined : <StepperConta stepIndex={1} />
+      }
     >
       <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
         <Controller
-          name="workspaceType"
+          name="tipoUso"
           control={control}
           render={({ field }) => (
-            <WorkspaceTypeSelector
+            <TipoUsoSelector
               value={field.value}
               onChange={field.onChange}
             />
           )}
         />
-        {errors.workspaceType?.message && (
+        {errors.tipoUso?.message && (
           <p className="mt-2 text-xs text-error dark:text-error-lighter">
-            {errors.workspaceType.message}
+            {errors.tipoUso.message}
           </p>
         )}
 
-        <div className="mt-5 space-y-4">
-          {workspaceType === "personal" ? (
-            <div className="dark:border-dark-600 dark:bg-dark-800 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-              <p className="dark:text-dark-200 text-sm text-gray-600">
-                Seu espaço será criado automaticamente utilizando seu nome.
-              </p>
-              <p className="dark:text-dark-100 mt-1.5 text-sm font-medium text-gray-800">
-                {usuario.nome.trim()}
-              </p>
-            </div>
-          ) : (
-            <>
-              <OrganizationFields
-                registration={register("nomeOrganizacao")}
-                error={errors?.nomeOrganizacao?.message}
-              />
-              <InviteMembersField
-                emails={emails}
-                emailDoUsuario={usuario.email}
-                onChange={(proximos) =>
-                  setValue("emails", proximos, { shouldValidate: true })
-                }
-              />
-            </>
-          )}
-        </div>
+        {tipoUso === "organization" && (
+          <div className="mt-5 space-y-4">
+            <OrganizationFields
+              registration={register("nomeOrganizacao")}
+              error={errors?.nomeOrganizacao?.message}
+            />
+            <InviteMembersField
+              emails={emails}
+              emailDoUsuario={usuario.email}
+              onChange={(proximos) =>
+                setValue("emails", proximos, { shouldValidate: true })
+              }
+            />
+          </div>
+        )}
 
         <div className="mt-2">
           <InputErrorMsg when={!!erroBackend}>{erroBackend}</InputErrorMsg>
@@ -173,7 +181,7 @@ export default function ConfigurarOrganizacao() {
         >
           {enviando
             ? "Criando…"
-            : workspaceType === "personal"
+            : tipoUso === "personal"
               ? "Continuar"
               : "Criar organização"}
         </Button>

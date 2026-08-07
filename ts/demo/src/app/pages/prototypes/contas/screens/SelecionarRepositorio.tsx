@@ -1,11 +1,9 @@
 /**
- * TELA 3 — Seletor de contexto / workspace.
+ * TELA 3 — Seletor de contexto / organização.
  *
- * Lista vertical dentro da mesma moldura das etapas 1 e 2: uma linha por
- * contexto, agrupada por workspace, com o papel do usuário em cada grupo.
- *
- * Exatamente UM card pode estar marcado como "Aberto agora" — não por disciplina
- * de renderização, mas porque o estado só guarda um `contexto.repositorioId`.
+ * No cadastro, contas pessoais vão direto ao produto; corporativas passam por
+ * aqui. Também é o destino de "Criar organização" no menu de perfil (`?novo=1`),
+ * listando todas as organizações existentes (pf ou pj).
  */
 
 import {
@@ -48,6 +46,10 @@ export default function SelecionarRepositorio() {
 
   if (!usuario) return <Navigate to="../criar-conta" replace />;
 
+  // Sem nenhuma organização ainda — nada a escolher.
+  if (grupos.length === 0) {
+    return <Navigate to={HOME_PATH} replace />;
+  }
   const abrir = async (repositorioId: string) => {
     despachar({ tipo: "contexto/abrirRepositorio", payload: { repositorioId } });
 
@@ -68,7 +70,7 @@ export default function SelecionarRepositorio() {
         nome: usuario.nome,
         email: usuario.email,
         senha: usuario.senha,
-        workspaceNome: org?.nome,
+        organizacaoNome: org?.nome,
       });
       flushSync(() => {
         if (sessao.tipo === "ok") {
@@ -88,15 +90,15 @@ export default function SelecionarRepositorio() {
 
   return (
     <MolduraAuth
-      tituloPagina="Selecionar workspace"
+      tituloPagina="Selecionar organização"
       kicker="Etapa 3 · Contexto de trabalho"
-      titulo="Selecione o workspace"
+      titulo="Selecione a organização"
       subtitulo="Escolha onde você quer começar a trabalhar."
       largura="max-w-[34rem]"
       depoisDoCard={
         <p className="dark:text-dark-300 mt-4 text-center text-xs-plus text-gray-400">
-          Contextos são isolados entre workspaces: o conteúdo de um não aparece
-          no outro.
+          Contextos são isolados entre organizações: o conteúdo de um não
+          aparece no outro.
         </p>
       }
     >
@@ -184,7 +186,7 @@ export default function SelecionarRepositorio() {
 
               {grupo.repositorios.length === 0 && (
                 <p className="dark:border-dark-600 dark:text-dark-300 rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-400">
-                  Nenhum contexto neste workspace ainda.
+                  Nenhum contexto nesta organização ainda.
                 </p>
               )}
 

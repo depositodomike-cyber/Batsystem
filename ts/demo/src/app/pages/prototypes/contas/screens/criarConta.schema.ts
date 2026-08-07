@@ -4,7 +4,7 @@ import * as Yup from "yup";
  * Tela 1 — criação de conta.
  *
  * Só nome, e-mail, senha e confirmação. NÃO existe campo de tipo de conta, de
- * plano, de documento ou de organização: o workspace é a etapa seguinte.
+ * plano, de documento ou de organização: a organização é a etapa seguinte.
  */
 export interface CriarContaFormValues {
   nome: string;

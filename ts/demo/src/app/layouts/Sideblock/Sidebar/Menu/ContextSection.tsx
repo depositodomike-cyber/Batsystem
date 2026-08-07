@@ -1,6 +1,7 @@
 /**
- * Seção Context: seletor do contexto ativo + atalho Grafo.
- * Sempre expandida — não é collapse.
+ * Seção Context: seletor do contexto ativo + as duas telas da pasta de notas.
+ * Grafo e Lista mostram o mesmo conteúdo de formas diferentes, então convivem
+ * como itens irmãos aqui. Sempre expandida — não é collapse.
  */
 
 import clsx from "clsx";
@@ -20,6 +21,14 @@ export function ContextSection({ product }: { product: string }) {
     path: `/${product}/memoria-grafo`,
     title: "Grafo",
     icon: "ceo.grafo",
+  };
+
+  const listaItem: NavigationTree = {
+    id: `${product}.memoria-lista`,
+    type: "item",
+    path: `/${product}/memoria-lista`,
+    title: "Lista",
+    icon: "ceo.contexto-lista",
   };
 
   return (
@@ -46,6 +55,7 @@ export function ContextSection({ product }: { product: string }) {
       <div className="flex flex-col space-y-0.5">
         <ContextoSelect />
         <MenuItem data={grafoItem} />
+        <MenuItem data={listaItem} />
       </div>
     </section>
   );

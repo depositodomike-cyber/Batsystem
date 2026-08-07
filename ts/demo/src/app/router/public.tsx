@@ -40,7 +40,7 @@ const publicRoutes: RouteObject = {
     {
       path: "prototypes",
       children: [
-        // Protótipo do novo modelo de contas: criação de conta → workspace →
+        // Protótipo do novo modelo de contas: criação de conta → organização →
         // seletor de contexto. A entrada é o login único da app (`/login`);
         // este fluxo é só o cadastro.
         {

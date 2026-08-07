@@ -1,7 +1,7 @@
 import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 /**
- * Cadastro mínimo (nome, e-mail, senha, workspace).
+ * Cadastro mínimo (nome, e-mail, senha, organização).
  *
  * O funil completo (`POST /cadastro`) pede cobrança/documento/módulos. Este
  * endpoint existe para o fluxo novo de contas criar a empresa + owner no
@@ -23,9 +23,9 @@ export class RegistrarDto {
   @MaxLength(72)
   senha!: string;
 
-  /** Nome do workspace. Se omitido, usa o nome da pessoa. */
+  /** Nome da organização. Se omitido, usa o nome da pessoa. */
   @IsOptional()
   @IsString()
   @MaxLength(160)
-  workspaceNome?: string;
+  organizacaoNome?: string;
 }

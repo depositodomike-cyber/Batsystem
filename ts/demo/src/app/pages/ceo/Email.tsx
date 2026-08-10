@@ -63,13 +63,13 @@ import {
 
 // ----------------------------------------------------------------------
 // E-mail — leitura da caixa de entrada do conector, com duas saídas para o
-// resto do produto: "Salvar no Contexto" (vira memória da IA, aparece no grafo)
+// resto do produto: "Salvar no Repositório" (vira memória da IA, aparece no grafo)
 // e "Salvar no Grupo" (guarda uma cópia dentro de um agrupamento).
 //
 // Com o Gmail (ou o Outlook) autorizado em Conectores, a caixa vem do provedor
 // pelo backend; sem nenhum conector de e-mail, cai na caixa de demonstração
 // (emailsMock). O que é do usuário — o que já foi lido e o que já foi mandado
-// para o Contexto — fica no localStorage, no mesmo padrão da tela de Notas.
+// para o Repositório — fica no localStorage, no mesmo padrão da tela de Notas.
 // ----------------------------------------------------------------------
 
 const LIDOS_BASE = "ceo-email-lidos";
@@ -146,7 +146,7 @@ function previa(corpo: string): string {
  * de caracteres e os grupos vivem no localStorage (~5 MB no total): sem corte,
  * meia dúzia de e-mails estoura a cota e NADA mais é persistido. A página do
  * grupo mostra só um trecho, e o e-mail completo continua na caixa e no .md
- * gravado na pasta do grupo no Contexto.
+ * gravado na pasta do grupo no Repositório.
  */
 const GRUPO_MAX_CORPO = 4000;
 
@@ -186,7 +186,7 @@ export default function Email() {
   const { isConnected } = useConnectorsContext();
   const { isAuthenticated } = useAuthContext();
 
-  // Temas = as pastas disponíveis no Contexto (regra única da aplicação).
+  // Temas = as pastas disponíveis no Repositório (regra única da aplicação).
   const { temas: memoryCategories } = usePastasMemoria();
   const grupos = projectsByProduct(productCode);
 
@@ -332,8 +332,8 @@ export default function Email() {
     setLidos((prev) => (prev.includes(e.id) ? prev : [...prev, e.id]));
   };
 
-  // ---- Salvar no Contexto ----
-  // O e-mail vira um .md na pasta (tema) escolhida da Pasta do Contexto — é o
+  // ---- Salvar no Repositório ----
+  // O e-mail vira um .md na pasta (tema) escolhida da Pasta do Repositório — é o
   // que o grafo desenha e o que a IA consulta. Em caso de falha o modal
   // continua aberto, com o texto já revisado, para tentar de novo.
   const gravarNaMemoria = async (
@@ -357,7 +357,7 @@ export default function Email() {
     }
     setNaMemoria((prev) => (prev.includes(e.id) ? prev : [...prev, e.id]));
     setMemEmail(null);
-    toast.success("Salvo no Contexto.", {
+    toast.success("Salvo no Repositório.", {
       description: `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
     });
   };
@@ -422,7 +422,7 @@ export default function Email() {
                       <strong>E-mail</strong> mostra a sua caixa de entrada aqui dentro. Conecte o Gmail ou o Outlook em Conectores para ler os e-mails reais; sem conector, você vê uma caixa de demonstração. Use a busca e os filtros (não lidos, com anexo, salvos) para encontrar mensagens.
                     </p>
                     <p>
-                      Ao abrir um e-mail, você pode <strong>Salvar no Contexto</strong> — o conteúdo vira um contexto da IA e aparece no grafo — ou <strong>Salvar no Grupo</strong>, guardando uma cópia dentro de um agrupamento.
+                      Ao abrir um e-mail, você pode <strong>Salvar no Repositório</strong> — o conteúdo vira um contexto da IA e aparece no grafo — ou <strong>Salvar no Grupo</strong>, guardando uma cópia dentro de um agrupamento.
                     </p>
                   </>
                 ),
@@ -433,7 +433,7 @@ export default function Email() {
             <p className="dark:text-dark-300 truncate text-sm text-gray-400">
               {usarCaixaReal
                 ? `Caixa de entrada do ${provedor!.label}${conta ? ` · ${conta}` : ""}`
-                : "Leia a caixa de entrada e guarde o que importa no Contexto ou num grupo."}
+                : "Leia a caixa de entrada e guarde o que importa no Repositório ou num grupo."}
             </p>
           </div>
           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -704,8 +704,8 @@ export default function Email() {
                         <ArrowUpTrayIcon className="size-4" />
                       )}
                       {naMemoria.includes(aberto.id)
-                        ? "Salvar de novo no Contexto"
-                        : "Salvar no Contexto"}
+                        ? "Salvar de novo no Repositório"
+                        : "Salvar no Repositório"}
                     </Button>
                     <Button
                       variant="outlined"
@@ -784,7 +784,7 @@ export default function Email() {
 }
 
 // ----------------------------------------------------------------------
-// Modal "Salvar no Contexto" — deixa escolher o tema e revisar título/conteúdo
+// Modal "Salvar no Repositório" — deixa escolher o tema e revisar título/conteúdo
 // antes de gravar, porque um e-mail costuma trazer assinatura e ruído que não
 // deveriam entrar na memória da IA.
 // ----------------------------------------------------------------------
@@ -847,7 +847,7 @@ function SalvarNaMemoriaModal({
       show={!!email}
       close={close}
       icon={CpuChipIcon}
-      title="Salvar no Contexto"
+      title="Salvar no Repositório"
       description="O e-mail vira um contexto da IA e passa a aparecer no grafo."
       footer={
         <>
@@ -861,7 +861,7 @@ function SalvarNaMemoriaModal({
             disabled={salvando || !podeSalvar}
           >
             {salvando && <Spinner className="size-4" />}
-            {salvando ? "Gravando…" : "Gravar no Contexto"}
+            {salvando ? "Gravando…" : "Gravar no Repositório"}
           </Button>
         </>
       }
@@ -882,7 +882,7 @@ function SalvarNaMemoriaModal({
           value={categoria}
           onChange={(e) => setCategoria(e.target.value)}
           data={categories.map((c) => ({ label: c.label, value: c.id }))}
-          description="Os temas são as pastas disponíveis no Contexto."
+          description="Os temas são as pastas disponíveis no Repositório."
         />
         <Input
           label="Título"
@@ -903,7 +903,7 @@ function SalvarNaMemoriaModal({
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
               setConteudo(e.target.value)
             }
-            description="Edite antes de gravar — “[[” conecta o trecho a uma nota do Contexto."
+            description="Edite antes de gravar — “[[” conecta o trecho a uma nota do Repositório."
           />
           <p className="dark:text-dark-300 mt-1.5 text-tiny text-gray-400">
             {conteudo.trim().length.toLocaleString("pt-BR")} caracteres

@@ -318,7 +318,7 @@ export function conteudoDoRepositorioAtivo(
 export function rotuloEscopoAtivo(s: EstadoPrototipo): string {
   const org = organizacaoAtiva(s);
   if (org) return org.nome;
-  return repositorioAtivo(s) ? "Contexto pessoal" : "Nenhum contexto";
+  return repositorioAtivo(s) ? "Repositório pessoal" : "Nenhum repositório";
 }
 
 /** Convites pendentes de uma organização. */

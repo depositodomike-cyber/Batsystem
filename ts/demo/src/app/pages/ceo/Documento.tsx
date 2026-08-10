@@ -102,7 +102,7 @@ export default function Documento() {
                   <>
                     <p>
                       Documento organizado pela IA a partir de um upload. O
-                      conteúdo fica salvo no <strong>Contexto · Documentos</strong>{" "}
+                      conteúdo fica salvo no <strong>Repositório · Documentos</strong>{" "}
                       e pode ser enviado para um agrupamento ou gravado como{" "}
                       <span className="font-mono">.md</span> na pasta local.
                     </p>
@@ -197,7 +197,7 @@ export default function Documento() {
                   </h3>
                   {salvo && (
                     <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                      <CheckCircleIcon className="size-4" /> Salvo no Contexto ·
+                      <CheckCircleIcon className="size-4" /> Salvo na Memória ·
                       Documentos
                     </p>
                   )}

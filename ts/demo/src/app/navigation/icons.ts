@@ -287,7 +287,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.agenda": CalendarDaysIcon,
   "ceo.notas": PencilSquareIcon,
   "ceo.todo": CheckDoubleIcon,
-  // Uploads do Contexto (subitens que abrem o modal correspondente na tela de IA)
+  // Uploads do Repositório (subitens que abrem o modal correspondente na tela de IA)
   "ceo.upload-audio": MicrophoneIcon,
   "ceo.upload-documento": DocumentArrowUpIcon,
   "ceo.upload-transcricao": ArrowUpTrayIcon,

@@ -16,7 +16,7 @@ export interface Carrossel {
   hashtags: string[];
   /**
    * Bloco "## 🔗 Conexões no Vault" ([[wikilinks]] para outros assuntos da
-   * Memória). Entra na nota ao salvar no Contexto, fora do roteiro editável.
+   * Memória). Entra na nota ao salvar no Repositório, fora do roteiro editável.
    */
   conexoes: string;
 }

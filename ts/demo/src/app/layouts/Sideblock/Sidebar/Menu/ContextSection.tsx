@@ -40,7 +40,7 @@ export function ContextSection({ product }: { product: string }) {
         )}
       >
         <p className="dark:text-dark-300 mb-1.5 pt-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
-          Context
+          Repositório
         </p>
         <div
           className={clsx(

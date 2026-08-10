@@ -55,7 +55,7 @@ import {
 
 // ----------------------------------------------------------------------
 // Slack — leitura do workspace do conector, com as mesmas duas saídas da tela
-// de E-mail: "Salvar no Contexto" (vira memória da IA) e "Salvar no Grupo"
+// de E-mail: "Salvar no Repositório" (vira memória da IA) e "Salvar no Grupo"
 // (guarda uma cópia dentro de um agrupamento).
 //
 // Cobre as três formas de conversa: canais (públicos e privados), conversas em
@@ -68,7 +68,7 @@ import {
 // as mensagens são lidas em separado: só a conversa aberta é carregada, e o que
 // já foi lido fica em cache até a próxima atualização.
 //
-// O que já foi mandado para o Contexto fica no localStorage, como no E-mail.
+// O que já foi mandado para o Repositório fica no localStorage, como no E-mail.
 // ----------------------------------------------------------------------
 
 const NA_MEMORIA_BASE = "ceo-slack-na-memoria";
@@ -167,7 +167,7 @@ export default function Slack() {
   const { isConnected, getWorkspace } = useConnectorsContext();
   const { isAuthenticated } = useAuthContext();
 
-  // Temas = as pastas disponíveis no Contexto (regra única da aplicação).
+  // Temas = as pastas disponíveis no Repositório (regra única da aplicação).
   const { temas } = usePastasMemoria();
   const grupos = projectsByProduct(productCode);
 
@@ -378,7 +378,7 @@ export default function Slack() {
     };
   };
 
-  // ---- Salvar no Contexto ----
+  // ---- Salvar no Repositório ----
   // Vira um .md na pasta (tema) escolhida — mesma mecânica da tela de E-mail:
   // Memória é a pasta de notas, não o store de Regras.
   const gravarNaMemoria = async (
@@ -401,7 +401,7 @@ export default function Slack() {
     }
     setNaMemoria((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
     setMemItem(null);
-    toast.success("Salvo no Contexto.", {
+    toast.success("Salvo no Repositório.", {
       description: `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
     });
   };
@@ -458,7 +458,7 @@ export default function Slack() {
                       <strong>Slack</strong> mostra as conversas do seu workspace — canais, conversas em grupo e mensagens diretas. Conecte o Slack em Conectores para ler o workspace real; sem conector, você vê um workspace de demonstração. Mensagens com respostas abrem a thread em um painel à direita.
                     </p>
                     <p>
-                      De cada mensagem, ou da thread inteira, você pode <strong>Salvar no Contexto</strong> — o conteúdo vira um contexto da IA e aparece no grafo — ou <strong>Salvar no Grupo</strong>, guardando uma cópia dentro de um agrupamento.
+                      De cada mensagem, ou da thread inteira, você pode <strong>Salvar no Repositório</strong> — o conteúdo vira um contexto da IA e aparece no grafo — ou <strong>Salvar no Grupo</strong>, guardando uma cópia dentro de um agrupamento.
                     </p>
                   </>
                 ),
@@ -471,7 +471,7 @@ export default function Slack() {
                 ? `Workspace conectado${workspace ? ` · ${workspace}` : ""}${
                     contaSlack ? ` · lendo como ${contaSlack}` : ""
                   }`
-                : "Leia canais, conversas em grupo e DMs — e guarde o que importa no Contexto ou num grupo."}
+                : "Leia canais, conversas em grupo e DMs — e guarde o que importa no Repositório ou num grupo."}
             </p>
           </div>
           {usarWorkspaceReal && (
@@ -726,7 +726,7 @@ export default function Slack() {
                   className="h-8 flex-1 gap-1.5 px-2.5 text-xs-plus"
                 >
                   <CpuChipIcon className="size-4" />
-                  Thread no Contexto
+                  Thread no Repositório
                 </Button>
                 <Button
                   variant="outlined"
@@ -965,8 +965,8 @@ function Mensagem({
           <button
             type="button"
             onClick={onSalvarMemoria}
-            title="Salvar no Contexto"
-            aria-label={`Salvar a mensagem de ${mensagem.autor} no Contexto`}
+            title="Salvar no Repositório"
+            aria-label={`Salvar a mensagem de ${mensagem.autor} no Repositório`}
             className="dark:text-dark-300 dark:hover:bg-dark-600 dark:hover:text-dark-50 rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
           >
             <CpuChipIcon className="size-4" />

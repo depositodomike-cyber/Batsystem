@@ -47,7 +47,7 @@ import {
 } from "./memoria-inventario";
 
 // ----------------------------------------------------------------------
-// Contexto · Lista — a mesma pasta de notas .md que o Grafo mostra, só que como
+// Repositório · Lista — a mesma pasta de notas .md que o Grafo mostra, só que como
 // inventário. As duas telas convivem: o grafo responde "como isto se conecta?",
 // a lista responde "o que tem aqui?" — e é ela que serve quando o vault cresce e
 // achar um arquivo pelo nome vale mais que ver a teia.
@@ -107,11 +107,11 @@ export default function MemoriaLista() {
     setSincronizando(true);
     try {
       const r = await syncVault(notasParaVault(arquivos));
-      toast.success("Contexto sincronizado", {
+      toast.success("Repositório sincronizado", {
         description: `${r.total} notas disponíveis para a IA.`,
       });
     } catch {
-      toast.error("Falha ao sincronizar o Contexto com a IA.", {
+      toast.error("Falha ao sincronizar o Repositório com a IA.", {
         description: "A lista está atualizada, mas as notas não chegaram ao servidor.",
       });
     } finally {
@@ -194,7 +194,7 @@ export default function MemoriaLista() {
   const ocupado = lendo || sincronizando;
 
   return (
-    <Page title={`Contexto · lista · ${product.name}`}>
+    <Page title={`Repositório · lista · ${product.name}`}>
       <div className="transition-content w-full px-(--margin-x) py-6">
         {/* Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -204,7 +204,7 @@ export default function MemoriaLista() {
                 description: (
                   <>
                     <p>
-                      Esta é a <strong>lista do Contexto</strong>: todos os arquivos{" "}
+                      Esta é a <strong>lista do Repositório</strong>: todos os arquivos{" "}
                       <span className="font-mono">.md</span> da sua pasta — uploads,
                       transcrições, atas, documentos gerados pela IA e notas dos
                       agrupamentos.
@@ -218,11 +218,11 @@ export default function MemoriaLista() {
                 ),
               }}
             >
-              Contexto · Lista
+              Repositório · Lista
             </PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
               {semPasta
-                ? "Escolha a pasta do Contexto para ver tudo o que já está nela."
+                ? "Escolha a pasta do Repositório para ver tudo o que já está nela."
                 : `${total} ${total === 1 ? "nota" : "notas"} em ${nomePasta || "sua pasta"} · a mesma base que alimenta a IA.`}
             </p>
           </div>
@@ -262,7 +262,7 @@ export default function MemoriaLista() {
               </span>
               <p className="dark:text-dark-300 text-sm text-gray-500">
                 Escolha a pasta onde ficam as notas{" "}
-                <span className="font-mono">.md</span> do seu Contexto. A lista mostra
+                <span className="font-mono">.md</span> do seu Repositório. A lista mostra
                 cada arquivo com pasta, tipo e tags.
               </p>
               <Button onClick={escolherPasta} color="primary" className="gap-2">
@@ -349,7 +349,7 @@ export default function MemoriaLista() {
                   </h3>
                   <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
                     {total === 0
-                      ? "Faça um upload de documento, áudio ou transcrição para o Contexto começar a se formar."
+                      ? "Faça um upload de documento, áudio ou transcrição para o Repositório começar a se formar."
                       : "Ajuste a busca ou escolha outra pasta."}
                   </p>
                 </div>

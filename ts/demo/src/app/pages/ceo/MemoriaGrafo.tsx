@@ -35,7 +35,7 @@ import {
 // (File System Access API), sem backend.
 //
 // A leitura da pasta (handle, permissão, varredura dos .md, frontmatter) vem de
-// memoria-inventario.ts — o mesmo módulo que alimenta a Lista do Contexto, para
+// memoria-inventario.ts — o mesmo módulo que alimenta a Lista do Repositório, para
 // as duas telas mostrarem sempre o mesmo conjunto de notas.
 // ----------------------------------------------------------------------
 
@@ -237,12 +237,12 @@ export default function MemoriaGrafo() {
         setSync({ state: "syncing", done, total }),
       );
       setSync({ state: "done", done: r.total, total: r.total });
-      toast.success("Contexto sincronizado", {
+      toast.success("Repositório sincronizado", {
         description: `${r.total} notas disponíveis para a IA.`,
       });
     } catch {
       setSync({ state: "error", done: 0, total: 0 });
-      toast.error("Falha ao sincronizar o Contexto com a IA.", {
+      toast.error("Falha ao sincronizar o Repositório com a IA.", {
         description: "O grafo foi montado, mas as notas não chegaram ao servidor.",
       });
     }
@@ -259,7 +259,7 @@ export default function MemoriaGrafo() {
         if (files.length === 0) {
           toast("Nenhuma nota .md encontrada", { description: `A pasta “${handle.name}” não tem arquivos .md.` });
         } else {
-          toast("Contexto carregado", { description: `${notas} notas · ${g.links.length} conexões` });
+          toast("Repositório carregado", { description: `${notas} notas · ${g.links.length} conexões` });
           void syncToBackend(files);
           // Só pergunta quando o carregamento veio de um upload do usuário.
           if (opts?.fromUpload) {
@@ -819,7 +819,7 @@ export default function MemoriaGrafo() {
   }, [graph, isDark]);
 
   return (
-    <Page title={`Contexto · ${product.name}`}>
+    <Page title={`Repositório · ${product.name}`}>
       {/* Grafo solto na página, em tela cheia (abaixo do header de 65px) */}
       <div
         ref={wrapRef}
@@ -892,7 +892,7 @@ export default function MemoriaGrafo() {
                   <FolderIcon className="size-7 stroke-[1.5]" />
                 </span>
                 <p className="text-sm text-gray-500 dark:text-slate-300">
-                  Escolha a pasta onde ficam as notas <span className="font-mono">.md</span> do seu Contexto. O grafo é montado a partir dos <span className="font-mono">[[wikilinks]]</span>, tags e pastas.
+                  Escolha a pasta onde ficam as notas <span className="font-mono">.md</span> do seu Repositório. O grafo é montado a partir dos <span className="font-mono">[[wikilinks]]</span>, tags e pastas.
                 </p>
                 <Button onClick={pickFolder} color="primary" className="gap-2">
                   <FolderIcon className="size-5" />
@@ -931,7 +931,7 @@ export default function MemoriaGrafo() {
         }}
       />
 
-      {/* Pergunta pós-upload: gerar atividades ou insights a partir do Contexto. */}
+      {/* Pergunta pós-upload: gerar atividades ou insights a partir do Repositório. */}
       <SugerirPosUploadModal
         isOpen={sugerirOpen}
         close={() => setSugerirOpen(false)}

@@ -56,14 +56,14 @@ export function MenuMemoria({
       onMouseDown={(e) => e.preventDefault()}
     >
       <p className="dark:border-dark-500 dark:text-dark-300 border-b border-gray-100 px-3 py-1.5 text-tiny text-gray-400">
-        Conectar ao Contexto {termo ? `· “${termo}”` : ""}
+        Conectar ao Repositório {termo ? `· “${termo}”` : ""}
       </p>
 
       {itens.length === 0 ? (
         <p className="dark:text-dark-300 px-3 py-3 text-xs-plus text-gray-500">
           {termo
             ? "Nenhuma nota com esse nome. ↵ cria o link mesmo assim."
-            : "Nenhuma nota no Contexto ainda."}
+            : "Nenhuma nota no Repositório ainda."}
         </p>
       ) : (
         <ul ref={listaRef} className="max-h-64 overflow-y-auto py-1">

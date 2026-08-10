@@ -137,7 +137,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
           salvarMemoriasLocal(next);
           return next;
         });
-        toast.success("Contexto salvo.");
+        toast.success("Repositório salvo.");
       } catch (err) {
         if (pareceApiIndisponivel(err)) {
           modoLocalRef.current = true;
@@ -216,7 +216,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
           salvarMemoriasLocal(next);
           return next;
         });
-        toast.success("Contexto removido.");
+        toast.success("Repositório removido.");
       } catch (err) {
         if (pareceApiIndisponivel(err)) {
           modoLocalRef.current = true;

@@ -1,14 +1,14 @@
 // ----------------------------------------------------------------------
-// "Salvar no Contexto" de um conteúdo avulso — e-mail, conversa do Slack, nota.
+// "Salvar no Repositório" de um conteúdo avulso — e-mail, conversa do Slack, nota.
 //
 // Memória é a PASTA de arquivos .md: é dela que sai o grafo
 // (/<produto>/memoria-grafo) e é ela que a IA consulta. O store `/memorias` do
 // backend é outra coisa — a tela "Regras" (conduta da IA). Por
-// isso gravar no Contexto é escrever um .md na pasta (tema) escolhida.
+// isso gravar no Repositório é escrever um .md na pasta (tema) escolhida.
 //
 // Era exatamente o que faltava nos conectores: E-mail, Slack e Notas mandavam o
-// conteúdo para o store `/memorias`, então nada aparecia no Contexto nem chegava
-// à IA como conhecimento — o "Salvar no Contexto" parecia não funcionar.
+// conteúdo para o store `/memorias`, então nada aparecia no Repositório nem chegava
+// à IA como conhecimento — o "Salvar no Repositório" parecia não funcionar.
 //
 // Depois de gravar, a nota é indexada no backend (/ai/vault/sync/batch) para a
 // IA encontrá-la na mesma hora, sem esperar a próxima abertura do grafo.
@@ -26,7 +26,7 @@ import { syncVaultBatch } from "@/services/api/vault";
 type FalhaMemoria = Extract<WriteResult, { ok: false }>["reason"];
 
 export interface ConteudoNaMemoria {
-  /** Tema = pasta do Contexto escolhida no modal (ver usePastasMemoria). */
+  /** Tema = pasta do Repositório escolhida no modal (ver usePastasMemoria). */
   pasta: string;
   titulo: string;
   conteudo: string;
@@ -39,7 +39,7 @@ export interface ConteudoNaMemoria {
 }
 
 /**
- * Grava o conteúdo como .md na pasta escolhida do Contexto e o indexa para a IA.
+ * Grava o conteúdo como .md na pasta escolhida do Repositório e o indexa para a IA.
  * Devolve o resultado sem lançar — quem chama decide o feedback (e mantém o
  * modal aberto quando falha).
  */
@@ -74,33 +74,33 @@ export async function salvarConteudoNaMemoria(
 }
 
 /**
- * Feedback de falha do "Salvar no Contexto". Diferente de `avisarFalhaMemoria`
+ * Feedback de falha do "Salvar no Repositório". Diferente de `avisarFalhaMemoria`
  * (memoria-grupos), aqui "navegador sem suporte" TAMBÉM é avisado: a gravação
  * era a ação pedida pelo usuário, então ficar em silêncio é o mesmo bug de
  * antes — o clique não faz nada e ninguém sabe por quê.
  */
 export function avisarFalhaAoSalvarNaMemoria(reason: FalhaMemoria) {
   if (reason === "no-folder") {
-    toast.error("Nenhuma pasta do Contexto definida", {
+    toast.error("Nenhuma pasta do Repositório definida", {
       description:
-        "Abra o Contexto (ou Configurações), escolha a pasta e tente de novo.",
+        "Abra o Repositório (ou Configurações), escolha a pasta e tente de novo.",
     });
     return;
   }
   if (reason === "denied") {
     toast.error("Permissão negada", {
-      description: "É preciso autorizar a escrita na pasta do Contexto.",
+      description: "É preciso autorizar a escrita na pasta do Repositório.",
     });
     return;
   }
   if (reason === "unsupported") {
     toast.error("Gravação indisponível neste navegador", {
       description:
-        "O Contexto está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
+        "O Repositório está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
     });
     return;
   }
-  toast.error("Não foi possível gravar no Contexto", {
+  toast.error("Não foi possível gravar no Repositório", {
     description: "Tente novamente.",
   });
 }

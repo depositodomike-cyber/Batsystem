@@ -1,7 +1,7 @@
 /**
  * Menu da bolinha de perfil: organizações do usuário + idioma + sair.
  *
- * Os contextos de cada organização ficam no item "Contexto" da
+ * Os contextos de cada organização ficam no item "Repositório" da
  * sidebar — aqui a escolha é de escopo, não de conteúdo.
  */
 

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Campos com conexão ao Contexto — troque `<textarea>` por `<MemoriaTextarea>`
+// Campos com conexão ao Repositório — troque `<textarea>` por `<MemoriaTextarea>`
 // (ou `<input>` por `<MemoriaInput>`) e o campo passa a abrir a lista de notas
 // e regras quando a pessoa digita "[[".
 //

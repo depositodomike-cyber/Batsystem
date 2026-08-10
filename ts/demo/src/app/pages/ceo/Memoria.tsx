@@ -510,7 +510,7 @@ function NewMemoryModal({
                   onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                     setContent(e.target.value)
                   }
-                  placeholder="Descreva a regra… (“[[” conecta a uma nota do Contexto)"
+                  placeholder="Descreva a regra… (“[[” conecta a uma nota do Repositório)"
                 />
                 {/* Origem oculta temporariamente — o campo e o estado `source` permanecem. */}
 

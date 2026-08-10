@@ -52,7 +52,7 @@ export function Group({ data }: { data: NavigationTree }) {
         <Collapse in={isOpened}>
           <div className="flex flex-col space-y-0.5">
             {data.childs.map((item) => {
-              // O Contexto é renderizado numa seção própria pela raiz do menu.
+              // O Repositório é renderizado numa seção própria pela raiz do menu.
               if (item.id.endsWith(".memoria-grafo")) return null;
 
               switch (item.type) {

@@ -38,7 +38,7 @@ import { lerComMigracao } from "@/utils/escopoConta";
 // ----------------------------------------------------------------------
 
 const FONTES: [string, string][] = [
-  ["memoria", "Contexto"],
+  ["memoria", "Repositório"],
   ["notas", "Notas"],
   ["insights", "Insights"],
   ["todos", "To-do's"],

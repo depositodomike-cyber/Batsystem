@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
 // Contexto — leitura da pasta de notas .md.
 //
-// O Contexto tem duas telas sobre a MESMA pasta local: o Grafo (relações entre
+// O Repositório tem duas telas sobre a MESMA pasta local: o Grafo (relações entre
 // as notas) e a Lista (inventário dos arquivos). Tudo o que as duas precisam
 // para chegar aos mesmos itens — handle da pasta no IndexedDB, permissão de
 // leitura, varredura recursiva dos .md, título/tags do frontmatter — vive aqui,
-// para as duas nunca divergirem sobre o que é "o Contexto".
+// para as duas nunca divergirem sobre o que é "o Repositório".
 //
 // A gravação de notas fica em utils/memoriaVault.ts, que usa o MESMO handle
 // (mesmo banco/chave do IndexedDB) já com permissão de escrita.
@@ -257,7 +257,7 @@ function escolherPastaPorInput(): Promise<
 
 /** Files do <input webkitdirectory> → cópia dos .md, com caminhos relativos. */
 async function copiarPasta(files: File[]): Promise<CopiaDaPasta> {
-  const raiz = files[0]?.webkitRelativePath?.split("/")[0] || "Contexto";
+  const raiz = files[0]?.webkitRelativePath?.split("/")[0] || "Repositório";
   const arquivos: ArquivoMd[] = [];
 
   for (const file of files) {
@@ -360,7 +360,7 @@ export async function permissaoDeLeitura(
 // ---- Leitura dos arquivos ----
 
 export interface ArquivoMd {
-  /** Caminho relativo à pasta do Contexto ("Reuniões/ata.md"). */
+  /** Caminho relativo à pasta do Repositório ("Reuniões/ata.md"). */
   path: string;
   name: string;
   text: string;
@@ -446,12 +446,12 @@ export function notasParaVault(
 // ---- Inventário (a Lista) ----
 
 /**
- * Uma nota do Contexto como item de lista. É o mesmo conjunto que o grafo mostra
+ * Uma nota do Repositório como item de lista. É o mesmo conjunto que o grafo mostra
  * como nós de nota — os hubs de tag e de pasta são sintéticos e ficam de fora,
  * porque não existem como arquivo.
  */
 export interface ItemContexto {
-  /** Caminho relativo à pasta do Contexto — o mesmo id usado pelo nó do grafo. */
+  /** Caminho relativo à pasta do Repositório — o mesmo id usado pelo nó do grafo. */
   path: string;
   titulo: string;
   /** Primeiro segmento do caminho; "Raiz" para notas soltas na pasta. */

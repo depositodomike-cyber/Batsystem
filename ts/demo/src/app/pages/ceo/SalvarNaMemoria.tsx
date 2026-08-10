@@ -30,12 +30,12 @@ import { usePastasMemoria } from "./usePastasMemoria";
 // API (mesma regra do modal de transcrição).
 //
 // O botão é dividido: o clique principal grava na pasta da ação e a seta abre a
-// lista de temas — que, como em toda opção de gravar no Contexto, são as PASTAS
+// lista de temas — que, como em toda opção de gravar no Repositório, são as PASTAS
 // DISPONÍVEIS NA MEMÓRIA (ver usePastasMemoria).
 // ----------------------------------------------------------------------
 
 interface Props {
-  /** Subpasta do Contexto sugerida — use PASTA_MEMORIA (memoria-pastas.ts). */
+  /** Subpasta do Repositório sugerida — use PASTA_MEMORIA (memoria-pastas.ts). */
   pasta: string;
   titulo: string;
   tags?: string[];
@@ -105,22 +105,22 @@ export function SalvarNaMemoriaButton({
       });
       if (r.ok) {
         setSalvoEm(assinatura(destino));
-        toast("Salvo na pasta do Contexto", {
+        toast("Salvo na pasta do Repositório", {
           description: `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
         });
         // Cria as notas de pessoas citadas que ainda não existem, para que os
         // [[wikilinks]] da ata conectem a nós reais no grafo (pasta "Pessoas").
         if (pessoas?.length) void criarNotasDePessoas(pessoas);
       } else if (r.reason === "no-folder") {
-        toast("Nenhuma pasta do Contexto definida", {
-          description: "Defina a pasta em Contexto (ou Configurações) e tente de novo.",
+        toast("Nenhuma pasta do Repositório definida", {
+          description: "Defina a pasta em Repositório (ou Configurações) e tente de novo.",
         });
       } else if (r.reason === "denied") {
         toast("Permissão negada", { description: "É preciso autorizar a escrita na pasta." });
       } else if (r.reason === "unsupported") {
         toast("Gravação indisponível neste navegador", {
           description:
-            "O Contexto está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
+            "O Repositório está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
         });
       } else {
         toast("Não foi possível gravar o arquivo", { description: "Tente novamente." });
@@ -140,7 +140,7 @@ export function SalvarNaMemoriaButton({
     if (!r.ok) {
       if (r.reason === "denied") {
         toast("Notas de pessoas não criadas", {
-          description: "Autorize a escrita na pasta do Contexto para criá-las.",
+          description: "Autorize a escrita na pasta do Repositório para criá-las.",
         });
       }
       return;
@@ -186,7 +186,7 @@ export function SalvarNaMemoriaButton({
           as={Button}
           disabled={bloqueado}
           color="primary"
-          aria-label="Escolher o tema (pasta do Contexto)"
+          aria-label="Escolher o tema (pasta do Repositório)"
           className="dark:border-l-primary-400/40 h-auto rounded-l-none border-l border-l-white/25 px-1.5"
         >
           <ChevronDownIcon className="size-4" />
@@ -203,7 +203,7 @@ export function SalvarNaMemoriaButton({
           className="dark:bg-dark-750 dark:border-dark-500 z-100 max-h-80 w-60 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/60 outline-hidden dark:shadow-none"
         >
           <p className="dark:text-dark-300 px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-gray-400 uppercase">
-            Pastas do Contexto
+            Pastas do Repositório
           </p>
           {destinos.map((destino) => (
             <MenuItem key={destino}>

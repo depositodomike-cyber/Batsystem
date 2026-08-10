@@ -110,7 +110,7 @@ export function ApresentacaoModal({ isOpen, close, onMinimize }: Props) {
   const [edSlides, setEdSlides] = useState<EdSlide[]>([]);
   const [edCaps, setEdCaps] = useState<EdCap[]>([]);
   // Bloco "🔗 Conexões no Vault" da geração — guardado à parte do roteiro
-  // editável; só entra na nota do Contexto.
+  // editável; só entra na nota do Repositório.
   const [conexoes, setConexoes] = useState("");
 
   // Prefill vindo de outra tela (ex.: ação de IA de uma nota).
@@ -188,7 +188,7 @@ export function ApresentacaoModal({ isOpen, close, onMinimize }: Props) {
       titulo: deckTitulo.trim() || "Apresentação",
       subtitulo: deckSub.trim(),
       // Bloco "🔗 Conexões no Vault" da geração: não é editável no roteiro e não
-      // entra no .pptx/.html — só na nota do Contexto.
+      // entra no .pptx/.html — só na nota do Repositório.
       conexoes,
     };
     if (isBook) {
@@ -446,7 +446,7 @@ export function ApresentacaoModal({ isOpen, close, onMinimize }: Props) {
 
                     <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
                       <Checkbox checked={usarMemoria} onChange={(e) => setUsarMemoria(e.target.checked)} className="size-4" />
-                      Usar o Contexto como referência
+                      Usar o Repositório como referência
                     </label>
 
                     {erro && (

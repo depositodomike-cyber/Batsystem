@@ -1,5 +1,4 @@
 import { ReactNode, useCallback, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { gerarDocumentoApi } from "@/services/api/documento";
@@ -53,6 +52,16 @@ export function DocumentoUploadProvider({ children }: { children: ReactNode }) {
     else window.location.assign(path);
   }, []);
 
+  const abrirDocumento = useCallback(
+    (upload: DocumentoUpload) => {
+      const produtoCode =
+        upload.produtoCode ?? getCurrentProduct(window.location.pathname).code;
+      const destinoId = upload.memoriaId ?? upload.id;
+      navegar(`/${produtoCode}/documento/${destinoId}`);
+    },
+    [navegar],
+  );
+
   const descartar = useCallback((id: string) => {
     setUploads((prev) => {
       const entry = prev[id];
@@ -87,76 +96,76 @@ export function DocumentoUploadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const iniciar = useCallback(
-    (input: IniciarDocumentoInput): string => {
+    async (input: IniciarDocumentoInput): Promise<DocumentoUpload> => {
       const id = idPendente();
       const produto = getCurrentProduct(window.location.pathname);
       const nomeArquivo = input.arquivo?.name;
 
       setUploads((prev) => ({
         ...prev,
-        [id]: { id, nomeArquivo, estado: "analisando" },
+        [id]: {
+          id,
+          produtoCode: produto.code,
+          nomeArquivo,
+          estado: "analisando",
+        },
       }));
 
-      // Vai para a página do documento já no estado "Analisando conteúdo".
-      navegar(`/${produto.code}/documento/${id}`);
+      try {
+        const data = await gerarDocumentoApi({
+          arquivo: input.arquivo,
+          texto: input.texto?.trim() || undefined,
+        });
 
-      void (async () => {
-        try {
-          const data = await gerarDocumentoApi({
-            arquivo: input.arquivo,
-            texto: input.texto?.trim() || undefined,
-          });
+        const pronto: DocumentoUpload = {
+          id,
+          produtoCode: produto.code,
+          nomeArquivo,
+          estado: "pronto",
+          titulo: data.titulo,
+          conteudo: data.conteudo,
+          salvo: data.salvo,
+          memoriaId: data.memoriaId,
+          sugerirPendente: data.salvo,
+        };
 
-          const pronto: DocumentoUpload = {
-            id,
-            nomeArquivo,
-            estado: "pronto",
-            titulo: data.titulo,
-            conteudo: data.conteudo,
-            salvo: data.salvo,
-            memoriaId: data.memoriaId,
-            sugerirPendente: data.salvo,
-          };
+        setUploads((prev) => {
+          const next = { ...prev, [id]: pronto };
+          // Indexa também pelo memoriaId para a URL definitiva.
+          if (data.memoriaId) next[data.memoriaId] = pronto;
+          return next;
+        });
 
-          setUploads((prev) => {
-            const next = { ...prev, [id]: pronto };
-            // Indexa também pelo memoriaId para a URL definitiva.
-            if (data.memoriaId) next[data.memoriaId] = pronto;
-            return next;
-          });
-
-          toast(data.salvo ? "Documento salvo no Contexto" : "Documento gerado", {
-            description: data.salvo
-              ? "Guardado em Documentos."
-              : "Não foi possível salvar no Contexto.",
-          });
-
-          // Troca a URL pendente pela definitiva quando houver memoriaId.
-          if (data.memoriaId) {
-            navegar(`/${produto.code}/documento/${data.memoriaId}`, true);
-          }
-        } catch (err) {
-          setUploads((prev) => ({
-            ...prev,
-            [id]: { ...prev[id]!, estado: "erro", erro: errMessage(err) },
-          }));
-        }
-      })();
-
-      return id;
+        return pronto;
+      } catch (err) {
+        const mensagem = errMessage(err);
+        setUploads((prev) => ({
+          ...prev,
+          [id]: { ...prev[id]!, estado: "erro", erro: mensagem },
+        }));
+        throw new Error(mensagem);
+      }
     },
-    [navegar],
+    [],
   );
 
   const value = useMemo<DocumentoUploadContextValue>(
     () => ({
       iniciar,
+      abrirDocumento,
       obter: (id: string) => uploads[id],
       descartar,
       consumirSugerir,
       registrarNavegador,
     }),
-    [iniciar, uploads, descartar, consumirSugerir, registrarNavegador],
+    [
+      iniciar,
+      abrirDocumento,
+      uploads,
+      descartar,
+      consumirSugerir,
+      registrarNavegador,
+    ],
   );
 
   return (

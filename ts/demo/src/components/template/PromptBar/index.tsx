@@ -1,4 +1,4 @@
-// Barra "Pergunte ao seu Contexto" — portada do beculture/Confi (a barra de
+// Barra "Pergunte ao seu Repositório" — portada do beculture/Confi (a barra de
 // prompt de public/index.html + app.js). Substitui a busca no header do behuman.
 // Seletor de fonte (Memória/Web/Auto), anexo de texto, ditado por voz (Web
 // Speech API), envio ao backend /ai/prompt e resposta em janela flutuante.
@@ -186,11 +186,11 @@ export function PromptBar() {
     setLoading(true);
     const usarAnexo = arquivo && modo !== "web";
     flashStatus(usarAnexo ? "lendo anexo e buscando…" : ROTULO[modo]);
-    // Busca que toca o Contexto faz o grafo "pensar" enquanto a resposta não vem.
+    // Busca que toca o Repositório faz o grafo "pensar" enquanto a resposta não vem.
     const animaGrafo = modo !== "web";
     if (animaGrafo) marcarBuscaMemoria(true);
     try {
-      // Referência (Notas/To-do) só faz sentido no cruzamento com o Contexto;
+      // Referência (Notas/To-do) só faz sentido no cruzamento com o Repositório;
       // no modo Web o anexo/contexto local é ignorado (igual ao Confi).
       const referencia = modo !== "web" ? coletarReferencia() : undefined;
       const r = await perguntarPromptApi({
@@ -213,7 +213,7 @@ export function PromptBar() {
       if (inputRef.current) inputRef.current.style.height = "auto";
       limparAnexo();
       flashStatus(
-        r.origem === "web" ? "↗ respondido via web" : "◈ respondido pelo Contexto",
+        r.origem === "web" ? "↗ respondido via web" : "◈ respondido pelo Repositório",
         "ok",
         true,
       );

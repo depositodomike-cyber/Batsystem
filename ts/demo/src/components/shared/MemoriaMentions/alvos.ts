@@ -1,8 +1,8 @@
 // ----------------------------------------------------------------------
-// Alvos de conexão com o Contexto — o que a lista de "[[" oferece.
+// Alvos de conexão com o Repositório — o que a lista de "[[" oferece.
 //
 // São duas origens, na ordem em que aparecem:
-//  • Notas (.md do vault): o que desenha o grafo do Contexto. Um [[Título]] aqui
+//  • Notas (.md do vault): o que desenha o grafo do Repositório. Um [[Título]] aqui
 //    vira aresta no grafo, exatamente como no Obsidian.
 //  • Regras (store /memorias): as memórias que a IA usa como contexto.
 //
@@ -33,7 +33,7 @@ let carregando: Promise<AlvoMemoria[]> | null = null;
 /** Pasta da nota ("Reuniões/2026-01.md" → "Reuniões"). */
 function pastaDaNota(path: string): string {
   const partes = path.split("/").filter(Boolean);
-  return partes.length > 1 ? partes[0] : "Contexto";
+  return partes.length > 1 ? partes[0] : "Repositório";
 }
 
 function paraAlvo(nota: VaultNotaRef): AlvoMemoria {

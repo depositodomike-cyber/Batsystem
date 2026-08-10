@@ -15,7 +15,10 @@ import {
 import clsx from "clsx";
 
 import { WindowControls } from "@/app/contexts/ia-modals/WindowControls";
+import { useIaModals } from "@/app/contexts/ia-modals/context";
 import type { IaModalOpenPayload } from "@/app/contexts/ia-modals/context";
+import { useDocumentoUpload } from "@/app/contexts/documento-upload/context";
+import type { DocumentoUpload } from "@/app/contexts/documento-upload/context";
 import {
   DISABLED_MENU_CLASS,
   isFeatureTemporarilyDisabled,
@@ -23,6 +26,7 @@ import {
 import { DocumentoUploadPanel } from "./DocumentoUploadPanel";
 import { AudioUploadPanel } from "./AudioUploadPanel";
 import { TranscricaoUploadPanel } from "./TranscricaoUploadPanel";
+import { useUploadStatusToast } from "./useUploadStatusToast";
 
 // ----------------------------------------------------------------------
 // Modal único de Upload — três abas (Documento / Áudio / Transcrições).
@@ -31,6 +35,12 @@ import { TranscricaoUploadPanel } from "./TranscricaoUploadPanel";
 // ----------------------------------------------------------------------
 
 export type UploadAba = "documento" | "audio" | "transcricao";
+
+// Id registrado em ia-modals/registry — usado para restaurar a janela a partir
+// do toast de status.
+const UPLOAD_MODAL_ID = "upload";
+
+const CONTINUE_NAVEGANDO = "Você pode continuar navegando.";
 
 export interface UploadModalPayload {
   aba?: UploadAba;
@@ -78,10 +88,15 @@ function abaInicial(payload?: IaModalOpenPayload): UploadAba {
 
 export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
   const [aba, setAba] = useState<UploadAba>(() => abaInicial(payload));
+  const [busyDocumento, setBusyDocumento] = useState(false);
   const [busyAudio, setBusyAudio] = useState(false);
   const [busyTranscricao, setBusyTranscricao] = useState(false);
+  const { abrirDocumento } = useDocumentoUpload();
+  const { restore } = useIaModals();
+  const { mostrarCarregando, concluir, falhar, encerrar } =
+    useUploadStatusToast();
 
-  const busy = busyAudio || busyTranscricao;
+  const busy = busyDocumento || busyAudio || busyTranscricao;
 
   // Deep link / reabertura com payload: sincroniza a aba pedida.
   useEffect(() => {
@@ -89,19 +104,103 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
     setAba(abaInicial(payload));
   }, [isOpen, payload]);
 
+  const abrirUpload = useCallback(() => restore(UPLOAD_MODAL_ID), [restore]);
+
+  // Minimizado, o progresso migra para um toast no rodapé; ao restaurar, o
+  // spinner do painel volta a ser a única indicação.
+  useEffect(() => {
+    if (isOpen) {
+      encerrar();
+      return;
+    }
+    if (busyDocumento) {
+      mostrarCarregando("Organizando o documento…", CONTINUE_NAVEGANDO);
+    } else if (busyAudio) {
+      mostrarCarregando("Transcrevendo o áudio…", CONTINUE_NAVEGANDO);
+    } else if (busyTranscricao) {
+      mostrarCarregando("Gerando a ATA estratégica…", CONTINUE_NAVEGANDO);
+    }
+  }, [
+    isOpen,
+    busyDocumento,
+    busyAudio,
+    busyTranscricao,
+    mostrarCarregando,
+    encerrar,
+  ]);
+
   const fechar = () => {
     if (busy) return;
     close();
   };
 
+  const onBusyDocumento = useCallback((v: boolean) => setBusyDocumento(v), []);
   const onBusyAudio = useCallback((v: boolean) => setBusyAudio(v), []);
   const onBusyTranscricao = useCallback(
     (v: boolean) => setBusyTranscricao(v),
     [],
   );
 
+  const onDocumentoPronto = useCallback(
+    (upload: DocumentoUpload) => {
+      // Aberto: termina o fluxo levando direto à tela existente de resultado.
+      if (isOpen) {
+        encerrar();
+        close();
+        abrirDocumento(upload);
+        return;
+      }
+      // Minimizado: não interrompe o que o usuário está fazendo; o toast de
+      // status vira o aviso de conclusão. Converter antes de `close()`, que
+      // desmonta o modal e dispara a limpeza do toast.
+      concluir(
+        "Documento pronto",
+        "O resumo foi criado e está pronto para visualização.",
+        { label: "Visualizar", onClick: () => abrirDocumento(upload) },
+      );
+      close();
+    },
+    [abrirDocumento, close, concluir, encerrar, isOpen],
+  );
+
+  // Áudio e Transcrição mantêm o resultado dentro do modal: quando minimizado,
+  // o toast só oferece o caminho de volta para a janela.
+  const onResultadoNoModal = useCallback(
+    (pronto: string, { titulo, salvo }: { titulo: string; salvo: boolean }) => {
+      if (isOpen) return;
+      concluir(
+        pronto,
+        salvo
+          ? `${titulo} — guardado no Repositório (Reuniões).`
+          : `${titulo} — não foi possível salvar no Repositório.`,
+        { label: "Abrir", onClick: abrirUpload },
+      );
+    },
+    [abrirUpload, concluir, isOpen],
+  );
+
+  const onAudioPronto = useCallback(
+    (r: { titulo: string; salvo: boolean }) =>
+      onResultadoNoModal("Resumo do áudio pronto", r),
+    [onResultadoNoModal],
+  );
+
+  const onTranscricaoPronta = useCallback(
+    (r: { titulo: string; salvo: boolean }) =>
+      onResultadoNoModal("ATA pronta", r),
+    [onResultadoNoModal],
+  );
+
+  const onFalha = useCallback(
+    (mensagem: string) => {
+      if (isOpen) return;
+      falhar(mensagem, { label: "Abrir", onClick: abrirUpload });
+    },
+    [abrirUpload, falhar, isOpen],
+  );
+
   return (
-    <Transition show={isOpen}>
+    <Transition show={isOpen} unmount={false}>
       <Dialog onClose={fechar} className="relative z-[70]">
         <TransitionChild
           enter="ease-out duration-200"
@@ -152,10 +251,10 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
                       setAba(id);
                     }}
                     className={clsx(
-                      "inline-flex items-center gap-1.5 border-b-2 px-3 pb-2.5 text-xs-plus font-medium transition-colors",
+                      "text-xs-plus inline-flex items-center gap-1.5 border-b-2 px-3 pb-2.5 font-medium transition-colors",
                       aba === id
                         ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                        : "border-transparent text-gray-500 hover:text-gray-800 dark:text-dark-300 dark:hover:text-dark-100",
+                        : "dark:text-dark-300 dark:hover:text-dark-100 border-transparent text-gray-500 hover:text-gray-800",
                       disabled && DISABLED_MENU_CLASS,
                     )}
                   >
@@ -171,21 +270,35 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
                   hidden={aba !== "documento"}
                   className={clsx(aba !== "documento" && "hidden")}
                 >
-                  <DocumentoUploadPanel onSubmitted={fechar} />
+                  <DocumentoUploadPanel
+                    onBusyChange={onBusyDocumento}
+                    onFinished={onDocumentoPronto}
+                    onFailed={onFalha}
+                  />
                 </div>
                 <div
                   role="tabpanel"
                   hidden={aba !== "audio"}
                   className={clsx(aba !== "audio" && "hidden")}
                 >
-                  <AudioUploadPanel onBusyChange={onBusyAudio} />
+                  <AudioUploadPanel
+                    onBusyChange={onBusyAudio}
+                    minimizado={!isOpen}
+                    onFinished={onAudioPronto}
+                    onFailed={onFalha}
+                  />
                 </div>
                 <div
                   role="tabpanel"
                   hidden={aba !== "transcricao"}
                   className={clsx(aba !== "transcricao" && "hidden")}
                 >
-                  <TranscricaoUploadPanel onBusyChange={onBusyTranscricao} />
+                  <TranscricaoUploadPanel
+                    onBusyChange={onBusyTranscricao}
+                    minimizado={!isOpen}
+                    onFinished={onTranscricaoPronta}
+                    onFailed={onFalha}
+                  />
                 </div>
               </div>
             </DialogPanel>

@@ -142,7 +142,7 @@ export function CarrosselModal({ isOpen, close, onMinimize }: Props) {
   const [ajuste, setAjuste] = useState("");
   const [idx, setIdx] = useState(0);
   // Bloco "🔗 Conexões no Vault" da última geração — não é editável no roteiro;
-  // vai junto da nota ao salvar no Contexto.
+  // vai junto da nota ao salvar no Repositório.
   const [conexoes, setConexoes] = useState("");
 
   const carregar = (c: Carrossel) => {
@@ -253,7 +253,7 @@ export function CarrosselModal({ isOpen, close, onMinimize }: Props) {
     toast("Carrossel gerado", { description: "Aberto em nova aba e baixado (.html)." });
   };
 
-  // Nota do Contexto: os cards em Markdown (para o grafo ler o texto) + o
+  // Nota do Repositório: os cards em Markdown (para o grafo ler o texto) + o
   // carrossel HTML autônomo como anexo.
   const prepararMemoria = async () => {
     const c = atual();
@@ -356,7 +356,7 @@ export function CarrosselModal({ isOpen, close, onMinimize }: Props) {
                     </div>
                     <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
                       <Checkbox checked={usarMemoria} onChange={(e) => setUsarMemoria(e.target.checked)} className="size-4" />
-                      Usar o Contexto como referência
+                      Usar o Repositório como referência
                     </label>
                     {erro && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs-plus text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">{erro}</div>}
                     <div className="flex justify-end pt-1">

@@ -39,7 +39,7 @@ export default function ChatDetail() {
   const { getSquadById } = useSquadsContext();
 
   const chat = chatId ? getChat(chatId) : undefined;
-  // Grupo (agrupamento) da conversa: define a pasta do Contexto onde o .md vai.
+  // Grupo (agrupamento) da conversa: define a pasta do Repositório onde o .md vai.
   const grupo = chat?.projectId ? getProject(chat.projectId) : undefined;
   // Falha de gravação avisa uma vez por conversa — o resto fica silencioso para
   // não repetir o mesmo toast a cada turno.
@@ -148,7 +148,7 @@ export default function ChatDetail() {
     setPending(true);
 
     // Texto acumulado da resposta — é o que fecha o transcript gravado na
-    // pasta do Contexto do grupo (o estado das mensagens é assíncrono demais
+    // pasta do Repositório do grupo (o estado das mensagens é assíncrono demais
     // para servir de fonte aqui).
     let resposta = "";
 

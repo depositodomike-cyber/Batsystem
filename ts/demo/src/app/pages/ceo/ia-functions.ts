@@ -35,7 +35,7 @@ export interface AiFunction {
 /**
  * Quando true, as funções do AI Studio ficam visíveis mas não clicáveis
  * (padrão: `cursor-not-allowed opacity-40` + `disabled`).
- * Uploads do Contexto (áudio/transcrição) têm flags próprias em
+ * Uploads do Repositório (áudio/transcrição) têm flags próprias em
  * `temporarilyDisabledFeatures.ts` — não remova as funções.
  */
 export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");

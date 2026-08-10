@@ -50,7 +50,7 @@ import {
 //     consumo de tokens do usuário (GET /uso/tokens).
 //   • Memória — pasta de dados que alimenta o grafo/memória. No SaaS web isso é
 //     um diretório escolhido pelo navegador (File System Access API), persistido
-//     no MESMO IndexedDB usado pela telo Contexto, então a escolha vale nas duas.
+//     no MESMO IndexedDB usado pela telo Repositório, então a escolha vale nas duas.
 // ----------------------------------------------------------------------
 
 const SECOES = [
@@ -74,7 +74,7 @@ const SECOES = [
   },
   {
     id: "memoria",
-    titulo: "Contexto",
+    titulo: "Repositório",
     icon: CircleStackIcon,
     feature: "settingsMemory" as TemporarilyDisabledFeature,
   },
@@ -106,8 +106,8 @@ export default function Configuracoes() {
             help={{
               description: (
                 <>
-                  <p><strong>Configurações</strong> reúne as preferências do painel em quatro seções: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens) e <strong>Memória</strong> (a pasta de dados que alimenta o grafo do Contexto).</p>
-                  <p>As preferências de aparência e voz ficam salvas só neste navegador, e a pasta do Contexto é lida localmente — nenhum arquivo é enviado a servidores.</p>
+                  <p><strong>Configurações</strong> reúne as preferências do painel em quatro seções: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens) e <strong>Memória</strong> (a pasta de dados que alimenta o grafo do Repositório).</p>
+                  <p>As preferências de aparência e voz ficam salvas só neste navegador, e a pasta do Repositório é lida localmente — nenhum arquivo é enviado a servidores.</p>
                 </>
               ),
             }}
@@ -116,7 +116,7 @@ export default function Configuracoes() {
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
             Preferências de aparência, voz, inteligência artificial e a pasta de
-            dados que alimenta o Contexto.
+            dados que alimenta o Repositório.
           </p>
         </div>
 
@@ -417,7 +417,7 @@ function TokenUsagePanel() {
 // ----------------------------------------------------------------------
 // Memória — pasta de dados (File System Access API + IndexedDB)
 //
-// Usa o MESMO banco/chave da tela Contexto (ceo-memoria/kv/dir-handle:<conta>),
+// Usa o MESMO banco/chave da tela Repositório (ceo-memoria/kv/dir-handle:<conta>),
 // de modo que selecionar a pasta aqui reflete lá e vice-versa. Roda 100% no navegador.
 
 function MemoriaSection() {
@@ -449,15 +449,15 @@ function MemoriaSection() {
     }
     setFolderName(escolha.dir.name);
     setCopia(pastaEhCopia(escolha.dir));
-    toast.success(`Pasta do Contexto definida: “${escolha.dir.name}”.`, {
-      description: "Abra a tela Contexto para carregar o grafo desta pasta.",
+    toast.success(`Pasta do Repositório definida: “${escolha.dir.name}”.`, {
+      description: "Abra a tela Repositório para carregar o grafo desta pasta.",
     });
   }, []);
 
   return (
     <SectionCard
-      titulo="Pasta do Contexto"
-      descricao="Onde ficam os arquivos que o Contexto conecta — reuniões, insights, notas e documentos. O grafo lê os arquivos .md desta pasta."
+      titulo="Pasta do Repositório"
+      descricao="Onde ficam os arquivos que o Repositório conecta — reuniões, insights, notas e documentos. O grafo lê os arquivos .md desta pasta."
     >
       <div className="dark:border-dark-500 dark:bg-dark-600 flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
@@ -472,8 +472,8 @@ function MemoriaSection() {
               {folderName
                 ? copia
                   ? "Cópia somente leitura — reselecione a pasta para ver alterações."
-                  : "Pasta atual do Contexto neste navegador."
-                : "Selecione a pasta que o Contexto deve usar como fonte."}
+                  : "Pasta atual do Repositório neste navegador."
+                : "Selecione a pasta que o Repositório deve usar como fonte."}
             </p>
           </div>
         </div>
@@ -495,7 +495,7 @@ function MemoriaSection() {
       ) : (
         !nativa && (
           <p className="mt-3 text-xs-plus text-warning">
-            Este navegador lê a pasta como cópia: o Contexto abre normalmente, mas
+            Este navegador lê a pasta como cópia: o Repositório abre normalmente, mas
             a IA não grava notas de volta nos arquivos e mudanças feitas fora do
             navegador só aparecem quando você reselecionar a pasta. No Brave, o
             acesso completo liga em{" "}
@@ -506,7 +506,7 @@ function MemoriaSection() {
 
       <p className="dark:text-dark-300 mt-4 text-xs-plus text-gray-400">
         A pasta é lida localmente pelo navegador — nenhum arquivo é enviado a
-        servidores. A escolha é compartilhada com a telo Contexto.
+        servidores. A escolha é compartilhada com a tela Repositório.
       </p>
     </SectionCard>
   );

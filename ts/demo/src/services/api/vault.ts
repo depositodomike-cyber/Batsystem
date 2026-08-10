@@ -1,7 +1,7 @@
 import axios from "@/utils/axios";
 
 // Cliente do Vault de notas .md (backend NestJS: /ai/vault). O conteúdo dos
-// arquivos é lido no navegador (File System Access API, na telo Contexto) e
+// arquivos é lido no navegador (File System Access API, na telo Repositório) e
 // sincronizado aqui em lotes; o /ai/prompt recupera as notas relevantes.
 
 export interface VaultNotaInput {

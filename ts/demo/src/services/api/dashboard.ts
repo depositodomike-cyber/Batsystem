@@ -11,7 +11,7 @@ export interface Dashboard {
   html: string;
   /**
    * Bloco "## 🔗 Conexões no Vault" ([[wikilinks]] para outros assuntos da
-   * Memória). Entra na nota ao salvar no Contexto, fora do HTML do painel.
+   * Memória). Entra na nota ao salvar no Repositório, fora do HTML do painel.
    */
   conexoes: string;
 }

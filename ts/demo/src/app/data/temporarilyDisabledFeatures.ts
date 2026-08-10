@@ -109,7 +109,7 @@ export function isNavItemTemporarilyDisabled(
   return false;
 }
 
-/** Bloqueia abertura de modal de upload do Contexto via `?fn=`. */
+/** Bloqueia abertura de modal de upload do Repositório via `?fn=`. */
 export function isMemoryUploadFnTemporarilyDisabled(fnId: string): boolean {
   if (fnId === "audio") return TEMPORARILY_DISABLED.memoryUploadAudio;
   if (fnId === "transcricao")

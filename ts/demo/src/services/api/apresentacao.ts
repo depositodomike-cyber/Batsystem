@@ -24,7 +24,7 @@ export interface Roteiro {
   capitulos?: CapituloItem[];
   /**
    * Bloco "## 🔗 Conexões no Vault" ([[wikilinks]] para outros assuntos da
-   * Memória). Entra na nota ao salvar no Contexto; não vai para o .pptx/.html.
+   * Memória). Entra na nota ao salvar no Repositório; não vai para o .pptx/.html.
    */
   conexoes: string;
 }

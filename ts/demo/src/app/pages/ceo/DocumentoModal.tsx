@@ -99,7 +99,7 @@ export function DocumentoModal({ isOpen, close, onMinimize }: Props) {
                 >
                   <p className="dark:border-primary-500/20 dark:bg-primary-500/10 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs-plus text-gray-600 dark:text-dark-200">
                     A IA formata o conteúdo num <b>documento de referência</b> bem
-                    estruturado e o <b>salva no Contexto</b> (Documentos), com{" "}
+                    estruturado e o <b>salva no Repositório</b> (Documentos), com{" "}
                     <span className="font-mono">[[relacionamentos]]</span> às
                     regras existentes.
                   </p>

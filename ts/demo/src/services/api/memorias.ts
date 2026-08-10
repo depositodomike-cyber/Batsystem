@@ -7,7 +7,7 @@ import type { MemoryItem, MemoryConfidence } from "@/app/data/memoria";
 // ----------------------------------------------------------------------
 
 export interface CreateMemoryPayload {
-  /** Tema (pasta do Contexto). Omitido pela tela de Regras — o backend
+  /** Tema (pasta do Repositório). Omitido pela tela de Regras — o backend
    * grava o tema padrão. Ainda usado pelos fluxos que gravam em uma pasta. */
   category?: string;
   title: string;

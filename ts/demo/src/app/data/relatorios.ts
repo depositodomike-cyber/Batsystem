@@ -130,13 +130,13 @@ export const RELATORIOS_LISTA: RelatorioItem[] = [
   },
   {
     id: 11,
-    relatorio: "Contextos Registrados",
-    categoria: "Contexto",
+    relatorio: "Repositórios Registrados",
+    categoria: "Repositório",
     objetivo: "Volume e reuso da base de memória da IA por área",
     publico: "Admin, Líder",
     ultimaAtualizacao: "04 Fev",
     periodo: "Acumulado",
-    fonteDados: "Contexto",
+    fonteDados: "Repositório",
     status: "Em andamento",
   },
   {

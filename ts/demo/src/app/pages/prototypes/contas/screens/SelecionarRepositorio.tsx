@@ -33,7 +33,7 @@ import {
 import { rotuloPapel } from "../model/regras";
 
 const MOTIVO_COMPARTILHAMENTO =
-  "Em breve — compartilhar contextos entre usuários e times ainda não foi liberado.";
+  "Em breve — compartilhar repositórios entre usuários e times ainda não foi liberado.";
 
 export default function SelecionarRepositorio() {
   const navigate = useNavigate();
@@ -91,13 +91,13 @@ export default function SelecionarRepositorio() {
   return (
     <MolduraAuth
       tituloPagina="Selecionar organização"
-      kicker="Etapa 3 · Contexto de trabalho"
+      kicker="Etapa 3 · Repositório de trabalho"
       titulo="Selecione a organização"
       subtitulo="Escolha onde você quer começar a trabalhar."
       largura="max-w-[34rem]"
       depoisDoCard={
         <p className="dark:text-dark-300 mt-4 text-center text-xs-plus text-gray-400">
-          Contextos são isolados entre organizações: o conteúdo de um não
+          Repositórios são isolados entre organizações: o conteúdo de um não
           aparece no outro.
         </p>
       }
@@ -163,7 +163,7 @@ export default function SelecionarRepositorio() {
                         {repo.nome}
                       </p>
                       <p className="dark:text-dark-300 mt-0.5 truncate text-xs text-gray-400">
-                        Contexto · {itens} {itens === 1 ? "item" : "itens"}
+                        Repositório · {itens} {itens === 1 ? "item" : "itens"}
                       </p>
                     </div>
                     {isAtivo && (
@@ -186,7 +186,7 @@ export default function SelecionarRepositorio() {
 
               {grupo.repositorios.length === 0 && (
                 <p className="dark:border-dark-600 dark:text-dark-300 rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-400">
-                  Nenhum contexto nesta organização ainda.
+                  Nenhum repositório nesta organização ainda.
                 </p>
               )}
 
@@ -208,7 +208,7 @@ export default function SelecionarRepositorio() {
                       Compartilhar com outro time
                     </p>
                     <p className="dark:text-dark-300 mt-0.5 truncate text-xs text-gray-400">
-                      Compartilhamento seletivo de contextos — em breve.
+                      Compartilhamento seletivo de repositórios — em breve.
                     </p>
                   </div>
                 </div>

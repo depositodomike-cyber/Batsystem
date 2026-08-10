@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowUpTrayIcon,
@@ -10,7 +10,10 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { Button, Spinner } from "@/components/ui";
-import { MemoriaTextarea, MemoriaInput } from "@/components/shared/MemoriaMentions";
+import {
+  MemoriaTextarea,
+  MemoriaInput,
+} from "@/components/shared/MemoriaMentions";
 import { MarkdownView } from "./MarkdownView";
 import { SugerirPosUploadModal } from "./SugerirPosUpload";
 import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
@@ -36,10 +39,17 @@ function errMessage(err: unknown): string {
 
 export interface TranscricaoUploadPanelProps {
   onBusyChange?: (busy: boolean) => void;
+  /** Modal recolhido no dock: o aviso de desfecho fica a cargo do toast de status. */
+  minimizado?: boolean;
+  onFinished?: (resultado: { titulo: string; salvo: boolean }) => void;
+  onFailed?: (mensagem: string) => void;
 }
 
 export function TranscricaoUploadPanel({
   onBusyChange,
+  minimizado,
+  onFinished,
+  onFailed,
 }: TranscricaoUploadPanelProps) {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [texto, setTexto] = useState("");
@@ -57,6 +67,14 @@ export function TranscricaoUploadPanel({
     return () => onBusyChange?.(false);
   }, [loading, onBusyChange]);
 
+  // O usuário pode minimizar enquanto a ATA é gerada; ler o desfecho por ref
+  // evita usar o estado congelado no momento do clique.
+  const desfechoRef = useRef({ minimizado, onFinished, onFailed });
+
+  useEffect(() => {
+    desfechoRef.current = { minimizado, onFinished, onFailed };
+  }, [minimizado, onFinished, onFailed]);
+
   const gerar = async () => {
     setErro("");
     if (!arquivo && !texto.trim()) {
@@ -72,14 +90,20 @@ export function TranscricaoUploadPanel({
       setTitulo(data.titulo);
       setAta(data.ata);
       setSalvo(data.salvo);
-      toast(data.salvo ? "Ata salva no Contexto" : "Ata gerada", {
-        description: data.salvo
-          ? "Guardada em Reuniões."
-          : "Não foi possível salvar no Contexto.",
-      });
-      if (data.salvo) setSugerirOpen(true);
+      const desfecho = desfechoRef.current;
+      if (!desfecho.minimizado) {
+        toast(data.salvo ? "Ata salva no Repositório" : "Ata gerada", {
+          description: data.salvo
+            ? "Guardada em Reuniões."
+            : "Não foi possível salvar no Repositório.",
+        });
+        if (data.salvo) setSugerirOpen(true);
+      }
+      desfecho.onFinished?.({ titulo: data.titulo, salvo: data.salvo });
     } catch (err) {
-      setErro(errMessage(err));
+      const mensagem = errMessage(err);
+      setErro(mensagem);
+      desfechoRef.current.onFailed?.(mensagem);
     } finally {
       setLoading(false);
     }
@@ -121,7 +145,7 @@ export function TranscricaoUploadPanel({
               </h3>
               {salvo && (
                 <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                  <CheckCircleIcon className="size-4" /> Salva no Contexto ·
+                  <CheckCircleIcon className="size-4" /> Salva na Memória ·
                   Reuniões
                 </p>
               )}
@@ -130,21 +154,21 @@ export function TranscricaoUploadPanel({
               <Button
                 onClick={nova}
                 variant="outlined"
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 <ArrowPathIcon className="size-4" /> Nova
               </Button>
               <Button
                 onClick={copiar}
                 variant="outlined"
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 <ClipboardDocumentIcon className="size-4" /> Copiar
               </Button>
               <Button
                 onClick={baixar}
                 variant="outlined"
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 <ArrowDownTrayIcon className="size-4" /> .md
               </Button>
@@ -186,15 +210,15 @@ export function TranscricaoUploadPanel({
           }}
           className="flex flex-col gap-3"
         >
-          <p className="dark:border-primary-500/20 dark:bg-primary-500/10 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs-plus text-gray-600 dark:text-dark-200">
+          <p className="dark:border-primary-500/20 dark:bg-primary-500/10 border-primary-200 bg-primary-50 text-xs-plus dark:text-dark-200 rounded-lg border px-3 py-2 text-gray-600">
             Gera uma <b>ATA estratégica e detalhada</b> a partir da transcrição
-            e a <b>salva no Contexto</b> (Reuniões), com{" "}
+            e a <b>salva no Repositório</b> (Reuniões), com{" "}
             <span className="font-mono">[[relacionamentos]]</span> às regras
             existentes.
           </p>
 
           <div>
-            <label className="dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600">
+            <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
               Cole a transcrição da reunião
             </label>
             <MemoriaTextarea
@@ -207,12 +231,12 @@ export function TranscricaoUploadPanel({
           </div>
 
           <div>
-            <label className="dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600">
+            <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
               — ou — envie um arquivo{" "}
               <span className="text-gray-400">(.txt, .md, .pdf, .docx…)</span>
             </label>
             <div className="flex items-center gap-3">
-              <label className="dark:border-dark-500 dark:hover:border-dark-400 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs-plus text-gray-600 hover:border-gray-400 dark:text-dark-200">
+              <label className="dark:border-dark-500 dark:hover:border-dark-400 text-xs-plus dark:text-dark-200 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-gray-600 hover:border-gray-400">
                 <ArrowUpTrayIcon className="size-4" /> Carregar arquivo
                 <input
                   type="file"
@@ -228,7 +252,7 @@ export function TranscricaoUploadPanel({
           </div>
 
           <div>
-            <label className="dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600">
+            <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
               Instruções <span className="text-gray-400">(opcional)</span>
             </label>
             <MemoriaInput
@@ -240,7 +264,7 @@ export function TranscricaoUploadPanel({
           </div>
 
           {erro && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs-plus text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
+            <div className="text-xs-plus rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
               {erro}
             </div>
           )}

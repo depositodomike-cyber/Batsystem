@@ -94,7 +94,7 @@ const behumanHome = (base: string): NavigationTree => ({
       id: `${base}.memoria-grafo`,
       type: "collapse",
       path: `/${base}/memoria-grafo`,
-      title: "Contexto",
+      title: "Repositório",
       transKey: k("memory"),
       icon: "ceo.memoria",
       childs: [

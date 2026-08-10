@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Pasta do Contexto de cada grupo (agrupamento) — fonte única de verdade.
+// Pasta do Repositório de cada grupo (agrupamento) — fonte única de verdade.
 //
 // Regra do produto: todo grupo criado ganha uma pasta própria na Pasta da
 // Memória. A partir daí, toda conversa do grupo vira um .md em
@@ -28,7 +28,7 @@ type FalhaMemoria = Extract<WriteResult, { ok: false }>["reason"];
 export const SUBPASTA_CONVERSAS = "Conversas";
 export const SUBPASTA_DOCUMENTOS = "Documentos";
 
-/** Pasta do grupo dentro da Pasta do Contexto (mesma limpeza dos nomes de nota). */
+/** Pasta do grupo dentro da Pasta do Repositório (mesma limpeza dos nomes de nota). */
 export function pastaDoGrupo(titulo: string): string {
   return nomeSeguroMemoria(titulo);
 }
@@ -143,25 +143,25 @@ export async function salvarConversaNoGrupo(opts: {
 }
 
 /**
- * Feedback padrão de falha ao gravar na Pasta do Contexto. Navegador sem suporte
+ * Feedback padrão de falha ao gravar na Pasta do Repositório. Navegador sem suporte
  * é silencioso — não é erro do usuário e nada no app depende disso.
  */
 export function avisarFalhaMemoria(reason: FalhaMemoria) {
   if (reason === "unsupported") return;
   if (reason === "no-folder") {
-    toast("Nenhuma pasta do Contexto definida", {
+    toast("Nenhuma pasta do Repositório definida", {
       description:
-        "Defina a pasta em Contexto (ou Configurações) para o grupo ter pasta própria.",
+        "Defina a pasta em Repositório (ou Configurações) para o grupo ter pasta própria.",
     });
     return;
   }
   if (reason === "denied") {
     toast("Permissão negada", {
-      description: "É preciso autorizar a escrita na pasta do Contexto.",
+      description: "É preciso autorizar a escrita na pasta do Repositório.",
     });
     return;
   }
-  toast("Não foi possível gravar na pasta do Contexto", {
+  toast("Não foi possível gravar na pasta do Repositório", {
     description: "Tente novamente.",
   });
 }

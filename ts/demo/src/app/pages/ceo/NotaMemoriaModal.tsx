@@ -24,15 +24,15 @@ import { lerNotaMemoria, salvarNotaMemoria, type VaultFalha } from "@/utils/memo
 import { syncVaultBatch } from "@/services/api/vault";
 
 // ----------------------------------------------------------------------
-// Nota do Contexto aberta a partir de um nó do grafo. Lê o .md direto da Pasta
-// do Contexto (File System Access API), deixa editar e regrava o arquivo. Ao
+// Nota do Repositório aberta a partir de um nó do grafo. Lê o .md direto da Pasta
+// do Repositório (File System Access API), deixa editar e regrava o arquivo. Ao
 // salvar, a nota também é reenviada ao backend para a IA ver a versão nova.
 // ----------------------------------------------------------------------
 
 interface Props {
   isOpen: boolean;
   close: () => void;
-  /** Caminho relativo à Pasta do Contexto — é o id do nó no grafo. */
+  /** Caminho relativo à Pasta do Repositório — é o id do nó no grafo. */
   path: string | null;
   /** Título do nó (frontmatter ou nome do arquivo), usado no cabeçalho. */
   titulo?: string;
@@ -41,11 +41,11 @@ interface Props {
 }
 
 const MOTIVO: Record<VaultFalha, string> = {
-  "no-folder": "Nenhuma pasta do Contexto selecionada. Use “Sincronizar” para escolher a pasta.",
-  denied: "Permissão negada para acessar a pasta do Contexto.",
+  "no-folder": "Nenhuma pasta do Repositório selecionada. Use “Sincronizar” para escolher a pasta.",
+  denied: "Permissão negada para acessar a pasta do Repositório.",
   unsupported:
-    "Este navegador abre o Contexto como cópia somente leitura. Para editar, ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
-  "not-found": "Arquivo não encontrado na pasta. Sincronize o Contexto e tente de novo.",
+    "Este navegador abre o Repositório como cópia somente leitura. Para editar, ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
+  "not-found": "Arquivo não encontrado na pasta. Sincronize o Repositório e tente de novo.",
   error: "Não foi possível gravar o arquivo.",
 };
 

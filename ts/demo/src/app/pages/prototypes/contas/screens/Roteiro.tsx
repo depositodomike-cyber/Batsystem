@@ -45,15 +45,15 @@ const TELAS = [
 const REGRAS = [
   "Existe um único login, o da própria aplicação — o cadastro é que é novo.",
   "A intenção de uso fica no Step 2; B2C/B2B continua derivado do pagador, não como campo técnico.",
-  "A organização é a entidade central; contém contextos e pessoas.",
+  "A organização é a entidade central; contém repositórios e pessoas.",
   "Um usuário pode pertencer a várias organizações, com papel diferente em cada uma.",
-  "Uma organização tem N contextos, e contextos de organizações diferentes não se falam.",
-  "Nunca há dois contextos abertos ao mesmo tempo.",
+  "Uma organização tem N repositórios, e repositórios de organizações diferentes não se falam.",
+  "Nunca há dois repositórios abertos ao mesmo tempo.",
 ];
 
 export default function Roteiro() {
   return (
-    <Page title="Protótipo · Contas e contextos">
+    <Page title="Protótipo · Contas e repositórios">
       <main className="min-h-100vh grid w-full grow grid-cols-1 place-items-center py-8">
         <div className="w-full max-w-[52rem] p-4 sm:px-5">
           <div className="text-center">
@@ -63,10 +63,10 @@ export default function Roteiro() {
                 Protótipo navegável
               </p>
               <h2 className="dark:text-dark-100 text-2xl font-semibold tracking-wide text-gray-600">
-                Contas, organizações e contextos
+                Contas, organizações e repositórios
               </h2>
               <p className="dark:text-dark-300 mt-1 text-gray-400">
-                Da criação da conta até a escolha do contexto/organização. Para
+                Da criação da conta até a escolha do repositório/organização. Para
                 entrar numa conta existente, use o login da aplicação.
               </p>
             </div>

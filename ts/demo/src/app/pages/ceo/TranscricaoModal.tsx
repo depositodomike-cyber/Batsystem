@@ -31,7 +31,7 @@ import { gerarTranscricaoApi } from "@/services/api/transcricao";
 
 // ----------------------------------------------------------------------
 // Upload Transcrição — portado do beculture/Confi. Cola/sobe uma transcrição →
-// a IA gera uma ATA estratégica detalhada e a SALVA no Contexto (Reuniões).
+// a IA gera uma ATA estratégica detalhada e a SALVA no Repositório (Reuniões).
 // ----------------------------------------------------------------------
 
 const ACCEPT = ".txt,.md,.markdown,.pdf,.docx,.csv,.json,.log";
@@ -62,7 +62,7 @@ export function TranscricaoModal({ isOpen, close, onMinimize }: Props) {
   const [titulo, setTitulo] = useState("");
   const [ata, setAta] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
-  // Pergunta pós-upload: só abre quando a ata foi de fato salva no Contexto.
+  // Pergunta pós-upload: só abre quando a ata foi de fato salva no Repositório.
   const [sugerirOpen, setSugerirOpen] = useState(false);
 
   const fechar = () => {
@@ -83,8 +83,8 @@ export function TranscricaoModal({ isOpen, close, onMinimize }: Props) {
       setTitulo(data.titulo);
       setAta(data.ata);
       setSalvo(data.salvo);
-      toast(data.salvo ? "Ata salva no Contexto" : "Ata gerada", {
-        description: data.salvo ? "Guardada em Reuniões." : "Não foi possível salvar no Contexto.",
+      toast(data.salvo ? "Ata salva no Repositório" : "Ata gerada", {
+        description: data.salvo ? "Guardada em Reuniões." : "Não foi possível salvar no Repositório.",
       });
       if (data.salvo) setSugerirOpen(true);
     } catch (err) {
@@ -164,7 +164,7 @@ export function TranscricaoModal({ isOpen, close, onMinimize }: Props) {
                         <h3 className="dark:text-dark-50 truncate text-base font-semibold text-gray-800">{titulo}</h3>
                         {salvo && (
                           <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                            <CheckCircleIcon className="size-4" /> Salva no Contexto · Reuniões
+                            <CheckCircleIcon className="size-4" /> Salva no Repositório · Reuniões
                           </p>
                         )}
                       </div>
@@ -207,7 +207,7 @@ export function TranscricaoModal({ isOpen, close, onMinimize }: Props) {
                 ) : (
                   <form onSubmit={(e) => { e.preventDefault(); gerar(); }} className="flex flex-col gap-3">
                     <p className="dark:border-primary-500/20 dark:bg-primary-500/10 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs-plus text-gray-600 dark:text-dark-200">
-                      Gera uma <b>ATA estratégica e detalhada</b> a partir da transcrição e a <b>salva no Contexto</b> (Reuniões), com <span className="font-mono">[[relacionamentos]]</span> às regras existentes.
+                      Gera uma <b>ATA estratégica e detalhada</b> a partir da transcrição e a <b>salva no Repositório</b> (Reuniões), com <span className="font-mono">[[relacionamentos]]</span> às regras existentes.
                     </p>
 
                     <div>

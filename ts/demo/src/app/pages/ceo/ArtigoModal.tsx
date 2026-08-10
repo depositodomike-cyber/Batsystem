@@ -126,7 +126,7 @@ export function ArtigoModal({ isOpen, close, onMinimize }: Props) {
   const markdownCompleto = (a: Artigo) =>
     `# ${a.titulo}\n${a.subtitulo ? `\n*${a.subtitulo}*\n` : ""}\n${a.conteudo}`;
 
-  // Corpo da nota do Contexto: artigo + bloco "🔗 Conexões no Vault" (os
+  // Corpo da nota do Repositório: artigo + bloco "🔗 Conexões no Vault" (os
   // [[wikilinks]] que ligam a nota aos outros assuntos do vault).
   const notaMemoria = (a: Artigo) =>
     `${a.subtitulo ? `*${a.subtitulo}*\n\n` : ""}${a.conteudo}` +
@@ -304,7 +304,7 @@ export function ArtigoModal({ isOpen, close, onMinimize }: Props) {
 
                     <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
                       <Checkbox checked={usarMemoria} onChange={(e) => setUsarMemoria(e.target.checked)} className="size-4" />
-                      Usar o Contexto como referência
+                      Usar o Repositório como referência
                     </label>
 
                     {erro && (

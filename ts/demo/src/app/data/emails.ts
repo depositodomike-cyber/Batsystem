@@ -7,7 +7,7 @@
 // `emailsMock` continua como a caixa do modo demo: é o que aparece quando não
 // há nenhum conector de e-mail autorizado.
 //
-// O que o usuário faz com um e-mail (ler, salvar no Contexto, salvar num Grupo)
+// O que o usuário faz com um e-mail (ler, salvar no Repositório, salvar num Grupo)
 // não depende desta origem — ver pages/ceo/Email.tsx.
 // ----------------------------------------------------------------------
 

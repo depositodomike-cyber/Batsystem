@@ -286,7 +286,7 @@ export function AtaModal({ isOpen, close, onMinimize }: Props) {
 
                     <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
                       <Checkbox checked={memoria} onChange={(e) => setMemoria(e.target.checked)} className="size-4" />
-                      Formatar para o Contexto <span className="text-gray-400">(frontmatter + [[relacionamentos]])</span>
+                      Formatar para o Repositório <span className="text-gray-400">(frontmatter + [[relacionamentos]])</span>
                     </label>
 
                     {erro && (

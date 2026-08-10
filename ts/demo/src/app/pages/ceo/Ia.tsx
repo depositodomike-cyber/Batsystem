@@ -205,7 +205,7 @@ export default function Ia() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fnParam]);
 
-  // Os uploads do Contexto reaproveitam esta rota (`?fn=documento`), então o
+  // Os uploads do Repositório reaproveitam esta rota (`?fn=documento`), então o
   // aviso do AI Studio fica escondido enquanto houver janela de upload ativa.
   const avisoVisivel =
     AI_STUDIO_DISABLED &&

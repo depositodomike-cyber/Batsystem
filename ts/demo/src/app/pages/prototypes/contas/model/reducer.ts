@@ -187,7 +187,7 @@ export function reducer(
             }))
         : [];
 
-      // A organização do cadastro substitui o "Meu contexto" pessoal legado.
+      // A organização do cadastro substitui o "Meu repositório" pessoal legado.
       const reposPessoaisAntigos = new Set(
         estado.repositorios
           .filter(
@@ -425,7 +425,7 @@ export function reducer(
           ...estado.repositorios,
           {
             id: repoPessoalId,
-            nome: "Meu contexto",
+            nome: "Meu repositório",
             escopo: { tipo: "pessoal", usuarioId },
             criadoEm,
           },

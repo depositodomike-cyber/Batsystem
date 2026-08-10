@@ -53,7 +53,7 @@ import clsx from "clsx";
 // Notas — gestor de notas migrado do beculture/Confi. Duas colunas: à esquerda
 // os "Assuntos" (grupos), à direita a lista de notas do assunto selecionado ou
 // o editor. As notas e os assuntos ficam no navegador (localStorage). O botão
-// "Gravar no Contexto" envia a nota para a API real de Memória (aparece no
+// "Gravar no Repositório" envia a nota para a API real de Memória (aparece no
 // grafo); as ações de IA abrem a função correspondente na tela de IA já com o
 // conteúdo da nota preenchido.
 // ----------------------------------------------------------------------
@@ -124,7 +124,7 @@ export default function Notas() {
   const product = getCurrentProduct(pathname);
   const productCode = getProductCodeFromPath(pathname);
 
-  // Temas = as pastas disponíveis no Contexto (regra única da aplicação).
+  // Temas = as pastas disponíveis no Repositório (regra única da aplicação).
   const { temas: memoryCategories } = usePastasMemoria();
 
   const [notas, setNotas] = useState<Nota[]>(() =>
@@ -149,7 +149,7 @@ export default function Notas() {
   const [renomeando, setRenomeando] = useState<string | null>(null);
   const [assuntoInput, setAssuntoInput] = useState("");
 
-  // Modal "Gravar no Contexto".
+  // Modal "Gravar no Repositório".
   const [memNota, setMemNota] = useState<Nota | null>(null);
 
   useEffect(() => {
@@ -284,7 +284,7 @@ export default function Notas() {
     }
   };
 
-  // ---- Gravar no Contexto ----
+  // ---- Gravar no Repositório ----
   // A nota vira um .md na pasta (tema) escolhida — Memória é a pasta de notas
   // que desenha o grafo, não o store de Regras.
   const gravarNaMemoria = async (categoria: string) => {
@@ -302,7 +302,7 @@ export default function Notas() {
       return;
     }
     setMemNota(null);
-    toast.success("Salvo no Contexto.", {
+    toast.success("Salvo no Repositório.", {
       description: `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
     });
   };
@@ -347,7 +347,7 @@ export default function Notas() {
                       <strong>Notas</strong> é o seu bloco de anotações dentro do produto: crie notas rápidas e organize-as por assunto na coluna à esquerda. As notas ficam salvas no seu navegador.
                     </p>
                     <p>
-                      Quando uma nota importar, use <strong>Gravar no Contexto</strong> para enviá-la ao grafo da IA, ou as ações de IA (Apresentação, Artigo e Melhorar) para transformar o conteúdo direto na tela de IA.
+                      Quando uma nota importar, use <strong>Gravar no Repositório</strong> para enviá-la ao grafo da IA, ou as ações de IA (Apresentação, Artigo e Melhorar) para transformar o conteúdo direto na tela de IA.
                     </p>
                   </>
                 ),
@@ -356,7 +356,7 @@ export default function Notas() {
               Notas
             </PageTitle>
             <p className="dark:text-dark-300 text-sm text-gray-400">
-              Organize suas notas por assunto e grave o que importa no Contexto.
+              Organize suas notas por assunto e grave o que importa no Repositório.
             </p>
           </div>
         </div>
@@ -549,8 +549,8 @@ export default function Notas() {
                                 setMemNota(n);
                               }}
                               className="dark:hover:bg-dark-600 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 dark:hover:text-primary-400"
-                              aria-label="Gravar no Contexto"
-                              title="Gravar no Contexto"
+                              aria-label="Gravar no Repositório"
+                              title="Gravar no Repositório"
                             >
                               <ArrowUpTrayIcon className="size-4.5" />
                             </button>
@@ -628,7 +628,7 @@ export default function Notas() {
                     onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                       setECorpo(e.target.value)
                     }
-                    placeholder="Escreva a nota… (“[[” conecta ao Contexto)"
+                    placeholder="Escreva a nota… (“[[” conecta ao Repositório)"
                   />
                 </div>
 
@@ -657,7 +657,7 @@ export default function Notas() {
                     className="gap-1.5"
                   >
                     <ArrowUpTrayIcon className="size-4.5" />
-                    Gravar no Contexto
+                    Gravar no Repositório
                   </Button>
 
                   <span className="dark:border-dark-500 mx-1 hidden h-6 border-l border-gray-200 sm:block" />
@@ -708,7 +708,7 @@ export default function Notas() {
         </div>
       </div>
 
-      {/* Modal: Gravar no Contexto */}
+      {/* Modal: Gravar no Repositório */}
       <GravarMemoriaModal
         nota={memNota}
         categories={memoryCategories}
@@ -720,8 +720,8 @@ export default function Notas() {
 }
 
 // ----------------------------------------------------------------------
-// Modal de confirmação para gravar a nota no Contexto — permite escolher o tema
-// (= pasta do Contexto) onde a memória será registrada.
+// Modal de confirmação para gravar a nota no Repositório — permite escolher o tema
+// (= pasta do Repositório) onde a memória será registrada.
 // ----------------------------------------------------------------------
 
 interface MemCategory {
@@ -795,7 +795,7 @@ function GravarMemoriaModal({
                 </span>
                 <div>
                   <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
-                    Gravar no Contexto
+                    Gravar no Repositório
                   </DialogTitle>
                   <p className="dark:text-dark-300 text-xs-plus text-gray-500">
                     A nota vira um contexto e passa a aparecer no grafo.
@@ -829,7 +829,7 @@ function GravarMemoriaModal({
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
                 data={categories.map((c) => ({ label: c.label, value: c.id }))}
-                description="Os temas são as pastas disponíveis no Contexto."
+                description="Os temas são as pastas disponíveis no Repositório."
               />
             </div>
 

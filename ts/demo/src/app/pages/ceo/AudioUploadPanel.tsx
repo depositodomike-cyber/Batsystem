@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   MicrophoneIcon,
@@ -33,9 +33,18 @@ function errMessage(err: unknown): string {
 
 export interface AudioUploadPanelProps {
   onBusyChange?: (busy: boolean) => void;
+  /** Modal recolhido no dock: o aviso de desfecho fica a cargo do toast de status. */
+  minimizado?: boolean;
+  onFinished?: (resultado: { titulo: string; salvo: boolean }) => void;
+  onFailed?: (mensagem: string) => void;
 }
 
-export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
+export function AudioUploadPanel({
+  onBusyChange,
+  minimizado,
+  onFinished,
+  onFailed,
+}: AudioUploadPanelProps) {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState("");
@@ -51,6 +60,14 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
     return () => onBusyChange?.(false);
   }, [loading, onBusyChange]);
 
+  // O usuário pode minimizar enquanto a transcrição roda; ler o desfecho por ref
+  // evita usar o estado congelado no momento do clique.
+  const desfechoRef = useRef({ minimizado, onFinished, onFailed });
+
+  useEffect(() => {
+    desfechoRef.current = { minimizado, onFinished, onFailed };
+  }, [minimizado, onFinished, onFailed]);
+
   const gerar = async () => {
     setErro("");
     if (!arquivo) return setErro("Escolha um arquivo de áudio ou vídeo.");
@@ -61,14 +78,20 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
       setResumo(data.resumo);
       setTranscricao(data.transcricao);
       setSalvo(data.salvo);
-      toast(data.salvo ? "Resumo salvo no Contexto" : "Resumo gerado", {
-        description: data.salvo
-          ? "Guardado em Reuniões."
-          : "Não foi possível salvar no Contexto.",
-      });
-      if (data.salvo) setSugerirOpen(true);
+      const desfecho = desfechoRef.current;
+      if (!desfecho.minimizado) {
+        toast(data.salvo ? "Resumo salvo no Repositório" : "Resumo gerado", {
+          description: data.salvo
+            ? "Guardado em Reuniões."
+            : "Não foi possível salvar no Repositório.",
+        });
+        if (data.salvo) setSugerirOpen(true);
+      }
+      desfecho.onFinished?.({ titulo: data.titulo, salvo: data.salvo });
     } catch (err) {
-      setErro(errMessage(err));
+      const mensagem = errMessage(err);
+      setErro(mensagem);
+      desfechoRef.current.onFailed?.(mensagem);
     } finally {
       setLoading(false);
     }
@@ -112,7 +135,7 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
               </h3>
               {salvo && (
                 <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                  <CheckCircleIcon className="size-4" /> Salvo no Contexto ·
+                  <CheckCircleIcon className="size-4" /> Salvo na Memória ·
                   Reuniões
                 </p>
               )}
@@ -121,21 +144,21 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
               <Button
                 onClick={nova}
                 variant="outlined"
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 <ArrowPathIcon className="size-4" /> Novo
               </Button>
               <Button
                 onClick={copiar}
                 variant="outlined"
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 <ClipboardDocumentIcon className="size-4" /> Copiar
               </Button>
               <Button
                 onClick={baixar}
                 variant="outlined"
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 <ArrowDownTrayIcon className="size-4" /> .md
               </Button>
@@ -156,7 +179,7 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
           <button
             type="button"
             onClick={() => setVerTranscricao((v) => !v)}
-            className="dark:border-dark-600 dark:text-dark-200 mb-3 flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-xs-plus text-gray-600"
+            className="dark:border-dark-600 dark:text-dark-200 text-xs-plus mb-3 flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-gray-600"
           >
             <span>Ver transcrição bruta</span>
             <ChevronDownIcon
@@ -167,7 +190,7 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
             />
           </button>
           {verTranscricao && (
-            <p className="dark:border-dark-600 dark:bg-dark-800 dark:text-dark-200 mb-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs-plus text-gray-600">
+            <p className="dark:border-dark-600 dark:bg-dark-800 dark:text-dark-200 text-xs-plus mb-3 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-3 whitespace-pre-wrap text-gray-600">
               {transcricao}
             </p>
           )}
@@ -196,14 +219,14 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
           }}
           className="flex flex-col gap-3"
         >
-          <p className="dark:border-primary-500/20 dark:bg-primary-500/10 rounded-lg border border-primary-200 bg-primary-50 px-3 py-2 text-xs-plus text-gray-600 dark:text-dark-200">
+          <p className="dark:border-primary-500/20 dark:bg-primary-500/10 border-primary-200 bg-primary-50 text-xs-plus dark:text-dark-200 rounded-lg border px-3 py-2 text-gray-600">
             A IA <b>transcreve o áudio</b> (OpenAI Whisper) e gera um{" "}
-            <b>resumo</b> (com as conexões Obsidian ao final), salvo no Contexto
+            <b>resumo</b> (com as conexões Obsidian ao final), salvo no Repositório
             (Reuniões).
           </p>
 
           <div>
-            <label className="dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600">
+            <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
               Arquivo de áudio ou vídeo{" "}
               <span className="text-gray-400">(até 25 MB)</span>
             </label>
@@ -225,7 +248,7 @@ export function AudioUploadPanel({ onBusyChange }: AudioUploadPanelProps) {
           </div>
 
           {erro && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs-plus text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
+            <div className="text-xs-plus rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
               {erro}
             </div>
           )}

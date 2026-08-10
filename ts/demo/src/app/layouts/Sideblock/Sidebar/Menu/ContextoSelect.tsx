@@ -1,7 +1,7 @@
 /**
  * Select de contextos da organização aberta agora.
  *
- * Substitui o collapse "Contexto" na sidebar: lista só os contextos da
+ * Substitui o collapse "Repositório" na sidebar: lista só os contextos da
  * organização ativa. Trocar o valor abre aquele contexto.
  */
 
@@ -62,7 +62,7 @@ export function ContextoSelect() {
           <Icon className="text-primary-600 dark:text-primary-400 size-5 shrink-0 stroke-[1.5]" />
         )}
         <span className="dark:text-dark-50 min-w-0 flex-1 truncate text-xs-plus font-semibold text-gray-800">
-          {selecionado?.nome ?? "Nenhum contexto"}
+          {selecionado?.nome ?? "Nenhum repositório"}
         </span>
         <ChevronUpDownIcon className="dark:text-dark-300 size-4 shrink-0 text-gray-400" />
       </MenuButton>
@@ -80,7 +80,7 @@ export function ContextoSelect() {
           className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 w-56 rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
         >
           <p className="dark:text-dark-300 px-2.5 py-1 text-tiny-plus font-semibold tracking-wider text-gray-400 uppercase">
-            Contextos
+            Repositórios
           </p>
           {contextos.map((contexto) => {
             const active = contexto.id === selecionado?.id;

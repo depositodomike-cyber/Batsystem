@@ -163,10 +163,10 @@ export default function Documento() {
               <div className="flex gap-2">
                 <Button
                   component={Link}
-                  to={`/${product.code}/memoria`}
+                  to={`/${product.code}/configuracoes?secao=regras`}
                   variant="outlined"
                 >
-                  Ir para Memória
+                  Ir para Regras
                 </Button>
                 <Button
                   onClick={abrirNovoUpload}

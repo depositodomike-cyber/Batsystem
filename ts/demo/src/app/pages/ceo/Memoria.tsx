@@ -13,7 +13,6 @@ import {
   XMarkIcon,
   PlusIcon,
   SparklesIcon,
-  BoltIcon,
   CircleStackIcon,
   CpuChipIcon,
   TrashIcon,
@@ -57,6 +56,16 @@ export default function Memoria() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
 
+  return (
+    <Page title={`Regras · ${product.name}`}>
+      <div className="transition-content w-full px-(--margin-x) py-6">
+        <RegrasSection />
+      </div>
+    </Page>
+  );
+}
+
+export function RegrasSection() {
   const {
     memories,
     loading,
@@ -95,7 +104,9 @@ export default function Memoria() {
     });
   }, [memories, query, status]);
 
+  const total = memories.length;
   const activeCount = memories.filter((m) => m.active).length;
+  const inactiveCount = total - activeCount;
   const hasResults = filtered.length > 0;
 
   // Estimativa de tokens que as memórias ATIVAS adicionam ao contexto da IA.
@@ -109,8 +120,7 @@ export default function Memoria() {
   );
 
   return (
-    <Page title={`Regras · ${product.name}`}>
-      <div className="transition-content w-full px-(--margin-x) py-6">
+    <>
         {/* Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
@@ -118,139 +128,106 @@ export default function Memoria() {
               <p>As <strong>Regras</strong> definem o que a IA deve seguir em toda resposta — o que ela aprendeu nas conversas, conectores e squads, reunido em um só lugar sob o seu controle.</p>
               <p>Cada regra pode ser ativada ou desativada; só as ativas entram no contexto da IA. Use a busca e os filtros para gerenciar, ou crie uma nova. Administradores podem fixar regras como definição corporativa.</p>
             </>) }}>Regras</PageTitle>
-            <p className="dark:text-dark-300 text-sm whitespace-nowrap text-gray-500">
-              Tudo o que a IA aprendeu nas conversas, conectores e squads — em um
-              só lugar, sob o seu controle.
+            <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
+              {total === 0
+                ? "Registre a primeira regra para a IA seguir em toda resposta."
+                : `${total} ${total === 1 ? "regra" : "regras"} · ${activeCount} ativas · ~${estimatedTokens.toLocaleString("pt-BR")} tokens no contexto da IA.`}
             </p>
           </div>
 
-          {/* Resumo */}
-          <div className="flex flex-wrap gap-3">
-            <StatCard
-              icon={CircleStackIcon}
-              value={memories.length}
-              label="Regras"
-              tint="text-primary-500"
-            />
-            <StatCard
-              icon={BoltIcon}
-              value={activeCount}
-              label="Ativas"
-              tint="text-emerald-500"
-            />
-            <StatCard
-              icon={CpuChipIcon}
-              value={`~${estimatedTokens.toLocaleString("pt-BR")}`}
-              label="Tokens (est.)"
-              tint="text-indigo-500"
-              hint="Estimativa do total de tokens que as regras ativas adicionam ao contexto da IA (~4 caracteres por token)."
-            />
-          </div>
-        </div>
-
-        {/* Barra de ferramentas fixa: busca + status + categorias + ação */}
-        <div className="dark:bg-dark-900 sticky top-0 z-10 -mx-(--margin-x) mt-5 bg-gray-50 px-(--margin-x) pt-2 pb-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Busca */}
-            <div className="relative w-full lg:max-w-xs">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <MagnifyingGlassIcon className="size-4.5 text-gray-400" />
-              </span>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar nas regras…"
-                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-full border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
-              />
-              {query && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  aria-label="Limpar busca"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
-                >
-                  <XMarkIcon className="size-4.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Filtro de status segmentado */}
-              <div className="dark:bg-dark-700 inline-flex shrink-0 self-start rounded-full bg-gray-200/70 p-1 lg:self-auto">
-                {(
-                  [
-                    { id: "all", label: "Todas" },
-                    { id: "active", label: "Ativas" },
-                    { id: "inactive", label: "Inativas" },
-                  ] as { id: StatusFilter; label: string }[]
-                ).map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setStatus(opt.id)}
-                    className={clsx(
-                      "rounded-full px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
-                      status === opt.id
-                        ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
-                        : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              <Button
-                color="primary"
-                className="h-10 shrink-0 gap-1.5 rounded-full"
-                onClick={() => setCreating(true)}
-              >
-                <PlusIcon className="size-4.5" />
-                <span className="max-sm:sr-only">Nova regra</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Resultado */}
-        {loading ? (
-          <div className="dark:text-dark-300 mt-8 flex items-center justify-center gap-2 py-16 text-sm text-gray-400">
-            <Spinner className="size-5" />
-            Carregando regras…
-          </div>
-        ) : hasResults ? (
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((m) => (
-              <MemoryCard
-                key={m.id}
-                memory={m}
-                canManage={isAdmin}
-                onOpen={() => setSelectedId(m.id)}
-                onToggleActive={() => toggleActive(m.id)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="dark:border-dark-600 mt-8 grid place-items-center rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center">
-            <CircleStackIcon className="dark:text-dark-400 size-10 text-gray-300" />
-            <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
-              Nenhuma regra encontrada
-            </p>
-            <p className="dark:text-dark-300 mt-1 text-xs-plus text-gray-400">
-              Ajuste a busca/filtros ou registre uma nova regra para a IA.
-            </p>
+          <div className="flex shrink-0 items-center gap-2">
             <Button
-              color="primary"
-              className="mt-4 gap-1.5 rounded-full"
               onClick={() => setCreating(true)}
+              color="primary"
+              className="h-10 gap-2 rounded-full px-4"
             >
               <PlusIcon className="size-4.5" />
               Nova regra
             </Button>
           </div>
+        </div>
+
+        {/* Busca + filtro por status */}
+        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-xs">
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <MagnifyingGlassIcon className="size-4.5 text-gray-400" />
+            </span>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar nas regras…"
+              className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-full border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Limpar busca"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="size-4.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="dark:bg-dark-700 inline-flex flex-wrap gap-1 rounded-full bg-gray-200/70 p-1">
+            <ChipStatus
+              ativo={status === "all"}
+              onClick={() => setStatus("all")}
+              rotulo="Todas"
+              total={total}
+            />
+            <ChipStatus
+              ativo={status === "active"}
+              onClick={() => setStatus("active")}
+              rotulo="Ativas"
+              total={activeCount}
+            />
+            <ChipStatus
+              ativo={status === "inactive"}
+              onClick={() => setStatus("inactive")}
+              rotulo="Inativas"
+              total={inactiveCount}
+            />
+          </div>
+        </div>
+
+        {/* Resultado */}
+        {loading ? (
+          <div className="dark:text-dark-200 mt-6 flex items-center justify-center gap-3 py-16 text-sm text-gray-600">
+            <Spinner className="size-5" />
+            Carregando regras…
+          </div>
+        ) : hasResults ? (
+          <div className="dark:border-dark-600 mt-4 overflow-hidden rounded-xl border border-gray-200">
+            <ul className="dark:divide-dark-600 dark:bg-dark-700 divide-y divide-gray-100 bg-white">
+              {filtered.map((m) => (
+                <LinhaRegra
+                  key={m.id}
+                  memory={m}
+                  canManage={isAdmin}
+                  onOpen={() => setSelectedId(m.id)}
+                  onToggleActive={() => toggleActive(m.id)}
+                />
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="dark:border-dark-600 mt-4 grid place-items-center rounded-xl border border-gray-200 px-6 py-14 text-center">
+            <div className="max-w-sm">
+              <h3 className="dark:text-dark-50 text-base font-semibold text-gray-800">
+                {total === 0 ? "Nenhuma regra registrada" : "Nenhuma regra encontrada"}
+              </h3>
+              <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
+                {total === 0
+                  ? "Crie a primeira regra para definir o que a IA deve seguir em toda resposta."
+                  : "Ajuste a busca ou escolha outro filtro."}
+              </p>
+            </div>
+          </div>
         )}
-      </div>
 
       {/* Modal de criação */}
       <NewMemoryModal
@@ -284,45 +261,44 @@ export default function Memoria() {
         }}
         onToggleActive={() => selected && toggleActive(selected.id)}
       />
-    </Page>
+    </>
   );
 }
 
 // ----------------------------------------------------------------------
 
-function StatCard({
-  icon: Icon,
-  value,
-  label,
-  tint,
-  hint,
+function ChipStatus({
+  ativo,
+  onClick,
+  rotulo,
+  total,
 }: {
-  icon: React.ElementType;
-  value: number | string;
-  label: string;
-  tint: string;
-  /** Tooltip opcional (ex.: explicar uma estimativa). */
-  hint?: string;
+  ativo: boolean;
+  onClick: () => void;
+  rotulo: string;
+  total: number;
 }) {
   return (
-    <div
-      title={hint}
-      className="dark:border-dark-600 dark:bg-dark-700 flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5"
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ativo}
+      className={clsx(
+        "rounded-full px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+        ativo
+          ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
+          : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
+      )}
     >
-      <span className={clsx("grid size-9 place-items-center rounded-lg bg-current/10", tint)}>
-        <Icon className={clsx("size-5 stroke-[1.5]", tint)} />
-      </span>
-      <div className="leading-tight">
-        <p className="dark:text-dark-50 text-lg font-semibold text-gray-800">{value}</p>
-        <p className="dark:text-dark-300 text-tiny-plus text-gray-400">{label}</p>
-      </div>
-    </div>
+      {rotulo}
+      <span className="dark:text-dark-400 ml-1.5 text-tiny text-gray-400">{total}</span>
+    </button>
   );
 }
 
 // ----------------------------------------------------------------------
 
-function MemoryCard({
+function LinhaRegra({
   memory,
   canManage,
   onOpen,
@@ -335,78 +311,84 @@ function MemoryCard({
   onToggleActive: () => void;
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
+    <li
       className={clsx(
-        "group dark:border-dark-600 dark:bg-dark-700 dark:hover:border-dark-400 flex h-full cursor-pointer flex-col rounded-xl border border-gray-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-none",
+        "dark:hover:bg-dark-600 flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50",
         !memory.active && "opacity-60",
       )}
     >
-      {/* Conteúdo */}
-      <div className="grow">
-        <h4 className="dark:text-dark-50 line-clamp-2 font-semibold text-gray-800">
-          {memory.title}
-        </h4>
-        <p className="dark:text-dark-300 mt-1 line-clamp-2 text-xs-plus text-gray-500">
-          {memory.content}
-        </p>
-      </div>
-
-      {/* Meta */}
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <Badge
-          color={confidenceColor[memory.confidence]}
-          variant="soft"
-          className="rounded-full text-[11px]"
-        >
-          {CONFIDENCE_LABEL[memory.confidence]}
-        </Badge>
-        <span className="dark:bg-dark-600 dark:text-dark-200 truncate rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
-          {memory.source}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-w-0 flex-1 items-center gap-3 text-start"
+      >
+        <span className="dark:bg-dark-600 dark:text-dark-200 grid size-9 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-500">
+          <CircleStackIcon className="size-5 stroke-[1.5]" />
         </span>
-        <span
-          title="Tokens estimados desta regra (~4 caracteres por token)."
-          className="dark:bg-dark-600 dark:text-dark-200 inline-flex shrink-0 items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500"
-        >
-          <CpuChipIcon className="size-3" />~
-          {memoryTokens(memory).toLocaleString("pt-BR")} tokens
-        </span>
-      </div>
 
-      {/* Rodapé: data + (switch ativo | selo corporativa) */}
-      <div className="dark:border-dark-600 mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-        <span className="dark:text-dark-300 text-[11px] text-gray-400">{memory.date}</span>
-        {memory.corporate && !canManage ? (
-          <span
-            title="Definição corporativa — só um administrador pode desativá-la ou alterá-la."
-            className="dark:text-dark-300 inline-flex items-center gap-1 text-[11px] font-medium text-gray-400"
-          >
-            <LockClosedIcon className="size-3.5" />
-            Corporativa
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span
+              className="dark:text-dark-100 truncate text-sm font-medium text-gray-800"
+              title={memory.title}
+            >
+              {memory.title}
+            </span>
+            <Badge
+              variant="soft"
+              color={confidenceColor[memory.confidence]}
+              className="shrink-0 text-tiny"
+            >
+              {CONFIDENCE_LABEL[memory.confidence]}
+            </Badge>
+            {memory.corporate && (
+              <Badge variant="soft" color="info" className="shrink-0 gap-1 text-tiny">
+                <LockClosedIcon className="size-3" />
+                Corporativa
+              </Badge>
+            )}
           </span>
-        ) : (
-          <Switch
-            checked={memory.active}
-            onChange={onToggleActive}
-            onClick={(e) => e.stopPropagation()}
-            color="success"
-            label={memory.active ? "Ativa" : "Inativa"}
-            classNames={{
-              label: "flex-row-reverse gap-2",
-              labelText: "dark:text-dark-300 text-[11px] font-medium text-gray-400",
-            }}
-          />
-        )}
-      </div>
-    </div>
+          <span
+            className="dark:text-dark-300 mt-0.5 block truncate text-tiny text-gray-400"
+            title={memory.content}
+          >
+            {memory.content}
+            <span> · {memory.source}</span>
+          </span>
+        </span>
+      </button>
+
+      <span
+        title="Tokens estimados desta regra (~4 caracteres por token)."
+        className="dark:bg-dark-600 dark:text-dark-200 hidden shrink-0 items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-tiny font-medium text-gray-500 lg:inline-flex"
+      >
+        <CpuChipIcon className="size-3" />~
+        {memoryTokens(memory).toLocaleString("pt-BR")} tokens
+      </span>
+
+      <span className="dark:text-dark-300 hidden w-24 shrink-0 text-end text-tiny text-gray-400 sm:block">
+        {memory.date}
+      </span>
+
+      {memory.corporate && !canManage ? (
+        <span
+          title="Definição corporativa — só um administrador pode desativá-la ou alterá-la."
+          className="dark:text-dark-300 inline-flex shrink-0 items-center gap-1 text-tiny font-medium text-gray-400"
+        >
+          <LockClosedIcon className="size-3.5" />
+          Corporativa
+        </span>
+      ) : (
+        <Switch
+          checked={memory.active}
+          onChange={onToggleActive}
+          onClick={(e) => e.stopPropagation()}
+          color="success"
+          aria-label={memory.active ? "Desativar regra" : "Ativar regra"}
+          className="shrink-0"
+        />
+      )}
+    </li>
   );
 }
 

@@ -9,7 +9,6 @@ import {
 
 // Local Imports
 import { Notifications } from "@/components/template/Notifications";
-import { MemoriaShortcut } from "@/components/template/MemoriaShortcut";
 import { TokenUsage } from "@/components/template/TokenUsage";
 import { PromptBar } from "@/components/template/PromptBar";
 import { SidebarToggleBtn } from "@/components/shared/SidebarToggleBtn";
@@ -71,7 +70,6 @@ export function Header() {
         <div className="ms-4 me-4">
           <TokenUsage />
         </div>
-        <MemoriaShortcut />
         <SystemAreaLink
           productCode={productCode}
           slug="conectores"

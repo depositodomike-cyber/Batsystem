@@ -1,11 +1,12 @@
 // Import Dependencies
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import {
   SwatchIcon,
   SpeakerWaveIcon,
   CpuChipIcon,
+  BookOpenIcon,
   CircleStackIcon,
   FolderIcon,
   ChartBarIcon,
@@ -28,6 +29,7 @@ import {
 } from "@/utils/beculturePrefs";
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
+import { RegrasSection } from "./Memoria";
 import {
   escolherPastaContexto,
   pastaContextoNativa,
@@ -43,14 +45,15 @@ import {
 
 // ----------------------------------------------------------------------
 // Configurações — porta o painel ⚙ do beculture/Confi (app antigo) para o SaaS.
-// Reúne quatro grupos:
+// Reúne cinco grupos:
 //   • Aparência — animação de fundo e vinheta (preferências locais).
 //   • Voz — resposta falada (TTS) após comandos de voz (preferência local).
 //   • IA & API — conexões BYOK (Texto/Imagem/Vídeo) via AiConnectionCard +
 //     consumo de tokens do usuário (GET /uso/tokens).
-//   • Memória — pasta de dados que alimenta o grafo/memória. No SaaS web isso é
+//   • Regras — orientações persistidas que a IA segue em suas respostas.
+//   • Repositório — pasta de dados que alimenta o grafo. No SaaS web isso é
 //     um diretório escolhido pelo navegador (File System Access API), persistido
-//     no MESMO IndexedDB usado pela telo Repositório, então a escolha vale nas duas.
+//     no MESMO IndexedDB usado pela tela Repositório, então a escolha vale nas duas.
 // ----------------------------------------------------------------------
 
 const SECOES = [
@@ -70,6 +73,12 @@ const SECOES = [
     id: "ia",
     titulo: "IA & API",
     icon: CpuChipIcon,
+    feature: null,
+  },
+  {
+    id: "regras",
+    titulo: "Regras",
+    icon: BookOpenIcon,
     feature: null,
   },
   {
@@ -95,7 +104,19 @@ function primeiraSecaoAtiva(): SecaoId {
 export default function Configuracoes() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
-  const [active, setActive] = useState<SecaoId>(primeiraSecaoAtiva);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const secaoSolicitada = searchParams.get("secao");
+  const active =
+    SECOES.find(
+      (secao) =>
+        secao.id === secaoSolicitada && !secaoEstaDesabilitada(secao),
+    )?.id ?? primeiraSecaoAtiva();
+
+  const selecionarSecao = (secao: SecaoId) => {
+    const proximosParametros = new URLSearchParams(searchParams);
+    proximosParametros.set("secao", secao);
+    setSearchParams(proximosParametros);
+  };
 
   return (
     <Page title={`Configurações · ${product.name}`}>
@@ -106,7 +127,7 @@ export default function Configuracoes() {
             help={{
               description: (
                 <>
-                  <p><strong>Configurações</strong> reúne as preferências do painel em quatro seções: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens) e <strong>Memória</strong> (a pasta de dados que alimenta o grafo do Repositório).</p>
+                  <p><strong>Configurações</strong> reúne as preferências do painel: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens), <strong>Regras</strong> (orientações que a IA segue nas respostas) e <strong>Repositório</strong> (a pasta de dados que alimenta o grafo).</p>
                   <p>As preferências de aparência e voz ficam salvas só neste navegador, e a pasta do Repositório é lida localmente — nenhum arquivo é enviado a servidores.</p>
                 </>
               ),
@@ -115,8 +136,8 @@ export default function Configuracoes() {
             Configurações
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-            Preferências de aparência, voz, inteligência artificial e a pasta de
-            dados que alimenta o Repositório.
+            Preferências de aparência, voz, inteligência artificial, regras e
+            a pasta de dados que alimenta o Repositório.
           </p>
         </div>
 
@@ -143,7 +164,7 @@ export default function Configuracoes() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setActive(s.id)}
+                        onClick={() => selecionarSecao(s.id)}
                         className={clsx(
                           "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                           isActive
@@ -166,6 +187,7 @@ export default function Configuracoes() {
             {active === "aparencia" && <AparenciaSection />}
             {active === "voz" && <VozSection />}
             {active === "ia" && <IaSection />}
+            {active === "regras" && <RegrasSection />}
             {active === "memoria" && <MemoriaSection />}
           </div>
         </div>

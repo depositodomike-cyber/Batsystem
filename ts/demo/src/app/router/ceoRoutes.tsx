@@ -6,7 +6,6 @@ import ChatDetail from "@/app/pages/ceo/ChatDetail";
 import SquadDetail from "@/app/pages/ceo/SquadDetail";
 import Conectores from "@/app/pages/ceo/Conectores";
 import Documentos from "@/app/pages/ceo/Documentos";
-import Memoria from "@/app/pages/ceo/Memoria";
 import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
 import Ia from "@/app/pages/ceo/Ia";
@@ -50,7 +49,6 @@ const pageBySlug: Record<string, RouteObject["Component"]> = {
   email: Email,
   slack: Slack,
   "memoria-grafo": MemoriaGrafo,
-  memoria: Memoria,
   ia: Ia,
   notas: Notas,
   todo: ToDo,
@@ -104,6 +102,15 @@ const memoriaListaRoutes: RouteObject[] = products.map((p) => ({
   Component: MemoriaLista,
 }));
 
+// Regras agora vive dentro de Configurações. Mantém links e favoritos antigos
+// funcionando sem expor uma segunda entrada independente no sistema.
+const memoriaRedirects: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/memoria`,
+  element: (
+    <Navigate to={`/${p.code}/configuracoes?secao=regras`} replace />
+  ),
+}));
+
 // Detalhe de um documento gerado pelo upload de IA (Memória category documentos).
 const documentoRoutes: RouteObject[] = products.map((p) => ({
   path: `${p.code}/documento/:documentoId`,
@@ -152,6 +159,7 @@ export const ceoRoutes: RouteObject[] = [
   ...legacyRedirects,
   ...productRedirects,
   ...memoriaListaRoutes,
+  ...memoriaRedirects,
   ...documentoRoutes,
   ...projectRoutes,
   ...chatRoutes,

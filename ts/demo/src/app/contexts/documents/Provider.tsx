@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { idbGet, idbSet } from "@/utils/idbKv";
+import { chaveConta } from "@/utils/escopoConta";
 import {
   DocumentsContext,
   type DocumentAttachment,
@@ -11,7 +12,11 @@ import {
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:documents";
+const STORAGE_BASE = "ceo-os:documents";
+
+function storageKey(): string {
+  return chaveConta(STORAGE_BASE);
+}
 
 function createId(): string {
   return `doc_${Date.now().toString(36)}${Math.random()
@@ -59,7 +64,9 @@ function normalize(raw: unknown[]): SquadDocument[] {
 /** Biblioteca antiga (localStorage) — lida uma única vez para migrar. */
 function loadLegacy(): SquadDocument[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = storageKey();
+    const raw =
+      localStorage.getItem(key) ?? localStorage.getItem(STORAGE_BASE);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? normalize(parsed) : [];
@@ -77,10 +84,13 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    const key = storageKey();
     (async () => {
       let stored: SquadDocument[] = [];
       try {
-        const fromIdb = await idbGet<unknown[]>(STORAGE_KEY);
+        const fromIdb =
+          (await idbGet<unknown[]>(key)) ??
+          (await idbGet<unknown[]>(STORAGE_BASE));
         if (Array.isArray(fromIdb)) stored = normalize(fromIdb);
         else {
           // Primeira execução após a migração: traz o que havia no localStorage.
@@ -102,13 +112,15 @@ export function DocumentsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    idbSet(STORAGE_KEY, documents)
+    const key = storageKey();
+    idbSet(key, documents)
       .then(() => {
         // Migrado com sucesso: libera a cota que a cópia antiga ocupava.
         if (migratedRef.current) {
           migratedRef.current = false;
           try {
-            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(key);
+            localStorage.removeItem(STORAGE_BASE);
           } catch {
             /* ignora */
           }

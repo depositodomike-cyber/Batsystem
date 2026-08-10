@@ -20,7 +20,6 @@ import { AgrupamentosGroup } from "./AgrupamentosGroup";
 import { HistoricoGroup } from "./HistoricoGroup";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { ContextSection } from "./ContextSection";
-import { UploadSection } from "./UploadSection";
 
 // Produtos que exibem os grupos "Agrupamentos" e "Histórico" na sidebar.
 const PRODUCTS_WITH_GROUPINGS = ["behuman"];
@@ -39,7 +38,6 @@ export function Menu() {
   const contextNav = navigation
     .flatMap((group) => group.childs ?? [])
     .find((item) => item.id.endsWith(".memoria-grafo"));
-  const uploadItems = contextNav?.childs ?? [];
   const showContextSections = productCode === "behuman" && !!contextNav;
 
   const activeGroup = navigation.find((item) => {
@@ -74,7 +72,6 @@ export function Menu() {
         {navigation.map((nav) => (
           <Group key={nav.id} data={nav} />
         ))}
-        {showContextSections && <UploadSection items={uploadItems} />}
         {showSquads && <AiStudioGroup product={productCode} />}
         {showSquads && <SquadsGroup />}
         {showGroupings && <AgrupamentosGroup product={productCode} />}

@@ -9,12 +9,13 @@
 // contexto falso na resposta.
 
 import { loadBoards } from "@/app/pages/apps/kanban/store";
+import { lerComMigracao } from "@/utils/escopoConta";
 
 // Limites defensivos: o campo vai junto do prompt, então mantemos enxuto.
 const MAX_NOTAS = 40;
 const MAX_TAREFAS = 60;
 const MAX_CHARS = 12000;
-const NOTAS_KEY = "ceo-notas-itens";
+const NOTAS_BASE = "ceo-notas-itens";
 
 interface NotaLike {
   assunto?: string;
@@ -25,7 +26,7 @@ interface NotaLike {
 function lerNotas(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(NOTAS_KEY);
+    const raw = lerComMigracao(NOTAS_BASE);
     if (!raw) return [];
     const arr = JSON.parse(raw) as unknown;
     if (!Array.isArray(arr)) return [];

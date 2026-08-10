@@ -8,9 +8,14 @@
 // ----------------------------------------------------------------------
 
 import { PADRAO, type Brand, type BrandOption, type DesignSystem } from "./types";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 
 const STORE = "beculture.designSystem"; // legado: um único design system
-const STORE_MULTI = "beculture.designSystems"; // { brands, activeId }
+const STORE_MULTI_BASE = "beculture.designSystems"; // { brands, activeId }
+
+function storeMultiKey(): string {
+  return chaveConta(STORE_MULTI_BASE);
+}
 
 interface State {
   brands: Brand[];
@@ -39,7 +44,7 @@ const clonePadrao = (): DesignSystem => structuredClone(PADRAO);
 
 function persistir(st: State) {
   try {
-    localStorage.setItem(STORE_MULTI, JSON.stringify(st));
+    localStorage.setItem(storeMultiKey(), JSON.stringify(st));
   } catch {
     /* quota/modo privado — segue sem persistir */
   }
@@ -49,7 +54,7 @@ function persistir(st: State) {
 // (ou cria um a partir do PADRAO) como a marca inicial.
 function carregar(): State {
   try {
-    const raw = localStorage.getItem(STORE_MULTI);
+    const raw = lerComMigracao(STORE_MULTI_BASE);
     if (raw) {
       const st = JSON.parse(raw) as State | null;
       if (st && Array.isArray(st.brands) && st.brands.length) {
@@ -100,7 +105,7 @@ export function getVersao(): number {
 
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key === STORE_MULTI) notificar();
+    if (e.key === storeMultiKey() || e.key === STORE_MULTI_BASE) notificar();
   });
 }
 

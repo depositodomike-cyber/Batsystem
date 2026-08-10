@@ -6,11 +6,16 @@ import { createSafeContext } from "@/utils/createSafeContext";
 // rodapé, mas ainda montada — o estado interno do modal é preservado).
 export type IaModalStatus = "open" | "minimized";
 
+/** Payload opcional ao abrir um modal (ex.: aba inicial do Upload). */
+export type IaModalOpenPayload = Record<string, unknown> | null | undefined;
+
 export interface IaModalsContextValue {
   // Mapa id → status das janelas montadas. Ids ausentes estão fechados
   // (desmontados; ao reabrir começam do zero).
   states: Record<string, IaModalStatus>;
-  open: (id: string) => void;
+  /** Payload da última abertura por id (consumido pelo modal montado). */
+  payloads: Record<string, IaModalOpenPayload>;
+  open: (id: string, payload?: IaModalOpenPayload) => void;
   close: (id: string) => void;
   minimize: (id: string) => void;
   restore: (id: string) => void;

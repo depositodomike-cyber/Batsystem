@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useDisclosure } from "@/hooks";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import {
   ProjectsContext,
   type NewProject,
@@ -13,11 +14,11 @@ import {
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:projects";
+const STORAGE_BASE = "ceo-os:projects";
 
 function loadProjects(): Project[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -58,7 +59,7 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   // guardados em grupos.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+      localStorage.setItem(chaveConta(STORAGE_BASE), JSON.stringify(projects));
     } catch {
       toast.error("Não foi possível guardar os grupos neste navegador.", {
         description:

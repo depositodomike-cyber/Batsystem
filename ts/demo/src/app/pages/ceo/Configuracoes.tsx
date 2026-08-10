@@ -29,6 +29,13 @@ import {
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
 import {
+  escolherPastaContexto,
+  pastaContextoNativa,
+  pastaContextoSuportada,
+  pastaContextoSalva,
+  pastaEhCopia,
+} from "./memoria-inventario";
+import {
   DISABLED_MENU_CLASS,
   isFeatureTemporarilyDisabled,
   type TemporarilyDisabledFeature,
@@ -410,96 +417,41 @@ function TokenUsagePanel() {
 // ----------------------------------------------------------------------
 // Memória — pasta de dados (File System Access API + IndexedDB)
 //
-// Usa o MESMO banco/chave da telo Contexto (ceo-memoria/kv/dir-handle), de modo
-// que selecionar a pasta aqui reflete lá e vice-versa. Roda 100% no navegador.
-
-const IDB_DB = "ceo-memoria";
-const IDB_STORE = "kv";
-const IDB_KEY = "dir-handle";
-
-interface FSDirHandle {
-  name: string;
-  queryPermission?: (opts: { mode: "read" }) => Promise<PermissionState>;
-}
-
-function idbGet<T>(): Promise<T | undefined> {
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction(IDB_STORE, "readonly");
-        const g = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        g.onsuccess = () => resolve(g.result as T);
-        g.onerror = () => resolve(undefined);
-      };
-      req.onerror = () => resolve(undefined);
-    } catch {
-      resolve(undefined);
-    }
-  });
-}
-
-function idbSet(val: unknown): Promise<void> {
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(val, IDB_KEY);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => resolve();
-      };
-      req.onerror = () => resolve();
-    } catch {
-      resolve();
-    }
-  });
-}
+// Usa o MESMO banco/chave da tela Contexto (ceo-memoria/kv/dir-handle:<conta>),
+// de modo que selecionar a pasta aqui reflete lá e vice-versa. Roda 100% no navegador.
 
 function MemoriaSection() {
   const [folderName, setFolderName] = useState<string | null>(null);
+  const [copia, setCopia] = useState(false);
   // Suporte é fixo no mount; init lazy evita setState dentro de efeito.
-  const [supported] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      typeof (window as unknown as { showDirectoryPicker?: unknown })
-        .showDirectoryPicker === "function",
-  );
+  const [supported] = useState(() => pastaContextoSuportada());
+  const [nativa] = useState(() => pastaContextoNativa());
 
   useEffect(() => {
     // setFolderName só ocorre após o await (assíncrono): sem cascata de renders.
     (async () => {
-      const handle = await idbGet<FSDirHandle>();
-      if (handle) setFolderName(handle.name);
+      const handle = await pastaContextoSalva();
+      if (!handle) return;
+      setFolderName(handle.name);
+      setCopia(pastaEhCopia(handle));
     })();
   }, []);
 
   const pickFolder = useCallback(async () => {
-    const picker = (
-      window as unknown as {
-        showDirectoryPicker?: () => Promise<FSDirHandle>;
+    const escolha = await escolherPastaContexto();
+    if (!escolha.ok) {
+      if (escolha.reason === "unsupported") {
+        toast("Navegador sem suporte", {
+          description: "Este navegador não permite selecionar pastas.",
+        });
       }
-    ).showDirectoryPicker;
-    if (!picker) {
-      toast("Navegador sem suporte", {
-        description: "Use o Chrome ou Edge para selecionar a pasta do Contexto.",
-      });
       return;
     }
-    try {
-      const handle = await picker();
-      await idbSet(handle);
-      setFolderName(handle.name);
-      toast.success(`Pasta do Contexto definida: “${handle.name}”.`, {
-        description: "Abra a telo Contexto para carregar o grafo desta pasta.",
-      });
-    } catch {
-      /* usuário cancelou a seleção */
-    }
+    setFolderName(escolha.dir.name);
+    setCopia(pastaEhCopia(escolha.dir));
+    toast.success(`Pasta do Contexto definida: “${escolha.dir.name}”.`, {
+      description: "Abra a tela Contexto para carregar o grafo desta pasta.",
+    });
   }, []);
 
   return (
@@ -518,7 +470,9 @@ function MemoriaSection() {
             </p>
             <p className="dark:text-dark-300 text-xs-plus text-gray-500">
               {folderName
-                ? "Pasta atual do Contexto neste navegador."
+                ? copia
+                  ? "Cópia somente leitura — reselecione a pasta para ver alterações."
+                  : "Pasta atual do Contexto neste navegador."
                 : "Selecione a pasta que o Contexto deve usar como fonte."}
             </p>
           </div>
@@ -534,10 +488,20 @@ function MemoriaSection() {
         </Button>
       </div>
 
-      {!supported && (
+      {!supported ? (
         <p className="mt-3 text-xs-plus text-warning">
           Seleção de pasta indisponível neste navegador. Use o Chrome ou o Edge.
         </p>
+      ) : (
+        !nativa && (
+          <p className="mt-3 text-xs-plus text-warning">
+            Este navegador lê a pasta como cópia: o Contexto abre normalmente, mas
+            a IA não grava notas de volta nos arquivos e mudanças feitas fora do
+            navegador só aparecem quando você reselecionar a pasta. No Brave, o
+            acesso completo liga em{" "}
+            <span className="font-mono">brave://flags/#file-system-access-api</span>.
+          </p>
+        )
       )}
 
       <p className="dark:text-dark-300 mt-4 text-xs-plus text-gray-400">

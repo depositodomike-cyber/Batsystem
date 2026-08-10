@@ -9,9 +9,17 @@
 //
 // A gravação de notas fica em utils/memoriaVault.ts, que usa o MESMO handle
 // (mesmo banco/chave do IndexedDB) já com permissão de escrita.
+//
+// Nem todo navegador tem a File System Access API: o Brave a desliga por padrão
+// (brave://flags/#file-system-access-api) e Firefox/Safari não a implementam.
+// Nesses casos caímos no <input webkitdirectory>, que abre o mesmo seletor de
+// pasta do sistema e devolve os arquivos — só que como cópia somente leitura.
+// Para o resto do código não haver dois caminhos, essa cópia é embrulhada num
+// handle virtual que cumpre o mesmo contrato de FSDirHandle.
 // ----------------------------------------------------------------------
 
 import { PASTA_MEMORIA } from "./memoria-pastas";
+import { chaveConta, escopoConta } from "@/utils/escopoConta";
 
 // Tipos mínimos da File System Access API (não estão no lib.dom padrão do TS).
 export interface FSFileHandle {
@@ -25,15 +33,37 @@ export interface FSDirHandle {
   entries(): AsyncIterableIterator<[string, FSFileHandle | FSDirHandle]>;
   queryPermission?: (o: { mode: string }) => Promise<PermissionState>;
   requestPermission?: (o: { mode: string }) => Promise<PermissionState>;
+  /** Só na raiz de um handle virtual — ver "cópia somente leitura" no topo. */
+  copia?: CopiaDaPasta;
+}
+
+/**
+ * Cópia dos .md feita pelo <input webkitdirectory>. É um retrato do momento da
+ * seleção: sem handle, o navegador não consegue reabrir a pasta depois, então
+ * guardamos o conteúdo para as telas continuarem funcionando ao recarregar.
+ */
+export interface CopiaDaPasta {
+  nome: string;
+  arquivos: ArquivoMd[];
+  /** Quando a cópia foi feita (epoch ms) — o quão velho é o retrato. */
+  copiadaEm: number;
 }
 
 // ---- Persistência do handle da pasta (IndexedDB) ----
 const IDB_DB = "ceo-memoria";
 const IDB_STORE = "kv";
-const IDB_KEY = "dir-handle";
+const IDB_KEY_BASE = "dir-handle";
+const IDB_CONFIGURED_BASE = "dir-handle-configured";
 
-/** Handle da pasta escolhida na última visita (Grafo, Lista ou Configurações). */
-export function pastaContextoSalva(): Promise<FSDirHandle | undefined> {
+function chaveHandle(): string {
+  return chaveConta(IDB_KEY_BASE);
+}
+
+function chaveConfigurada(): string {
+  return chaveConta(IDB_CONFIGURED_BASE);
+}
+
+function idbGetRaw<T>(key: string): Promise<T | undefined> {
   return new Promise((resolve) => {
     try {
       const req = indexedDB.open(IDB_DB, 1);
@@ -41,8 +71,8 @@ export function pastaContextoSalva(): Promise<FSDirHandle | undefined> {
       req.onsuccess = () => {
         const db = req.result;
         const tx = db.transaction(IDB_STORE, "readonly");
-        const g = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        g.onsuccess = () => resolve(g.result as FSDirHandle | undefined);
+        const g = tx.objectStore(IDB_STORE).get(key);
+        g.onsuccess = () => resolve(g.result as T | undefined);
         g.onerror = () => resolve(undefined);
       };
       req.onerror = () => resolve(undefined);
@@ -52,7 +82,7 @@ export function pastaContextoSalva(): Promise<FSDirHandle | undefined> {
   });
 }
 
-export function guardarPastaContexto(handle: FSDirHandle): Promise<void> {
+function idbPutRaw(key: string, value: unknown): Promise<void> {
   return new Promise((resolve) => {
     try {
       const req = indexedDB.open(IDB_DB, 1);
@@ -60,7 +90,7 @@ export function guardarPastaContexto(handle: FSDirHandle): Promise<void> {
       req.onsuccess = () => {
         const db = req.result;
         const tx = db.transaction(IDB_STORE, "readwrite");
-        tx.objectStore(IDB_STORE).put(handle, IDB_KEY);
+        tx.objectStore(IDB_STORE).put(value, key);
         tx.oncomplete = () => resolve();
         tx.onerror = () => resolve();
       };
@@ -71,7 +101,54 @@ export function guardarPastaContexto(handle: FSDirHandle): Promise<void> {
   });
 }
 
-export function pastaContextoSuportada(): boolean {
+/** Handle da pasta escolhida na última visita (Grafo, Lista ou Configurações). */
+export async function pastaContextoSalva(): Promise<FSDirHandle | undefined> {
+  if (escopoConta() === "anon") return undefined;
+
+  // Um handle só pertence à conta quando ela selecionou explicitamente a pasta.
+  // Não reutilizamos a chave global legada: isso faria outra conta herdar a
+  // configuração de quem usou o navegador anteriormente.
+  const configurada = await idbGetRaw<boolean>(chaveConfigurada());
+  if (configurada !== true) return undefined;
+
+  const guardado = await idbGetRaw<unknown>(chaveHandle());
+  if (!guardado) return undefined;
+  const copia = comoCopia(guardado);
+  return copia ? handleDaCopia(copia) : (guardado as FSDirHandle);
+}
+
+export async function guardarPastaContexto(handle: FSDirHandle): Promise<void> {
+  if (escopoConta() === "anon") return;
+  // Um handle virtual tem funções e não sobrevive à clonagem do IndexedDB;
+  // o que guardamos dele é a cópia dos arquivos, que é dado puro.
+  await idbPutRaw(chaveHandle(), handle.copia ?? handle);
+  await idbPutRaw(chaveConfigurada(), true);
+}
+
+function comoCopia(valor: unknown): CopiaDaPasta | undefined {
+  if (!valor || typeof valor !== "object") return undefined;
+  const c = valor as Partial<CopiaDaPasta>;
+  return Array.isArray(c.arquivos) && typeof c.nome === "string"
+    ? (c as CopiaDaPasta)
+    : undefined;
+}
+
+/** A pasta desta conta é uma cópia somente leitura, não a pasta viva em disco. */
+export function pastaEhCopia(handle: FSDirHandle): boolean {
+  return handle.copia !== undefined;
+}
+
+/**
+ * Conteúdo de uma nota vindo da cópia. É o que permite abrir um nó do grafo em
+ * navegadores sem File System Access API, onde não há como reler o arquivo.
+ */
+export async function lerNotaDaCopia(path: string): Promise<string | undefined> {
+  const handle = await pastaContextoSalva();
+  return handle?.copia?.arquivos.find((a) => a.path === path)?.text;
+}
+
+/** O navegador abre a pasta de verdade (lê e grava direto nos arquivos). */
+export function pastaContextoNativa(): boolean {
   return (
     typeof window !== "undefined" &&
     typeof (window as unknown as { showDirectoryPicker?: unknown })
@@ -79,10 +156,21 @@ export function pastaContextoSuportada(): boolean {
   );
 }
 
+export function pastaContextoSuportada(): boolean {
+  return pastaContextoNativa() || selecaoPorInputSuportada();
+}
+
+function selecaoPorInputSuportada(): boolean {
+  return (
+    typeof document !== "undefined" &&
+    "webkitdirectory" in document.createElement("input")
+  );
+}
+
 /**
- * Abre o seletor de pasta e guarda o handle. `cancelado` cobre tanto o usuário
- * fechar o seletor quanto o navegador recusar a escolha — em nenhum dos dois
- * casos há o que avisar.
+ * Abre o seletor de pasta e guarda o resultado. `cancelado` cobre tanto o
+ * usuário fechar o seletor quanto o navegador recusar a escolha — em nenhum dos
+ * dois casos há o que avisar.
  */
 export async function escolherPastaContexto(): Promise<
   { ok: true; dir: FSDirHandle } | { ok: false; reason: "unsupported" | "cancelado" }
@@ -90,7 +178,9 @@ export async function escolherPastaContexto(): Promise<
   const picker = (window as unknown as {
     showDirectoryPicker?: () => Promise<FSDirHandle>;
   }).showDirectoryPicker;
-  if (!picker) return { ok: false, reason: "unsupported" };
+
+  if (!picker) return escolherPastaPorInput();
+
   try {
     const dir = await picker();
     await guardarPastaContexto(dir);
@@ -98,6 +188,152 @@ export async function escolherPastaContexto(): Promise<
   } catch {
     return { ok: false, reason: "cancelado" };
   }
+}
+
+/**
+ * Seletor de pasta sem File System Access API. O <input webkitdirectory> abre o
+ * mesmo diálogo do sistema, mas entrega Files avulsos: lemos os .md na hora e
+ * seguimos com a cópia, já que não há handle para reabrir a pasta depois.
+ */
+function escolherPastaPorInput(): Promise<
+  { ok: true; dir: FSDirHandle } | { ok: false; reason: "unsupported" | "cancelado" }
+> {
+  if (!selecaoPorInputSuportada()) {
+    return Promise.resolve({ ok: false as const, reason: "unsupported" as const });
+  }
+
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.webkitdirectory = true;
+    input.style.display = "none";
+    document.body.appendChild(input);
+
+    let respondido = false;
+    const encerrar = (
+      r: { ok: true; dir: FSDirHandle } | { ok: false; reason: "cancelado" },
+    ) => {
+      if (respondido) return;
+      respondido = true;
+      input.remove();
+      resolve(r);
+    };
+
+    input.addEventListener("cancel", () => encerrar({ ok: false, reason: "cancelado" }));
+    input.addEventListener("change", () => {
+      const files = [...(input.files ?? [])];
+      if (!files.length) {
+        encerrar({ ok: false, reason: "cancelado" });
+        return;
+      }
+      // Marca antes do await: o `focus` abaixo dispara junto com o change e não
+      // pode cancelar uma seleção que está apenas sendo lida.
+      respondido = true;
+      void copiarPasta(files).then(async (copia) => {
+        input.remove();
+        const dir = handleDaCopia(copia);
+        await guardarPastaContexto(dir);
+        resolve({ ok: true, dir });
+      });
+    });
+
+    // Rede de segurança para navegadores sem o evento `cancel`: ao fechar o
+    // diálogo a janela recupera o foco e, se nada foi escolhido, desistimos.
+    // Conferimos `files` junto para não cancelar uma seleção cujo `change`
+    // ainda não foi despachado.
+    window.addEventListener(
+      "focus",
+      () =>
+        setTimeout(() => {
+          if (!input.files?.length) encerrar({ ok: false, reason: "cancelado" });
+        }, 500),
+      { once: true },
+    );
+
+    input.click();
+  });
+}
+
+/** Files do <input webkitdirectory> → cópia dos .md, com caminhos relativos. */
+async function copiarPasta(files: File[]): Promise<CopiaDaPasta> {
+  const raiz = files[0]?.webkitRelativePath?.split("/")[0] || "Contexto";
+  const arquivos: ArquivoMd[] = [];
+
+  for (const file of files) {
+    // webkitRelativePath inclui a pasta escolhida; o resto do código trabalha
+    // com caminhos relativos a ela ("Reuniões/ata.md").
+    const rel = file.webkitRelativePath
+      ? file.webkitRelativePath.split("/").slice(1).join("/")
+      : file.name;
+    const segmentos = rel.split("/");
+    if (!rel.toLowerCase().endsWith(".md")) continue;
+    if (segmentos.some((s) => s.startsWith("."))) continue; // .obsidian, .git…
+    try {
+      arquivos.push({
+        path: rel,
+        name: segmentos[segmentos.length - 1],
+        text: await file.text(),
+        modificadoEm: file.lastModified,
+      });
+    } catch {
+      /* arquivo ilegível — ignora */
+    }
+  }
+
+  return { nome: raiz, arquivos, copiadaEm: Date.now() };
+}
+
+interface NoDaCopia {
+  pastas: Map<string, NoDaCopia>;
+  arquivos: Map<string, ArquivoMd>;
+}
+
+/** Cópia → handle virtual, para lerArquivosMd e companhia não saberem a diferença. */
+function handleDaCopia(copia: CopiaDaPasta): FSDirHandle {
+  const raiz: NoDaCopia = { pastas: new Map(), arquivos: new Map() };
+  for (const arquivo of copia.arquivos) {
+    const segmentos = arquivo.path.split("/");
+    const nome = segmentos.pop();
+    if (!nome) continue;
+    let no = raiz;
+    for (const seg of segmentos) {
+      let filho = no.pastas.get(seg);
+      if (!filho) {
+        filho = { pastas: new Map(), arquivos: new Map() };
+        no.pastas.set(seg, filho);
+      }
+      no = filho;
+    }
+    no.arquivos.set(nome, arquivo);
+  }
+  return handleDoNo(copia.nome, raiz, copia);
+}
+
+function handleDoNo(nome: string, no: NoDaCopia, copia?: CopiaDaPasta): FSDirHandle {
+  return {
+    kind: "directory",
+    name: nome,
+    copia,
+    entries: async function* (): AsyncIterableIterator<
+      [string, FSFileHandle | FSDirHandle]
+    > {
+      for (const [n, arquivo] of no.arquivos) yield [n, handleDoArquivo(n, arquivo)];
+      for (const [n, filho] of no.pastas) yield [n, handleDoNo(n, filho)];
+    },
+  };
+}
+
+function handleDoArquivo(nome: string, arquivo: ArquivoMd): FSFileHandle {
+  return {
+    kind: "file",
+    name: nome,
+    getFile: async () =>
+      new File([arquivo.text], nome, {
+        type: "text/markdown",
+        lastModified: arquivo.modificadoEm,
+      }),
+  };
 }
 
 /**

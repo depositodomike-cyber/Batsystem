@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import {
   CommentsContext,
   type CommentsContextValue,
@@ -9,7 +10,7 @@ import {
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:feed-comments";
+const STORAGE_BASE = "ceo-os:feed-comments";
 
 function createId(): string {
   return `cmt_${Date.now().toString(36)}${Math.random()
@@ -19,7 +20,7 @@ function createId(): string {
 
 function loadComments(): FeedComment[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -49,7 +50,7 @@ export function CommentsProvider({ children }: { children: ReactNode }) {
   // Persiste no "banco" (localStorage) a cada alteração.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(comments));
+      localStorage.setItem(chaveConta(STORAGE_BASE), JSON.stringify(comments));
     } catch {
       /* ignora falhas de persistência (ex.: modo privado) */
     }

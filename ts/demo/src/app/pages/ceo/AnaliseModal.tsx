@@ -29,6 +29,7 @@ import { analisarConteudoApi, type AnaliseResult } from "@/services/api/analise"
 import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
 import { EnviarParaGrupoButton } from "./EnviarParaGrupo";
 import { PASTA_MEMORIA } from "./memoria-pastas";
+import { lerComMigracao } from "@/utils/escopoConta";
 
 // ----------------------------------------------------------------------
 // Análise de conteúdo — UI portada do beculture/Confi (ia.js). Formulário com
@@ -70,10 +71,19 @@ function coletarReferenciaCliente(fontes: Set<string>): string {
   const partes: string[] = [];
   if (fontes.has("notas")) {
     try {
-      const raw = window.localStorage.getItem("ceo-notas");
+      // Preferência: formato atual (ceo-notas-itens); fallback legado ceo-notas.
+      const raw =
+        lerComMigracao("ceo-notas-itens") ??
+        window.localStorage.getItem("ceo-notas");
       const arr = raw ? JSON.parse(raw) : [];
       const txt = Array.isArray(arr)
-        ? arr.map((n: { texto?: string }) => `- ${n.texto ?? ""}`).filter(Boolean).join("\n")
+        ? arr
+            .map((n: { texto?: string; corpo?: string; titulo?: string }) => {
+              const linha = n.corpo ?? n.texto ?? n.titulo ?? "";
+              return linha ? `- ${linha}` : "";
+            })
+            .filter(Boolean)
+            .join("\n")
         : "";
       if (txt.trim()) partes.push(`### Notas\n${txt}`);
     } catch {

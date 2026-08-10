@@ -32,6 +32,7 @@ import { PageTitle } from "@/components/shared/PageTitle";
 import { Button } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { idbGet, idbSet } from "@/utils/idbKv";
+import { chaveConta } from "@/utils/escopoConta";
 
 // ----------------------------------------------------------------------
 
@@ -105,8 +106,11 @@ function kindFor(file: File): NodeKind {
   return "document";
 }
 
-// Chave de persistência da biblioteca (frontend-only por ora).
-const STORAGE_KEY = "beculture.documentos.v1";
+// Chave de persistência da biblioteca (frontend-only por ora), por conta.
+const STORAGE_BASE = "beculture.documentos.v1";
+function storageKey(): string {
+  return chaveConta(STORAGE_BASE);
+}
 // Limite por arquivo não-imagem. O IndexedDB aguenta bem mais que o localStorage,
 // então o teto serve só para evitar um único arquivo gigante travar a UI.
 const MAX_DOC_BYTES = 25 * 1024 * 1024;
@@ -298,7 +302,9 @@ const SEED_NODES: FsNode[] = [
 /** Migração única: lê a biblioteca antiga do localStorage, se existir. */
 function loadLegacyNodes(): FsNode[] | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = storageKey();
+    const raw =
+      localStorage.getItem(key) ?? localStorage.getItem(STORAGE_BASE);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed as FsNode[];
@@ -330,9 +336,12 @@ export default function Documentos() {
   // única do localStorage antigo e cai nos exemplos de seed na primeira visita.
   useEffect(() => {
     let alive = true;
+    const key = storageKey();
     (async () => {
       try {
-        const stored = await idbGet<FsNode[]>(STORAGE_KEY);
+        const stored =
+          (await idbGet<FsNode[]>(key)) ??
+          (await idbGet<FsNode[]>(STORAGE_BASE));
         if (stored && Array.isArray(stored)) {
           if (alive) setNodes(stored);
         } else {
@@ -354,7 +363,7 @@ export default function Documentos() {
   // para imagens). Só grava depois de carregar, para não apagar o que está salvo.
   useEffect(() => {
     if (!loaded) return;
-    idbSet(STORAGE_KEY, nodes).catch(() => {
+    idbSet(storageKey(), nodes).catch(() => {
       toast.error("Não foi possível salvar a biblioteca neste navegador.");
     });
   }, [nodes, loaded]);

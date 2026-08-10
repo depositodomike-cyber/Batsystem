@@ -51,6 +51,7 @@ import { MEMORIA_MAX_TITULO } from "@/app/data/memoria";
 import { fetchCaixaDeEntradaApi } from "@/services/api/email";
 import { formatBytes } from "@/utils/formatByte";
 import { memoriaVaultSupported } from "@/utils/memoriaVault";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import {
   avisarFalhaMemoria,
   salvarDocumentoNoGrupo,
@@ -71,8 +72,8 @@ import {
 // para o Contexto — fica no localStorage, no mesmo padrão da tela de Notas.
 // ----------------------------------------------------------------------
 
-const LIDOS_KEY = "ceo-email-lidos";
-const NA_MEMORIA_KEY = "ceo-email-na-memoria";
+const LIDOS_BASE = "ceo-email-lidos";
+const NA_MEMORIA_BASE = "ceo-email-na-memoria";
 
 /** Conectores de e-mail suportados, na ordem de preferência. */
 const PROVEDORES: { id: string; label: string }[] = [
@@ -89,10 +90,10 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "salvos", label: "Salvos" },
 ];
 
-function readJSON<T>(key: string, fallback: T): T {
+function readJSON<T>(base: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = lerComMigracao(base);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     return parsed ?? fallback;
@@ -101,9 +102,9 @@ function readJSON<T>(key: string, fallback: T): T {
   }
 }
 
-function writeJSON(key: string, value: unknown) {
+function writeJSON(base: string, value: unknown) {
   try {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    window.localStorage.setItem(chaveConta(base), JSON.stringify(value));
   } catch {
     /* ignora indisponibilidade de storage */
   }
@@ -222,10 +223,10 @@ export default function Email() {
   const carregando = (usarCaixaReal && !caixaReal && !erro) || atualizando;
 
   const [lidos, setLidos] = useState<string[]>(() =>
-    readJSON<string[]>(LIDOS_KEY, []),
+    readJSON<string[]>(LIDOS_BASE, []),
   );
   const [naMemoria, setNaMemoria] = useState<string[]>(() =>
-    readJSON<string[]>(NA_MEMORIA_KEY, []),
+    readJSON<string[]>(NA_MEMORIA_BASE, []),
   );
 
   const [busca, setBusca] = useState("");
@@ -278,8 +279,8 @@ export default function Email() {
     [usarCaixaReal, caixaReal],
   );
 
-  useEffect(() => writeJSON(LIDOS_KEY, lidos), [lidos]);
-  useEffect(() => writeJSON(NA_MEMORIA_KEY, naMemoria), [naMemoria]);
+  useEffect(() => writeJSON(LIDOS_BASE, lidos), [lidos]);
+  useEffect(() => writeJSON(NA_MEMORIA_BASE, naMemoria), [naMemoria]);
 
   const marcadores = useMemo(() => marcadoresDaCaixa(caixa), [caixa]);
 

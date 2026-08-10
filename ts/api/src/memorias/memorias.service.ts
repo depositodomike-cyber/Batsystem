@@ -132,6 +132,10 @@ export class MemoriasService {
         ...(dto.active !== undefined ? { ativa: dto.active } : {}),
       },
     });
+    // Confirma que a linha ainda é da empresa (defesa em profundidade).
+    if (row.empresaId !== empresaId) {
+      throw new NotFoundException('Memória não encontrada.');
+    }
     return toMemoryItem(row);
   }
 
@@ -141,7 +145,12 @@ export class MemoriasService {
     isAdmin: boolean,
   ): Promise<{ success: true }> {
     await this.ensureEditable(empresaId, id, isAdmin);
-    await this.prisma.memoria.delete({ where: { id } });
+    const deleted = await this.prisma.memoria.deleteMany({
+      where: { id, empresaId },
+    });
+    if (deleted.count === 0) {
+      throw new NotFoundException('Memória não encontrada.');
+    }
     return { success: true };
   }
 

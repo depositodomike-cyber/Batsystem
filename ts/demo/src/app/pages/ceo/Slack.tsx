@@ -42,6 +42,7 @@ import {
   fetchConversasSlackApi,
   fetchMensagensSlackApi,
 } from "@/services/api/slack";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import {
   SalvarNaMemoriaModal,
   SalvarNoGrupoModal,
@@ -70,7 +71,7 @@ import {
 // O que já foi mandado para o Contexto fica no localStorage, como no E-mail.
 // ----------------------------------------------------------------------
 
-const NA_MEMORIA_KEY = "ceo-slack-na-memoria";
+const NA_MEMORIA_BASE = "ceo-slack-na-memoria";
 
 /** Sufixo que distingue "a thread inteira" da mensagem sozinha. */
 const THREAD = "#thread";
@@ -83,10 +84,10 @@ const FILTROS: { id: Filtro; label: string }[] = [
   { id: "salvas", label: "Salvas" },
 ];
 
-function readJSON<T>(key: string, fallback: T): T {
+function readJSON<T>(base: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = lerComMigracao(base);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     return parsed ?? fallback;
@@ -174,7 +175,7 @@ export default function Slack() {
   const workspace = getWorkspace("slack");
 
   const [naMemoria, setNaMemoria] = useState<string[]>(() =>
-    readJSON<string[]>(NA_MEMORIA_KEY, []),
+    readJSON<string[]>(NA_MEMORIA_BASE, []),
   );
   const [conversaId, setConversaId] = useState("");
   const [busca, setBusca] = useState("");
@@ -205,7 +206,10 @@ export default function Slack() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(NA_MEMORIA_KEY, JSON.stringify(naMemoria));
+      window.localStorage.setItem(
+        chaveConta(NA_MEMORIA_BASE),
+        JSON.stringify(naMemoria),
+      );
     } catch {
       /* ignora indisponibilidade de storage */
     }

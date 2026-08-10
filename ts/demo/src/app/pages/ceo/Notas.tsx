@@ -45,6 +45,7 @@ import {
   salvarConteudoNaMemoria,
 } from "./memoria-conteudo";
 import { setIaPrefill } from "@/utils/iaPrefill";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import { AI_STUDIO_DISABLED } from "./ia-functions";
 import clsx from "clsx";
 
@@ -67,14 +68,21 @@ interface Nota {
   atualizadaEm: number;
 }
 
-const NOTAS_KEY = "ceo-notas-itens";
-const ASSUNTOS_KEY = "ceo-notas-assuntos";
+const NOTAS_BASE = "ceo-notas-itens";
+const ASSUNTOS_BASE = "ceo-notas-assuntos";
 const SEM_ASSUNTO = "__sem__";
 
-function readJSON<T>(key: string, fallback: T): T {
+function notasKey(): string {
+  return chaveConta(NOTAS_BASE);
+}
+function assuntosKey(): string {
+  return chaveConta(ASSUNTOS_BASE);
+}
+
+function readJSON<T>(key: string, fallback: T, base?: string): T {
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(key);
+    const raw = base ? lerComMigracao(base) : window.localStorage.getItem(key);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw);
     return parsed ?? fallback;
@@ -119,9 +127,11 @@ export default function Notas() {
   // Temas = as pastas disponíveis no Contexto (regra única da aplicação).
   const { temas: memoryCategories } = usePastasMemoria();
 
-  const [notas, setNotas] = useState<Nota[]>(() => readJSON<Nota[]>(NOTAS_KEY, []));
+  const [notas, setNotas] = useState<Nota[]>(() =>
+    readJSON<Nota[]>(notasKey(), [], NOTAS_BASE),
+  );
   const [assuntos, setAssuntos] = useState<string[]>(() =>
-    readJSON<string[]>(ASSUNTOS_KEY, []),
+    readJSON<string[]>(assuntosKey(), [], ASSUNTOS_BASE),
   );
 
   // Seleção da coluna de assuntos e modo de exibição da coluna principal.
@@ -144,7 +154,7 @@ export default function Notas() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(NOTAS_KEY, JSON.stringify(notas));
+      window.localStorage.setItem(notasKey(), JSON.stringify(notas));
     } catch {
       /* ignora indisponibilidade de storage */
     }
@@ -152,7 +162,7 @@ export default function Notas() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(ASSUNTOS_KEY, JSON.stringify(assuntos));
+      window.localStorage.setItem(assuntosKey(), JSON.stringify(assuntos));
     } catch {
       /* ignora indisponibilidade de storage */
     }

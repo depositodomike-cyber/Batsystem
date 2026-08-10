@@ -1,11 +1,11 @@
 /**
- * Menu da bolinha de perfil: lista APENAS as organizações do usuário.
+ * Menu da bolinha de perfil: organizações do usuário + idioma + sair.
  *
  * Os contextos de cada organização ficam no item "Contexto" da
  * sidebar — aqui a escolha é de escopo, não de conteúdo.
  */
 
-import { useEffect, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import {
   Popover,
   PopoverButton,
@@ -25,6 +25,7 @@ import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
+import { useLocaleContext } from "@/app/contexts/locale/context";
 import { getProductCodeFromPath } from "@/app/navigation/ceoOs";
 import {
   useGruposDeRepositorios,
@@ -33,7 +34,8 @@ import {
   useRepositorioAtivo,
 } from "@/app/pages/prototypes/contas/model/context";
 import { rotuloPapel } from "@/app/pages/prototypes/contas/model/regras";
-import { Avatar, AvatarDot, Button } from "@/components/ui";
+import { Avatar, AvatarDot, Button, Spinner } from "@/components/ui";
+import { locales, profileLocales, type LocaleCode } from "@/i18n/langs";
 
 type AnchorTo = "bottom end" | "right end" | "bottom start" | "top end";
 
@@ -50,10 +52,28 @@ export function ProfileMenu({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { user, logout } = useAuthContext();
+  const { locale, updateLocale } = useLocaleContext();
+  const [localeLoading, setLocaleLoading] = useState(false);
   const { estado, despachar } = usePrototipoContas();
   const grupos = useGruposDeRepositorios();
   const organizacaoAtiva = useOrganizacaoAtiva();
   const repositorioAtivo = useRepositorioAtivo();
+
+  const idiomaAtual: LocaleCode = profileLocales.includes(locale)
+    ? locale
+    : "pt";
+
+  const onLanguageSelect = async (lang: LocaleCode) => {
+    if (lang === idiomaAtual || localeLoading) return;
+    setLocaleLoading(true);
+    try {
+      await updateLocale(lang);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLocaleLoading(false);
+    }
+  };
 
   // Alinha a sessão do protótipo com o usuário autenticado (ex.: após reload ou
   // login direto na app) — criando a conta se ela ainda não existir.
@@ -259,6 +279,59 @@ export function ProfileMenu({
                     Criar organização
                   </span>
                 </button>
+              </div>
+
+              <div className="dark:border-dark-600 border-t border-gray-150 px-2 py-3">
+                <p className="text-tiny-plus dark:text-dark-300 px-2 pb-1.5 font-semibold tracking-wider text-gray-400 uppercase">
+                  Idioma
+                </p>
+                <ul className="space-y-0.5">
+                  {profileLocales.map((code) => {
+                    const isAtivo = code === idiomaAtual;
+                    return (
+                      <li key={code}>
+                        <button
+                          type="button"
+                          disabled={localeLoading}
+                          onClick={() => onLanguageSelect(code)}
+                          className={clsx(
+                            "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-hidden transition-colors",
+                            isAtivo
+                              ? "bg-primary-600/10 dark:bg-primary-400/10"
+                              : "hover:bg-gray-100 dark:hover:bg-dark-600",
+                            localeLoading && "opacity-70",
+                          )}
+                        >
+                          {localeLoading && isAtivo ? (
+                            <Spinner
+                              color="primary"
+                              className="size-4 shrink-0"
+                            />
+                          ) : (
+                            <img
+                              className="size-4 shrink-0"
+                              src={`/images/flags/svg/rounded/${locales[code].flag}.svg`}
+                              alt=""
+                            />
+                          )}
+                          <span
+                            className={clsx(
+                              "min-w-0 flex-1 truncate text-sm font-medium",
+                              isAtivo
+                                ? "text-primary-600 dark:text-primary-400"
+                                : "dark:text-dark-100 text-gray-800",
+                            )}
+                          >
+                            {locales[code].label}
+                          </span>
+                          {isAtivo && (
+                            <CheckCircleIcon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
 
               <div className="dark:border-dark-600 border-t border-gray-150 px-4 py-3">

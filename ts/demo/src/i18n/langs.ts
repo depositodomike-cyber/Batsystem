@@ -46,5 +46,8 @@ export type LocaleCode = keyof typeof locales;
 
 export type Dir = "ltr" | "rtl";
 
-/** Idiomas expostos no seletor do sidebar (PT / EN). */
-export const sidebarLocales: LocaleCode[] = ["pt", "en"];
+/** Idiomas expostos no seletor do menu de perfil (PT / EN). */
+export const profileLocales: LocaleCode[] = ["pt", "en"];
+
+/** @deprecated use profileLocales */
+export const sidebarLocales = profileLocales;

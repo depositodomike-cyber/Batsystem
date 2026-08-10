@@ -94,8 +94,9 @@ export function avisarFalhaAoSalvarNaMemoria(reason: FalhaMemoria) {
     return;
   }
   if (reason === "unsupported") {
-    toast.error("Navegador sem suporte", {
-      description: "Use o Chrome ou o Edge para gravar na pasta do Contexto.",
+    toast.error("Gravação indisponível neste navegador", {
+      description:
+        "O Contexto está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
     });
     return;
   }

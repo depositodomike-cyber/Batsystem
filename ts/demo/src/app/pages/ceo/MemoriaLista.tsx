@@ -38,6 +38,7 @@ import {
   parseNotaMd,
   pastasDoInventario,
   pastaContextoSalva,
+  pastaEhCopia,
   permissaoDeLeitura,
   tituloPadrao,
   type ArquivoMd,
@@ -143,7 +144,7 @@ export default function MemoriaLista() {
       // Cancelar a seleção não merece aviso; navegador sem suporte, sim.
       if (escolha.reason === "unsupported") {
         toast("Navegador sem suporte", {
-          description: "Use o Chrome ou Edge para selecionar a pasta do Contexto.",
+          description: "Este navegador não permite selecionar pastas.",
         });
       }
       return;
@@ -156,7 +157,13 @@ export default function MemoriaLista() {
   // do usuário, e o clique no botão é um.
   const sincronizar = useCallback(async () => {
     const handle = await pastaContextoSalva();
-    if (!handle || !(await permissaoDeLeitura(handle, { pedir: true }))) {
+    // Uma cópia é um retrato do momento da seleção: sincronizar precisa dos
+    // arquivos de agora, e sem handle a única forma de relê-los é o seletor.
+    if (
+      !handle ||
+      pastaEhCopia(handle) ||
+      !(await permissaoDeLeitura(handle, { pedir: true }))
+    ) {
       await escolherPasta();
       return;
     }

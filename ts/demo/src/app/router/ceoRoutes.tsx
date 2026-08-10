@@ -14,6 +14,7 @@ import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
 import MemoriaGrafo from "@/app/pages/ceo/MemoriaGrafo";
 import MemoriaLista from "@/app/pages/ceo/MemoriaLista";
+import Documento from "@/app/pages/ceo/Documento";
 import Configuracoes from "@/app/pages/ceo/Configuracoes";
 import Feed from "@/app/pages/ceo/Feed";
 import FeedDetail from "@/app/pages/ceo/FeedDetail";
@@ -103,6 +104,12 @@ const memoriaListaRoutes: RouteObject[] = products.map((p) => ({
   Component: MemoriaLista,
 }));
 
+// Detalhe de um documento gerado pelo upload de IA (Memória category documentos).
+const documentoRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/documento/:documentoId`,
+  Component: Documento,
+}));
+
 // Detalhe de um projeto criado no grupo "Agrupamentos".
 const projectRoutes: RouteObject[] = products.map((p) => ({
   path: `${p.code}/agrupamentos/:projectId`,
@@ -145,6 +152,7 @@ export const ceoRoutes: RouteObject[] = [
   ...legacyRedirects,
   ...productRedirects,
   ...memoriaListaRoutes,
+  ...documentoRoutes,
   ...projectRoutes,
   ...chatRoutes,
   ...feedDetailRoutes,

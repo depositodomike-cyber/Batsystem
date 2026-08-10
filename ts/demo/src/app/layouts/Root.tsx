@@ -12,6 +12,7 @@ import {
 import { Loadable } from "@/components/shared/Loadable";
 import { Progress } from "@/components/template/Progress";
 import RouteThemeSync from "@/app/layouts/RouteThemeSync";
+import { DocumentoUploadNavigator } from "@/app/contexts/documento-upload/Navigator";
 
 const Toaster = Loadable(lazy(() => import("@/components/template/Toaster")));
 const Customizer = Loadable(
@@ -67,6 +68,8 @@ function Root() {
   return (
     <>
       <RouteThemeSync />
+      {/* Deixa o upload de documento navegar de dentro do router. */}
+      <DocumentoUploadNavigator />
       <Progress />
       <ScrollRestoration />
       <Outlet />

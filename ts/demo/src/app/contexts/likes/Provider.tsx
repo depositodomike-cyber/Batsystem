@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import {
   LikesContext,
   type LikesContextValue,
@@ -8,11 +9,11 @@ import {
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:feed-likes";
+const STORAGE_BASE = "ceo-os:feed-likes";
 
 function loadLikes(): FeedLike[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -35,7 +36,7 @@ export function LikesProvider({ children }: { children: ReactNode }) {
   // Persiste no "banco" (localStorage) a cada alteração.
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(likes));
+      localStorage.setItem(chaveConta(STORAGE_BASE), JSON.stringify(likes));
     } catch {
       /* ignora falhas de persistência (ex.: modo privado) */
     }

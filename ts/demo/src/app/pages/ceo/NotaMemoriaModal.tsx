@@ -43,7 +43,8 @@ interface Props {
 const MOTIVO: Record<VaultFalha, string> = {
   "no-folder": "Nenhuma pasta do Contexto selecionada. Use “Sincronizar” para escolher a pasta.",
   denied: "Permissão negada para acessar a pasta do Contexto.",
-  unsupported: "Use o Chrome ou o Edge para abrir e editar as notas do Contexto.",
+  unsupported:
+    "Este navegador abre o Contexto como cópia somente leitura. Para editar, ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
   "not-found": "Arquivo não encontrado na pasta. Sincronize o Contexto e tente de novo.",
   error: "Não foi possível gravar o arquivo.",
 };

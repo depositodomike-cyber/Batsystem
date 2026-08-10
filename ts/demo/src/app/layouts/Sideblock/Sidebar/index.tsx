@@ -9,7 +9,6 @@ import { useThemeContext } from "@/app/contexts/theme/context";
 import { useDidUpdate } from "@/hooks";
 import { Header } from "./Header";
 import { Menu } from "./Menu";
-import { LanguageSelect } from "./LanguageSelect";
 
 // ----------------------------------------------------------------------
 
@@ -42,7 +41,6 @@ export function Sidebar() {
         <Header />
         <div className="flex min-h-0 flex-1 flex-col">
           <Menu />
-          <LanguageSelect />
         </div>
       </div>
 

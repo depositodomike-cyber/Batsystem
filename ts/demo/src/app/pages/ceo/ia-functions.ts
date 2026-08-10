@@ -19,6 +19,7 @@ import {
   MicrophoneIcon,
   SparklesIcon,
   ChartBarSquareIcon,
+  ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
 import i18n from "@/i18n/config";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
@@ -54,10 +55,11 @@ export const FUNCTIONS: AiFunction[] = [
   { id: "dashboard", label: "Criar Dashboard", desc: "Painel HTML com KPIs e gráficos a partir dos seus dados.", Icon: ChartBarSquareIcon, tint: "text-cyan-500" },
 ];
 
-// Ações de upload — não aparecem na grade do AI Studio (são abertas pelos
-// subitens do Contexto na sidebar), mas produzem conteúdo como as demais e por
-// isso entram no registro de janelas e no envio para grupos.
+// Ações de upload — não aparecem na grade do AI Studio. A janela única
+// `upload` abre no topbar; os ids documento/audio/transcricao seguem como
+// deep links (`?fn=`) e rótulos de envio para grupos.
 export const UPLOAD_FUNCTIONS: AiFunction[] = [
+  { id: "upload", label: "Upload", desc: "Documento, áudio ou transcrição.", Icon: ArrowUpTrayIcon, tint: "text-sky-500" },
   { id: "documento", label: "Upload Documento", desc: "Documento bruto → documento de referência.", Icon: DocumentTextIcon, tint: "text-sky-500" },
   { id: "transcricao", label: "Upload Transcrição", desc: "Transcrição colada → ata estratégica.", Icon: DocumentCheckIcon, tint: "text-emerald-500" },
   { id: "audio", label: "Upload Áudio", desc: "Áudio/vídeo → transcrição e ata.", Icon: MicrophoneIcon, tint: "text-rose-500" },
@@ -71,7 +73,7 @@ export function isAiStudioFunction(id: string): boolean {
   return FUNCTIONS.some((f) => f.id === id);
 }
 
-/** Indica se o id é uma ação de upload do Contexto (aberta pela sidebar). */
+/** Indica se o id é uma ação de upload (modal único ou deep link de aba). */
 export function isUploadFunction(id: string | null): boolean {
   return id !== null && UPLOAD_FUNCTIONS.some((f) => f.id === id);
 }

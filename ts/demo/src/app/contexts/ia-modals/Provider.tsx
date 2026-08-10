@@ -1,6 +1,7 @@
 import { ReactNode, useCallback, useMemo, useState } from "react";
 
 import {
+  IaModalOpenPayload,
   IaModalStatus,
   IaModalsContextValue,
   IaModalsProvider as Ctx,
@@ -19,14 +20,27 @@ import { MinimizedDock } from "./MinimizedDock";
 
 export function IaModalsHostProvider({ children }: { children: ReactNode }) {
   const [states, setStates] = useState<Record<string, IaModalStatus>>({});
+  const [payloads, setPayloads] = useState<Record<string, IaModalOpenPayload>>(
+    {},
+  );
 
   const setStatus = useCallback((id: string, status: IaModalStatus) => {
     setStates((prev) => ({ ...prev, [id]: status }));
   }, []);
 
-  const open = useCallback((id: string) => setStatus(id, "open"), [setStatus]);
-  const minimize = useCallback((id: string) => setStatus(id, "minimized"), [setStatus]);
-  const restore = useCallback((id: string) => setStatus(id, "open"), [setStatus]);
+  const open = useCallback((id: string, payload?: IaModalOpenPayload) => {
+    setStates((prev) => ({ ...prev, [id]: "open" }));
+    setPayloads((prev) => ({ ...prev, [id]: payload ?? null }));
+  }, []);
+
+  const minimize = useCallback(
+    (id: string) => setStatus(id, "minimized"),
+    [setStatus],
+  );
+  const restore = useCallback(
+    (id: string) => setStatus(id, "open"),
+    [setStatus],
+  );
 
   const close = useCallback((id: string) => {
     setStates((prev) => {
@@ -35,11 +49,17 @@ export function IaModalsHostProvider({ children }: { children: ReactNode }) {
       delete next[id];
       return next;
     });
+    setPayloads((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   }, []);
 
   const value = useMemo<IaModalsContextValue>(
-    () => ({ states, open, close, minimize, restore }),
-    [states, open, close, minimize, restore],
+    () => ({ states, payloads, open, close, minimize, restore }),
+    [states, payloads, open, close, minimize, restore],
   );
 
   return (
@@ -56,6 +76,7 @@ export function IaModalsHostProvider({ children }: { children: ReactNode }) {
             isOpen={states[id] === "open"}
             close={() => close(id)}
             onMinimize={() => minimize(id)}
+            payload={payloads[id]}
           />
         ) : null,
       )}

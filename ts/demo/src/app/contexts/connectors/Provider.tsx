@@ -7,11 +7,12 @@ import {
   disconnectConectorApi,
   fetchConectoresApi,
 } from "@/services/api/conectores";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import { ConnectorsContext, type ConnectorsContextValue } from "./context";
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:connectors";
+const STORAGE_BASE = "ceo-os:connectors";
 
 // Conectores OAuth nunca entram na semente do modo demo: só há conexão se o
 // servidor tiver as credenciais do provedor.
@@ -23,7 +24,7 @@ function defaultConnected(): Set<string> {
 
 function loadConnected(): Set<string> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return new Set(parsed.map(String));
@@ -76,7 +77,10 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
   // Cache local a cada alteração (render imediato na próxima visita).
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...connectedIds]));
+      localStorage.setItem(
+        chaveConta(STORAGE_BASE),
+        JSON.stringify([...connectedIds]),
+      );
     } catch {
       /* ignora falhas de persistência (ex.: modo privado) */
     }

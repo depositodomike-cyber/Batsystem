@@ -11,11 +11,9 @@ import { ImagemModal } from "@/app/pages/ceo/ImagemModal";
 import { VideoModal } from "@/app/pages/ceo/VideoModal";
 import { MelhorarModal } from "@/app/pages/ceo/MelhorarModal";
 import { DashboardModal } from "@/app/pages/ceo/DashboardModal";
-import { TranscricaoModal } from "@/app/pages/ceo/TranscricaoModal";
-import { DocumentoModal } from "@/app/pages/ceo/DocumentoModal";
-import { AudioModal } from "@/app/pages/ceo/AudioModal";
+import { UploadModal } from "@/app/pages/ceo/UploadModal";
 
-import { IaModalMeta } from "./context";
+import { IaModalMeta, IaModalOpenPayload } from "./context";
 
 // ----------------------------------------------------------------------
 // Registro único das janelas de IA que podem ser minimizadas para o rodapé.
@@ -30,6 +28,8 @@ export interface IaModalProps {
   isOpen: boolean;
   close: () => void;
   onMinimize?: () => void;
+  /** Payload opcional da última chamada a `open(id, payload)`. */
+  payload?: IaModalOpenPayload;
 }
 
 export interface IaModalEntry extends IaModalMeta {
@@ -55,10 +55,8 @@ export const IA_MODALS: IaModalEntry[] = [
   { ...fn("video"), Component: VideoModal },
   { ...fn("melhorar"), Component: MelhorarModal },
   { ...fn("dashboard"), Component: DashboardModal },
-  // Modais de upload — acessíveis pelos subitens do Contexto na sidebar.
-  { ...fn("transcricao"), Component: TranscricaoModal },
-  { ...fn("documento"), Component: DocumentoModal },
-  { ...fn("audio"), Component: AudioModal },
+  // Modal único de Upload (Documento / Áudio / Transcrições) — topbar.
+  { ...fn("upload"), Component: UploadModal },
 ];
 
 export const IA_MODALS_BY_ID: Record<string, IaModalEntry> = Object.fromEntries(

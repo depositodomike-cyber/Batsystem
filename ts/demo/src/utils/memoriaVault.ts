@@ -2,14 +2,16 @@
 //
 // A telo Contexto (grafo) monta os nós a partir dos arquivos .md de uma pasta
 // local que o usuário seleciona; o handle dessa pasta é persistido no IndexedDB
-// (ceo-memoria/kv/dir-handle) — o MESMO banco/chave usado por MemoriaGrafo e
+// (ceo-memoria/kv/dir-handle:<conta>) — o MESMO banco/chave usado por MemoriaGrafo e
 // Configuracoes. Este utilitário reaproveita esse handle para ESCREVER novas
 // notas na pasta, de modo que — por exemplo — uma ata gerada a partir de uma
 // transcrição vire um .md e apareça imediatamente no grafo (subpasta Reuniões).
 
-const IDB_DB = "ceo-memoria";
-const IDB_STORE = "kv";
-const IDB_KEY = "dir-handle";
+import {
+  lerNotaDaCopia,
+  pastaContextoSalva,
+  pastaEhCopia,
+} from "@/app/pages/ceo/memoria-inventario";
 
 // Tipos mínimos da File System Access API (não estão no lib.dom padrão do TS).
 interface FSWritable {
@@ -28,25 +30,6 @@ interface FSDirHandle {
   entries?: () => AsyncIterableIterator<[string, { kind?: "file" | "directory" }]>;
   queryPermission?: (o: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
   requestPermission?: (o: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
-}
-
-function idbGet<T>(): Promise<T | undefined> {
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open(IDB_DB, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction(IDB_STORE, "readonly");
-        const g = tx.objectStore(IDB_STORE).get(IDB_KEY);
-        g.onsuccess = () => resolve(g.result as T);
-        g.onerror = () => resolve(undefined);
-      };
-      req.onerror = () => resolve(undefined);
-    } catch {
-      resolve(undefined);
-    }
-  });
 }
 
 export function memoriaVaultSupported(): boolean {
@@ -84,15 +67,28 @@ export interface AnexoMemoria {
 
 export type VaultFalha = "no-folder" | "denied" | "unsupported" | "not-found" | "error";
 
+// A pasta viva em disco, não a cópia somente leitura que navegadores sem File
+// System Access API produzem (Brave com a flag desligada, Firefox, Safari):
+// nela não há o que gravar nem o que listar, então vale como "sem suporte".
+async function pastaViva(): Promise<
+  { ok: true; dir: FSDirHandle } | { ok: false; reason: "no-folder" | "unsupported" }
+> {
+  if (!memoriaVaultSupported()) return { ok: false, reason: "unsupported" };
+  const handle = await pastaContextoSalva();
+  if (!handle) return { ok: false, reason: "no-folder" };
+  if (pastaEhCopia(handle)) return { ok: false, reason: "unsupported" };
+  return { ok: true, dir: handle as unknown as FSDirHandle };
+}
+
 // Pega o handle da Pasta do Contexto já com a permissão pedida. `requestPermission`
 // só funciona a partir de um gesto do usuário — daí as chamadas partirem sempre
 // de um clique (salvar/abrir nó do grafo).
 async function pastaComPermissao(
   mode: "read" | "readwrite",
 ): Promise<{ ok: true; dir: FSDirHandle } | { ok: false; reason: VaultFalha }> {
-  if (!memoriaVaultSupported()) return { ok: false, reason: "unsupported" };
-  const handle = await idbGet<FSDirHandle>();
-  if (!handle) return { ok: false, reason: "no-folder" };
+  const pasta = await pastaViva();
+  if (!pasta.ok) return pasta;
+  const handle = pasta.dir;
   try {
     const query = handle.queryPermission ? await handle.queryPermission({ mode }) : "prompt";
     if (query !== "granted") {
@@ -135,9 +131,9 @@ async function pastaDoCaminho(
 export async function listarPastasMemoria(): Promise<
   { ok: true; pastas: string[] } | { ok: false; reason: VaultFalha }
 > {
-  if (!memoriaVaultSupported()) return { ok: false, reason: "unsupported" };
-  const handle = await idbGet<FSDirHandle>();
-  if (!handle) return { ok: false, reason: "no-folder" };
+  const pasta = await pastaViva();
+  if (!pasta.ok) return pasta;
+  const handle = pasta.dir;
   try {
     const estado = handle.queryPermission
       ? await handle.queryPermission({ mode: "read" })
@@ -194,6 +190,11 @@ async function arquivoDoCaminho(
 export async function lerNotaMemoria(
   path: string,
 ): Promise<{ ok: true; conteudo: string } | { ok: false; reason: VaultFalha }> {
+  // Sem acesso à pasta viva a nota ainda pode ser lida da cópia feita na
+  // seleção — é o que mantém os nós do grafo abríveis nesses navegadores.
+  const daCopia = await lerNotaDaCopia(path);
+  if (daCopia !== undefined) return { ok: true, conteudo: daCopia };
+
   const pasta = await pastaComPermissao("read");
   if (!pasta.ok) return pasta;
   try {
@@ -381,10 +382,9 @@ export async function escreverNotaMemoria(opts: {
   tags?: string[];
   anexos?: AnexoMemoria[];
 }): Promise<WriteResult> {
-  if (!memoriaVaultSupported()) return { ok: false, reason: "unsupported" };
-
-  const handle = await idbGet<FSDirHandle>();
-  if (!handle) return { ok: false, reason: "no-folder" };
+  const pasta = await pastaViva();
+  if (!pasta.ok) return pasta;
+  const handle = pasta.dir;
 
   // Precisa de permissão de escrita — o handle da telo Contexto é só de leitura.
   try {

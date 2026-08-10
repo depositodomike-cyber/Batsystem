@@ -17,7 +17,24 @@ import {
 
 // ----------------------------------------------------------------------
 
-export function MenuItem({ data }: { data: NavigationTree }) {
+// Classes do item: separadas do JSX porque o item pode ser link (NavLink) ou
+// botão (quando abre um modal em vez de navegar) e os dois usam o mesmo visual.
+const ITEM_CLASS =
+  "group min-w-0 flex-1 rounded-md px-3 py-1 font-medium outline-hidden transition-colors ease-in-out";
+const ITEM_IDLE_CLASS =
+  "text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950 dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10";
+
+export function MenuItem({
+  data,
+  onSelect,
+}: {
+  data: NavigationTree;
+  /**
+   * Quando informado, o item abre algo na tela atual (ex.: modal de upload) em
+   * vez de navegar — vira botão e nunca fica com estado "ativo" de rota.
+   */
+  onSelect?: () => void;
+}) {
   const { icon, path, id, transKey, title } = data;
   const { lgAndDown } = useBreakpointsContext();
   const { close } = useSidebarContext();
@@ -85,16 +102,27 @@ export function MenuItem({ data }: { data: NavigationTree }) {
         >
           {body(false)}
         </div>
+      ) : onSelect ? (
+        <button
+          type="button"
+          onClick={() => {
+            onSelect();
+            handleMenuItemClick();
+          }}
+          className={clsx(ITEM_CLASS, ITEM_IDLE_CLASS, "text-start")}
+        >
+          {body(false)}
+        </button>
       ) : (
         <NavLink
           to={path}
           onClick={handleMenuItemClick}
           className={({ isActive }) =>
             clsx(
-              "group min-w-0 flex-1 rounded-md px-3 py-1 font-medium outline-hidden transition-colors ease-in-out",
+              ITEM_CLASS,
               isActive
                 ? "text-primary-600 dark:text-primary-400"
-                : "text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950 dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10",
+                : ITEM_IDLE_CLASS,
             )
           }
         >

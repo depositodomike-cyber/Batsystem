@@ -118,7 +118,10 @@ export function SalvarNaMemoriaButton({
       } else if (r.reason === "denied") {
         toast("Permissão negada", { description: "É preciso autorizar a escrita na pasta." });
       } else if (r.reason === "unsupported") {
-        toast("Navegador sem suporte", { description: "Use o Chrome ou Edge para gravar na pasta." });
+        toast("Gravação indisponível neste navegador", {
+          description:
+            "O Contexto está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
+        });
       } else {
         toast("Não foi possível gravar o arquivo", { description: "Tente novamente." });
       }

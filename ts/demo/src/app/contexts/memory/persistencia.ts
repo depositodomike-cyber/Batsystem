@@ -4,27 +4,16 @@
  */
 
 import type { MemoryItem } from "@/app/data/memoria";
+import { chaveConta, escopoConta } from "@/utils/escopoConta";
 
-const CHAVE_PREFIXO = "beculture:memorias:v1:";
-
-function chave(escopo: string): string {
-  return `${CHAVE_PREFIXO}${escopo}`;
-}
+const CHAVE_PREFIXO = "beculture:memorias:v1";
 
 export function escopoMemoriasLocal(): string {
-  try {
-    const token = localStorage.getItem("authToken");
-    if (!token) return "anon";
-    // Preferência: e-mail do payload JWT (real ou protótipo).
-    const parte = token.split(".")[1];
-    if (!parte) return "anon";
-    const json = JSON.parse(
-      atob(parte.replace(/-/g, "+").replace(/_/g, "/")),
-    ) as { email?: string; sub?: string };
-    return (json.email || json.sub || "anon").toLowerCase();
-  } catch {
-    return "anon";
-  }
+  return escopoConta();
+}
+
+function chave(escopo: string): string {
+  return `${CHAVE_PREFIXO}:${escopo}`;
 }
 
 export function tokenEhPrototipo(): boolean {
@@ -55,4 +44,9 @@ export function salvarMemoriasLocal(
   } catch {
     // modo privado / cota
   }
+}
+
+/** Chave completa da conta atual (útil para debug). */
+export function chaveMemoriasContaAtual(): string {
+  return chaveConta(CHAVE_PREFIXO);
 }

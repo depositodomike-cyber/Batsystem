@@ -1,7 +1,11 @@
 // Import Dependencies
 import clsx from "clsx";
 import { NavLink, useLocation } from "react-router";
-import { Cog6ToothIcon, LinkIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowUpTrayIcon,
+  Cog6ToothIcon,
+  LinkIcon,
+} from "@heroicons/react/24/outline";
 
 // Local Imports
 import { Notifications } from "@/components/template/Notifications";
@@ -11,6 +15,7 @@ import { PromptBar } from "@/components/template/PromptBar";
 import { SidebarToggleBtn } from "@/components/shared/SidebarToggleBtn";
 import { Profile } from "../Profile";
 import { useThemeContext } from "@/app/contexts/theme/context";
+import { useIaModals } from "@/app/contexts/ia-modals/context";
 import {
   getProductCodeFromPath,
   systemAreaPath,
@@ -34,6 +39,7 @@ export function Header() {
   const { pathname } = useLocation();
   const productCode = getProductCodeFromPath(pathname);
   const { t } = useTranslation();
+  const { open } = useIaModals();
 
   return (
     <header
@@ -45,6 +51,17 @@ export function Header() {
       <div className="contents xl:hidden">
         <SidebarToggleBtn />
       </div>
+
+      <button
+        type="button"
+        onClick={() => open("upload")}
+        title="Upload"
+        aria-label="Upload"
+        className="dark:border-dark-500 dark:bg-dark-700 dark:text-dark-200 dark:hover:bg-dark-600 dark:hover:text-dark-50 flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-100/70 px-3 text-xs-plus font-medium text-gray-600 transition-colors hover:bg-gray-200/70 hover:text-gray-900"
+      >
+        <ArrowUpTrayIcon className="size-4 stroke-[1.5]" />
+        <span>Upload</span>
+      </button>
 
       <div className="min-w-0 flex-1">
         <PromptBar />

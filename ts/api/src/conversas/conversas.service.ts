@@ -104,7 +104,12 @@ export class ConversasService {
     if (!c) {
       throw new NotFoundException('Conversa não encontrada.');
     }
-    await this.prisma.conversa.delete({ where: { id } });
+    const deleted = await this.prisma.conversa.deleteMany({
+      where: { id, empresaId, usuarioId },
+    });
+    if (deleted.count === 0) {
+      throw new NotFoundException('Conversa não encontrada.');
+    }
     return { success: true };
   }
 

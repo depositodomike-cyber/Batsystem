@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import {
   ChatsContext,
   type ChatsContextValue,
@@ -9,7 +10,7 @@ import {
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:chats";
+const STORAGE_BASE = "ceo-os:chats";
 
 function createId(): string {
   return `chat_${Date.now().toString(36)}${Math.random()
@@ -19,7 +20,7 @@ function createId(): string {
 
 function loadChats(): Chat[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -49,7 +50,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+      localStorage.setItem(chaveConta(STORAGE_BASE), JSON.stringify(chats));
     } catch {
       /* ignora falhas de persistência (ex.: modo privado) */
     }

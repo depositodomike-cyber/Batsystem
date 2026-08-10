@@ -3,15 +3,16 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { type Squad } from "@/app/navigation/ceoOs";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { fetchSquadCatalogApi } from "@/services/api/squads";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import { SquadsContext, type SquadsContextValue } from "./context";
 
 // ----------------------------------------------------------------------
 
-const STORAGE_KEY = "ceo-os:pinned-squads";
+const STORAGE_BASE = "ceo-os:pinned-squads";
 
 function loadPinnedIds(): string[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -66,7 +67,7 @@ export function SquadsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(pinnedIds));
+      localStorage.setItem(chaveConta(STORAGE_BASE), JSON.stringify(pinnedIds));
     } catch {
       /* ignora falhas de persistência (ex.: modo privado) */
     }

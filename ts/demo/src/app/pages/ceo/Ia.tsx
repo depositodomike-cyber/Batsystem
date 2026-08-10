@@ -179,7 +179,21 @@ export default function Ia() {
     const blocked =
       (AI_STUDIO_DISABLED && isAiStudioFunction(fnParam)) ||
       isMemoryUploadFnTemporarilyDisabled(fnParam);
-    if (!blocked && IA_MODALS_BY_ID[fnParam]) open(fnParam);
+
+    if (!blocked) {
+      // Deep links de upload abrem o modal único na aba correspondente.
+      if (
+        fnParam === "documento" ||
+        fnParam === "audio" ||
+        fnParam === "transcricao"
+      ) {
+        open("upload", { aba: fnParam });
+      } else if (fnParam === "upload") {
+        open("upload");
+      } else if (IA_MODALS_BY_ID[fnParam]) {
+        open(fnParam);
+      }
+    }
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);

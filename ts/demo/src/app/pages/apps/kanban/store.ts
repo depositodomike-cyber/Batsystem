@@ -20,9 +20,16 @@ import type { IconType } from "react-icons";
 
 import { randomId } from "@/utils/randomId";
 import { stringToSlug } from "@/utils/stringToSlug";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import { Board, Column, Task, fakeBoards } from "./data";
 
-export const KANBAN_STORAGE_KEY = "ceo-kanban-boards-v2";
+export const KANBAN_STORAGE_BASE = "ceo-kanban-boards-v2";
+/** @deprecated use KANBAN_STORAGE_BASE + chaveConta */
+export const KANBAN_STORAGE_KEY = KANBAN_STORAGE_BASE;
+
+function storageKey(): string {
+  return chaveConta(KANBAN_STORAGE_BASE);
+}
 
 // Ícones padrão das etapas, reanexados por slug após o JSON round-trip
 // (Column.Icon é um componente e não sobrevive à serialização).
@@ -45,7 +52,7 @@ function reattachIcons(boards: Board[]): Board[] {
 export function loadBoards(): Board[] {
   if (typeof window === "undefined") return fakeBoards;
   try {
-    const raw = window.localStorage.getItem(KANBAN_STORAGE_KEY);
+    const raw = lerComMigracao(KANBAN_STORAGE_BASE);
     if (!raw) return fakeBoards;
     const parsed = JSON.parse(raw) as Board[];
     if (!Array.isArray(parsed)) return fakeBoards;
@@ -59,7 +66,7 @@ export function loadBoards(): Board[] {
 export function saveBoards(boards: Board[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KANBAN_STORAGE_KEY, JSON.stringify(boards));
+    window.localStorage.setItem(storageKey(), JSON.stringify(boards));
   } catch {
     /* ignora indisponibilidade de storage */
   }

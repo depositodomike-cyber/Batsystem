@@ -29,6 +29,7 @@ import {
   getProductCodeFromPath,
   systemAreaPath,
 } from "@/app/navigation/ceoOs";
+import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 
 // ----------------------------------------------------------------------
 
@@ -56,7 +57,7 @@ const FEATURES: Feature[] = [
 ];
 
 // v3: nenhum item vem fixado por padrão — o usuário fixa clicando no alfinete.
-const STORAGE_KEY = "ceo-pinned-features-v3";
+const STORAGE_BASE = "ceo-pinned-features-v3";
 // Nenhum item fixado por padrão no menu superior.
 const DEFAULT_PINNED: string[] = [];
 // Nenhum item é fixado à força: todos podem ser fixados/desafixados pelo usuário.
@@ -65,7 +66,7 @@ const FORCED_PINNED: string[] = [];
 function readPinned(): string[] {
   if (typeof window === "undefined") return DEFAULT_PINNED;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = lerComMigracao(STORAGE_BASE);
     if (!raw) return DEFAULT_PINNED;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : DEFAULT_PINNED;
@@ -109,7 +110,7 @@ export function Funcionalidades() {
   // Persiste a seleção de itens fixados.
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(pinned));
+      window.localStorage.setItem(chaveConta(STORAGE_BASE), JSON.stringify(pinned));
     } catch {
       /* ignora indisponibilidade de storage */
     }

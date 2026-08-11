@@ -1,7 +1,8 @@
 /**
- * TELA 2 — Intenção de uso + configuração da organização.
+ * Intenção de uso + configuração da organização.
  *
- * Usada no cadastro e também em `?novo=1` (criar organização pelo menu de perfil).
+ * Fluxo próprio (não é “etapa 2” da criação de conta). Usada no cadastro após
+ * a confirmação de e-mail simulada e também em `?novo=1` (menu de perfil).
  * Cadastro: pessoal → produto; corporativo → seletor.
  * Perfil (`novo=1`): sempre → seletor com as organizações existentes.
  */
@@ -20,10 +21,8 @@ import {
   garantirSessaoBackend,
 } from "@/services/api/contaBackend";
 
-import { InviteMembersField } from "../components/InviteMembersField";
 import { MolduraAuth } from "../components/MolduraAuth";
 import { OrganizationFields } from "../components/OrganizationFields";
-import { StepperConta } from "../components/StepperConta";
 import { TipoUsoSelector } from "../components/TipoUsoSelector";
 import { usePrototipoContas, useUsuario } from "../model/context";
 import {
@@ -45,7 +44,6 @@ export default function ConfigurarOrganizacao() {
     register,
     handleSubmit,
     control,
-    setValue,
     formState: { errors },
   } = useForm<OrganizacaoFormValues>({
     resolver: yupResolver(organizacaoSchema),
@@ -57,7 +55,6 @@ export default function ConfigurarOrganizacao() {
   });
 
   const tipoUso = useWatch({ control, name: "tipoUso" });
-  const emails = useWatch({ control, name: "emails" }) ?? [];
 
   if (!usuario) return <Navigate to="../criar-conta" replace />;
 
@@ -127,14 +124,9 @@ export default function ConfigurarOrganizacao() {
       tituloPagina={
         novaOrganizacao ? "Nova organização" : "Configurar organização"
       }
-      kicker={
-        novaOrganizacao ? "Nova organização" : "Etapa 2 · Sua organização"
-      }
+      kicker={novaOrganizacao ? "Nova organização" : "Sua organização"}
       titulo="Como você quer usar a beculture?"
       subtitulo="Isso ajuda a personalizar sua experiência"
-      antesDoCard={
-        novaOrganizacao ? undefined : <StepperConta stepIndex={1} />
-      }
     >
       <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
         <Controller
@@ -158,13 +150,6 @@ export default function ConfigurarOrganizacao() {
             <OrganizationFields
               registration={register("nomeOrganizacao")}
               error={errors?.nomeOrganizacao?.message}
-            />
-            <InviteMembersField
-              emails={emails}
-              emailDoUsuario={usuario.email}
-              onChange={(proximos) =>
-                setValue("emails", proximos, { shouldValidate: true })
-              }
             />
           </div>
         )}

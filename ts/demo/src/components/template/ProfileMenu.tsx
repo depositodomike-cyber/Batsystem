@@ -7,6 +7,10 @@
 
 import { useEffect, useState, type MouseEvent } from "react";
 import {
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
   Popover,
   PopoverButton,
   PopoverPanel,
@@ -16,6 +20,8 @@ import {
   ArrowLeftStartOnRectangleIcon,
   BuildingOffice2Icon,
   CheckCircleIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
   PlusIcon,
   TrashIcon,
   UserIcon,
@@ -285,53 +291,80 @@ export function ProfileMenu({
                 <p className="text-tiny-plus dark:text-dark-300 px-2 pb-1.5 font-semibold tracking-wider text-gray-400 uppercase">
                   Idioma
                 </p>
-                <ul className="space-y-0.5">
-                  {profileLocales.map((code) => {
-                    const isAtivo = code === idiomaAtual;
-                    return (
-                      <li key={code}>
-                        <button
-                          type="button"
-                          disabled={localeLoading}
-                          onClick={() => onLanguageSelect(code)}
-                          className={clsx(
-                            "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-hidden transition-colors",
-                            isAtivo
-                              ? "bg-primary-600/10 dark:bg-primary-400/10"
-                              : "hover:bg-gray-100 dark:hover:bg-dark-600",
-                            localeLoading && "opacity-70",
-                          )}
-                        >
-                          {localeLoading && isAtivo ? (
-                            <Spinner
-                              color="primary"
-                              className="size-4 shrink-0"
-                            />
-                          ) : (
-                            <img
-                              className="size-4 shrink-0"
-                              src={`/images/flags/svg/rounded/${locales[code].flag}.svg`}
-                              alt=""
-                            />
-                          )}
-                          <span
-                            className={clsx(
-                              "min-w-0 flex-1 truncate text-sm font-medium",
-                              isAtivo
-                                ? "text-primary-600 dark:text-primary-400"
+                <Listbox
+                  value={idiomaAtual}
+                  onChange={onLanguageSelect}
+                  disabled={localeLoading}
+                >
+                  <ListboxButton
+                    className={clsx(
+                      "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-hidden transition-colors",
+                      "hover:bg-gray-100 dark:hover:bg-dark-600",
+                      "focus-visible:ring-primary-500/50 focus-visible:ring-2",
+                      localeLoading && "opacity-70",
+                    )}
+                  >
+                    {localeLoading ? (
+                      <Spinner color="primary" className="size-4 shrink-0" />
+                    ) : (
+                      <img
+                        className="size-4 shrink-0"
+                        src={`/images/flags/svg/rounded/${locales[idiomaAtual].flag}.svg`}
+                        alt=""
+                      />
+                    )}
+                    <span className="dark:text-dark-100 min-w-0 flex-1 truncate text-sm font-medium text-gray-800">
+                      {locales[idiomaAtual].label}
+                    </span>
+                    <ChevronUpDownIcon className="dark:text-dark-300 size-4 shrink-0 text-gray-400" />
+                  </ListboxButton>
+
+                  <Transition
+                    enter="transition ease-out"
+                    enterFrom="translate-y-1 opacity-0"
+                    enterTo="translate-y-0 opacity-100"
+                    leave="transition ease-in"
+                    leaveFrom="translate-y-0 opacity-100"
+                    leaveTo="translate-y-1 opacity-0"
+                  >
+                    <ListboxOptions
+                      anchor={{ to: "bottom start", gap: 6 }}
+                      className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-101 w-(--button-width) min-w-40 rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
+                    >
+                      {profileLocales.map((code) => (
+                        <ListboxOption
+                          key={code}
+                          value={code}
+                          className={({ focus, selected }) =>
+                            clsx(
+                              "flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors select-none",
+                              focus && "dark:bg-dark-600 bg-gray-100",
+                              selected
+                                ? "text-primary-600 dark:text-primary-400 font-semibold"
                                 : "dark:text-dark-100 text-gray-800",
-                            )}
-                          >
-                            {locales[code].label}
-                          </span>
-                          {isAtivo && (
-                            <CheckCircleIcon className="size-4 shrink-0 text-primary-600 dark:text-primary-400" />
+                            )
+                          }
+                        >
+                          {({ selected }) => (
+                            <>
+                              <img
+                                className="size-4 shrink-0"
+                                src={`/images/flags/svg/rounded/${locales[code].flag}.svg`}
+                                alt=""
+                              />
+                              <span className="min-w-0 flex-1 truncate">
+                                {locales[code].label}
+                              </span>
+                              {selected && (
+                                <CheckIcon className="size-4 shrink-0" />
+                              )}
+                            </>
                           )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                        </ListboxOption>
+                      ))}
+                    </ListboxOptions>
+                  </Transition>
+                </Listbox>
               </div>
 
               <div className="dark:border-dark-600 border-t border-gray-150 px-4 py-3">

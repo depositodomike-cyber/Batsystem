@@ -27,6 +27,8 @@ import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { Badge, Button, Spinner } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 import { syncVault } from "@/services/api/vault";
 import { NotaMemoriaModal } from "./NotaMemoriaModal";
 import {
@@ -89,6 +91,8 @@ function formatarData(ms: number): string {
 export default function MemoriaLista() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
+  const repositorio = useRepositorioAtivo();
+  const repositorioId = repositorio?.id ?? null;
 
   // `null` = a pasta ainda não foi lida nesta sessão (empty state de escolha);
   // `[]` = pasta lida e sem nenhum .md.
@@ -170,14 +174,29 @@ export default function MemoriaLista() {
     await carregar(handle, { indexar: true });
   }, [carregar, escolherPasta]);
 
-  // Restaura a pasta da última visita (a mesma do grafo) quando a permissão
-  // ainda está concedida — quem já escolheu a pasta no grafo cai direto na lista.
+  // Restaura a pasta do repositório ativo. Ao trocar de repositório, limpa o
+  // inventário (após await) e tenta carregar a pasta (ou fica vazio).
   useEffect(() => {
+    let cancelado = false;
+
     (async () => {
-      const handle = await pastaContextoSalva();
-      if (handle && (await permissaoDeLeitura(handle))) await carregar(handle);
+      const handle = await pastaContextoSalva(repositorioId);
+      if (cancelado) return;
+      if (handle && (await permissaoDeLeitura(handle))) {
+        await carregar(handle);
+        return;
+      }
+      setItens(null);
+      setNomePasta("");
+      setPasta(null);
+      setBusca("");
+      setNota(null);
     })();
-  }, [carregar]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [carregar, repositorioId]);
 
   const pastas = useMemo(() => pastasDoInventario(itens ?? []), [itens]);
   // Uma pasta filtrada pode desaparecer ao sincronizar; nesse caso o filtro cai
@@ -228,15 +247,17 @@ export default function MemoriaLista() {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              component={Link}
-              to={`/${product.code}/memoria-grafo`}
-              variant="outlined"
-              className="h-10 gap-2 rounded-full px-4"
-            >
-              <ShareIcon className="size-4.5" />
-              Ver no grafo
-            </Button>
+            {!isFeatureTemporarilyDisabled("memoryGraph") && (
+              <Button
+                component={Link}
+                to={`/${product.code}/memoria-grafo`}
+                variant="outlined"
+                className="h-10 gap-2 rounded-full px-4"
+              >
+                <ShareIcon className="size-4.5" />
+                Ver no grafo
+              </Button>
+            )}
             <Button
               onClick={sincronizar}
               color="primary"

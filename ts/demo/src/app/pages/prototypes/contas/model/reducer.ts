@@ -46,6 +46,11 @@ export type AcaoPrototipo =
       tipo: "organizacao/excluir";
       payload: { organizacaoId: string };
     }
+  /**
+   * Cria um repositório vazio no mesmo escopo do contexto atual (ou do primeiro
+   * repositório acessível) e já o seleciona. Não herda pasta nem conteúdo.
+   */
+  | { tipo: "repositorio/criar"; payload: { nome: string } }
   | { tipo: "sessao/login"; payload: { email: string } }
   /**
    * Garante uma sessão para um usuário autenticado na app real: reaproveita a
@@ -116,21 +121,8 @@ export function reducer(
         (u) => u.email.toLowerCase() === email.toLowerCase(),
       );
 
-      // Mesmo e-mail = retomar essa conta (não cria id duplicado nem mistura repos).
-      if (existente) {
-        const primeiro = primeiroRepositorioDoUsuario(estado, existente.id);
-        return {
-          ...estado,
-          usuarios: estado.usuarios.map((u) =>
-            u.id === existente.id
-              ? { ...u, nome: acao.payload.nome, senha: acao.payload.senha }
-              : u,
-          ),
-          sessao: { usuarioId: existente.id },
-          contexto: primeiro ? { repositorioId: primeiro.id } : null,
-          demo: { papelForcado: null },
-        };
-      }
+      // E-mail é o ID da conta: não recria nem sobrescreve se já existir.
+      if (existente) return estado;
 
       const usuarioId = novoId("u");
       const criadoEm = agora();
@@ -236,6 +228,40 @@ export function reducer(
         ],
         conteudo: { ...conteudoSemPessoal, [repoId]: conteudoVazio() },
         convites: [...estado.convites, ...convites],
+        contexto: { repositorioId: repoId },
+        demo: { papelForcado: null },
+      };
+    }
+
+    case "repositorio/criar": {
+      const sessao = estado.sessao;
+      if (!sessao) return estado;
+
+      const nome = acao.payload.nome.trim();
+      if (nome === "") return estado;
+
+      const ativo = estado.contexto
+        ? estado.repositorios.find((r) => r.id === estado.contexto!.repositorioId)
+        : null;
+      const base =
+        ativo ?? primeiroRepositorioDoUsuario(estado, sessao.usuarioId);
+      if (!base) return estado;
+
+      const repoId = novoId("rep");
+      const criadoEm = agora();
+
+      return {
+        ...estado,
+        repositorios: [
+          ...estado.repositorios,
+          {
+            id: repoId,
+            nome,
+            escopo: base.escopo,
+            criadoEm,
+          },
+        ],
+        conteudo: { ...estado.conteudo, [repoId]: conteudoVazio() },
         contexto: { repositorioId: repoId },
         demo: { papelForcado: null },
       };

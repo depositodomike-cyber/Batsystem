@@ -27,7 +27,10 @@ import {
   isAiStudioFunction,
   isUploadFunction,
 } from "./ia-functions";
-import { isMemoryUploadFnTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import {
+  isFeatureTemporarilyDisabled,
+  isMemoryUploadFnTemporarilyDisabled,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -160,7 +163,9 @@ export default function Ia() {
   const [searchParams, setSearchParams] = useSearchParams();
   const product = getCurrentProduct(pathname);
   const { open, states } = useIaModals();
-  const grafoPath = `/${product.code}/memoria-grafo`;
+  const grafoPath = isFeatureTemporarilyDisabled("memoryGraph")
+    ? `/${product.code}/memoria-lista`
+    : `/${product.code}/memoria-grafo`;
 
   const run = (fn: AiFunction) => {
     if (AI_STUDIO_DISABLED) return;

@@ -38,6 +38,10 @@ import {
   pastaEhCopia,
 } from "./memoria-inventario";
 import {
+  useRepositorioAtivo,
+  useRepositoriosDoEscopoAtivo,
+} from "@/app/pages/prototypes/contas/model/context";
+import {
   DISABLED_MENU_CLASS,
   isFeatureTemporarilyDisabled,
   type TemporarilyDisabledFeature,
@@ -439,28 +443,46 @@ function TokenUsagePanel() {
 // ----------------------------------------------------------------------
 // Memória — pasta de dados (File System Access API + IndexedDB)
 //
-// Usa o MESMO banco/chave da tela Repositório (ceo-memoria/kv/dir-handle:<conta>),
-// de modo que selecionar a pasta aqui reflete lá e vice-versa. Roda 100% no navegador.
+// Lista os repositórios do escopo ativo e a pasta vinculada a cada um
+// (ceo-memoria/kv/dir-handle:<repoId>). Roda 100% no navegador.
+
+type PastaPorRepo = {
+  nome: string | null;
+  copia: boolean;
+};
 
 function MemoriaSection() {
-  const [folderName, setFolderName] = useState<string | null>(null);
-  const [copia, setCopia] = useState(false);
+  const repositorios = useRepositoriosDoEscopoAtivo();
+  const ativo = useRepositorioAtivo();
+  const [pastas, setPastas] = useState<Record<string, PastaPorRepo>>({});
   // Suporte é fixo no mount; init lazy evita setState dentro de efeito.
   const [supported] = useState(() => pastaContextoSuportada());
   const [nativa] = useState(() => pastaContextoNativa());
 
-  useEffect(() => {
-    // setFolderName só ocorre após o await (assíncrono): sem cascata de renders.
-    (async () => {
-      const handle = await pastaContextoSalva();
-      if (!handle) return;
-      setFolderName(handle.name);
-      setCopia(pastaEhCopia(handle));
-    })();
-  }, []);
+  const ids = repositorios.map((r) => r.id).join(",");
 
-  const pickFolder = useCallback(async () => {
-    const escolha = await escolherPastaContexto();
+  useEffect(() => {
+    let cancelado = false;
+    const lista = ids ? ids.split(",") : [];
+
+    (async () => {
+      const proximo: Record<string, PastaPorRepo> = {};
+      for (const id of lista) {
+        const handle = await pastaContextoSalva(id);
+        proximo[id] = handle
+          ? { nome: handle.name, copia: pastaEhCopia(handle) }
+          : { nome: null, copia: false };
+      }
+      if (!cancelado) setPastas(proximo);
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [ids]);
+
+  const pickFolder = useCallback(async (repositorioId: string, nomeRepo: string) => {
+    const escolha = await escolherPastaContexto(repositorioId);
     if (!escolha.ok) {
       if (escolha.reason === "unsupported") {
         toast("Navegador sem suporte", {
@@ -469,46 +491,79 @@ function MemoriaSection() {
       }
       return;
     }
-    setFolderName(escolha.dir.name);
-    setCopia(pastaEhCopia(escolha.dir));
-    toast.success(`Pasta do Repositório definida: “${escolha.dir.name}”.`, {
-      description: "Abra a tela Repositório para carregar o grafo desta pasta.",
+    setPastas((prev) => ({
+      ...prev,
+      [repositorioId]: {
+        nome: escolha.dir.name,
+        copia: pastaEhCopia(escolha.dir),
+      },
+    }));
+    toast.success(`Pasta vinculada a “${nomeRepo}”: “${escolha.dir.name}”.`, {
+      description: "Abra a tela Repositório com este contexto ativo para carregar as notas.",
     });
   }, []);
 
   return (
     <SectionCard
-      titulo="Pasta do Repositório"
-      descricao="Onde ficam os arquivos que o Repositório conecta — reuniões, insights, notas e documentos. O grafo lê os arquivos .md desta pasta."
+      titulo="Repositórios"
+      descricao="Cada repositório tem nome próprio e pode ter uma pasta local vinculada. O conteúdo não é compartilhado entre eles."
     >
-      <div className="dark:border-dark-500 dark:bg-dark-600 flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400 grid size-10 shrink-0 place-items-center rounded-lg">
-            <FolderIcon className="size-5.5" />
-          </span>
-          <div className="min-w-0">
-            <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
-              {folderName ?? "Nenhuma pasta selecionada"}
-            </p>
-            <p className="dark:text-dark-300 text-xs-plus text-gray-500">
-              {folderName
-                ? copia
-                  ? "Cópia somente leitura — reselecione a pasta para ver alterações."
-                  : "Pasta atual do Repositório neste navegador."
-                : "Selecione a pasta que o Repositório deve usar como fonte."}
-            </p>
-          </div>
-        </div>
-        <Button
-          color="primary"
-          onClick={pickFolder}
-          disabled={!supported}
-          className="h-10 shrink-0 gap-1.5 rounded-lg"
-        >
-          <FolderIcon className="size-4.5" />
-          {folderName ? "Trocar pasta" : "Selecionar pasta"}
-        </Button>
-      </div>
+      {repositorios.length === 0 ? (
+        <p className="dark:text-dark-300 text-sm text-gray-500">
+          Nenhum repositório neste escopo. Crie um pelo seletor da sidebar.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {repositorios.map((repo) => {
+            const pasta = pastas[repo.id];
+            const folderName = pasta?.nome ?? null;
+            const copia = pasta?.copia ?? false;
+            const ehAtivo = ativo?.id === repo.id;
+
+            return (
+              <li
+                key={repo.id}
+                className="dark:border-dark-500 dark:bg-dark-600 flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-400 grid size-10 shrink-0 place-items-center rounded-lg">
+                    <CircleStackIcon className="size-5.5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="dark:text-dark-100 flex flex-wrap items-center gap-2 truncate text-sm font-medium text-gray-800">
+                      <span className="truncate">{repo.nome}</span>
+                      {ehAtivo ? (
+                        <span className="bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300 shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase">
+                          Ativo
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="dark:text-dark-300 mt-0.5 flex items-center gap-1.5 truncate text-xs-plus text-gray-500">
+                      <FolderIcon className="size-3.5 shrink-0" />
+                      <span className="truncate">
+                        {folderName
+                          ? copia
+                            ? `${folderName} (cópia somente leitura)`
+                            : folderName
+                          : "Nenhuma pasta selecionada"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  color="primary"
+                  onClick={() => void pickFolder(repo.id, repo.nome)}
+                  disabled={!supported}
+                  className="h-10 shrink-0 gap-1.5 rounded-lg"
+                >
+                  <FolderIcon className="size-4.5" />
+                  {folderName ? "Trocar pasta" : "Selecionar pasta"}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       {!supported ? (
         <p className="mt-3 text-xs-plus text-warning">
@@ -528,7 +583,8 @@ function MemoriaSection() {
 
       <p className="dark:text-dark-300 mt-4 text-xs-plus text-gray-400">
         A pasta é lida localmente pelo navegador — nenhum arquivo é enviado a
-        servidores. A escolha é compartilhada com a tela Repositório.
+        servidores. A escolha é compartilhada com a tela Repositório do mesmo
+        contexto.
       </p>
     </SectionCard>
   );

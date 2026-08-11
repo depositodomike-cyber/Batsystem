@@ -25,6 +25,10 @@ import {
   products,
   SQUADS_PRODUCT_CODE,
 } from "@/app/navigation/ceoOs";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+
+const GRAFO_DESABILITADO = isFeatureTemporarilyDisabled("memoryGraph");
+const REPOSITORIO_HOME = GRAFO_DESABILITADO ? "memoria-lista" : "memoria-grafo";
 
 // Insights é por produto (cada produto tem a sua própria página, diferente do
 // Feed). Aqui só o Business Partner tem página dedicada; os demais caem no
@@ -60,6 +64,12 @@ const pageBySlug: Record<string, RouteObject["Component"]> = {
 const leafRoutes: RouteObject[] = allCeoPaths().map((p) => {
   const slug = p.split("/").pop() ?? "";
   const productCode = p.split("/")[1] ?? "";
+  if (slug === "memoria-grafo" && GRAFO_DESABILITADO) {
+    return {
+      path: p.replace(/^\//, ""),
+      element: <Navigate to={`/${productCode}/memoria-lista`} replace />,
+    };
+  }
   return {
     path: p.replace(/^\//, ""),
     Component:
@@ -86,7 +96,7 @@ const squadRoute: RouteObject = {
 // Acessar a raiz de um produto redireciona para a sua página inicial. No behuman
 // a home é o Repositório; nos demais produtos continua sendo o Insights.
 const productHome: Record<string, string> = {
-  behuman: "memoria-grafo",
+  behuman: REPOSITORIO_HOME,
 };
 const productRedirects: RouteObject[] = products.map((p) => ({
   path: p.code,
@@ -147,7 +157,7 @@ const relatorioDetailRoutes: RouteObject[] = Object.keys(relatoriosPages).map(
 // preservando o restante do caminho (ex.: /business-partner/feed → /behuman/feed).
 function LegacyProductRedirect() {
   const rest = useParams()["*"] ?? "";
-  return <Navigate to={`/behuman${rest ? `/${rest}` : "/memoria-grafo"}`} replace />;
+  return <Navigate to={`/behuman${rest ? `/${rest}` : `/${REPOSITORIO_HOME}`}`} replace />;
 }
 
 const legacyRedirects: RouteObject[] = [

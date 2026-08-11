@@ -34,6 +34,7 @@ import {
 } from "@/app/data/memoria";
 import { useMemoryContext } from "@/app/contexts/memory/context";
 import { useAuthContext } from "@/app/contexts/auth/context";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -126,7 +127,7 @@ export function RegrasSection() {
           <div className="flex flex-col gap-1">
             <PageTitle help={{ description: (<>
               <p>As <strong>Regras</strong> definem o que a IA deve seguir em toda resposta — o que ela aprendeu nas conversas, conectores e squads, reunido em um só lugar sob o seu controle.</p>
-              <p>Cada regra pode ser ativada ou desativada; só as ativas entram no contexto da IA. Use a busca e os filtros para gerenciar, ou crie uma nova. Administradores podem fixar regras como definição corporativa.</p>
+              <p>Cada regra pode ser ativada ou desativada; só as ativas entram no contexto da IA. Use a busca e os filtros para gerenciar, ou crie uma nova.</p>
             </>) }}>Regras</PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
               {total === 0
@@ -417,6 +418,8 @@ function NewMemoryModal({
   const [source, setSource] = useState("");
   const [corporate, setCorporate] = useState(false);
 
+  const podeFixar =
+    canFix && !isFeatureTemporarilyDisabled("rulesCorporatePin");
   const canSave = title.trim().length > 0 && content.trim().length > 0;
 
   const reset = () => {
@@ -485,7 +488,7 @@ function NewMemoryModal({
                 />
                 <Textarea
                   component={MemoriaTextarea}
-                  label="Descrição"
+                  label="Regra"
                   rows={3}
                   value={content}
                   maxLength={2000}
@@ -496,8 +499,8 @@ function NewMemoryModal({
                 />
                 {/* Origem oculta temporariamente — o campo e o estado `source` permanecem. */}
 
-                {/* Fixar como corporativa — só admin/owner */}
-                {canFix && (
+                {/* Fixar como corporativa — só admin/owner, quando a feature voltar. */}
+                {podeFixar && (
                   <button
                     type="button"
                     onClick={() => setCorporate((v) => !v)}
@@ -549,7 +552,7 @@ function NewMemoryModal({
                       title,
                       content,
                       source: source || undefined,
-                      corporate: canFix ? corporate : undefined,
+                      corporate: podeFixar ? corporate : undefined,
                     })
                   }
                 >

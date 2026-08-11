@@ -55,11 +55,40 @@ const IDB_STORE = "kv";
 const IDB_KEY_BASE = "dir-handle";
 const IDB_CONFIGURED_BASE = "dir-handle-configured";
 
-function chaveHandle(): string {
+/**
+ * Repositório cujo handle de pasta as APIs sem parâmetro devem usar.
+ * Mantido em sincronia com o contexto ativo (PrototipoContasProvider).
+ */
+let repositorioPastaAtual: string | null = null;
+
+export function definirRepositorioPastaAtivo(
+  repositorioId: string | null,
+): void {
+  repositorioPastaAtual = repositorioId;
+}
+
+export function repositorioPastaAtivo(): string | null {
+  return repositorioPastaAtual;
+}
+
+function resolveRepositorioId(repositorioId?: string | null): string | null {
+  return repositorioId ?? repositorioPastaAtual;
+}
+
+function chaveHandle(repositorioId: string): string {
+  return chaveConta(`${IDB_KEY_BASE}:${repositorioId}`);
+}
+
+function chaveConfigurada(repositorioId: string): string {
+  return chaveConta(`${IDB_CONFIGURED_BASE}:${repositorioId}`);
+}
+
+/** Chaves anteriores à isolação por repositório (uma pasta por conta). */
+function chaveHandleLegada(): string {
   return chaveConta(IDB_KEY_BASE);
 }
 
-function chaveConfigurada(): string {
+function chaveConfiguradaLegada(): string {
   return chaveConta(IDB_CONFIGURED_BASE);
 }
 
@@ -101,28 +130,79 @@ function idbPutRaw(key: string, value: unknown): Promise<void> {
   });
 }
 
+function idbDeleteRaw(key: string): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(IDB_DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      };
+      req.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+/**
+ * Se ainda não há pasta neste repositório, promove o handle legado da conta
+ * (pré-isolamento) uma única vez, para não perder a pasta já configurada.
+ */
+async function migrarHandleLegado(repositorioId: string): Promise<void> {
+  const jaConfigurada = await idbGetRaw<boolean>(chaveConfigurada(repositorioId));
+  if (jaConfigurada === true) return;
+
+  const legadoConfig = await idbGetRaw<boolean>(chaveConfiguradaLegada());
+  if (legadoConfig !== true) return;
+
+  const legadoHandle = await idbGetRaw<unknown>(chaveHandleLegada());
+  if (!legadoHandle) return;
+
+  await idbPutRaw(chaveHandle(repositorioId), legadoHandle);
+  await idbPutRaw(chaveConfigurada(repositorioId), true);
+  await idbDeleteRaw(chaveHandleLegada());
+  await idbDeleteRaw(chaveConfiguradaLegada());
+}
+
 /** Handle da pasta escolhida na última visita (Grafo, Lista ou Configurações). */
-export async function pastaContextoSalva(): Promise<FSDirHandle | undefined> {
+export async function pastaContextoSalva(
+  repositorioId?: string | null,
+): Promise<FSDirHandle | undefined> {
   if (escopoConta() === "anon") return undefined;
 
-  // Um handle só pertence à conta quando ela selecionou explicitamente a pasta.
+  const repoId = resolveRepositorioId(repositorioId);
+  if (!repoId) return undefined;
+
+  await migrarHandleLegado(repoId);
+
+  // Um handle só pertence à conta/repositório quando selecionado explicitamente.
   // Não reutilizamos a chave global legada: isso faria outra conta herdar a
   // configuração de quem usou o navegador anteriormente.
-  const configurada = await idbGetRaw<boolean>(chaveConfigurada());
+  const configurada = await idbGetRaw<boolean>(chaveConfigurada(repoId));
   if (configurada !== true) return undefined;
 
-  const guardado = await idbGetRaw<unknown>(chaveHandle());
+  const guardado = await idbGetRaw<unknown>(chaveHandle(repoId));
   if (!guardado) return undefined;
   const copia = comoCopia(guardado);
   return copia ? handleDaCopia(copia) : (guardado as FSDirHandle);
 }
 
-export async function guardarPastaContexto(handle: FSDirHandle): Promise<void> {
+export async function guardarPastaContexto(
+  handle: FSDirHandle,
+  repositorioId?: string | null,
+): Promise<void> {
   if (escopoConta() === "anon") return;
+  const repoId = resolveRepositorioId(repositorioId);
+  if (!repoId) return;
   // Um handle virtual tem funções e não sobrevive à clonagem do IndexedDB;
   // o que guardamos dele é a cópia dos arquivos, que é dado puro.
-  await idbPutRaw(chaveHandle(), handle.copia ?? handle);
-  await idbPutRaw(chaveConfigurada(), true);
+  await idbPutRaw(chaveHandle(repoId), handle.copia ?? handle);
+  await idbPutRaw(chaveConfigurada(repoId), true);
 }
 
 function comoCopia(valor: unknown): CopiaDaPasta | undefined {
@@ -171,19 +251,24 @@ function selecaoPorInputSuportada(): boolean {
  * Abre o seletor de pasta e guarda o resultado. `cancelado` cobre tanto o
  * usuário fechar o seletor quanto o navegador recusar a escolha — em nenhum dos
  * dois casos há o que avisar.
+ *
+ * `repositorioId` opcional: vincula a pasta a um repositório específico
+ * (Configurações lista vários). Sem ele, usa o repositório ativo.
  */
-export async function escolherPastaContexto(): Promise<
+export async function escolherPastaContexto(
+  repositorioId?: string | null,
+): Promise<
   { ok: true; dir: FSDirHandle } | { ok: false; reason: "unsupported" | "cancelado" }
 > {
   const picker = (window as unknown as {
     showDirectoryPicker?: () => Promise<FSDirHandle>;
   }).showDirectoryPicker;
 
-  if (!picker) return escolherPastaPorInput();
+  if (!picker) return escolherPastaPorInput(repositorioId);
 
   try {
     const dir = await picker();
-    await guardarPastaContexto(dir);
+    await guardarPastaContexto(dir, repositorioId);
     return { ok: true, dir };
   } catch {
     return { ok: false, reason: "cancelado" };
@@ -195,7 +280,9 @@ export async function escolherPastaContexto(): Promise<
  * mesmo diálogo do sistema, mas entrega Files avulsos: lemos os .md na hora e
  * seguimos com a cópia, já que não há handle para reabrir a pasta depois.
  */
-function escolherPastaPorInput(): Promise<
+function escolherPastaPorInput(
+  repositorioId?: string | null,
+): Promise<
   { ok: true; dir: FSDirHandle } | { ok: false; reason: "unsupported" | "cancelado" }
 > {
   if (!selecaoPorInputSuportada()) {
@@ -233,7 +320,7 @@ function escolherPastaPorInput(): Promise<
       void copiarPasta(files).then(async (copia) => {
         input.remove();
         const dir = handleDaCopia(copia);
-        await guardarPastaContexto(dir);
+        await guardarPastaContexto(dir, repositorioId);
         resolve({ ok: true, dir });
       });
     });

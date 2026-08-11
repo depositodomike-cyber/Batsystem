@@ -12,6 +12,7 @@ import { SugerirPosUploadModal } from "./SugerirPosUpload";
 import { NotaMemoriaModal } from "./NotaMemoriaModal";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useThemeContext } from "@/app/contexts/theme/context";
+import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 import { syncVault, getVaultStatus } from "@/services/api/vault";
 import { buscandoMemoria, onBuscaMemoria } from "@/utils/memoriaBusca";
 import {
@@ -198,6 +199,7 @@ export default function MemoriaGrafo() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
   const { isDark } = useThemeContext();
+  const repositorioId = useRepositorioAtivo()?.id ?? null;
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -330,13 +332,26 @@ export default function MemoriaGrafo() {
     };
   }, []);
 
-  // Restaura a última pasta se a permissão ainda estiver concedida.
+  // Restaura a pasta do repositório ativo. Ao trocar de repo, limpa o grafo.
   useEffect(() => {
+    let cancelado = false;
+
     (async () => {
-      const handle = await pastaContextoSalva();
-      if (handle && (await permissaoDeLeitura(handle))) await loadFromHandle(handle);
+      const handle = await pastaContextoSalva(repositorioId);
+      if (cancelado) return;
+      if (handle && (await permissaoDeLeitura(handle))) {
+        await loadFromHandle(handle);
+        return;
+      }
+      setGraph({ nodes: [], links: [] });
+      setNota(null);
+      setSync({ state: "idle", done: 0, total: 0 });
     })();
-  }, [loadFromHandle]);
+
+    return () => {
+      cancelado = true;
+    };
+  }, [loadFromHandle, repositorioId]);
 
   // ---- Simulação (canvas) ----
   useEffect(() => {

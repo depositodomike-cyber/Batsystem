@@ -25,6 +25,8 @@ export type TemporarilyDisabledFeature =
   | "settingsMemory"
   | "memoryUploadAudio"
   | "memoryUploadTranscript"
+  | "memoryGraph"
+  | "rulesCorporatePin"
   // Funil legado de criação de conta — ver bloco no fim deste arquivo.
   | "legacySignup"
   | "legacyOnboarding"
@@ -47,9 +49,11 @@ export const TEMPORARILY_DISABLED: Record<
   notifications: true,
   settingsAppearance: true,
   settingsVoice: true,
-  settingsMemory: true,
+  settingsMemory: false,
   memoryUploadAudio: true,
   memoryUploadTranscript: true,
+  memoryGraph: true,
+  rulesCorporatePin: true,
   legacySignup: true,
   legacyOnboarding: true,
   legacyPriceCalculator: true,
@@ -80,6 +84,7 @@ export function isNavItemTemporarilyDisabled(
     agenda: "calendar",
     "upload-audio": "memoryUploadAudio",
     "upload-transcricao": "memoryUploadTranscript",
+    "memoria-grafo": "memoryGraph",
   };
 
   const suffix = id.split(".").pop() ?? "";

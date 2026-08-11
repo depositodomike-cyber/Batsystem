@@ -8,12 +8,14 @@ import clsx from "clsx";
 
 import type { NavigationTree } from "@/@types/navigation";
 import { useThemeContext } from "@/app/contexts/theme/context";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 import { ContextoSelect } from "./ContextoSelect";
 import { MenuItem } from "./Group/MenuItem";
 
 export function ContextSection({ product }: { product: string }) {
   const { cardSkin } = useThemeContext();
+  const grafoDesabilitado = isFeatureTemporarilyDisabled("memoryGraph");
 
   const grafoItem: NavigationTree = {
     id: `${product}.memoria-grafo`,
@@ -54,7 +56,7 @@ export function ContextSection({ product }: { product: string }) {
 
       <div className="flex flex-col space-y-0.5">
         <ContextoSelect />
-        <MenuItem data={grafoItem} />
+        {!grafoDesabilitado && <MenuItem data={grafoItem} />}
         <MenuItem data={listaItem} />
       </div>
     </section>

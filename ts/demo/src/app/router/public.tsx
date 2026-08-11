@@ -40,9 +40,10 @@ const publicRoutes: RouteObject = {
     {
       path: "prototypes",
       children: [
-        // Protótipo do novo modelo de contas: criação de conta → organização →
-        // seletor de contexto. A entrada é o login único da app (`/login`);
-        // este fluxo é só o cadastro.
+        // Protótipo do novo modelo de contas: criar conta → confirmação de
+        // e-mail (simulada) → criar organização → seletor de contexto.
+        // Telas distintas, sem wizard numerado. A entrada é o login único da
+        // app (`/login`); este fluxo é só o cadastro.
         {
           path: "contas",
           lazy: async () => ({
@@ -62,6 +63,16 @@ const publicRoutes: RouteObject = {
               lazy: async () => ({
                 Component: (
                   await import("@/app/pages/prototypes/contas/screens/CriarConta")
+                ).default,
+              }),
+            },
+            {
+              path: "confirmar-email",
+              lazy: async () => ({
+                Component: (
+                  await import(
+                    "@/app/pages/prototypes/contas/screens/ConfirmarEmail"
+                  )
                 ).default,
               }),
             },

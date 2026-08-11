@@ -9,6 +9,7 @@ import {
   ArrowRightIcon,
   BuildingOffice2Icon,
   CircleStackIcon,
+  EnvelopeIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
 import { Link } from "react-router";
@@ -24,18 +25,25 @@ const TELAS = [
     numero: 1,
     Icon: UserPlusIcon,
     titulo: "Criação de conta",
-    desc: "Nome, e-mail, senha e confirmação. Sem escolha de tipo nesta etapa.",
+    desc: "Nome, e-mail, senha e confirmação — tela própria, sem wizard numerado.",
+  },
+  {
+    slug: "confirmar-email",
+    numero: 2,
+    Icon: EnvelopeIcon,
+    titulo: "Confirmação de e-mail",
+    desc: "Aviso simulado: sem envio real. CTA “Já confirmei” segue para a organização.",
   },
   {
     slug: "organizacao",
-    numero: 2,
+    numero: 3,
     Icon: BuildingOffice2Icon,
-    titulo: "Intenção de uso",
-    desc: "Pessoal (organização automática) ou empresa/equipe (nome + convites opcionais).",
+    titulo: "Criação da organização",
+    desc: "Fluxo separado: pessoal (organização automática) ou empresa/equipe (apenas o nome).",
   },
   {
     slug: "repositorios",
-    numero: 3,
+    numero: 4,
     Icon: CircleStackIcon,
     titulo: "Seletor de contexto / organização",
     desc: "Só no cadastro corporativo: escolha o contexto após criar a organização.",
@@ -44,7 +52,7 @@ const TELAS = [
 
 const REGRAS = [
   "Existe um único login, o da própria aplicação — o cadastro é que é novo.",
-  "A intenção de uso fica no Step 2; B2C/B2B continua derivado do pagador, não como campo técnico.",
+  "Criar conta e criar organização são telas separadas; a confirmação de e-mail é só um estado visual entre elas.",
   "A organização é a entidade central; contém repositórios e pessoas.",
   "Um usuário pode pertencer a várias organizações, com papel diferente em cada uma.",
   "Uma organização tem N repositórios, e repositórios de organizações diferentes não se falam.",

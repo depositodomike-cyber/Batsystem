@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 // Local Imports
+import { Button } from "@/components/ui";
 import { Notifications } from "@/components/template/Notifications";
 import { TokenUsage } from "@/components/template/TokenUsage";
 import { PromptBar } from "@/components/template/PromptBar";
@@ -51,16 +52,16 @@ export function Header() {
         <SidebarToggleBtn />
       </div>
 
-      <button
-        type="button"
+      <Button
         onClick={() => open("upload")}
+        color="primary"
         title="Upload"
         aria-label="Upload"
-        className="dark:border-dark-500 dark:bg-dark-700 dark:text-dark-200 dark:hover:bg-dark-600 dark:hover:text-dark-50 flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-100/70 px-3 text-xs-plus font-medium text-gray-600 transition-colors hover:bg-gray-200/70 hover:text-gray-900"
+        className="h-9 shrink-0 gap-1.5 px-3 text-xs-plus"
       >
         <ArrowUpTrayIcon className="size-4 stroke-[1.5]" />
         <span>Upload</span>
-      </button>
+      </Button>
 
       <div className="min-w-0 flex-1">
         <PromptBar />

@@ -95,13 +95,6 @@ export function DocumentoUploadPanel({
       }}
       className="flex flex-col gap-3"
     >
-      <p className="dark:border-primary-500/20 dark:bg-primary-500/10 border-primary-200 bg-primary-50 text-xs-plus dark:text-dark-200 rounded-lg border px-3 py-2 text-gray-600">
-        A IA formata o conteúdo num <b>documento de referência</b> bem
-        estruturado e o <b>salva no Repositório</b> (Documentos), com{" "}
-        <span className="font-mono">[[relacionamentos]]</span> às regras
-        existentes.
-      </p>
-
       <div>
         <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
           Cole o conteúdo do documento

@@ -1,11 +1,10 @@
 // Gravação de notas na "Pasta do Repositório" (File System Access API).
 //
-// A telo Repositório (grafo) monta os nós a partir dos arquivos .md de uma pasta
+// A tela Repositório (grafo) monta os nós a partir dos arquivos .md de uma pasta
 // local que o usuário seleciona; o handle dessa pasta é persistido no IndexedDB
-// (ceo-memoria/kv/dir-handle:<conta>) — o MESMO banco/chave usado por MemoriaGrafo e
-// Configuracoes. Este utilitário reaproveita esse handle para ESCREVER novas
-// notas na pasta, de modo que — por exemplo — uma ata gerada a partir de uma
-// transcrição vire um .md e apareça imediatamente no grafo (subpasta Reuniões).
+// (ceo-memoria/kv/dir-handle:<conta>:<repositorioId>) — o MESMO banco/chave usado
+// por MemoriaGrafo e Configuracoes. Este utilitário reaproveita esse handle para
+// ESCREVER novas notas na pasta.
 
 import {
   lerNotaDaCopia,

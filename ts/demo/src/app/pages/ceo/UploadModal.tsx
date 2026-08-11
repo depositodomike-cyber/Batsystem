@@ -20,7 +20,6 @@ import type { IaModalOpenPayload } from "@/app/contexts/ia-modals/context";
 import { useDocumentoUpload } from "@/app/contexts/documento-upload/context";
 import type { DocumentoUpload } from "@/app/contexts/documento-upload/context";
 import {
-  DISABLED_MENU_CLASS,
   isFeatureTemporarilyDisabled,
 } from "@/app/data/temporarilyDisabledFeatures";
 import { DocumentoUploadPanel } from "./DocumentoUploadPanel";
@@ -74,6 +73,8 @@ const ABAS: {
     disabled: isFeatureTemporarilyDisabled("memoryUploadTranscript"),
   },
 ];
+
+const ABAS_VISIVEIS = ABAS.filter((a) => !a.disabled);
 
 function abaInicial(payload?: IaModalOpenPayload): UploadAba {
   const pedida =
@@ -201,7 +202,8 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
 
   return (
     <Transition show={isOpen} unmount={false}>
-      <Dialog onClose={fechar} className="relative z-[70]">
+      {/* Só o X fecha; clique fora e Escape não descartam o upload. */}
+      <Dialog onClose={() => {}} className="relative z-[70]">
         <TransitionChild
           enter="ease-out duration-200"
           enterFrom="opacity-0"
@@ -235,34 +237,32 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
                 />
               </div>
 
-              <div
-                role="tablist"
-                className="dark:border-dark-600 flex gap-1 border-b border-gray-200 px-5 pt-3"
-              >
-                {ABAS.map(({ id, label, Icon, disabled }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="tab"
-                    aria-selected={aba === id}
-                    disabled={disabled || (busy && aba !== id)}
-                    onClick={() => {
-                      if (disabled) return;
-                      setAba(id);
-                    }}
-                    className={clsx(
-                      "text-xs-plus inline-flex items-center gap-1.5 border-b-2 px-3 pb-2.5 font-medium transition-colors",
-                      aba === id
-                        ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                        : "dark:text-dark-300 dark:hover:text-dark-100 border-transparent text-gray-500 hover:text-gray-800",
-                      disabled && DISABLED_MENU_CLASS,
-                    )}
-                  >
-                    <Icon className="size-4" />
-                    {label}
-                  </button>
-                ))}
-              </div>
+              {ABAS_VISIVEIS.length > 1 && (
+                <div
+                  role="tablist"
+                  className="dark:border-dark-600 flex gap-1 border-b border-gray-200 px-5 pt-3"
+                >
+                  {ABAS_VISIVEIS.map(({ id, label, Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={aba === id}
+                      disabled={busy && aba !== id}
+                      onClick={() => setAba(id)}
+                      className={clsx(
+                        "text-xs-plus inline-flex items-center gap-1.5 border-b-2 px-3 pb-2.5 font-medium transition-colors",
+                        aba === id
+                          ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                          : "dark:text-dark-300 dark:hover:text-dark-100 border-transparent text-gray-500 hover:text-gray-800",
+                      )}
+                    >
+                      <Icon className="size-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="max-h-[78vh] overflow-y-auto px-5 py-4">
                 <div
@@ -276,30 +276,34 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
                     onFailed={onFalha}
                   />
                 </div>
-                <div
-                  role="tabpanel"
-                  hidden={aba !== "audio"}
-                  className={clsx(aba !== "audio" && "hidden")}
-                >
-                  <AudioUploadPanel
-                    onBusyChange={onBusyAudio}
-                    minimizado={!isOpen}
-                    onFinished={onAudioPronto}
-                    onFailed={onFalha}
-                  />
-                </div>
-                <div
-                  role="tabpanel"
-                  hidden={aba !== "transcricao"}
-                  className={clsx(aba !== "transcricao" && "hidden")}
-                >
-                  <TranscricaoUploadPanel
-                    onBusyChange={onBusyTranscricao}
-                    minimizado={!isOpen}
-                    onFinished={onTranscricaoPronta}
-                    onFailed={onFalha}
-                  />
-                </div>
+                {!isFeatureTemporarilyDisabled("memoryUploadAudio") && (
+                  <div
+                    role="tabpanel"
+                    hidden={aba !== "audio"}
+                    className={clsx(aba !== "audio" && "hidden")}
+                  >
+                    <AudioUploadPanel
+                      onBusyChange={onBusyAudio}
+                      minimizado={!isOpen}
+                      onFinished={onAudioPronto}
+                      onFailed={onFalha}
+                    />
+                  </div>
+                )}
+                {!isFeatureTemporarilyDisabled("memoryUploadTranscript") && (
+                  <div
+                    role="tabpanel"
+                    hidden={aba !== "transcricao"}
+                    className={clsx(aba !== "transcricao" && "hidden")}
+                  >
+                    <TranscricaoUploadPanel
+                      onBusyChange={onBusyTranscricao}
+                      minimizado={!isOpen}
+                      onFinished={onTranscricaoPronta}
+                      onFailed={onFalha}
+                    />
+                  </div>
+                )}
               </div>
             </DialogPanel>
           </TransitionChild>

@@ -1,11 +1,9 @@
 /**
- * TELA 1 — Criação de conta.
+ * Criação de conta.
  *
  * Formulário deliberadamente mínimo: nome, e-mail, senha e confirmação.
- *
- * A intenção de uso (pessoal vs empresa/equipe) fica no Step 2. Aqui não há
- * seletor de tipo de conta, CPF/CNPJ, plano nem módulos — B2C/B2B continua
- * derivado do pagador criado na etapa seguinte.
+ * Após o submit, o fluxo vai para a confirmação de e-mail simulada — a
+ * organização é um fluxo separado, não uma “próxima etapa” deste formulário.
  */
 
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -20,8 +18,8 @@ import { GHOST_ENTRY_PATH } from "@/constants/app";
 
 import { CampoSenha } from "../components/CampoSenha";
 import { MolduraAuth } from "../components/MolduraAuth";
-import { StepperConta } from "../components/StepperConta";
 import { usePrototipoContas } from "../model/context";
+import { usuarioPorEmail } from "../model/selectors";
 import {
   criarContaSchema,
   type CriarContaFormValues,
@@ -29,7 +27,7 @@ import {
 
 export default function CriarConta() {
   const navigate = useNavigate();
-  const { despachar } = usePrototipoContas();
+  const { estado, despachar } = usePrototipoContas();
   const { logout } = useAuthContext();
 
   // Encerra a conta anterior nos DOIS lados (protótipo e sessão autenticada).
@@ -43,6 +41,7 @@ export default function CriarConta() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<CriarContaFormValues>({
     resolver: yupResolver(criarContaSchema),
@@ -50,6 +49,14 @@ export default function CriarConta() {
   });
 
   const onSubmit = (valores: CriarContaFormValues) => {
+    if (usuarioPorEmail(estado, valores.email)) {
+      setError("email", {
+        type: "manual",
+        message: "Já existe uma conta com este e-mail. Entre com ela.",
+      });
+      return;
+    }
+
     despachar({
       tipo: "conta/criar",
       payload: {
@@ -58,17 +65,15 @@ export default function CriarConta() {
         senha: valores.senha,
       },
     });
-    navigate("../organizacao");
+    navigate("../confirmar-email");
   };
 
   return (
     <MolduraAuth
       tituloPagina="Criar conta"
-      kicker="Etapa 1 · Sua conta"
       titulo="Crie a sua conta"
       subtitulo="Quatro campos. O resto vem depois."
       largura="max-w-[30rem]"
-      antesDoCard={<StepperConta stepIndex={0} />}
       depoisDoCard={
         <div className="mt-4 text-center text-xs-plus">
           <p className="line-clamp-1">

@@ -15,8 +15,9 @@
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:memorias": "ts-node prisma/seed-memorias.ts",
+    "db:seed:demo": "ts-node prisma/seed-demo-conta.ts",
     "db:diretrizes:limpar": "ts-node prisma/limpar-diretrizes.ts",
-    "vercel-build": "prisma generate && prisma migrate deploy && (npm run db:seed || echo 'seed do catalogo falhou, seguindo') && nest build"
+    "vercel-build": "prisma generate && prisma migrate deploy && (npm run db:seed || echo 'seed do catalogo falhou, seguindo') && (npm run db:seed:demo || echo 'seed da conta demo falhou, seguindo') && nest build"
   },
 
   "prisma": {

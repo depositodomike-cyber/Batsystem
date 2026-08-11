@@ -23,6 +23,7 @@ import {
   garantirSessaoBackend,
 } from "@/services/api/contaBackend";
 import { HOME_PATH, SIGNUP_ENTRY_PATH } from "@/constants/app";
+import { DEMO_LOGIN } from "@/constants/demoLogin";
 import { SPLASH_MIN_DURATION } from "@/components/template/SplashScreen";
 import { AuthFormValues, schema } from "./schema";
 import { Page } from "@/components/shared/Page";
@@ -38,6 +39,7 @@ export default function SignIn() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
@@ -203,6 +205,28 @@ export default function SignIn() {
               <p className="line-clamp-1">
                 <span>Não tem conta?</span> <CriarContaLink />
               </p>
+            </div>
+            <div className="dark:border-dark-600 dark:bg-dark-800 mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2.5 text-left">
+              <p className="dark:text-dark-200 text-xs font-medium text-gray-600">
+                Conta do time (já no servidor)
+              </p>
+              <p className="dark:text-dark-300 mt-0.5 text-tiny-plus text-gray-400">
+                {DEMO_LOGIN.email} · {DEMO_LOGIN.senha}
+              </p>
+              <button
+                type="button"
+                className="text-primary-600 dark:text-primary-400 mt-1.5 text-xs font-medium hover:underline"
+                onClick={() => {
+                  setValue("username", DEMO_LOGIN.email, {
+                    shouldValidate: true,
+                  });
+                  setValue("password", DEMO_LOGIN.senha, {
+                    shouldValidate: true,
+                  });
+                }}
+              >
+                Preencher e-mail e senha
+              </button>
             </div>
           </Card>
           <div className="mt-8 flex justify-center text-xs text-gray-400 dark:text-dark-300">

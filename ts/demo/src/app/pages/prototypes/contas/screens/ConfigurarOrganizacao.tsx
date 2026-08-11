@@ -11,7 +11,6 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
-import { toast } from "sonner";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { Button, InputErrorMsg } from "@/components/ui";
@@ -36,7 +35,7 @@ export default function ConfigurarOrganizacao() {
   const novaOrganizacao = searchParams.get("novo") === "1";
   const usuario = useUsuario();
   const { despachar } = usePrototipoContas();
-  const { adoptSession, establishSession } = useAuthContext();
+  const { adoptSession } = useAuthContext();
   const [enviando, setEnviando] = useState(false);
   const [erroBackend, setErroBackend] = useState<string | null>(null);
 
@@ -93,23 +92,12 @@ export default function ConfigurarOrganizacao() {
       return;
     }
 
-    if (sessao.tipo === "ok") {
-      adoptSession(sessao.authToken, sessao.user);
-    } else {
-      establishSession({
-        id: usuario.id,
-        name: usuario.nome,
-        email: usuario.email,
-      });
-      toast.message(
-        novaOrganizacao
-          ? "Organização criada em modo local"
-          : "Conta criada em modo local",
-        {
-          description: descricaoModoLocal(sessao.motivo),
-        },
-      );
+    if (sessao.tipo !== "ok") {
+      setErroBackend(descricaoModoLocal(sessao.motivo));
+      return;
     }
+
+    adoptSession(sessao.authToken, sessao.user);
 
     // Pelo perfil sempre vai ao seletor; no cadastro, pessoal entra direto.
     if (novaOrganizacao || !pessoal) {

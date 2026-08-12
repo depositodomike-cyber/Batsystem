@@ -12,8 +12,8 @@ import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
 import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import {
   AiFunction,
-  AI_STUDIO_DISABLED,
   FUNCTIONS,
+  isAiStudioFunctionDisabled,
 } from "@/app/pages/ceo/ia-functions";
 import { GroupChevron } from "./GroupChevron";
 
@@ -137,7 +137,7 @@ export function AiStudioGroup({ product }: { product: string }) {
               item={item}
               to={itemPath(item.id)}
               onNavigate={handleItemClick}
-              disabled={AI_STUDIO_DISABLED}
+              disabled={isAiStudioFunctionDisabled(item.id)}
             />
           ))}
         </div>

@@ -2,9 +2,10 @@
  * Intenção de uso + configuração da organização.
  *
  * Fluxo próprio (não é “etapa 2” da criação de conta). Usada no cadastro após
- * a confirmação de e-mail simulada e também em `?novo=1` (menu de perfil).
- * Cadastro: pessoal → produto; corporativo → seletor.
- * Perfil (`novo=1`): sempre → seletor com as organizações existentes.
+ * a confirmação de e-mail e também em `?novo=1` (menu de perfil).
+ * Cadastro (pessoal ou corporativo): entra direto no produto com a sessão
+ * da conta/organização acabadas de criar.
+ * Perfil (`novo=1`): → seletor com as organizações existentes.
  */
 
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -99,8 +100,9 @@ export default function ConfigurarOrganizacao() {
 
     adoptSession(sessao.authToken, sessao.user);
 
-    // Pelo perfil sempre vai ao seletor; no cadastro, pessoal entra direto.
-    if (novaOrganizacao || !pessoal) {
+    // Cadastro: entra direto no produto (a organização/repositório padrão já
+    // ficaram ativos no reducer). Perfil (`?novo=1`): passa pelo seletor.
+    if (novaOrganizacao) {
       navigate("../repositorios");
     } else {
       navigate(HOME_PATH);

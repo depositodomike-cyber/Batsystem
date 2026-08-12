@@ -25,6 +25,7 @@ import {
   AI_STUDIO_DISABLED,
   FUNCTIONS,
   isAiStudioFunction,
+  isAiStudioFunctionDisabled,
   isUploadFunction,
 } from "./ia-functions";
 import {
@@ -80,6 +81,13 @@ function AiCard({
     </button>
   );
 }
+
+/**
+ * Aviso de lançamento desligado temporariamente: com o AI Studio parcialmente
+ * liberado (Criar Dashboard), o bloqueio de tela inteira impediria o acesso.
+ * Volte para `true` para reativar o aviso.
+ */
+const AVISO_EM_BREVE_ATIVO = false;
 
 /**
  * Aviso de lançamento: a grade desabilitada fica atrás, e a única saída é o
@@ -168,7 +176,7 @@ export default function Ia() {
     : `/${product.code}/memoria-grafo`;
 
   const run = (fn: AiFunction) => {
-    if (AI_STUDIO_DISABLED) return;
+    if (isAiStudioFunctionDisabled(fn.id)) return;
     if (IA_MODALS_BY_ID[fn.id]) {
       open(fn.id);
       return;
@@ -182,7 +190,7 @@ export default function Ia() {
   useEffect(() => {
     if (!fnParam) return;
     const blocked =
-      (AI_STUDIO_DISABLED && isAiStudioFunction(fnParam)) ||
+      (isAiStudioFunction(fnParam) && isAiStudioFunctionDisabled(fnParam)) ||
       isMemoryUploadFnTemporarilyDisabled(fnParam);
 
     if (!blocked) {
@@ -213,6 +221,7 @@ export default function Ia() {
   // Os uploads do Repositório reaproveitam esta rota (`?fn=documento`), então o
   // aviso do AI Studio fica escondido enquanto houver janela de upload ativa.
   const avisoVisivel =
+    AVISO_EM_BREVE_ATIVO &&
     AI_STUDIO_DISABLED &&
     !isUploadFunction(fnParam) &&
     Object.keys(states).length === 0;
@@ -253,7 +262,7 @@ export default function Ia() {
                 key={fn.id}
                 item={fn}
                 onRun={run}
-                disabled={AI_STUDIO_DISABLED}
+                disabled={isAiStudioFunctionDisabled(fn.id)}
               />
             ))}
           </div>

@@ -36,7 +36,9 @@ export const TEMPORARILY_DISABLED: Record<
   TemporarilyDisabledFeature,
   boolean
 > = {
-  aiStudio: true,
+  // false = tela do AI Studio acessível; funções individuais seguem
+  // `AI_STUDIO_ENABLED_FUNCTION_IDS` em ia-functions.ts (hoje só dashboard).
+  aiStudio: false,
   squads: true,
   groups: true,
   history: true,

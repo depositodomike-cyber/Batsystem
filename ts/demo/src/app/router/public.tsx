@@ -41,9 +41,10 @@ const publicRoutes: RouteObject = {
       path: "prototypes",
       children: [
         // Protótipo do novo modelo de contas: criar conta → confirmação de
-        // e-mail (simulada) → criar organização → seletor de contexto.
+        // e-mail → criar organização → entrar no produto (sessão automática).
         // Telas distintas, sem wizard numerado. A entrada é o login único da
-        // app (`/login`); este fluxo é só o cadastro.
+        // app (`/login`); este fluxo é só o cadastro. O seletor de contexto
+        // (`repositorios`) permanece para “Criar organização” no perfil.
         {
           path: "contas",
           lazy: async () => ({

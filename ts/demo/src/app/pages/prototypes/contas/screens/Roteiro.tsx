@@ -46,7 +46,7 @@ const TELAS = [
     numero: 4,
     Icon: CircleStackIcon,
     titulo: "Seletor de contexto / organização",
-    desc: "Só no cadastro corporativo: escolha o contexto após criar a organização.",
+    desc: "Usado ao criar organização pelo perfil — não faz parte do cadastro.",
   },
 ] as const;
 
@@ -74,8 +74,8 @@ export default function Roteiro() {
                 Contas, organizações e repositórios
               </h2>
               <p className="dark:text-dark-300 mt-1 text-gray-400">
-                Da criação da conta até a escolha do repositório/organização. Para
-                entrar numa conta existente, use o login da aplicação.
+                Da criação da conta até entrar no produto com a organização.
+                Para entrar numa conta existente, use o login da aplicação.
               </p>
             </div>
           </div>

@@ -1,9 +1,10 @@
 /**
- * TELA 3 — Seletor de contexto / organização.
+ * Seletor de contexto / organização.
  *
- * No cadastro, contas pessoais vão direto ao produto; corporativas passam por
- * aqui. Também é o destino de "Criar organização" no menu de perfil (`?novo=1`),
- * listando todas as organizações existentes (pf ou pj).
+ * Não faz mais parte do cadastro: após criar a organização (pessoal ou
+ * corporativa), o usuário entra direto no produto. Esta tela continua como
+ * destino de “Criar organização” no menu de perfil (`?novo=1`), listando
+ * todas as organizações existentes.
  */
 
 import {

@@ -33,12 +33,28 @@ export interface AiFunction {
 }
 
 /**
- * Quando true, as funções do AI Studio ficam visíveis mas não clicáveis
- * (padrão: `cursor-not-allowed opacity-40` + `disabled`).
- * Uploads do Repositório (áudio/transcrição) têm flags próprias em
- * `temporarilyDisabledFeatures.ts` — não remova as funções.
+ * Quando true, o AI Studio inteiro fica bloqueado (grade opaca + modal
+ * “Em breve”). Uploads do Repositório (áudio/transcrição) têm flags próprias
+ * em `temporarilyDisabledFeatures.ts` — não remova as funções.
  */
 export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
+
+/**
+ * Allowlist de funções liberadas enquanto o AI Studio está parcialmente ativo.
+ * - `null` → todas as funções da grade liberadas (quando `AI_STUDIO_DISABLED` é false)
+ * - `Set([...])` → só esses ids ficam clicáveis; o restante permanece opaco
+ *
+ * Hoje só “Criar Dashboard” está liberado.
+ */
+export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null =
+  new Set(["dashboard"]);
+
+/** Indica se uma função da grade do AI Studio está temporariamente desabilitada. */
+export function isAiStudioFunctionDisabled(id: string): boolean {
+  if (AI_STUDIO_DISABLED) return true;
+  if (AI_STUDIO_ENABLED_FUNCTION_IDS == null) return false;
+  return !AI_STUDIO_ENABLED_FUNCTION_IDS.has(id);
+}
 
 // Funções nativas de inteligência (criar apresentação, editar vídeo, melhorar
 // texto…). Cada uma abre um modal na tela de IA.

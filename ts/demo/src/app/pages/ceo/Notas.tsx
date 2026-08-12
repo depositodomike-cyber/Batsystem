@@ -46,7 +46,7 @@ import {
 } from "./memoria-conteudo";
 import { setIaPrefill } from "@/utils/iaPrefill";
 import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
-import { AI_STUDIO_DISABLED } from "./ia-functions";
+import { isAiStudioFunctionDisabled } from "./ia-functions";
 import clsx from "clsx";
 
 // ----------------------------------------------------------------------
@@ -309,7 +309,7 @@ export default function Notas() {
 
   // ---- Ações de IA (abrem a função na tela de IA com a nota preenchida) ----
   const acaoIa = (fn: "apresentacao" | "artigo" | "melhorar") => {
-    if (AI_STUDIO_DISABLED) return;
+    if (isAiStudioFunctionDisabled(fn)) return;
     const tema = eTitulo.trim() || tituloAuto(eCorpo);
     const contexto = eCorpo.trim();
     if (!contexto) {
@@ -668,10 +668,11 @@ export default function Notas() {
                   <Button
                     variant="flat"
                     onClick={() => acaoIa("apresentacao")}
-                    disabled={AI_STUDIO_DISABLED}
+                    disabled={isAiStudioFunctionDisabled("apresentacao")}
                     className={clsx(
                       "gap-1.5",
-                      AI_STUDIO_DISABLED && "cursor-not-allowed opacity-40",
+                      isAiStudioFunctionDisabled("apresentacao") &&
+                        "cursor-not-allowed opacity-40",
                     )}
                   >
                     <PresentationChartBarIcon className="size-4.5" />
@@ -680,10 +681,11 @@ export default function Notas() {
                   <Button
                     variant="flat"
                     onClick={() => acaoIa("artigo")}
-                    disabled={AI_STUDIO_DISABLED}
+                    disabled={isAiStudioFunctionDisabled("artigo")}
                     className={clsx(
                       "gap-1.5",
-                      AI_STUDIO_DISABLED && "cursor-not-allowed opacity-40",
+                      isAiStudioFunctionDisabled("artigo") &&
+                        "cursor-not-allowed opacity-40",
                     )}
                   >
                     <DocumentTextIcon className="size-4.5" />
@@ -692,10 +694,11 @@ export default function Notas() {
                   <Button
                     variant="flat"
                     onClick={() => acaoIa("melhorar")}
-                    disabled={AI_STUDIO_DISABLED}
+                    disabled={isAiStudioFunctionDisabled("melhorar")}
                     className={clsx(
                       "gap-1.5",
-                      AI_STUDIO_DISABLED && "cursor-not-allowed opacity-40",
+                      isAiStudioFunctionDisabled("melhorar") &&
+                        "cursor-not-allowed opacity-40",
                     )}
                   >
                     <SparklesIcon className="size-4.5" />

@@ -50,7 +50,7 @@ export function ContextoSelect() {
       tipo: "contexto/abrirRepositorio",
       payload: { repositorioId },
     });
-    // Só troca o contexto ativo — a tela do grafo abre pelo item "Grafo".
+    // Só troca o contexto ativo — a tela abre pelo select de visualização.
     if (lgAndDown) close();
   };
 

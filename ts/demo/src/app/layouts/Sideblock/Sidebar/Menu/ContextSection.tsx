@@ -1,7 +1,6 @@
 /**
- * Seção Context: seletor do contexto ativo + as duas telas da pasta de notas.
- * Grafo e Lista mostram o mesmo conteúdo de formas diferentes, então convivem
- * como itens irmãos aqui. Sempre expandida — não é collapse.
+ * Seção Repositório: seletor do contexto ativo + select de visualização
+ * (Lista ou Grafo). Sempre expandida — não é collapse.
  */
 
 import clsx from "clsx";
@@ -12,18 +11,11 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 
 import { ContextoSelect } from "./ContextoSelect";
 import { MenuItem } from "./Group/MenuItem";
+import { VisualizacaoSelect } from "./VisualizacaoSelect";
 
 export function ContextSection({ product }: { product: string }) {
   const { cardSkin } = useThemeContext();
   const grafoDesabilitado = isFeatureTemporarilyDisabled("memoryGraph");
-
-  const grafoItem: NavigationTree = {
-    id: `${product}.memoria-grafo`,
-    type: "item",
-    path: `/${product}/memoria-grafo`,
-    title: "Grafo",
-    icon: "ceo.grafo",
-  };
 
   const listaItem: NavigationTree = {
     id: `${product}.memoria-lista`,
@@ -56,8 +48,11 @@ export function ContextSection({ product }: { product: string }) {
 
       <div className="flex flex-col space-y-0.5">
         <ContextoSelect />
-        {!grafoDesabilitado && <MenuItem data={grafoItem} />}
-        <MenuItem data={listaItem} />
+        {grafoDesabilitado ? (
+          <MenuItem data={listaItem} />
+        ) : (
+          <VisualizacaoSelect product={product} />
+        )}
       </div>
     </section>
   );

@@ -54,7 +54,7 @@ export const TEMPORARILY_DISABLED: Record<
   settingsMemory: false,
   memoryUploadAudio: true,
   memoryUploadTranscript: true,
-  memoryGraph: true,
+  memoryGraph: false,
   rulesCorporatePin: true,
   legacySignup: true,
   legacyOnboarding: true,

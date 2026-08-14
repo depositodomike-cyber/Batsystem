@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AiMediaConnectionsService } from './media-connections.service';
+import { ehChaveRejeitada, ehFalhaDeProvedor } from './falha-provedor';
 import { gerarImagensOpenAI, type ModeloImagem } from './imagem/gerar';
 import { designImagemHint, parseDesign, type DesignSystemDto } from './design/design';
 import { MemoriasService } from '@/memorias/memorias.service';
@@ -55,9 +56,10 @@ export class ImagemController {
   ) {}
 
   /**
-   * POST /ai/imagem → gera imagens por IA (OpenAI). Usa EXCLUSIVAMENTE a conexão
-   * de IA de Imagem do tenant (BYOK) ou, na sua ausência, a OPENAI_API_KEY
-   * gerenciada. A conexão de Texto nunca é usada aqui. Retorna data URLs base64.
+   * POST /ai/imagem → gera imagens por IA (OpenAI). Usa EXCLUSIVAMENTE a fila de
+   * conexões de IA de Imagem do tenant (BYOK), na ordem de prioridade definida
+   * em Configurações, ou, na ausência dela, a OPENAI_API_KEY gerenciada. A
+   * conexão de Texto nunca é usada aqui. Retorna data URLs base64.
    */
   @Post('imagem')
   async imagem(
@@ -78,39 +80,74 @@ export class ImagemController {
     const promptFinal =
       prompt + designImagemHint(parseDesign(body.design)) + restricoes;
 
-    // Resolve a chave a partir da conexão de Imagem. Hoje a geração é feita pela
-    // OpenAI, então provedores de imagem que não sejam OpenAI ainda não têm
-    // geração implementada — orienta o usuário em vez de falhar silenciosamente.
-    const conn = await this.media.getDecrypted(user.empresaId, 'image');
-    if (conn && conn.provider !== 'openai') {
-      throw new BadRequestException(
-        `A geração de imagem ainda só está disponível para a OpenAI. Conecte a OpenAI na aba Imagem (provedor atual: ${conn.provider}).`,
-      );
+    const tentativas = await this.tentativas(user.empresaId);
+
+    // Tenta os modelos da fila em ordem: se um cair, o próximo assume. O modelo
+    // escolhido no AI Studio (body.modelo) vale para a primeira tentativa; nas
+    // seguintes usamos o modelo configurado em cada conexão de reserva.
+    let ultimoErro: unknown;
+    for (let i = 0; i < tentativas.length; i++) {
+      const tentativa = tentativas[i];
+      const escolhido = (body.modelo as ModeloImagem) || undefined;
+      const reserva = tentativa.model as ModeloImagem | undefined;
+      try {
+        const { images, formato } = await gerarImagensOpenAI(tentativa.apiKey, {
+          prompt: promptFinal,
+          modelo: (i === 0 ? escolhido || reserva : reserva || escolhido) || 'gpt-image-1',
+          size: body.size,
+          quality: body.quality,
+          style: body.style,
+          background: body.background,
+          formato: body.formato,
+          n: Number(body.n) || 1,
+        });
+        if (!images.length) throw new Error('A OpenAI não retornou nenhuma imagem.');
+        const mime = formato === 'jpeg' ? 'image/jpeg' : formato === 'webp' ? 'image/webp' : 'image/png';
+        return { images: images.map((b) => `data:${mime};base64,${b}`), formato };
+      } catch (err) {
+        ultimoErro = err;
+        const tentarProximo = ehFalhaDeProvedor(err) && i < tentativas.length - 1;
+        this.logger.warn(
+          `Falha ao gerar imagem com ${tentativa.model ?? 'chave gerenciada'}: ${String(err)}` +
+            (tentarProximo ? ' — tentando o próximo modelo da fila.' : ''),
+        );
+        if (tentativa.id && ehChaveRejeitada(err)) {
+          void this.media.marcarInvalida(tentativa.id);
+        }
+        if (!tentarProximo) break;
+      }
     }
-    let key = conn?.apiKey || '';
-    if (!key) key = this.config.get<string>('OPENAI_API_KEY') || '';
-    if (!key) {
+
+    throw new BadRequestException(mensagemErro(ultimoErro));
+  }
+
+  /**
+   * Fila de tentativas para a geração: as conexões de Imagem do tenant em ordem
+   * de prioridade e, na ausência delas, a chave gerenciada do servidor. Hoje a
+   * geração é feita pela OpenAI, então provedores sem implementação são
+   * descartados — e se a fila TODA for de outros provedores, orienta o usuário
+   * em vez de falhar silenciosamente.
+   */
+  private async tentativas(
+    empresaId: string,
+  ): Promise<{ id?: string; model?: string; apiKey: string }[]> {
+    const fila = await this.media.listDecrypted(empresaId, 'image');
+    const suportadas = fila.filter((c) => c.provider === 'openai');
+    if (suportadas.length > 0) return suportadas;
+
+    if (fila.length > 0) {
+      const provedores = [...new Set(fila.map((c) => c.provider))].join(', ');
       throw new BadRequestException(
-        'Nenhuma IA de Imagem conectada. Conecte a OpenAI na aba Imagem em Conectores (ou defina OPENAI_API_KEY no servidor).',
+        `A geração de imagem ainda só está disponível para a OpenAI. Adicione um modelo da OpenAI na seção Imagem (provedores atuais: ${provedores}).`,
       );
     }
 
-    try {
-      const { images, formato } = await gerarImagensOpenAI(key, {
-        prompt: promptFinal,
-        modelo: (body.modelo as ModeloImagem) || 'gpt-image-1',
-        size: body.size,
-        quality: body.quality,
-        style: body.style,
-        background: body.background,
-        formato: body.formato,
-        n: Number(body.n) || 1,
-      });
-      if (!images.length) throw new Error('A OpenAI não retornou nenhuma imagem.');
-      const mime = formato === 'jpeg' ? 'image/jpeg' : formato === 'webp' ? 'image/webp' : 'image/png';
-      return { images: images.map((b) => `data:${mime};base64,${b}`), formato };
-    } catch (err) {
-      throw new BadRequestException(mensagemErro(err));
+    const key = this.config.get<string>('OPENAI_API_KEY') || '';
+    if (!key) {
+      throw new BadRequestException(
+        'Nenhuma IA de Imagem conectada. Conecte a OpenAI na seção Imagem em Configurações (ou defina OPENAI_API_KEY no servidor).',
+      );
     }
+    return [{ apiKey: key }];
   }
 }

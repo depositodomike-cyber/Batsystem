@@ -1,131 +1,41 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import type { AiConnectionStatus, AiMediaKind } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CryptoService } from './crypto';
+import { AiCredentialsService } from './credentials.service';
+import {
+  catalogForKind,
+  isKnownModelFor,
+  type MediaProviderInfo,
+} from './catalogo';
 
 /**
- * Conexões de IA de mídia (Imagem e Vídeo), por modalidade e por tenant.
- * Separadas da AiConnection (texto/LLM): a de `image` é usada SÓ em
- * "Criar Imagem" e a de `video` SÓ em "Criar Vídeo". A chave é validada
- * apenas por formato (provedores de mídia não têm um `validateKey` uniforme
- * como os LLMs) e criptografada em repouso.
+ * Fila de modelos de mídia (Imagem e Vídeo). A chave fica em AiCredential;
+ * aqui só o modelo, a modalidade e a ordem de prioridade.
  */
 
-export interface MediaModelInfo {
-  id: string;
-  name: string;
-}
-export interface MediaProviderInfo {
-  id: string;
-  name: string;
-  models: MediaModelInfo[];
-}
-
-/** Catálogo de provedores por modalidade (espelha o front). */
-export const MEDIA_CATALOG: Record<AiMediaKind, MediaProviderInfo[]> = {
-  image: [
-    {
-      id: 'openai',
-      name: 'OpenAI (GPT Image / DALL·E)',
-      models: [
-        { id: 'gpt-image-1', name: 'GPT Image 1' },
-        { id: 'dall-e-3', name: 'DALL·E 3' },
-      ],
-    },
-    {
-      id: 'stability',
-      name: 'Stability AI (Stable Diffusion)',
-      models: [
-        { id: 'stable-image-ultra', name: 'Stable Image Ultra' },
-        { id: 'stable-image-core', name: 'Stable Image Core' },
-        { id: 'sd3.5-large', name: 'Stable Diffusion 3.5 Large' },
-      ],
-    },
-    {
-      id: 'black-forest-labs',
-      name: 'Black Forest Labs (FLUX)',
-      models: [
-        { id: 'flux-1.1-pro', name: 'FLUX 1.1 Pro' },
-        { id: 'flux-1-dev', name: 'FLUX.1 [dev]' },
-      ],
-    },
-    {
-      id: 'google',
-      name: 'Google (Imagen)',
-      models: [
-        { id: 'imagen-4.0', name: 'Imagen 4' },
-        { id: 'imagen-3.0', name: 'Imagen 3' },
-      ],
-    },
-  ],
-  video: [
-    {
-      id: 'runway',
-      name: 'Runway',
-      models: [
-        { id: 'gen-4-turbo', name: 'Gen-4 Turbo' },
-        { id: 'gen-3-alpha', name: 'Gen-3 Alpha' },
-      ],
-    },
-    {
-      id: 'luma',
-      name: 'Luma (Dream Machine)',
-      models: [
-        { id: 'ray-2', name: 'Ray 2' },
-        { id: 'ray-1.6', name: 'Ray 1.6' },
-      ],
-    },
-    {
-      id: 'pika',
-      name: 'Pika',
-      models: [{ id: 'pika-2.1', name: 'Pika 2.1' }],
-    },
-    {
-      id: 'google',
-      name: 'Google (Veo)',
-      models: [
-        { id: 'veo-3', name: 'Veo 3' },
-        { id: 'veo-2', name: 'Veo 2' },
-      ],
-    },
-    {
-      id: 'kling',
-      name: 'Kling AI',
-      models: [
-        { id: 'kling-2.0', name: 'Kling 2.0' },
-        { id: 'kling-1.6', name: 'Kling 1.6' },
-      ],
-    },
-    {
-      id: 'heygen',
-      name: 'HeyGen (Avatares)',
-      models: [
-        { id: 'avatar-iv', name: 'Avatar IV' },
-        { id: 'avatar-v2', name: 'Avatar V2' },
-      ],
-    },
-  ],
-};
-
-function isKnownMediaModel(
-  kind: AiMediaKind,
-  provider: string,
-  model: string,
-): boolean {
-  const p = MEDIA_CATALOG[kind].find((x) => x.id === provider);
-  return !!p && p.models.some((m) => m.id === model);
-}
-
-/** Visão pública da conexão (NUNCA inclui a chave crua). */
+/** Visão pública de um modelo na fila (NUNCA inclui a chave crua). */
 export interface PublicMediaConnection {
+  id: string;
+  credentialId: string;
   provider: string;
+  nome: string | null;
   model: string;
   keyLast4: string;
   status: AiConnectionStatus;
-  validatedAt: Date | null;
+  /** Posição na fila de prioridade da modalidade (0 = principal). */
+  priority: number;
 }
 
 export interface SetMediaConnectionInput {
+  credentialId: string;
+  model: string;
+}
+
+/** Credenciais prontas para uso, já descriptografadas. */
+export interface DecryptedMediaConnection {
+  id: string;
+  credentialId: string;
   provider: string;
   model: string;
   apiKey: string;
@@ -133,88 +43,208 @@ export interface SetMediaConnectionInput {
 
 @Injectable()
 export class AiMediaConnectionsService {
+  private readonly logger = new Logger(AiMediaConnectionsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
+    private readonly credentials: AiCredentialsService,
   ) {}
 
   catalog(kind: AiMediaKind): MediaProviderInfo[] {
-    return MEDIA_CATALOG[kind];
+    return catalogForKind(kind);
+  }
+
+  /** Modelos da modalidade em ordem de prioridade, sem as chaves. */
+  async listPublic(
+    empresaId: string,
+    kind: AiMediaKind,
+  ): Promise<PublicMediaConnection[]> {
+    const rows = await this.prisma.aiMediaConnection.findMany({
+      where: { empresaId, kind },
+      orderBy: [{ priority: 'asc' }, { criadoEm: 'asc' }],
+      include: { credential: true },
+    });
+    return rows.map((c) => this.toPublic(c));
   }
 
   async getPublic(
     empresaId: string,
     kind: AiMediaKind,
   ): Promise<PublicMediaConnection | null> {
-    const c = await this.prisma.aiMediaConnection.findUnique({
-      where: { empresaId_kind: { empresaId, kind } },
-    });
-    if (!c) return null;
-    return {
-      provider: c.provider,
-      model: c.model,
-      keyLast4: c.keyLast4,
-      status: c.status,
-      validatedAt: c.validatedAt,
-    };
+    const [primeira] = await this.listPublic(empresaId, kind);
+    return primeira ?? null;
   }
 
+  /**
+   * Adiciona um modelo à fila a partir de uma chave já cadastrada. Se o par
+   * credencial+modelo já estiver na lista, devolve o item existente.
+   */
   async upsert(
     empresaId: string,
     kind: AiMediaKind,
     input: SetMediaConnectionInput,
   ): Promise<PublicMediaConnection> {
-    const apiKey = input.apiKey.trim();
-    if (!apiKey) throw new BadRequestException('Informe a chave de API.');
-    if (!isKnownMediaModel(kind, input.provider, input.model)) {
+    const cred = await this.credentials.exigirDaEmpresa(
+      empresaId,
+      input.credentialId,
+      kind,
+    );
+    if (!isKnownModelFor(cred.provider, kind, input.model)) {
       throw new BadRequestException(
         'Provedor ou modelo inválido para esta modalidade.',
       );
     }
 
-    const data = {
-      provider: input.provider,
-      model: input.model,
-      apiKeyEncrypted: this.crypto.encrypt(apiKey),
-      keyLast4: apiKey.slice(-4),
-      status: 'ativa' as AiConnectionStatus,
-      validatedAt: new Date(),
-    };
-
-    const c = await this.prisma.aiMediaConnection.upsert({
-      where: { empresaId_kind: { empresaId, kind } },
-      create: { empresaId, kind, ...data },
-      update: data,
+    const existente = await this.prisma.aiMediaConnection.findUnique({
+      where: {
+        empresaId_kind_credentialId_model: {
+          empresaId,
+          kind,
+          credentialId: cred.id,
+          model: input.model,
+        },
+      },
+      include: { credential: true },
     });
+    if (existente) return this.toPublic(existente);
 
-    return {
-      provider: c.provider,
-      model: c.model,
-      keyLast4: c.keyLast4,
-      status: c.status,
-      validatedAt: c.validatedAt,
-    };
+    const c = await this.prisma.aiMediaConnection.create({
+      data: {
+        empresaId,
+        kind,
+        credentialId: cred.id,
+        model: input.model,
+        priority: await this.proximaPrioridade(empresaId, kind),
+      },
+      include: { credential: true },
+    });
+    return this.toPublic(c);
   }
 
-  async remove(empresaId: string, kind: AiMediaKind): Promise<void> {
-    await this.prisma.aiMediaConnection.deleteMany({
+  async remove(
+    empresaId: string,
+    kind: AiMediaKind,
+    id: string,
+  ): Promise<void> {
+    const { count } = await this.prisma.aiMediaConnection.deleteMany({
+      where: { id, empresaId, kind },
+    });
+    if (count > 0) await this.reindexar(empresaId, kind);
+  }
+
+  async reorder(
+    empresaId: string,
+    kind: AiMediaKind,
+    ids: string[],
+  ): Promise<PublicMediaConnection[]> {
+    await this.prisma.$transaction(
+      ids.map((id, index) =>
+        this.prisma.aiMediaConnection.updateMany({
+          where: { id, empresaId, kind },
+          data: { priority: index },
+        }),
+      ),
+    );
+    return this.listPublic(empresaId, kind);
+  }
+
+  async listDecrypted(
+    empresaId: string,
+    kind: AiMediaKind,
+  ): Promise<DecryptedMediaConnection[]> {
+    const rows = await this.prisma.aiMediaConnection.findMany({
       where: { empresaId, kind },
+      orderBy: [{ priority: 'asc' }, { criadoEm: 'asc' }],
+      include: { credential: true },
     });
+    const out: DecryptedMediaConnection[] = [];
+    for (const c of rows) {
+      try {
+        out.push({
+          id: c.id,
+          credentialId: c.credentialId,
+          provider: c.credential.provider,
+          model: c.model,
+          apiKey: this.crypto.decrypt(c.credential.apiKeyEncrypted),
+        });
+      } catch {
+        this.logger.warn(
+          `Chave da conexão de ${kind} ${c.id} (${c.credential.provider}/${c.model}) não pôde ser descriptografada; ignorada.`,
+        );
+      }
+    }
+    return out;
   }
 
-  /** USO INTERNO: chave descriptografada da modalidade (ou null). */
   async getDecrypted(
     empresaId: string,
     kind: AiMediaKind,
-  ): Promise<{ provider: string; model: string; apiKey: string } | null> {
-    const c = await this.prisma.aiMediaConnection.findUnique({
-      where: { empresaId_kind: { empresaId, kind } },
+  ): Promise<DecryptedMediaConnection | null> {
+    const [primeira] = await this.listDecrypted(empresaId, kind);
+    return primeira ?? null;
+  }
+
+  async marcarInvalida(id: string): Promise<void> {
+    const row = await this.prisma.aiMediaConnection.findUnique({
+      where: { id },
+      select: { credentialId: true },
     });
-    if (!c) return null;
-    return {
-      provider: c.provider,
-      model: c.model,
-      apiKey: this.crypto.decrypt(c.apiKeyEncrypted),
+    if (row) await this.credentials.marcarInvalida(row.credentialId);
+  }
+
+  private toPublic(c: {
+    id: string;
+    credentialId: string;
+    model: string;
+    priority: number;
+    credential: {
+      provider: string;
+      nome: string | null;
+      keyLast4: string;
+      status: AiConnectionStatus;
     };
+  }): PublicMediaConnection {
+    return {
+      id: c.id,
+      credentialId: c.credentialId,
+      provider: c.credential.provider,
+      nome: c.credential.nome,
+      model: c.model,
+      keyLast4: c.credential.keyLast4,
+      status: c.credential.status,
+      priority: c.priority,
+    };
+  }
+
+  private async proximaPrioridade(
+    empresaId: string,
+    kind: AiMediaKind,
+  ): Promise<number> {
+    const maior = await this.prisma.aiMediaConnection.aggregate({
+      where: { empresaId, kind },
+      _max: { priority: true },
+    });
+    const atual = maior._max.priority;
+    return atual === null ? 0 : atual + 1;
+  }
+
+  private async reindexar(
+    empresaId: string,
+    kind: AiMediaKind,
+  ): Promise<void> {
+    const rows = await this.prisma.aiMediaConnection.findMany({
+      where: { empresaId, kind },
+      orderBy: [{ priority: 'asc' }, { criadoEm: 'asc' }],
+      select: { id: true },
+    });
+    await this.prisma.$transaction(
+      rows.map((r, index) =>
+        this.prisma.aiMediaConnection.update({
+          where: { id: r.id },
+          data: { priority: index },
+        }),
+      ),
+    );
   }
 }

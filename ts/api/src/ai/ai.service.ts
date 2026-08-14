@@ -10,6 +10,11 @@ import type { AiProvider } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { getProvider, type LlmWebResult } from './providers';
 import { AiConnectionsService } from './connections.service';
+import {
+  ehChaveRejeitada,
+  ehFalhaDeProvedor,
+  statusDoErro,
+} from './falha-provedor';
 import { blocoTitulosVault, REGRA_CONEXOES_VAULT } from './conexoes-vault';
 import { VaultService } from '@/vault/vault.service';
 import { UsoTokensService } from '@/uso/uso-tokens.service';
@@ -26,6 +31,16 @@ export interface ChatInput {
   squadId: string;
   agentId?: string;
   messages: ChatTurn[];
+}
+
+/** Um modelo candidato a atender a chamada, na ordem de prioridade do tenant. */
+interface CandidatoIa {
+  /** Id da conexão BYOK; ausente no modo gerenciado (trial). */
+  id?: string;
+  provider: AiProvider;
+  model: string;
+  apiKey: string;
+  managed: boolean;
 }
 
 /** Enquadramento da plataforma, anexado ao prompt da persona. */
@@ -130,19 +145,17 @@ ${PLATFORM_FRAMING}${conexoes}`;
   }
 
   /**
-   * Resolve as credenciais de IA do tenant:
-   * 1) Conexão BYOK da empresa (provedor + chave do cliente); senão
+   * Resolve os modelos de IA do tenant em ordem de prioridade:
+   * 1) Conexões BYOK da empresa (a fila definida em Configurações → IA); senão
    * 2) Modo gerenciado: nossa chave Anthropic, apenas enquanto o trial está ativo.
+   *
+   * A ordem importa: o primeiro é o principal e os seguintes são os reservas do
+   * failover — se um modelo cair, o próximo assume.
    */
-  private async resolveCreds(empresaId: string): Promise<{
-    provider: AiProvider;
-    model: string;
-    apiKey: string;
-    managed: boolean;
-  }> {
-    const conn = await this.connections.getDecrypted(empresaId);
-    if (conn) {
-      return { ...conn, managed: false };
+  private async resolveCandidatos(empresaId: string): Promise<CandidatoIa[]> {
+    const conns = await this.connections.listDecrypted(empresaId);
+    if (conns.length > 0) {
+      return conns.map((c) => ({ ...c, managed: false }));
     }
 
     const managedKey = this.config.get<string>('ANTHROPIC_API_KEY');
@@ -155,12 +168,14 @@ ${PLATFORM_FRAMING}${conexoes}`;
         assinatura.status === 'trial' &&
         assinatura.trialEndsAt.getTime() > Date.now();
       if (trialAtivo) {
-        return {
-          provider: 'anthropic',
-          model: this.config.get<string>('AI_MODEL', 'claude-opus-4-8'),
-          apiKey: managedKey,
-          managed: true,
-        };
+        return [
+          {
+            provider: 'anthropic',
+            model: this.config.get<string>('AI_MODEL', 'claude-opus-4-8'),
+            apiKey: managedKey,
+            managed: true,
+          },
+        ];
       }
     }
 
@@ -169,50 +184,116 @@ ${PLATFORM_FRAMING}${conexoes}`;
     );
   }
 
-  /** Gera a resposta do agente em streaming (chunks de texto). */
-  async *chatStream(input: ChatInput): AsyncGenerator<string> {
-    const system = await this.comDiretrizes(
-      input.empresaId,
-      await this.buildSystem(input),
-    );
-    const creds = await this.resolveCreds(input.empresaId);
+  /**
+   * Executa a chamada no primeiro modelo da fila e, se ele falhar por culpa do
+   * provedor, tenta o próximo. Se todos falharem, traduz o último erro.
+   */
+  private async comFailover<T>(
+    empresaId: string,
+    executar: (candidato: CandidatoIa) => Promise<T>,
+  ): Promise<T> {
+    const candidatos = await this.resolveCandidatos(empresaId);
+    let ultimoErro: unknown;
 
+    for (let i = 0; i < candidatos.length; i++) {
+      const candidato = candidatos[i];
+      try {
+        return await executar(candidato);
+      } catch (err) {
+        ultimoErro = err;
+        const tentarProximo =
+          ehFalhaDeProvedor(err) && i < candidatos.length - 1;
+        this.registrarFalha(candidato, err, tentarProximo);
+        if (!tentarProximo) break;
+      }
+    }
+
+    this.traduzErroProvedor(ultimoErro);
+  }
+
+  /**
+   * Loga a falha de um modelo da fila e, quando o provedor rejeitou a chave,
+   * marca a conexão como inválida para a interface sinalizar ao usuário.
+   */
+  private registrarFalha(
+    candidato: CandidatoIa,
+    err: unknown,
+    tentarProximo: boolean,
+  ): void {
+    const status = statusDoErro(err);
+    this.logger.warn(
+      `Falha em ${candidato.provider}/${candidato.model}` +
+        (status ? ` (HTTP ${status})` : '') +
+        (tentarProximo
+          ? ': tentando o próximo modelo da fila.'
+          : ': sem outro modelo para assumir.'),
+    );
+    if (candidato.id && ehChaveRejeitada(err)) {
+      void this.connections.marcarInvalida(candidato.id);
+    }
+  }
+
+  /**
+   * Gera a resposta do agente em streaming (chunks de texto). O failover só
+   * acontece ANTES do primeiro chunk: depois que o cliente já recebeu texto,
+   * não há como rebobinar a resposta, então o erro é propagado.
+   */
+  async *chatStream(input: ChatInput): AsyncGenerator<string> {
     const messages = input.messages.filter((m) => m.text && m.text.trim());
     if (messages.length === 0) {
       throw new BadRequestException('Envie ao menos uma mensagem.');
     }
 
-    yield* getProvider(creds.provider).streamChat({
-      apiKey: creds.apiKey,
-      model: creds.model,
-      system,
-      messages,
-      onUsage: (u) =>
-        this.uso.registrar({
-          empresaId: input.empresaId,
-          usuarioId: input.usuarioId,
-          entrada: u.entrada,
-          saida: u.saida,
-          fonte: 'chat',
-        }),
-    });
+    const system = await this.comDiretrizes(
+      input.empresaId,
+      await this.buildSystem(input),
+    );
+    const candidatos = await this.resolveCandidatos(input.empresaId);
+    let ultimoErro: unknown;
+
+    for (let i = 0; i < candidatos.length; i++) {
+      const candidato = candidatos[i];
+      let emitiu = false;
+      try {
+        const stream = getProvider(candidato.provider).streamChat({
+          apiKey: candidato.apiKey,
+          model: candidato.model,
+          system,
+          messages,
+          onUsage: (u) =>
+            this.uso.registrar({
+              empresaId: input.empresaId,
+              usuarioId: input.usuarioId,
+              entrada: u.entrada,
+              saida: u.saida,
+              fonte: 'chat',
+            }),
+        });
+        for await (const chunk of stream) {
+          emitiu = true;
+          yield chunk;
+        }
+        return;
+      } catch (err) {
+        ultimoErro = err;
+        const tentarProximo =
+          !emitiu && ehFalhaDeProvedor(err) && i < candidatos.length - 1;
+        this.registrarFalha(candidato, err, tentarProximo);
+        if (!tentarProximo) break;
+      }
+    }
+
+    this.traduzErroProvedor(ultimoErro);
   }
 
   /**
-   * Resposta única (não-streaming) usada por relatórios longos — ex.: a Análise
-   * de conteúdo. Resolve as credenciais do tenant e chama o provedor com um
-   * limite de tokens maior que o chat.
-   */
-  /**
    * Traduz erros do provedor de IA (SDK Anthropic/OpenAI) em mensagens claras
    * para o usuário. Sem isto, uma chave inválida ou modelo indisponível vira um
-   * 500 opaco ("Erro na busca") sem pista do que corrigir.
+   * 500 opaco ("Erro na busca") sem pista do que corrigir. Só é chamado depois
+   * que TODOS os modelos da fila falharam.
    */
   private traduzErroProvedor(err: unknown): never {
-    const status =
-      err && typeof err === 'object' && 'status' in err
-        ? Number((err as { status?: unknown }).status)
-        : undefined;
+    const status = statusDoErro(err);
     if (status === 401 || status === 403) {
       throw new ServiceUnavailableException(
         'A chave de IA conectada é inválida ou sem permissão. Reconecte o provedor em Conexões.',
@@ -232,6 +313,11 @@ ${PLATFORM_FRAMING}${conexoes}`;
     throw new ServiceUnavailableException(`Falha ao consultar a IA: ${msg}`);
   }
 
+  /**
+   * Resposta única (não-streaming) usada por relatórios longos — ex.: a Análise
+   * de conteúdo. Percorre a fila de modelos do tenant com failover e chama o
+   * provedor com um limite de tokens maior que o chat.
+   */
   async completar(
     empresaId: string,
     usuarioId: string,
@@ -246,19 +332,18 @@ ${PLATFORM_FRAMING}${conexoes}`;
      */
     opts: { semDiretrizes?: boolean } = {},
   ): Promise<{ text: string; truncated: boolean }> {
-    const creds = await this.resolveCreds(empresaId);
     const systemFinal = opts.semDiretrizes
       ? system
       : await this.comDiretrizes(empresaId, system);
-    const result = await getProvider(creds.provider)
-      .complete({
-        apiKey: creds.apiKey,
-        model: creds.model,
+    const result = await this.comFailover(empresaId, (candidato) =>
+      getProvider(candidato.provider).complete({
+        apiKey: candidato.apiKey,
+        model: candidato.model,
         system: systemFinal,
         user,
         maxTokens,
-      })
-      .catch((err) => this.traduzErroProvedor(err));
+      }),
+    );
     if (result.usage) {
       this.uso.registrar({
         empresaId,
@@ -283,26 +368,27 @@ ${PLATFORM_FRAMING}${conexoes}`;
     user: string,
     maxTokens = 4000,
   ): Promise<LlmWebResult> {
-    const creds = await this.resolveCreds(empresaId);
-    const provider = getProvider(creds.provider);
-    const params = {
-      apiKey: creds.apiKey,
-      model: creds.model,
-      system: await this.comDiretrizes(empresaId, system),
-      user,
-      maxTokens,
-    };
-    const result = await (provider.completeWeb
-      ? provider.completeWeb(params)
-      : provider.complete(params).then(
-          (r): LlmWebResult => ({
-            text: r.text,
-            fontes: [],
-            truncated: r.truncated,
-            usage: r.usage,
-          }),
-        )
-    ).catch((err) => this.traduzErroProvedor(err));
+    const systemFinal = await this.comDiretrizes(empresaId, system);
+    const result = await this.comFailover(empresaId, (candidato) => {
+      const provider = getProvider(candidato.provider);
+      const params = {
+        apiKey: candidato.apiKey,
+        model: candidato.model,
+        system: systemFinal,
+        user,
+        maxTokens,
+      };
+      return provider.completeWeb
+        ? provider.completeWeb(params)
+        : provider.complete(params).then(
+            (r): LlmWebResult => ({
+              text: r.text,
+              fontes: [],
+              truncated: r.truncated,
+              usage: r.usage,
+            }),
+          );
+    });
     if (result.usage) {
       this.uso.registrar({
         empresaId,

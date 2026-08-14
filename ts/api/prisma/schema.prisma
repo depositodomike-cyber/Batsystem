@@ -110,7 +110,8 @@ model Empresa {
   usuarios     Usuario[]
   convites     Convite[]
   assinatura   Assinatura?
-  aiConnection AiConnection?
+  aiCredentials AiCredential[]
+  aiConnections AiConnection[]
   aiMediaConnections AiMediaConnection[]
   memorias     Memoria[]
   insights     Insight[]
@@ -190,12 +191,16 @@ model Assinatura {
   @@map("assinaturas")
 }
 
-/// Conexão de IA do tenant (BYOK). 1 por empresa. Chave criptografada em repouso.
-model AiConnection {
+/// Chave de API de um provedor (BYOK). N por empresa: a mesma empresa de IA
+/// pode ter várias chaves (Produção / Backup). A chave é criptografada em
+/// repouso e nunca volta crua. Os modelos de Texto/Imagem/Vídeo apontam para cá.
+model AiCredential {
   id              String             @id @default(cuid())
-  empresaId       String             @unique
-  provider        AiProvider
-  model           String
+  empresaId       String
+  /// Id do provedor (ex.: "anthropic", "openai", "heygen") — union dos catálogos.
+  provider        String
+  /// Apelido opcional para distinguir duas chaves do mesmo provedor.
+  nome            String?
   /// Chave de API do provedor, criptografada (AES-256-GCM). NUNCA exposta crua.
   apiKeyEncrypted String
   /// Últimos 4 dígitos da chave, apenas para exibição.
@@ -205,34 +210,53 @@ model AiConnection {
   criadoEm        DateTime           @default(now())
   atualizadoEm    DateTime           @updatedAt
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa     Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  textModels  AiConnection[]
+  mediaModels AiMediaConnection[]
 
+  @@index([empresaId])
+  @@map("ai_credentials")
+}
+
+/// Modelo de texto na fila de prioridade do tenant. A chave fica em AiCredential;
+/// aqui só o modelo e a ordem de tentativa (0 = principal).
+model AiConnection {
+  id           String   @id @default(cuid())
+  empresaId    String
+  credentialId String
+  model        String
+  /// Ordem de prioridade dentro da modalidade (0 = primeiro a ser tentado).
+  priority     Int      @default(0)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa    Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  credential AiCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, credentialId, model])
+  @@index([empresaId, priority])
   @@map("ai_connections")
 }
 
-/// Conexão de IA de mídia (BYOK), separada por modalidade. Diferente da
-/// AiConnection (texto/LLM): a de `image` é usada SÓ em "Criar Imagem" e a de
-/// `video` SÓ em "Criar Vídeo". O provedor é texto livre (não é um LLM), então
-/// não usa o enum AiProvider. Até 1 conexão por (empresa, modalidade).
+/// Modelo de mídia na fila de prioridade, separado por modalidade. Diferente da
+/// AiConnection (texto/LLM): as de `image` são usadas SÓ em "Criar Imagem" e as
+/// de `video` SÓ em "Criar Vídeo". A chave fica em AiCredential.
 model AiMediaConnection {
-  id              String             @id @default(cuid())
-  empresaId       String
-  kind            AiMediaKind
-  /// Id do provedor de mídia (ex.: "openai", "stability", "heygen").
-  provider        String
-  model           String
-  /// Chave de API do provedor, criptografada (AES-256-GCM). NUNCA exposta crua.
-  apiKeyEncrypted String
-  /// Últimos 4 dígitos da chave, apenas para exibição.
-  keyLast4        String
-  status          AiConnectionStatus @default(ativa)
-  validatedAt     DateTime?
-  criadoEm        DateTime           @default(now())
-  atualizadoEm    DateTime           @updatedAt
+  id           String      @id @default(cuid())
+  empresaId    String
+  credentialId String
+  kind         AiMediaKind
+  model        String
+  /// Ordem de prioridade dentro da modalidade (0 = primeiro a ser tentado).
+  priority     Int         @default(0)
+  criadoEm     DateTime    @default(now())
+  atualizadoEm DateTime    @updatedAt
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa    Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  credential AiCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
 
-  @@unique([empresaId, kind])
+  @@unique([empresaId, kind, credentialId, model])
+  @@index([empresaId, kind, priority])
   @@map("ai_media_connections")
 }
 

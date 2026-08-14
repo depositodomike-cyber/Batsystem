@@ -1,53 +1,47 @@
 import axios from "@/utils/axios";
 
-export type AiProviderId = "anthropic" | "openai";
-
-export interface AiModelInfo {
-  id: string;
-  name: string;
-}
-
-export interface AiProviderInfo {
-  id: AiProviderId;
-  name: string;
-  models: AiModelInfo[];
-}
+/**
+ * Fila de modelos de texto do tenant. Cada item aponta para uma chave
+ * cadastrada em /ai/credentials; a ordem é a prioridade do failover.
+ */
 
 export interface AiConnection {
-  provider: AiProviderId;
+  id: string;
+  credentialId: string;
+  provider: string;
+  nome: string | null;
   model: string;
   keyLast4: string;
   status: "ativa" | "invalida";
-  validatedAt: string | null;
+  priority: number;
 }
 
 export interface SetConnectionInput {
-  provider: AiProviderId;
+  credentialId: string;
   model: string;
-  apiKey: string;
 }
 
-/** Catálogo de provedores e modelos disponíveis. */
-export async function getAiProviders(): Promise<AiProviderInfo[]> {
-  const { data } = await axios.get<AiProviderInfo[]>("/ai/providers");
-  return data;
+export async function listAiConnections(): Promise<AiConnection[]> {
+  const { data } = await axios.get<AiConnection[]>("/ai/connections");
+  return data ?? [];
 }
 
-/** Conexão de IA atual do tenant (ou null). */
-export async function getAiConnection(): Promise<AiConnection | null> {
-  const { data } = await axios.get<AiConnection | null>("/ai/connection");
-  return data ?? null;
-}
-
-/** Conecta/substitui o provedor de IA (valida a chave no backend). */
-export async function setAiConnection(
+export async function addAiConnection(
   input: SetConnectionInput,
 ): Promise<AiConnection> {
-  const { data } = await axios.put<AiConnection>("/ai/connection", input);
+  const { data } = await axios.put<AiConnection>("/ai/connections", input);
   return data;
 }
 
-/** Remove a conexão de IA. */
-export async function removeAiConnection(): Promise<void> {
-  await axios.delete("/ai/connection");
+export async function reorderAiConnections(
+  ids: string[],
+): Promise<AiConnection[]> {
+  const { data } = await axios.put<AiConnection[]>("/ai/connections/order", {
+    ids,
+  });
+  return data ?? [];
+}
+
+export async function removeAiConnection(id: string): Promise<void> {
+  await axios.delete(`/ai/connections/${id}`);
 }

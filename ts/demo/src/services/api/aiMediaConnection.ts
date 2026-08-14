@@ -1,68 +1,62 @@
 import axios from "@/utils/axios";
 
 /**
- * Conexões de IA de mídia (Imagem e Vídeo) — BYOK, persistidas no backend
- * (`/ai/media/:kind`). A de `image` é usada SÓ em "Criar Imagem" e a de
- * `video` SÓ em "Criar Vídeo"; o restante da aplicação usa a conexão de Texto
- * (`aiConnection.ts`). A chave nunca volta do servidor — só os 4 últimos
- * dígitos, para exibição.
+ * Fila de modelos de mídia (Imagem e Vídeo). A chave fica em
+ * /ai/credentials; aqui só o modelo e a ordem de prioridade.
  */
 
 export type AiMediaKind = "image" | "video";
 
-export interface AiModelInfo {
-  id: string;
-  name: string;
-}
-
-export interface AiProviderInfo {
-  id: string;
-  name: string;
-  models: AiModelInfo[];
-}
-
 export interface AiConnection {
+  id: string;
+  credentialId: string;
   provider: string;
+  nome: string | null;
   model: string;
   keyLast4: string;
   status: "ativa" | "invalida";
-  validatedAt: string | null;
+  priority: number;
 }
 
 export interface SetConnectionInput {
-  provider: string;
+  credentialId: string;
   model: string;
-  apiKey: string;
 }
 
-/** Catálogo de provedores/modelos da modalidade (fonte: backend). */
-export async function getAiMediaProviders(
+export async function listAiMediaConnections(
   kind: AiMediaKind,
-): Promise<AiProviderInfo[]> {
-  const { data } = await axios.get<AiProviderInfo[]>(
-    `/ai/media/${kind}/providers`,
+): Promise<AiConnection[]> {
+  const { data } = await axios.get<AiConnection[]>(
+    `/ai/media/${kind}/connections`,
+  );
+  return data ?? [];
+}
+
+export async function addAiMediaConnection(
+  kind: AiMediaKind,
+  input: SetConnectionInput,
+): Promise<AiConnection> {
+  const { data } = await axios.put<AiConnection>(
+    `/ai/media/${kind}/connections`,
+    input,
   );
   return data;
 }
 
-/** Conexão atual da modalidade (ou null). */
-export async function getAiMediaConnection(
+export async function reorderAiMediaConnections(
   kind: AiMediaKind,
-): Promise<AiConnection | null> {
-  const { data } = await axios.get<AiConnection | null>(`/ai/media/${kind}`);
-  return data ?? null;
+  ids: string[],
+): Promise<AiConnection[]> {
+  const { data } = await axios.put<AiConnection[]>(
+    `/ai/media/${kind}/connections/order`,
+    { ids },
+  );
+  return data ?? [];
 }
 
-/** Conecta/substitui a chave da modalidade (criptografada no backend). */
-export async function setAiMediaConnection(
+export async function removeAiMediaConnection(
   kind: AiMediaKind,
-  input: SetConnectionInput,
-): Promise<AiConnection> {
-  const { data } = await axios.put<AiConnection>(`/ai/media/${kind}`, input);
-  return data;
-}
-
-/** Remove a conexão da modalidade. */
-export async function removeAiMediaConnection(kind: AiMediaKind): Promise<void> {
-  await axios.delete(`/ai/media/${kind}`);
+  id: string,
+): Promise<void> {
+  await axios.delete(`/ai/media/${kind}/connections/${id}`);
 }

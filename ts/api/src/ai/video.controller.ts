@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Post,
   Query,
   UseGuards,
@@ -10,6 +11,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { AiMediaConnectionsService } from './media-connections.service';
+import { ehChaveRejeitada, ehFalhaDeProvedor } from './falha-provedor';
 import * as heygen from './video/heygen';
 import { designBrief, parseDesign, type DesignSystemDto } from './design/design';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -50,6 +52,8 @@ function erroMsg(err: unknown): string {
 @Controller('ai/video')
 @UseGuards(JwtAuthGuard)
 export class VideoController {
+  private readonly logger = new Logger(VideoController.name);
+
   constructor(
     private readonly ai: AiService,
     private readonly media: AiMediaConnectionsService,
@@ -57,18 +61,68 @@ export class VideoController {
   ) {}
 
   /**
-   * Chave HeyGen usada por "Criar Vídeo": conexão de IA de Vídeo do tenant
-   * (BYOK) quando o provedor for HeyGen; senão, a HEYGEN_API_KEY do servidor.
-   * Provedores de vídeo que não sejam HeyGen ainda não têm geração implementada.
+   * Chaves HeyGen usadas por "Criar Vídeo", em ordem de prioridade: a fila de
+   * conexões de IA de Vídeo do tenant (BYOK) filtrada pelos provedores com
+   * geração implementada (hoje só HeyGen); na ausência de qualquer conexão, a
+   * HEYGEN_API_KEY do servidor. `outrosProvedores` serve só para a mensagem de
+   * erro quando a fila existe mas nenhum item é suportado.
    */
-  private async key(empresaId: string): Promise<string> {
-    const conn = await this.media.getDecrypted(empresaId, 'video');
-    if (conn && conn.provider !== 'heygen') {
+  private async filaHeygen(empresaId: string): Promise<{
+    chaves: { id?: string; apiKey: string }[];
+    outrosProvedores: string[];
+  }> {
+    const fila = await this.media.listDecrypted(empresaId, 'video');
+    const suportadas = fila.filter((c) => c.provider === 'heygen');
+    if (suportadas.length > 0) {
+      return { chaves: suportadas, outrosProvedores: [] };
+    }
+    if (fila.length > 0) {
+      return {
+        chaves: [],
+        outrosProvedores: [...new Set(fila.map((c) => c.provider))],
+      };
+    }
+    const key = this.config.get<string>('HEYGEN_API_KEY') || '';
+    return { chaves: key ? [{ apiKey: key }] : [], outrosProvedores: [] };
+  }
+
+  /**
+   * Executa a chamada ao HeyGen na primeira chave da fila e, se ela falhar por
+   * culpa do provedor, tenta a próxima. Vale para todas as rotas: `gerar` só
+   * cria o vídeo quando a chamada dá certo, e `status`/`avatares`/`vozes` são
+   * leituras — a conta que responde é a mesma que atendeu a geração.
+   */
+  private async comFailover<T>(
+    empresaId: string,
+    executar: (apiKey: string) => Promise<T>,
+  ): Promise<T> {
+    const { chaves, outrosProvedores } = await this.filaHeygen(empresaId);
+    if (chaves.length === 0) {
       throw new BadRequestException(
-        `A geração de vídeo ainda só está disponível para o HeyGen. Conecte o HeyGen na aba Vídeo (provedor atual: ${conn.provider}).`,
+        outrosProvedores.length > 0
+          ? `A geração de vídeo ainda só está disponível para o HeyGen. Adicione um modelo do HeyGen na seção Vídeo (provedores atuais: ${outrosProvedores.join(', ')}).`
+          : 'Nenhuma IA de Vídeo conectada. Conecte o HeyGen na seção Vídeo em Configurações (ou defina HEYGEN_API_KEY no servidor).',
       );
     }
-    return conn?.apiKey || this.config.get<string>('HEYGEN_API_KEY') || '';
+
+    let ultimoErro: unknown;
+    for (let i = 0; i < chaves.length; i++) {
+      try {
+        return await executar(chaves[i].apiKey);
+      } catch (err) {
+        ultimoErro = err;
+        const tentarProximo = ehFalhaDeProvedor(err) && i < chaves.length - 1;
+        this.logger.warn(
+          `Falha na chamada ao HeyGen: ${String(err)}` +
+            (tentarProximo ? ' — tentando a próxima chave da fila.' : ''),
+        );
+        if (chaves[i].id && ehChaveRejeitada(err)) {
+          void this.media.marcarInvalida(chaves[i].id!);
+        }
+        if (!tentarProximo) break;
+      }
+    }
+    throw new BadRequestException(erroMsg(ultimoErro));
   }
 
   /** GET /ai/video/config → se há chave HeyGen (conexão do tenant ou servidor). */
@@ -76,7 +130,8 @@ export class VideoController {
   async config_(
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ configurado: boolean }> {
-    return { configurado: !!(await this.key(user.empresaId)) };
+    const { chaves } = await this.filaHeygen(user.empresaId);
+    return { configurado: chaves.length > 0 };
   }
 
   /** POST /ai/video/roteiro → gera o texto falado a partir de um tema (via IA). */
@@ -100,21 +155,17 @@ export class VideoController {
   /** GET /ai/video/avatares → avatares da conta HeyGen. */
   @Get('avatares')
   async avatares(@CurrentUser() user: AuthenticatedUser) {
-    try {
-      return { avatares: await heygen.avatares(await this.key(user.empresaId)) };
-    } catch (err) {
-      throw new BadRequestException(erroMsg(err));
-    }
+    return this.comFailover(user.empresaId, async (apiKey) => ({
+      avatares: await heygen.avatares(apiKey),
+    }));
   }
 
   /** GET /ai/video/vozes → vozes da conta HeyGen (pt-BR no topo). */
   @Get('vozes')
   async vozes(@CurrentUser() user: AuthenticatedUser) {
-    try {
-      return { vozes: await heygen.vozes(await this.key(user.empresaId)) };
-    } catch (err) {
-      throw new BadRequestException(erroMsg(err));
-    }
+    return this.comFailover(user.empresaId, async (apiKey) => ({
+      vozes: await heygen.vozes(apiKey),
+    }));
   }
 
   /** POST /ai/video/gerar → dispara a geração; devolve { videoId, teste }. */
@@ -123,8 +174,8 @@ export class VideoController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() body: GerarBody,
   ) {
-    try {
-      return await heygen.gerar(await this.key(user.empresaId), {
+    return this.comFailover(user.empresaId, (apiKey) =>
+      heygen.gerar(apiKey, {
         script: body.script || '',
         avatarId: body.avatarId || '',
         voiceId: body.voiceId || '',
@@ -133,10 +184,8 @@ export class VideoController {
         fundo: body.fundo,
         titulo: body.titulo,
         teste: body.teste,
-      });
-    } catch (err) {
-      throw new BadRequestException(erroMsg(err));
-    }
+      }),
+    );
   }
 
   /** GET /ai/video/status?videoId= → status do vídeo (polling). */
@@ -145,10 +194,8 @@ export class VideoController {
     @CurrentUser() user: AuthenticatedUser,
     @Query('videoId') videoId: string,
   ) {
-    try {
-      return await heygen.status(await this.key(user.empresaId), videoId || '');
-    } catch (err) {
-      throw new BadRequestException(erroMsg(err));
-    }
+    return this.comFailover(user.empresaId, (apiKey) =>
+      heygen.status(apiKey, videoId || ''),
+    );
   }
 }

@@ -11,6 +11,7 @@ import {
 import type { AiMediaKind } from '@prisma/client';
 import { AiMediaConnectionsService } from './media-connections.service';
 import { SetMediaConnectionDto } from './dto/media-connection.dto';
+import { ReorderConnectionsDto } from './dto/reorder.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -32,15 +33,15 @@ export class AiMediaConnectionsController {
     return this.media.catalog(parseKind(kind));
   }
 
-  /** GET /ai/media/:kind → conexão atual da modalidade (sem a chave). */
-  @Get(':kind')
-  get(@CurrentUser() user: AuthenticatedUser, @Param('kind') kind: string) {
-    return this.media.getPublic(user.empresaId, parseKind(kind));
+  /** GET /ai/media/:kind/connections → fila de modelos da modalidade. */
+  @Get(':kind/connections')
+  list(@CurrentUser() user: AuthenticatedUser, @Param('kind') kind: string) {
+    return this.media.listPublic(user.empresaId, parseKind(kind));
   }
 
-  /** PUT /ai/media/:kind → conecta/substitui a chave da modalidade. */
-  @Put(':kind')
-  set(
+  /** PUT /ai/media/:kind/connections → adiciona um modelo a partir de uma chave. */
+  @Put(':kind/connections')
+  add(
     @CurrentUser() user: AuthenticatedUser,
     @Param('kind') kind: string,
     @Body() dto: SetMediaConnectionDto,
@@ -48,13 +49,34 @@ export class AiMediaConnectionsController {
     return this.media.upsert(user.empresaId, parseKind(kind), dto);
   }
 
-  /** DELETE /ai/media/:kind → desconecta a modalidade. */
-  @Delete(':kind')
+  /** PUT /ai/media/:kind/connections/order → grava a nova ordem de prioridade. */
+  @Put(':kind/connections/order')
+  reorder(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('kind') kind: string,
+    @Body() dto: ReorderConnectionsDto,
+  ) {
+    return this.media.reorder(user.empresaId, parseKind(kind), dto.ids);
+  }
+
+  /** DELETE /ai/media/:kind/connections/:id → remove um modelo da fila. */
+  @Delete(':kind/connections/:id')
   async remove(
     @CurrentUser() user: AuthenticatedUser,
     @Param('kind') kind: string,
+    @Param('id') id: string,
   ) {
-    await this.media.remove(user.empresaId, parseKind(kind));
+    await this.media.remove(user.empresaId, parseKind(kind), id);
     return { ok: true };
+  }
+
+  /**
+   * GET /ai/media/:kind → conexão principal da modalidade (sem a chave).
+   * Compatibilidade: atende clientes antigos que ainda esperam uma única
+   * conexão. O front atual usa `GET /ai/media/:kind/connections`.
+   */
+  @Get(':kind')
+  get(@CurrentUser() user: AuthenticatedUser, @Param('kind') kind: string) {
+    return this.media.getPublic(user.empresaId, parseKind(kind));
   }
 }

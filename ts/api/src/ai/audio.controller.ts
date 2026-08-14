@@ -49,16 +49,19 @@ export class AudioController {
   /**
    * Resolve uma chave OpenAI a partir de QUALQUER conexão do tenant. A
    * transcrição (Whisper) só existe na OpenAI, mas a chave pode ter sido salva
-   * na conexão de Texto, de Imagem ou de Vídeo — usamos a primeira que for
-   * OpenAI. Sem nenhuma, cai na OPENAI_API_KEY gerenciada do servidor.
+   * em qualquer modalidade — varremos as filas de Texto, Imagem e Vídeo na
+   * ordem de prioridade e usamos a primeira chave OpenAI que aparecer. Sem
+   * nenhuma, cai na OPENAI_API_KEY gerenciada do servidor.
    */
   private async resolveOpenAiKey(empresaId: string): Promise<string> {
-    const texto = await this.connections.getDecrypted(empresaId);
-    if (texto && texto.provider === 'openai' && texto.apiKey) return texto.apiKey;
+    const texto = await this.connections.listDecrypted(empresaId);
+    const daTexto = texto.find((c) => c.provider === 'openai' && c.apiKey);
+    if (daTexto) return daTexto.apiKey;
 
     for (const kind of ['image', 'video'] as const) {
-      const conn = await this.media.getDecrypted(empresaId, kind);
-      if (conn && conn.provider === 'openai' && conn.apiKey) return conn.apiKey;
+      const fila = await this.media.listDecrypted(empresaId, kind);
+      const conn = fila.find((c) => c.provider === 'openai' && c.apiKey);
+      if (conn) return conn.apiKey;
     }
 
     return this.config.get<string>('OPENAI_API_KEY') || '';

@@ -343,7 +343,7 @@ function IaSection() {
     <div className="space-y-6">
       <SectionCard
         titulo="IA & Modelos"
-        descricao="Conecte os provedores de IA da sua empresa (BYOK). A chave é criptografada no servidor e nunca é exibida."
+        descricao="Conecte os provedores de IA da sua empresa e defina a prioridade dos modelos por modalidade."
       >
         <AiConnectionCard />
       </SectionCard>

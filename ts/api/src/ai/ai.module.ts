@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AiController } from './ai.controller';
 import { AiConnectionsController } from './connections.controller';
+import { AiCredentialsController } from './credentials.controller';
 import { AiMediaConnectionsController } from './media-connections.controller';
 import { AnaliseController } from './analise.controller';
 import { ApresentacaoController } from './apresentacao.controller';
@@ -21,6 +22,7 @@ import { VaultController } from '@/vault/vault.controller';
 import { VaultService } from '@/vault/vault.service';
 import { AiService } from './ai.service';
 import { AiConnectionsService } from './connections.service';
+import { AiCredentialsService } from './credentials.service';
 import { AiMediaConnectionsService } from './media-connections.service';
 import { CryptoService } from './crypto';
 import { AuthModule } from '@/auth/auth.module';
@@ -33,6 +35,7 @@ import { UsoModule } from '@/uso/uso.module';
   controllers: [
     AiController,
     AiConnectionsController,
+    AiCredentialsController,
     AiMediaConnectionsController,
     AnaliseController,
     ApresentacaoController,
@@ -53,6 +56,7 @@ import { UsoModule } from '@/uso/uso.module';
   providers: [
     AiService,
     AiConnectionsService,
+    AiCredentialsService,
     AiMediaConnectionsService,
     CryptoService,
     InsightsService,

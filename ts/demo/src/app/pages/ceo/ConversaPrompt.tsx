@@ -90,7 +90,7 @@ export default function ConversaPrompt() {
   const { refresh } = useConversasContext();
   const repositorioId = useRepositorioAtivo()?.id ?? undefined;
 
-  const [titulo, setTitulo] = useState("Nova conversa");
+  const [titulo, setTitulo] = useState("Nova pesquisa");
   const [modo, setModo] = useState<ModoBusca>("vault");
   const [messages, setMessages] = useState<ConversaMessage[]>([]);
   const [loading, setLoading] = useState(!!conversaId);
@@ -101,7 +101,7 @@ export default function ConversaPrompt() {
   useEffect(() => {
     setId(conversaId ?? null);
     if (!conversaId) {
-      setTitulo("Nova conversa");
+      setTitulo("Nova pesquisa");
       setMessages([]);
       setModo("vault");
       setLoading(false);
@@ -249,7 +249,7 @@ export default function ConversaPrompt() {
 
             {!loading && messages.length === 0 && (
               <p className="dark:text-dark-300 mt-6 text-sm text-gray-500">
-                Escreva a primeira mensagem para começar uma conversa nova.
+                Escreva a primeira mensagem para começar uma pesquisa nova.
               </p>
             )}
 

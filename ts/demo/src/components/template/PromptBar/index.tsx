@@ -1,9 +1,9 @@
 // Barra "Pergunte ao seu Repositório" — portada do beculture/Confi (a barra de
 // prompt de public/index.html + app.js). Substitui a busca no header do behuman.
 // Seletor de fonte (Memória/Web/Auto), anexo de texto, ditado por voz (Web
-// Speech API), envio ao backend /ai/prompt e resposta em janela flutuante.
+// Speech API) e envio ao assistente — a resposta aparece no painel da bolinha,
+// no canto inferior direito (ver src/components/template/Assistente).
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router";
 import {
   PlusIcon,
   MicrophoneIcon,
@@ -15,30 +15,14 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { toast } from "sonner";
 import clsx from "clsx";
 
-import { perguntarPromptApi, type ModoBusca } from "@/services/api/prompt";
-import { coletarReferencia } from "@/services/referencia";
-import { marcarBuscaMemoria } from "@/utils/memoriaBusca";
-import { AnswerWindow, type Turno } from "./AnswerWindow";
+import { type ModoBusca } from "@/services/api/prompt";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { useTranslation } from "react-i18next";
-import { useConversasContext } from "@/app/contexts/conversas/context";
-import { getCurrentProduct } from "@/app/navigation/ceoOs";
-import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
+import { useAssistente } from "@/app/contexts/assistente/context";
 
 // ----------------------------------------------------------------------
 
 const ACEITA_ANEXO = ".txt,.md,.csv,.json,.log,.markdown,text/*";
-
-function msgErro(e: unknown, fallback: string): string {
-  if (typeof e === "string") return e;
-  if (e instanceof Error) return e.message;
-  if (e && typeof e === "object" && "message" in e) {
-    const m = (e as { message?: unknown }).message;
-    if (Array.isArray(m) && m.length) return String(m[0]);
-    if (typeof m === "string" && m) return m;
-  }
-  return fallback;
-}
 
 // Tipo mínimo da Web Speech API (não faz parte do lib DOM padrão).
 type SpeechResult = ArrayLike<{ transcript: string }> & { isFinal: boolean };
@@ -60,32 +44,20 @@ type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 export function PromptBar() {
   const { t, i18n } = useTranslation();
-  const { pathname } = useLocation();
-  const product = getCurrentProduct(pathname);
-  const { refresh } = useConversasContext();
-  const repositorioId = useRepositorioAtivo()?.id ?? undefined;
+  const { perguntar, loading, expandido } = useAssistente();
   const [modo, setModo] = useState<ModoBusca>("vault");
   const [value, setValue] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ msg: string; cls: "" | "ok" | "err" }>({
     msg: "",
     cls: "",
   });
   const [listening, setListening] = useState(false);
 
-  const [conversa, setConversa] = useState<Turno[] | null>(null);
-  const [conversaId, setConversaId] = useState<string | null>(null);
-  const [modoConversa, setModoConversa] = useState<ModoBusca>("vault");
-  const [winOpen, setWinOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
-
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const origem = conversa?.[0]?.origem ?? "vault";
 
   const MODOS: { id: ModoBusca; label: string; title: string }[] = [
     {
@@ -112,12 +84,17 @@ export function PromptBar() {
   };
 
   // ⌘K / "/" foca a barra (herda o atalho da antiga busca).
+  // Desligados com o assistente ampliado: focar esta barra jogaria o cursor
+  // atrás do backdrop. `mod+k` tem enableOnFormTags, então dispararia até de
+  // dentro do textarea do painel.
   useHotkeys("mod+k", () => inputRef.current?.focus(), {
     enableOnFormTags: true,
     preventDefault: true,
+    enabled: !expandido,
   });
   useHotkeys("/", () => inputRef.current?.focus(), {
     preventDefault: true,
+    enabled: !expandido,
   });
 
   useEffect(() => {
@@ -126,14 +103,6 @@ export function PromptBar() {
       recognitionRef.current?.stop();
     };
   }, []);
-
-  // Troca de repositório/organização: a janela e o id pertencem ao contexto anterior.
-  useEffect(() => {
-    setConversa(null);
-    setConversaId(null);
-    setWinOpen(false);
-    setMinimized(false);
-  }, [repositorioId]);
 
   const flashStatus = (msg: string, cls: "" | "ok" | "err" = "", auto = false) => {
     if (statusTimer.current) clearTimeout(statusTimer.current);
@@ -195,121 +164,36 @@ export function PromptBar() {
     rec.start();
   };
 
-  // --- Enviar (pergunta de topo: abre a janela) ---
+  // --- Enviar (pergunta de topo: abre o painel do assistente) ---
+  // A conversa em si (e o follow-up) vive no contexto do assistente; aqui só
+  // coletamos a pergunta e refletimos o resultado na linha de status da barra.
   const enviar = async () => {
     const texto = value.trim();
     if (!texto || loading) return;
     if (listening) recognitionRef.current?.stop();
 
-    setLoading(true);
     const usarAnexo = arquivo && modo !== "web";
     flashStatus(usarAnexo ? "lendo anexo e buscando…" : ROTULO[modo]);
-    // Busca que toca o Repositório faz o grafo "pensar" enquanto a resposta não vem.
-    const animaGrafo = modo !== "web";
-    if (animaGrafo) marcarBuscaMemoria(true);
-    try {
-      // Referência (Notas/To-do) só faz sentido no cruzamento com o Repositório;
-      // no modo Web o anexo/contexto local é ignorado (igual ao Confi).
-      const referencia = modo !== "web" ? coletarReferencia() : undefined;
-      const r = await perguntarPromptApi({
-        texto,
-        modo,
-        arquivo: modo !== "web" ? arquivo : null,
-        referencia,
-        repositorioId,
-      });
-      setModoConversa(modo);
-      setConversaId(r.conversaId ?? null);
-      setConversa([
-        {
-          pergunta: texto,
-          resposta: r.resposta,
-          fontes: r.fontes,
-          origem: r.origem,
-        },
-      ]);
-      setWinOpen(true);
-      setMinimized(false);
-      setValue("");
-      void refresh();
-      if (r.conversaId) {
-        window.setTimeout(() => void refresh(), 2500);
-      }
-      if (inputRef.current) inputRef.current.style.height = "auto";
-      limparAnexo();
-      flashStatus(
-        r.origem === "web" ? "↗ respondido via web" : "◈ respondido pelo Repositório",
-        "ok",
-        true,
-      );
-    } catch (e) {
-      flashStatus("✕ " + msgErro(e, t("chrome.searchError")), "err");
-    } finally {
-      if (animaGrafo) marcarBuscaMemoria(false);
-      setLoading(false);
-    }
-  };
 
-  // --- Continuar a conversa dentro da janela ---
-  const continuar = async (texto: string) => {
-    if (!conversa || loading) return;
-    const historico = conversa.map((t) => ({
-      pergunta: t.pergunta,
-      resposta: t.resposta,
-    }));
-    const pendente: Turno = {
-      pergunta: texto,
-      resposta: "",
-      fontes: [],
-      origem,
-      pendente: true,
-    };
-    setConversa([...conversa, pendente]);
-    setLoading(true);
-    const animaGrafo = modoConversa !== "web";
-    if (animaGrafo) marcarBuscaMemoria(true);
-    try {
-      const referencia =
-        modoConversa !== "web" ? coletarReferencia() : undefined;
-      const r = await perguntarPromptApi({
-        texto,
-        modo: modoConversa,
-        historico,
-        conversaId: conversaId ?? undefined,
-        referencia,
-        repositorioId,
-      });
-      if (r.conversaId) setConversaId(r.conversaId);
-      void refresh();
-      setConversa((c) =>
-        (c ?? []).map((t) =>
-          t === pendente
-            ? {
-                pergunta: texto,
-                resposta: r.resposta,
-                fontes: r.fontes,
-                origem: r.origem,
-              }
-            : t,
-        ),
-      );
-    } catch (e) {
-      const msg = "✕ " + msgErro(e, t("chrome.searchError"));
-      setConversa((c) =>
-        (c ?? []).map((t) =>
-          t === pendente ? { ...t, resposta: msg, pendente: false } : t,
-        ),
-      );
-    } finally {
-      if (animaGrafo) marcarBuscaMemoria(false);
-      setLoading(false);
-    }
-  };
+    const r = await perguntar({
+      texto,
+      modo,
+      arquivo: modo !== "web" ? arquivo : null,
+    });
 
-  const fecharJanela = () => {
-    setWinOpen(false);
-    setConversa(null);
-    setConversaId(null);
+    if (!r.ok) {
+      flashStatus("✕ " + (r.erro || t("chrome.searchError")), "err");
+      return;
+    }
+
+    setValue("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    limparAnexo();
+    flashStatus(
+      r.origem === "web" ? "↗ respondido via web" : "◈ respondido pelo Repositório",
+      "ok",
+      true,
+    );
   };
 
   return (
@@ -424,23 +308,6 @@ export function PromptBar() {
         >
           {status.msg}
         </div>
-      )}
-
-      {winOpen && conversa && (
-        <AnswerWindow
-          conversa={conversa}
-          origem={origem}
-          loading={loading}
-          minimized={minimized}
-          continuarHref={
-            conversaId
-              ? `/${product.code}/conversas/${conversaId}`
-              : undefined
-          }
-          onToggleMinimize={() => setMinimized((m) => !m)}
-          onClose={fecharJanela}
-          onFollowUp={continuar}
-        />
       )}
     </div>
   );

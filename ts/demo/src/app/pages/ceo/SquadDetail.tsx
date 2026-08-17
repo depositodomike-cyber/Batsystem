@@ -319,11 +319,11 @@ export default function SquadDetail() {
               <button
                 type="button"
                 onClick={handleReset}
-                title="Nova conversa"
+                title="Nova pesquisa"
                 className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
               >
                 <ArrowPathIcon className="size-3.5" />
-                Nova conversa
+                Nova pesquisa
               </button>
             )}
           </div>

@@ -17,11 +17,11 @@ import { Group } from "./Group";
 import { AiStudioGroup } from "./AiStudioGroup";
 import { SquadsGroup } from "./SquadsGroup";
 import { AgrupamentosGroup } from "./AgrupamentosGroup";
-import { HistoricoGroup } from "./HistoricoGroup";
 import { CreateProjectModal } from "./CreateProjectModal";
 import { ContextSection } from "./ContextSection";
 
-// Produtos que exibem os grupos "Agrupamentos" e "Histórico" na sidebar.
+// Produtos que exibem o grupo "Agrupamentos" na sidebar. O histórico de
+// conversas vive na aba Histórico do painel do assistente (bolinha).
 const PRODUCTS_WITH_GROUPINGS = ["behuman"];
 
 // ----------------------------------------------------------------------
@@ -80,7 +80,6 @@ export function Menu() {
           {showSquads && <AiStudioGroup product={productCode} />}
           {showSquads && <SquadsGroup />}
           {showGroupings && <AgrupamentosGroup product={productCode} />}
-          {showGroupings && <HistoricoGroup product={productCode} />}
         </Accordion>
       </SimpleBar>
 

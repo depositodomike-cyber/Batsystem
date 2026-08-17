@@ -71,7 +71,7 @@ function toListItem(
 /** Título a partir da 1ª mensagem do usuário (curto, sem quebrar palavra no fim). */
 export function tituloFromText(text: string): string {
   const clean = text.trim().replace(/\s+/g, ' ');
-  if (clean.length <= 60) return clean || 'Nova conversa';
+  if (clean.length <= 60) return clean || 'Nova pesquisa';
   return `${clean.slice(0, 57).trimEnd()}…`;
 }
 

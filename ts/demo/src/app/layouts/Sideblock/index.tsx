@@ -4,6 +4,7 @@ import { Outlet } from "react-router";
 // Local Imports
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { AssistenteHost } from "@/components/template/Assistente";
 
 // ----------------------------------------------------------------------
 
@@ -15,6 +16,7 @@ export default function Sideblock() {
         <Outlet />
       </main>
       <Sidebar />
+      <AssistenteHost />
     </>
   );
-} 
+}

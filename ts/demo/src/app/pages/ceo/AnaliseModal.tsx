@@ -369,7 +369,7 @@ export function AnaliseModal({ isOpen, close, onMinimize }: Props) {
                     </div>
                     <div className="dark:bg-dark-500 h-2 w-full overflow-hidden rounded-full bg-gray-200">
                       <div
-                        className="bg-primary-600 dark:bg-primary-500 h-full rounded-full transition-[width] duration-300 ease-out"
+                        className="bg-primary-600 dark:bg-primary-500 h-full rounded-lg transition-[width] duration-300 ease-out"
                         style={{ width: `${prog.pct.toFixed(1)}%` }}
                       />
                     </div>
@@ -472,7 +472,7 @@ export function AnaliseModal({ isOpen, close, onMinimize }: Props) {
                               key={id}
                               onClick={() => setFontes((s) => toggle(s, id))}
                               className={clsx(
-                                "rounded-full border px-3 py-1 text-xs-plus transition-colors",
+                                "rounded-lg border px-3 py-1 text-xs-plus transition-colors",
                                 on
                                   ? "border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400"
                                   : "dark:border-dark-500 dark:text-dark-200 border-gray-300 text-gray-600 hover:border-gray-400",

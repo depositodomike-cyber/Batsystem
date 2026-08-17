@@ -3,6 +3,8 @@
 // resposta em Markdown), os chips de fontes e um campo para continuar a conversa.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router";
+import { useTranslation } from "react-i18next";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import {
   XMarkIcon,
@@ -14,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
+import { Button } from "@/components/ui";
 import { MarkdownView } from "@/app/pages/ceo/MarkdownView";
 import { fonteLabel, fonteUrl, type Fonte } from "@/services/api/prompt";
 
@@ -32,6 +35,8 @@ interface AnswerWindowProps {
   origem: "vault" | "web";
   loading: boolean;
   minimized: boolean;
+  /** Abre a conversa persistida na página completa. */
+  continuarHref?: string;
   onToggleMinimize: () => void;
   onClose: () => void;
   onFollowUp: (texto: string) => void;
@@ -91,10 +96,12 @@ export function AnswerWindow({
   origem,
   loading,
   minimized,
+  continuarHref,
   onToggleMinimize,
   onClose,
   onFollowUp,
 }: AnswerWindowProps) {
+  const { t } = useTranslation();
   const [followUp, setFollowUp] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -120,9 +127,9 @@ export function AnswerWindow({
     return createPortal(
       <button
         onClick={onToggleMinimize}
-        className="dark:bg-dark-700 dark:border-dark-500 fixed right-4 bottom-4 z-[110] flex max-w-xs items-center gap-2 rounded-full border border-gray-200 bg-white py-2 pr-3 pl-2 shadow-lg"
+        className="dark:bg-dark-700 dark:border-dark-500 fixed right-4 bottom-4 z-[110] flex max-w-xs items-center gap-2 rounded-lg border border-gray-200 bg-white py-2 pr-3 pl-2 shadow-lg"
       >
-        <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-7 shrink-0 place-items-center rounded-full">
+        <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-7 shrink-0 place-items-center rounded-lg">
           {origem === "web" ? (
             <GlobeAltIcon className="size-4" />
           ) : (
@@ -142,7 +149,7 @@ export function AnswerWindow({
       <div className="dark:bg-dark-700 dark:border-dark-500 flex max-h-[76vh] w-full max-w-[680px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
         {/* Cabeçalho */}
         <div className="dark:border-dark-600 flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
-          <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-7 shrink-0 place-items-center rounded-full">
+          <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-7 shrink-0 place-items-center rounded-lg">
             {origem === "web" ? (
               <GlobeAltIcon className="size-4" />
             ) : (
@@ -155,6 +162,18 @@ export function AnswerWindow({
           >
             {titulo}
           </p>
+          {continuarHref && (
+            <Button
+              component={Link}
+              to={continuarHref}
+              variant="flat"
+              color="primary"
+              className="h-7 shrink-0 px-2 text-xs-plus"
+              onClick={onClose}
+            >
+              {t("chrome.continueConversation")}
+            </Button>
+          )}
           <button
             onClick={onToggleMinimize}
             title="Minimizar"

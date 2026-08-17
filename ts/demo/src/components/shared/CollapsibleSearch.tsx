@@ -51,7 +51,7 @@ export function CollapsibleSearch({
         onClick={toggle}
         variant="flat"
         isIcon
-        className="size-8 rounded-full"
+        className="size-8 rounded-lg"
         aria-label="Toggle Search"
         title="Toggle Search"
         {...buttonProps}

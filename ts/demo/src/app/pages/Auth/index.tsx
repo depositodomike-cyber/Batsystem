@@ -1,6 +1,6 @@
 // Import Dependencies
 import { Link, useNavigate } from "react-router";
-import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { EnvelopeIcon } from "@heroicons/react/24/outline";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useState } from "react";
 import { flushSync } from "react-dom";
@@ -17,6 +17,7 @@ import {
   isFeatureTemporarilyDisabled,
 } from "@/app/data/temporarilyDisabledFeatures";
 import { usePrototipoContas } from "@/app/pages/prototypes/contas/model/context";
+import { CampoSenha } from "@/app/pages/prototypes/contas/components/CampoSenha";
 import { autenticar } from "@/app/pages/prototypes/contas/model/selectors";
 import {
   descricaoModoLocal,
@@ -108,11 +109,9 @@ export default function SignIn() {
       return;
     }
 
-    if (resultado.motivo === "senha") {
-      setErroLocal("Senha incorreta.");
-      return;
-    }
-
+    // Senha local diferente não encerra o fluxo: `sessao/garantir` grava
+    // `demonstracao1` depois de um login na API, e a conta do time usa outra
+    // senha. Sem esta tentativa, o e-mail fica preso no protótipo.
     await login({
       username: data.username,
       password: data.password,
@@ -123,9 +122,17 @@ export default function SignIn() {
     // confiável de sucesso aqui: o `isAuthenticated` do closure está velho.
     if (!window.localStorage.getItem("authToken")) {
       setErroLocal(
-        'Nenhuma conta com este e-mail. Use "Criar conta" para começar.',
+        resultado.motivo === "senha"
+          ? "Senha incorreta."
+          : 'Nenhuma conta com este e-mail. Use "Criar conta" para começar.',
       );
+      return;
     }
+
+    despachar({
+      tipo: "sessao/sincronizarSenha",
+      payload: { email: data.username, senha: data.password },
+    });
   };
 
   const erro = erroLocal ?? errorMessage;
@@ -166,17 +173,11 @@ export default function SignIn() {
                   {...register("username")}
                   error={errors?.username?.message}
                 />
-                <Input
+                <CampoSenha
                   label="Senha"
                   placeholder="Digite sua senha"
-                  type="password"
-                  prefix={
-                    <LockClosedIcon
-                      className="size-5 transition-colors duration-200"
-                      strokeWidth="1"
-                    />
-                  }
-                  {...register("password")}
+                  autoComplete="current-password"
+                  registration={register("password")}
                   error={errors?.password?.message}
                 />
               </div>

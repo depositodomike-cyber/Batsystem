@@ -35,7 +35,7 @@ export function CopyableCell({
         onClick={() => copy(val)}
         isIcon
         variant="flat"
-        className="size-5 rounded-full opacity-0 group-hover/td:opacity-100"
+        className="size-5 rounded-lg opacity-0 group-hover/td:opacity-100"
         aria-label="Copy Button"
       >
         <DocumentDuplicateIcon className="size-3.5" />

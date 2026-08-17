@@ -41,7 +41,8 @@ export const TEMPORARILY_DISABLED: Record<
   aiStudio: false,
   squads: true,
   groups: true,
-  history: true,
+  history: false,
+
   insights: true,
   notes: true,
   email: true,

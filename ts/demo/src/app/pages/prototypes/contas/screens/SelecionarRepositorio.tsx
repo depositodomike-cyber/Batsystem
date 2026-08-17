@@ -1,10 +1,10 @@
 /**
  * Seletor de contexto / organização.
  *
- * Não faz mais parte do cadastro: após criar a organização (pessoal ou
- * corporativa), o usuário entra direto no produto. Esta tela continua como
- * destino de “Criar organização” no menu de perfil (`?novo=1`), listando
- * todas as organizações existentes.
+ * Não faz parte do cadastro nem da criação pelo perfil: após criar a
+ * organização, o usuário entra direto no produto. O menu de perfil troca de
+ * organização no próprio dropdown. Esta tela permanece só como referência
+ * no índice do protótipo.
  */
 
 import {

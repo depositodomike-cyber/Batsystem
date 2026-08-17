@@ -24,6 +24,7 @@ import {
   type ModoBusca,
 } from './prompt/framework';
 import { VaultService } from '@/vault/vault.service';
+import { ConversasService } from '@/conversas/conversas.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -39,6 +40,8 @@ interface PromptBody {
   modo?: string;
   historico?: string; // JSON string: HistoricoTurno[]
   referencia?: string; // Notas/Insights/To-do's coletados no cliente
+  conversaId?: string;
+  repositorioId?: string;
 }
 
 /** Fonte da resposta: caminho/título (Memória) ou página web citada. */
@@ -49,6 +52,7 @@ interface PromptResposta {
   resposta: string;
   fontes: Fonte[];
   origem: 'vault' | 'web';
+  conversaId?: string;
 }
 
 function parseHistorico(raw: string | undefined): HistoricoTurno[] {
@@ -76,6 +80,7 @@ export class PromptController {
   constructor(
     private readonly ai: AiService,
     private readonly vault: VaultService,
+    private readonly conversas: ConversasService,
   ) {}
 
   /**
@@ -107,6 +112,9 @@ export class PromptController {
 
     const historico = parseHistorico(body.historico);
     const referencia = (body.referencia || '').trim();
+    const conversaIdIn = (body.conversaId || '').trim() || undefined;
+    const repositorioId = (body.repositorioId || '').trim() || undefined;
+    const modoPedido = modo;
 
     // Modo Auto: o modelo decide entre Memória e Web.
     if (modo === 'auto') {
@@ -150,7 +158,17 @@ export class PromptController {
       );
       let resposta = text.trim();
       if (truncated) resposta += '\n\n> ⚠️ Resposta truncada por tamanho.';
-      return { tipo: 'resposta', resposta, fontes, origem: 'web' };
+      const conversaId = await this.persistirPrompt({
+        user,
+        conversaId: conversaIdIn,
+        repositorioId,
+        modo: modoPedido,
+        pergunta: texto,
+        resposta,
+        fontes,
+        origem: 'web',
+      });
+      return { tipo: 'resposta', resposta, fontes, origem: 'web', conversaId };
     }
 
     // Modo Memória (vault): referência do cliente + anexo opcional (arquivo de
@@ -212,6 +230,76 @@ export class PromptController {
 
     let resposta = limpa;
     if (truncated) resposta += '\n\n> ⚠️ Resposta truncada por tamanho.';
-    return { tipo: 'resposta', resposta, fontes, origem: 'vault' };
+    const conversaId = await this.persistirPrompt({
+      user,
+      conversaId: conversaIdIn,
+      repositorioId,
+      modo: modoPedido,
+      pergunta: texto,
+      resposta,
+      fontes,
+      origem: 'vault',
+    });
+    return { tipo: 'resposta', resposta, fontes, origem: 'vault', conversaId };
+  }
+
+  private async persistirPrompt(params: {
+    user: AuthenticatedUser;
+    conversaId?: string;
+    repositorioId?: string;
+    modo: ModoBusca;
+    pergunta: string;
+    resposta: string;
+    fontes: Fonte[];
+    origem: 'vault' | 'web';
+  }): Promise<string | undefined> {
+    try {
+      const { conversaId, nova } = await this.conversas.persistPromptTurn({
+        empresaId: params.user.empresaId,
+        usuarioId: params.user.id,
+        conversaId: params.conversaId,
+        repositorioId: params.repositorioId,
+        modo: params.modo,
+        pergunta: params.pergunta,
+        resposta: params.resposta,
+        fontes: params.fontes,
+        origemResposta: params.origem,
+      });
+      if (nova) this.refinarTitulo(params.user, conversaId, params.pergunta, params.resposta);
+      return conversaId;
+    } catch (err) {
+      this.logger.warn(`Falha ao persistir conversa do Prompt: ${String(err)}`);
+      return params.conversaId;
+    }
+  }
+
+  private refinarTitulo(
+    user: AuthenticatedUser,
+    conversaId: string,
+    pergunta: string,
+    resposta: string,
+  ): void {
+    void this.ai
+      .completar(
+        user.empresaId,
+        user.id,
+        'Responda somente com um título curto de 4 a 6 palavras, em português, sem aspas e sem pontuação final, que resuma a conversa.',
+        `Pergunta: ${pergunta}\nResposta: ${resposta.slice(0, 500)}`,
+        24,
+        'completar',
+        { semDiretrizes: true },
+      )
+      .then(async (r) => {
+        const titulo = r.text
+          .trim()
+          .replace(/^["'«»]+|["'«»]+$/g, '')
+          .replace(/\s+/g, ' ')
+          .slice(0, 80);
+        if (titulo.length < 3) return;
+        await this.conversas.rename(user.empresaId, user.id, conversaId, titulo);
+      })
+      .catch((err) => {
+        this.logger.warn(`Falha ao gerar título da conversa: ${String(err)}`);
+      });
   }
 }

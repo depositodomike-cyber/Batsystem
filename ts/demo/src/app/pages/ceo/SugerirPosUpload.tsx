@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Button, Spinner } from "@/components/ui";
 import { MarkdownView } from "./MarkdownView";
 import { perguntarPromptApi } from "@/services/api/prompt";
+import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 
 // ----------------------------------------------------------------------
 // Pergunta pós-upload do Repositório. Toda vez que um upload é salvo no Repositório
@@ -74,6 +75,7 @@ const META: Record<
 };
 
 export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props) {
+  const repositorioId = useRepositorioAtivo()?.id ?? undefined;
   const [etapa, setEtapa] = useState<Etapa>("escolha");
   const [kind, setKind] = useState<Kind | null>(null);
   const [resultado, setResultado] = useState("");
@@ -105,7 +107,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
         : "\n\nUse como base o material recém-adicionado ao Repositório e as regras já existentes.";
     const texto = `${meta.instrucao} Responda em português do Brasil, em Markdown.${base}`;
     try {
-      const data = await perguntarPromptApi({ texto, modo: "vault" });
+      const data = await perguntarPromptApi({ texto, modo: "vault", repositorioId });
       setResultado(data.resposta);
       setEtapa("resultado");
     } catch (err) {
@@ -159,7 +161,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                   disabled={etapa === "gerando"}
                   variant="flat"
                   isIcon
-                  className="size-8 rounded-full"
+                  className="size-8 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />

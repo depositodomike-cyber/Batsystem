@@ -19,7 +19,7 @@ export function Header({ close }: { close: () => void }) {
         onClick={close}
         variant="flat"
         isIcon
-        className="size-6 rounded-full ltr:-mr-1 rtl:-ml-1"
+        className="size-6 rounded-lg ltr:-mr-1 rtl:-ml-1"
       >
         <XMarkIcon className="size-4" />
       </Button>

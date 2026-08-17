@@ -28,7 +28,7 @@ export function WindowControls({ onMinimize, onClose, closeDisabled }: Props) {
           onClick={onMinimize}
           variant="flat"
           isIcon
-          className="size-8 rounded-full"
+          className="size-8 rounded-lg"
           aria-label="Minimizar"
           title="Minimizar para o rodapé"
         >
@@ -40,7 +40,7 @@ export function WindowControls({ onMinimize, onClose, closeDisabled }: Props) {
         disabled={closeDisabled}
         variant="flat"
         isIcon
-        className="size-8 rounded-full"
+        className="size-8 rounded-lg"
         aria-label="Fechar"
       >
         <XMarkIcon className="size-5" />

@@ -63,20 +63,26 @@ export function Menu() {
   }, [pathname]);
 
   return (
-    <SimpleBar
-      scrollableNodeProps={{ ref }}
-      className="min-h-0 flex-1 overflow-x-hidden pb-6"
-    >
-      <Accordion value={expanded} onChange={setExpanded} className="space-y-1">
-        {showContextSections && <ContextSection product={productCode} />}
-        {navigation.map((nav) => (
-          <Group key={nav.id} data={nav} />
-        ))}
-        {showSquads && <AiStudioGroup product={productCode} />}
-        {showSquads && <SquadsGroup />}
-        {showGroupings && <AgrupamentosGroup product={productCode} />}
-        {showGroupings && <HistoricoGroup product={productCode} />}
-      </Accordion>
+    <>
+      <SimpleBar
+        scrollableNodeProps={{ ref }}
+        className="absolute inset-0"
+      >
+        <Accordion
+          value={expanded}
+          onChange={setExpanded}
+          className="space-y-1 pb-6"
+        >
+          {showContextSections && <ContextSection product={productCode} />}
+          {navigation.map((nav) => (
+            <Group key={nav.id} data={nav} />
+          ))}
+          {showSquads && <AiStudioGroup product={productCode} />}
+          {showSquads && <SquadsGroup />}
+          {showGroupings && <AgrupamentosGroup product={productCode} />}
+          {showGroupings && <HistoricoGroup product={productCode} />}
+        </Accordion>
+      </SimpleBar>
 
       {showGroupings && (
         <CreateProjectModal
@@ -85,6 +91,6 @@ export function Menu() {
           product={productCode}
         />
       )}
-    </SimpleBar>
+    </>
   );
 }

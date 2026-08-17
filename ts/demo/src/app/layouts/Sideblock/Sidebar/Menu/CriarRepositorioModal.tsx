@@ -99,7 +99,7 @@ export function CriarRepositorioModal({ isOpen, close }: Props) {
             onClick={close}
             variant="flat"
             isIcon
-            className="size-7 rounded-full"
+            className="size-7 rounded-lg"
             aria-label="Fechar"
           >
             <XMarkIcon className="size-4.5" />

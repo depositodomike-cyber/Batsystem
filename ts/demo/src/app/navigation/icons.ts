@@ -54,6 +54,7 @@ import {
   EnvelopeIcon,
   HashtagIcon,
   ListBulletIcon,
+  HomeIcon,
 } from "@heroicons/react/24/outline";
 import { TbCoins, TbDevices, TbPalette } from "react-icons/tb";
 
@@ -262,6 +263,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.whatsapp": ChatBubbleLeftRightIcon,
   "ceo.divulgacao": HiWindowIcon,
   "ceo.campanhas": HiMegaphoneIcon,
+  "ceo.home": HomeIcon,
   "ceo.memoria": CircleStackIcon,
   "ceo.grafo": ShareIcon,
   "ceo.contexto-lista": ListBulletIcon,

@@ -168,7 +168,7 @@ export function Widgets() {
             <Button
               isIcon
               variant="flat"
-              className="btn size-6 rounded-full ltr:-ml-1 rtl:-mr-1"
+              className="btn size-6 rounded-lg ltr:-ml-1 rtl:-mr-1"
             >
               <Cog6ToothIcon className="size-4" />
             </Button>
@@ -201,7 +201,7 @@ export function Widgets() {
             <Button
               isIcon
               variant="flat"
-              className="btn size-6 rounded-full ltr:-ml-1 rtl:-mr-1"
+              className="btn size-6 rounded-lg ltr:-ml-1 rtl:-mr-1"
             >
               <Cog6ToothIcon className="size-4" />
             </Button>

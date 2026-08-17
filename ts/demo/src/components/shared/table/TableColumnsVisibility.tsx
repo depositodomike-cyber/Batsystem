@@ -28,7 +28,7 @@ export function TableColumnVisibility({
       <PopoverButton
         isIcon
         variant="flat"
-        className="size-8 rounded-full"
+        className="size-8 rounded-lg"
         as={Button}
       >
         <ViewColumnsIcon className="size-5" />

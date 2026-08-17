@@ -3,6 +3,7 @@
 // Seletor de fonte (Memória/Web/Auto), anexo de texto, ditado por voz (Web
 // Speech API), envio ao backend /ai/prompt e resposta em janela flutuante.
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router";
 import {
   PlusIcon,
   MicrophoneIcon,
@@ -20,6 +21,9 @@ import { marcarBuscaMemoria } from "@/utils/memoriaBusca";
 import { AnswerWindow, type Turno } from "./AnswerWindow";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { useTranslation } from "react-i18next";
+import { useConversasContext } from "@/app/contexts/conversas/context";
+import { getCurrentProduct } from "@/app/navigation/ceoOs";
+import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 
 // ----------------------------------------------------------------------
 
@@ -56,6 +60,10 @@ type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 export function PromptBar() {
   const { t, i18n } = useTranslation();
+  const { pathname } = useLocation();
+  const product = getCurrentProduct(pathname);
+  const { refresh } = useConversasContext();
+  const repositorioId = useRepositorioAtivo()?.id ?? undefined;
   const [modo, setModo] = useState<ModoBusca>("vault");
   const [value, setValue] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -67,6 +75,8 @@ export function PromptBar() {
   const [listening, setListening] = useState(false);
 
   const [conversa, setConversa] = useState<Turno[] | null>(null);
+  const [conversaId, setConversaId] = useState<string | null>(null);
+  const [modoConversa, setModoConversa] = useState<ModoBusca>("vault");
   const [winOpen, setWinOpen] = useState(false);
   const [minimized, setMinimized] = useState(false);
 
@@ -116,6 +126,14 @@ export function PromptBar() {
       recognitionRef.current?.stop();
     };
   }, []);
+
+  // Troca de repositório/organização: a janela e o id pertencem ao contexto anterior.
+  useEffect(() => {
+    setConversa(null);
+    setConversaId(null);
+    setWinOpen(false);
+    setMinimized(false);
+  }, [repositorioId]);
 
   const flashStatus = (msg: string, cls: "" | "ok" | "err" = "", auto = false) => {
     if (statusTimer.current) clearTimeout(statusTimer.current);
@@ -198,7 +216,10 @@ export function PromptBar() {
         modo,
         arquivo: modo !== "web" ? arquivo : null,
         referencia,
+        repositorioId,
       });
+      setModoConversa(modo);
+      setConversaId(r.conversaId ?? null);
       setConversa([
         {
           pergunta: texto,
@@ -210,6 +231,10 @@ export function PromptBar() {
       setWinOpen(true);
       setMinimized(false);
       setValue("");
+      void refresh();
+      if (r.conversaId) {
+        window.setTimeout(() => void refresh(), 2500);
+      }
       if (inputRef.current) inputRef.current.style.height = "auto";
       limparAnexo();
       flashStatus(
@@ -228,7 +253,6 @@ export function PromptBar() {
   // --- Continuar a conversa dentro da janela ---
   const continuar = async (texto: string) => {
     if (!conversa || loading) return;
-    const modoConversa: ModoBusca = origem === "web" ? "web" : "vault";
     const historico = conversa.map((t) => ({
       pergunta: t.pergunta,
       resposta: t.resposta,
@@ -251,8 +275,12 @@ export function PromptBar() {
         texto,
         modo: modoConversa,
         historico,
+        conversaId: conversaId ?? undefined,
         referencia,
+        repositorioId,
       });
+      if (r.conversaId) setConversaId(r.conversaId);
+      void refresh();
       setConversa((c) =>
         (c ?? []).map((t) =>
           t === pendente
@@ -281,6 +309,7 @@ export function PromptBar() {
   const fecharJanela = () => {
     setWinOpen(false);
     setConversa(null);
+    setConversaId(null);
   };
 
   return (
@@ -403,6 +432,11 @@ export function PromptBar() {
           origem={origem}
           loading={loading}
           minimized={minimized}
+          continuarHref={
+            conversaId
+              ? `/${product.code}/conversas/${conversaId}`
+              : undefined
+          }
           onToggleMinimize={() => setMinimized((m) => !m)}
           onClose={fecharJanela}
           onFollowUp={continuar}

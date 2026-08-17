@@ -29,7 +29,7 @@ export function RightSidebar() {
         onClick={open}
         variant="flat"
         isIcon
-        className="relative size-9 rounded-full"
+        className="relative size-9 rounded-lg"
       >
         <VerticalSliderIcon className="size-6" />
       </Button>

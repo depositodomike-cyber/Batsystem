@@ -9,7 +9,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { EnvelopeIcon, UserIcon } from "@heroicons/react/24/outline";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
@@ -17,6 +17,7 @@ import { Button, Input } from "@/components/ui";
 import { GHOST_ENTRY_PATH } from "@/constants/app";
 
 import { CampoSenha } from "../components/CampoSenha";
+import { ChecklistSenha } from "../components/ChecklistSenha";
 import { MolduraAuth } from "../components/MolduraAuth";
 import { usePrototipoContas } from "../model/context";
 import { usuarioPorEmail } from "../model/selectors";
@@ -42,17 +43,22 @@ export default function CriarConta() {
     register,
     handleSubmit,
     setError,
-    formState: { errors },
+    control,
+    formState: { errors, isSubmitted },
   } = useForm<CriarContaFormValues>({
     resolver: yupResolver(criarContaSchema),
     defaultValues: { nome: "", email: "", senha: "", confirmarSenha: "" },
   });
 
+  const senha = useWatch({ control, name: "senha", defaultValue: "" });
+  const mostrarErrosSenha = isSubmitted || !!errors.senha;
+
   const onSubmit = (valores: CriarContaFormValues) => {
     if (usuarioPorEmail(estado, valores.email)) {
       setError("email", {
         type: "manual",
-        message: "Já existe uma conta com este e-mail. Entre com ela.",
+        message:
+          "Não foi possível criar a conta com este e-mail. Tente entrar ou use outro e-mail.",
       });
       return;
     }
@@ -72,7 +78,7 @@ export default function CriarConta() {
     <MolduraAuth
       tituloPagina="Criar conta"
       titulo="Crie a sua conta"
-      subtitulo="Quatro campos. O resto vem depois."
+      subtitulo="Preencha suas informações pessoais para continuar."
       largura="max-w-[30rem]"
       depoisDoCard={
         <div className="mt-4 text-center text-xs-plus">
@@ -116,13 +122,15 @@ export default function CriarConta() {
             {...register("email")}
             error={errors?.email?.message}
           />
-          <CampoSenha
-            label="Senha"
-            placeholder="Mínimo de 8 caracteres"
-            description="Ao menos uma letra e um número."
-            registration={register("senha")}
-            error={errors?.senha?.message}
-          />
+          <div>
+            <CampoSenha
+              label="Senha"
+              placeholder="Crie uma senha"
+              registration={register("senha")}
+              error={errors?.senha?.message}
+            />
+            <ChecklistSenha senha={senha} mostrarErros={mostrarErrosSenha} />
+          </div>
           <CampoSenha
             label="Confirmar senha"
             placeholder="Repita a senha"

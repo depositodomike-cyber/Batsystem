@@ -357,7 +357,7 @@ function RelatorioCard({
                 type="button"
                 onClick={onLike}
                 aria-label="Curtir"
-                className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-7 place-items-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 <HandThumbUpIcon className="size-4" />
               </button>
@@ -365,7 +365,7 @@ function RelatorioCard({
                 type="button"
                 onClick={onDislike}
                 aria-label="Não curtir"
-                className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-7 place-items-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 <HandThumbDownIcon className="size-4" />
               </button>

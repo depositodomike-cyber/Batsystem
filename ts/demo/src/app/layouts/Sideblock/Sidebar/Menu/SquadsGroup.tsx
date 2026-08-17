@@ -72,7 +72,7 @@ export function SquadsGroup() {
               aria-label="Adicionar squad"
               title="Adicionar squad"
               className={clsx(
-                "-mr-1 grid size-5 shrink-0 place-items-center rounded-full text-gray-500 outline-hidden",
+                "-mr-1 grid size-5 shrink-0 place-items-center rounded-lg text-gray-500 outline-hidden",
                 DISABLED_MENU_CLASS,
               )}
             >
@@ -83,7 +83,7 @@ export function SquadsGroup() {
             <PopoverButton
               aria-label="Adicionar squad"
               title="Adicionar squad"
-              className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[open]:bg-gray-100 dark:data-[open]:bg-dark-300/10"
+              className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[open]:bg-gray-100 dark:data-[open]:bg-dark-300/10"
             >
               <PlusIcon className="size-4" />
             </PopoverButton>
@@ -217,7 +217,7 @@ export function SquadsGroup() {
                       onClick={() => unpinSquad(squad.id)}
                       aria-label={`Remover ${squad.title}`}
                       title="Remover do menu"
-                      className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-400 opacity-0 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover/squad:opacity-100"
+                      className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-400 opacity-0 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover/squad:opacity-100"
                     >
                       <XMarkIcon className="size-4" />
                     </button>

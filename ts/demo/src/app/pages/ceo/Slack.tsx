@@ -552,7 +552,7 @@ export default function Slack() {
                 type="button"
                 onClick={() => setFiltro(f.id)}
                 className={clsx(
-                  "rounded-full px-3 py-1.5 text-xs-plus font-medium transition-colors",
+                  "rounded-lg px-3 py-1.5 text-xs-plus font-medium transition-colors",
                   filtro === f.id
                     ? "bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400"
                     : "dark:text-dark-300 dark:hover:bg-dark-600 text-gray-500 hover:bg-gray-100",
@@ -688,7 +688,7 @@ export default function Slack() {
                   variant="flat"
                   isIcon
                   onClick={() => setThreadId(null)}
-                  className="size-8 shrink-0 rounded-full"
+                  className="size-8 shrink-0 rounded-lg"
                   aria-label="Fechar thread"
                 >
                   <XMarkIcon className="size-5" />
@@ -932,7 +932,7 @@ function Mensagem({
               type="button"
               onClick={onAbrirThread}
               className={clsx(
-                "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-tiny font-medium transition-colors",
+                "inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-tiny font-medium transition-colors",
                 threadAberta
                   ? "bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400"
                   : "text-primary-600 dark:text-primary-400 hover:bg-primary-600/10 dark:hover:bg-primary-400/10",

@@ -1,5 +1,7 @@
 import * as Yup from "yup";
 
+import { requisitosSenhaAtendidos } from "../components/passwordRequirements";
+
 /**
  * Tela 1 — criação de conta.
  *
@@ -22,9 +24,11 @@ export const criarContaSchema: Yup.ObjectSchema<CriarContaFormValues> =
       .required("Informe o e-mail."),
     senha: Yup.string()
       .required("Crie uma senha.")
-      .min(8, "Mínimo de 8 caracteres.")
-      .matches(/[A-Za-z]/, "Inclua ao menos uma letra.")
-      .matches(/[0-9]/, "Inclua ao menos um número."),
+      .test(
+        "requisitos",
+        "A senha não atende a todos os requisitos.",
+        (valor) => requisitosSenhaAtendidos(valor ?? ""),
+      ),
     confirmarSenha: Yup.string()
       .required("Confirme a senha.")
       .oneOf([Yup.ref("senha")], "As senhas não coincidem."),

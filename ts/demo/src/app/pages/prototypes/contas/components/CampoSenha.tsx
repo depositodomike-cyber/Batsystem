@@ -20,6 +20,7 @@ export function CampoSenha({
   registration,
   error,
   classNames,
+  autoComplete = "new-password",
 }: {
   label: string;
   placeholder: string;
@@ -27,6 +28,7 @@ export function CampoSenha({
   registration: UseFormRegisterReturn;
   error?: string;
   classNames?: { root?: string };
+  autoComplete?: string;
 }) {
   const [visivel, setVisivel] = useState(false);
   return (
@@ -36,7 +38,7 @@ export function CampoSenha({
       description={description}
       classNames={classNames}
       type={visivel ? "text" : "password"}
-      autoComplete="new-password"
+      autoComplete={autoComplete}
       prefix={
         <LockClosedIcon
           className="size-5 transition-colors duration-200"

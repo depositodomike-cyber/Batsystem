@@ -187,7 +187,7 @@ function TabButton({
       {count > 0 && (
         <span
           className={clsx(
-            "rounded-full px-1.5 text-tiny-plus",
+            "rounded-lg px-1.5 text-tiny-plus",
             active
               ? "bg-primary-500/10 text-primary-700 dark:text-primary-300"
               : "dark:bg-dark-500 dark:text-dark-200 bg-gray-200 text-gray-600",

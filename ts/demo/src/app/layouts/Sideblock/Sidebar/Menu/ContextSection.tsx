@@ -1,28 +1,32 @@
 /**
- * Seção Repositório: seletor do contexto ativo + select de visualização
- * (Lista ou Grafo). Sempre expandida — não é collapse.
+ * Seção Repositório: seletor do contexto ativo + Home (Grafo/Lista
+ * ficam na página, ao lado de Sincronizar).
  */
 
 import clsx from "clsx";
+import { useLocation } from "react-router";
 
 import type { NavigationTree } from "@/@types/navigation";
 import { useThemeContext } from "@/app/contexts/theme/context";
-import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 import { ContextoSelect } from "./ContextoSelect";
 import { MenuItem } from "./Group/MenuItem";
-import { VisualizacaoSelect } from "./VisualizacaoSelect";
+import {
+  caminhoRepositorio,
+  ehPaginaRepositorio,
+} from "@/app/pages/ceo/RepositorioViewSelect";
 
 export function ContextSection({ product }: { product: string }) {
   const { cardSkin } = useThemeContext();
-  const grafoDesabilitado = isFeatureTemporarilyDisabled("memoryGraph");
+  const { pathname } = useLocation();
 
-  const listaItem: NavigationTree = {
-    id: `${product}.memoria-lista`,
+  const homeItem: NavigationTree = {
+    id: `${product}.memoria-home`,
     type: "item",
-    path: `/${product}/memoria-lista`,
-    title: "Lista",
-    icon: "ceo.contexto-lista",
+    path: caminhoRepositorio(product),
+    title: "Home",
+    transKey: "nav.ceo.home",
+    icon: "ceo.home",
   };
 
   return (
@@ -48,11 +52,7 @@ export function ContextSection({ product }: { product: string }) {
 
       <div className="flex flex-col space-y-0.5">
         <ContextoSelect />
-        {grafoDesabilitado ? (
-          <MenuItem data={listaItem} />
-        ) : (
-          <VisualizacaoSelect product={product} />
-        )}
+        <MenuItem data={homeItem} active={ehPaginaRepositorio(pathname)} />
       </div>
     </section>
   );

@@ -27,7 +27,7 @@ export function MinimizedDock() {
           return (
             <div
               key={id}
-              className="dark:bg-dark-700 dark:border-dark-500 flex items-center gap-1 rounded-full border border-gray-200 bg-white py-1 pr-1 pl-3 shadow-lg ring-1 ring-black/5"
+              className="dark:bg-dark-700 dark:border-dark-500 flex items-center gap-1 rounded-lg border border-gray-200 bg-white py-1 pr-1 pl-3 shadow-lg ring-1 ring-black/5"
             >
               <button
                 type="button"
@@ -44,7 +44,7 @@ export function MinimizedDock() {
                 type="button"
                 onClick={() => close(id)}
                 aria-label={t("ai.close", { title })}
-                className="dark:hover:bg-dark-600 dark:text-dark-300 grid size-6 shrink-0 place-items-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                className="dark:hover:bg-dark-600 dark:text-dark-300 grid size-6 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
               >
                 <XMarkIcon className="size-3.5" />
               </button>

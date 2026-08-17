@@ -52,7 +52,7 @@ export function ContextualHelp(props: ContextualHelpProps) {
         onClick={openModal}
         variant="flat"
         isIcon
-        className="contextual-trigger pointer-events-auto size-6 rounded-full"
+        className="contextual-trigger pointer-events-auto size-6 rounded-lg"
       >
         <Icon className="contextual-trigger-icon size-4.5" />
       </Button>
@@ -96,7 +96,7 @@ export function ContextualHelp(props: ContextualHelpProps) {
                   onClick={closeModal}
                   variant="flat"
                   isIcon
-                  className="size-6 rounded-full ltr:-mr-1.5 rtl:-ml-1.5"
+                  className="size-6 rounded-lg ltr:-mr-1.5 rtl:-ml-1.5"
                 >
                   <XMarkIcon className="size-4.5" />
                 </Button>
@@ -113,7 +113,7 @@ export function ContextualHelp(props: ContextualHelpProps) {
         as={Button}
         variant="flat"
         isIcon
-        className="contextual-trigger pointer-events-auto size-6 rounded-full"
+        className="contextual-trigger pointer-events-auto size-6 rounded-lg"
       >
         <Icon className="contextual-trigger-icon size-4.5" />
       </PopoverButton>

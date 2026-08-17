@@ -10,6 +10,7 @@ import { Page } from "@/components/shared/Page";
 import { Button, Spinner } from "@/components/ui";
 import { SugerirPosUploadModal } from "./SugerirPosUpload";
 import { NotaMemoriaModal } from "./NotaMemoriaModal";
+import { RepositorioViewSelect } from "./RepositorioViewSelect";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
@@ -844,19 +845,22 @@ export default function MemoriaGrafo() {
 
         {/* Canto superior direito: botão de sincronizar + status com a IA. */}
         <div className="absolute end-4 top-4 z-10 flex flex-col items-end gap-1.5">
-          <Button
-            onClick={sincronizar}
-            color="primary"
-            className="h-8 gap-1.5 px-3 text-xs"
-            disabled={loading || sync.state === "syncing"}
-          >
-            {loading || sync.state === "syncing" ? (
-              <Spinner className="size-4" />
-            ) : (
-              <ArrowPathIcon className="size-4" />
-            )}
-            Sincronizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <RepositorioViewSelect compact />
+            <Button
+              onClick={sincronizar}
+              color="primary"
+              className="h-8 gap-1.5 px-3 text-xs"
+              disabled={loading || sync.state === "syncing"}
+            >
+              {loading || sync.state === "syncing" ? (
+                <Spinner className="size-4" />
+              ) : (
+                <ArrowPathIcon className="size-4" />
+              )}
+              Sincronizar
+            </Button>
+          </div>
 
           {sync.state !== "idle" && (
             <span

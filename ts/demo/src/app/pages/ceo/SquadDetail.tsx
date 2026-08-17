@@ -445,7 +445,7 @@ function EmptyState({
                 type="button"
                 onClick={() => onSelectAgent(agent)}
                 className={clsx(
-                  "rounded-full border px-3 py-1 text-xs transition-colors",
+                  "rounded-lg border px-3 py-1 text-xs transition-colors",
                   active
                     ? "border-primary-500 bg-primary-500 text-white"
                     : "dark:border-dark-500 dark:text-dark-200 dark:hover:border-primary-500/50 dark:hover:text-primary-300 border-gray-300 text-gray-700 hover:border-primary-400 hover:text-primary-600",
@@ -553,7 +553,7 @@ function CollapsibleSection({
           )}
         />
         <span className="flex-1 text-start">{title}</span>
-        <span className="dark:bg-dark-600 dark:text-dark-200 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium normal-case tracking-normal text-gray-500">
+        <span className="dark:bg-dark-600 dark:text-dark-200 rounded-lg bg-gray-100 px-2 py-0.5 text-[11px] font-medium normal-case tracking-normal text-gray-500">
           {count}
         </span>
       </button>

@@ -13,6 +13,8 @@ import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
 import MemoriaGrafo from "@/app/pages/ceo/MemoriaGrafo";
 import MemoriaLista from "@/app/pages/ceo/MemoriaLista";
+import ConversaPrompt from "@/app/pages/ceo/ConversaPrompt";
+import ConversasHistorico from "@/app/pages/ceo/ConversasHistorico";
 import Documento from "@/app/pages/ceo/Documento";
 import Configuracoes from "@/app/pages/ceo/Configuracoes";
 import Feed from "@/app/pages/ceo/Feed";
@@ -111,6 +113,18 @@ const memoriaListaRoutes: RouteObject[] = products.map((p) => ({
   path: `${p.code}/memoria-lista`,
   Component: MemoriaLista,
 }));
+const conversasHistoricoRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/conversas/historico`,
+  Component: ConversasHistorico,
+}));
+const conversasRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/conversas`,
+  Component: ConversaPrompt,
+}));
+const conversasDetailRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/conversas/:conversaId`,
+  Component: ConversaPrompt,
+}));
 
 // Regras agora vive dentro de Configurações. Mantém links e favoritos antigos
 // funcionando sem expor uma segunda entrada independente no sistema.
@@ -169,6 +183,9 @@ export const ceoRoutes: RouteObject[] = [
   ...legacyRedirects,
   ...productRedirects,
   ...memoriaListaRoutes,
+  ...conversasHistoricoRoutes,
+  ...conversasRoutes,
+  ...conversasDetailRoutes,
   ...memoriaRedirects,
   ...documentoRoutes,
   ...projectRoutes,

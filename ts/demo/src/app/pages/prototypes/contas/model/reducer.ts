@@ -8,6 +8,7 @@
 
 import invariant from "tiny-invariant";
 
+import { DEMO_LOGIN } from "@/constants/demoLogin";
 import {
   conteudoVazio,
   estadoSemeado,
@@ -58,6 +59,14 @@ export type AcaoPrototipo =
    * escopo pessoal (sem organização ainda).
    */
   | { tipo: "sessao/garantir"; payload: { nome: string; email: string } }
+  /**
+   * Alinha a senha do protótipo com a que a API acabou de aceitar. Evita que
+   * o próximo login local recuse a conta do time (e outras contas reais).
+   */
+  | {
+      tipo: "sessao/sincronizarSenha";
+      payload: { email: string; senha: string };
+    }
   | { tipo: "sessao/logout" }
   | { tipo: "contexto/abrirRepositorio"; payload: { repositorioId: string } }
   /**
@@ -82,6 +91,14 @@ function novoId(prefixo: string): string {
 
 function agora(): string {
   return new Date().toISOString();
+}
+
+function ehContaDoTime(email: string): boolean {
+  return email.trim().toLowerCase() === DEMO_LOGIN.email.toLowerCase();
+}
+
+function senhaPlaceholder(email: string): string {
+  return ehContaDoTime(email) ? DEMO_LOGIN.senha : SENHA_DEMONSTRACAO;
 }
 
 /** Primeiro repositório acessível ao usuário (org preferida, senão pessoal). */
@@ -147,8 +164,11 @@ export function reducer(
 
     /**
      * Tela 2. Cria pagador + organização + membership do criador e o primeiro
-     * repositório da organização, já abrindo-o. Essa é a PRIMEIRA organização da
-     * conta — remove qualquer contexto pessoal residual do Step 1 antigo.
+     * repositório da organização, já abrindo-o.
+     *
+     * No cadastro (primeira organização da conta) remove o "Meu repositório"
+     * pessoal residual do Step 1 antigo. Pelo perfil, a nova organização é
+     * acrescentada — as existentes permanecem.
      *
      * O criador é admin AUTOMATICAMENTE — não é uma escolha oferecida a ele.
      */
@@ -179,22 +199,29 @@ export function reducer(
             }))
         : [];
 
-      // A organização do cadastro substitui o "Meu repositório" pessoal legado.
-      const reposPessoaisAntigos = new Set(
-        estado.repositorios
-          .filter(
-            (r) =>
-              r.escopo.tipo === "pessoal" &&
-              r.escopo.usuarioId === sessao.usuarioId,
-          )
-          .map((r) => r.id),
+      const jaTemOrganizacao = estado.membros.some(
+        (m) => m.usuarioId === sessao.usuarioId,
       );
-      const repositoriosSemPessoal = estado.repositorios.filter(
-        (r) => !reposPessoaisAntigos.has(r.id),
-      );
-      const conteudoSemPessoal = { ...estado.conteudo };
-      for (const id of reposPessoaisAntigos) {
-        delete conteudoSemPessoal[id];
+
+      let repositoriosBase = estado.repositorios;
+      let conteudoBase = estado.conteudo;
+      if (!jaTemOrganizacao) {
+        const reposPessoaisAntigos = new Set(
+          estado.repositorios
+            .filter(
+              (r) =>
+                r.escopo.tipo === "pessoal" &&
+                r.escopo.usuarioId === sessao.usuarioId,
+            )
+            .map((r) => r.id),
+        );
+        repositoriosBase = estado.repositorios.filter(
+          (r) => !reposPessoaisAntigos.has(r.id),
+        );
+        conteudoBase = { ...estado.conteudo };
+        for (const id of reposPessoaisAntigos) {
+          delete conteudoBase[id];
+        }
       }
 
       return {
@@ -218,7 +245,7 @@ export function reducer(
           },
         ],
         repositorios: [
-          ...repositoriosSemPessoal,
+          ...repositoriosBase,
           {
             id: repoId,
             nome: `${acao.payload.nome} — geral`,
@@ -226,7 +253,7 @@ export function reducer(
             criadoEm,
           },
         ],
-        conteudo: { ...conteudoSemPessoal, [repoId]: conteudoVazio() },
+        conteudo: { ...conteudoBase, [repoId]: conteudoVazio() },
         convites: [...estado.convites, ...convites],
         contexto: { repositorioId: repoId },
         demo: { papelForcado: null },
@@ -407,6 +434,22 @@ export function reducer(
       };
     }
 
+    case "sessao/sincronizarSenha": {
+      const email = acao.payload.email.trim().toLowerCase();
+      const senha = acao.payload.senha;
+      if (email === "" || senha === "") return estado;
+      const alvo = estado.usuarios.find(
+        (u) => u.email.toLowerCase() === email,
+      );
+      if (!alvo || alvo.senha === senha) return estado;
+      return {
+        ...estado,
+        usuarios: estado.usuarios.map((u) =>
+          u.id === alvo.id ? { ...u, senha } : u,
+        ),
+      };
+    }
+
     case "sessao/garantir": {
       const email = acao.payload.email.trim();
       if (email === "") return estado;
@@ -415,10 +458,25 @@ export function reducer(
         (u) => u.email.toLowerCase() === email.toLowerCase(),
       );
       if (existente) {
-        if (estado.sessao?.usuarioId === existente.id) return estado;
+        const senhaCerta = ehContaDoTime(email)
+          ? DEMO_LOGIN.senha
+          : existente.senha;
+        const usuarios =
+          existente.senha === senhaCerta
+            ? estado.usuarios
+            : estado.usuarios.map((u) =>
+                u.id === existente.id ? { ...u, senha: senhaCerta } : u,
+              );
+        if (
+          estado.sessao?.usuarioId === existente.id &&
+          usuarios === estado.usuarios
+        ) {
+          return estado;
+        }
         const primeiro = primeiroRepositorioDoUsuario(estado, existente.id);
         return {
           ...estado,
+          usuarios,
           sessao: { usuarioId: existente.id },
           contexto: primeiro ? { repositorioId: primeiro.id } : null,
           demo: { papelForcado: null },
@@ -441,9 +499,9 @@ export function reducer(
             id: usuarioId,
             nome: acao.payload.nome,
             email,
-            // Este caminho vem de uma sessão JÁ autenticada, onde não há senha
-            // digitada. A de demonstração mantém a conta utilizável no login.
-            senha: SENHA_DEMONSTRACAO,
+            // Sessão já autenticada: não há senha digitada. A conta do time
+            // precisa da senha real; as demais usam o placeholder local.
+            senha: senhaPlaceholder(email),
             criadoEm,
           },
         ],

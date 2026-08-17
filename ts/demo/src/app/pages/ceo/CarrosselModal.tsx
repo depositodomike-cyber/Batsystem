@@ -487,7 +487,7 @@ export function CarrosselModal({ isOpen, close, onMinimize }: Props) {
 
 function IconBtn({ label, danger, onClick, children }: { label: string; danger?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} title={label} className={clsx("dark:hover:bg-dark-600 grid size-7 shrink-0 place-items-center rounded-md text-gray-400 transition-colors hover:bg-gray-100", danger ? "hover:text-rose-500" : "hover:text-gray-700 dark:hover:text-dark-100")}>
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={clsx("dark:hover:bg-dark-600 grid size-7 shrink-0 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100", danger ? "hover:text-rose-500" : "hover:text-gray-700 dark:hover:text-dark-100")}>
       {children}
     </button>
   );

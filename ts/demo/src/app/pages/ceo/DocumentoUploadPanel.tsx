@@ -109,7 +109,7 @@ export function DocumentoUploadPanel({
       </div>
 
       <div>
-        <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
+        <label className="dark:text-dark-200 text-xs-plus mb-2 block font-medium text-gray-600">
           — ou — envie um arquivo{" "}
           <span className="text-gray-400">(.txt, .md, .pdf, .docx…)</span>
         </label>

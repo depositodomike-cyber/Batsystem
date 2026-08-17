@@ -582,7 +582,7 @@ export default function Documentos() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar nesta pasta…"
-                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-full border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
               />
               {query && (
                 <button
@@ -598,7 +598,7 @@ export default function Documentos() {
 
             <div className="flex flex-wrap items-center gap-3">
               {/* Filtro de tipo segmentado */}
-              <div className="dark:bg-dark-700 inline-flex shrink-0 rounded-full bg-gray-200/70 p-1">
+              <div className="dark:bg-dark-700 inline-flex shrink-0 rounded-lg bg-gray-200/70 p-1">
                 {(
                   [
                     { id: "all", label: "Todos" },
@@ -611,7 +611,7 @@ export default function Documentos() {
                     type="button"
                     onClick={() => setTypeFilter(opt.id)}
                     className={clsx(
-                      "rounded-full px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+                      "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
                       typeFilter === opt.id
                         ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                         : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
@@ -623,7 +623,7 @@ export default function Documentos() {
               </div>
 
               {/* Alternância de visualização */}
-              <div className="dark:bg-dark-700 inline-flex shrink-0 rounded-full bg-gray-200/70 p-1">
+              <div className="dark:bg-dark-700 inline-flex shrink-0 rounded-lg bg-gray-200/70 p-1">
                 {(
                   [
                     { id: "grid", Icon: Squares2X2Icon, label: "Grade" },
@@ -637,7 +637,7 @@ export default function Documentos() {
                     aria-label={opt.label}
                     title={opt.label}
                     className={clsx(
-                      "grid size-8 place-items-center rounded-full transition-colors",
+                      "grid size-8 place-items-center rounded-lg transition-colors",
                       view === opt.id
                         ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                         : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
@@ -652,7 +652,7 @@ export default function Documentos() {
               <button
                 type="button"
                 onClick={() => setNewFolderOpen(true)}
-                className="dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 dark:hover:bg-dark-600 flex h-10 items-center gap-2 rounded-full border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                className="dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 dark:hover:bg-dark-600 flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
               >
                 <FolderPlusIcon className="size-4.5" />
                 Nova pasta
@@ -662,7 +662,7 @@ export default function Documentos() {
               <Button
                 color="primary"
                 onClick={() => inputRef.current?.click()}
-                className="h-10 gap-2 rounded-full px-4"
+                className="h-10 gap-2 rounded-lg px-4"
               >
                 <ArrowUpTrayIcon className="size-4.5" />
                 Enviar arquivos
@@ -1155,7 +1155,7 @@ function EmptyState({
             <button
               type="button"
               onClick={onNewFolder}
-              className="dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 dark:hover:bg-dark-600 flex items-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 dark:hover:bg-dark-600 flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               <FolderPlusIcon className="size-4.5" />
               Nova pasta
@@ -1163,7 +1163,7 @@ function EmptyState({
             <Button
               color="primary"
               onClick={onUpload}
-              className="gap-2 rounded-full px-4"
+              className="gap-2 rounded-lg px-4"
             >
               <ArrowUpTrayIcon className="size-4.5" />
               Enviar arquivos

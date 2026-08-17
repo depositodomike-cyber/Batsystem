@@ -101,14 +101,14 @@ export function News() {
                     <Button
                       isIcon
                       variant="flat"
-                      className="size-7 rounded-full"
+                      className="size-7 rounded-lg"
                     >
                       <HandThumbUpIcon className="size-4" />
                     </Button>
                     <Button
                       isIcon
                       variant="flat"
-                      className="size-7 rounded-full"
+                      className="size-7 rounded-lg"
                     >
                       <BookmarkIcon className="size-4" />
                     </Button>

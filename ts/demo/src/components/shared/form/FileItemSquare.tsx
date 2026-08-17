@@ -41,10 +41,10 @@ export function FileItemSquare({
           <span className="text-tiny mt-1.5 line-clamp-2">{name}</span>
         </div>
       )}
-      <div className="dark:bg-dark-700 absolute -top-4 -right-3 flex items-center justify-center rounded-full bg-white opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="dark:bg-dark-700 absolute -top-4 -right-3 flex items-center justify-center rounded-lg bg-white opacity-0 transition-opacity group-hover:opacity-100">
         <Button
           onClick={handleRemove}
-          className="dark:border-dark-450 size-6 shrink-0 rounded-full border p-0"
+          className="dark:border-dark-450 size-6 shrink-0 rounded-lg border p-0"
         >
           <XMarkIcon className="size-4" />
         </Button>

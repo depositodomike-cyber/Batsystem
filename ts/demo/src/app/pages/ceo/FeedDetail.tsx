@@ -823,7 +823,7 @@ function ShareModal({
                     type="button"
                     onClick={() => setView("targets")}
                     aria-label="Voltar"
-                    className="dark:text-dark-300 dark:hover:bg-dark-600 -ml-1 mt-0.5 grid size-7 shrink-0 place-items-center rounded-full text-gray-400 hover:bg-gray-100"
+                    className="dark:text-dark-300 dark:hover:bg-dark-600 -ml-1 mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
                   >
                     <ArrowLeftIcon className="size-4.5" />
                   </button>
@@ -843,7 +843,7 @@ function ShareModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="dark:text-dark-300 dark:hover:bg-dark-600 grid size-8 shrink-0 place-items-center rounded-full text-gray-400 hover:bg-gray-100"
+                className="dark:text-dark-300 dark:hover:bg-dark-600 grid size-8 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
               >
                 <XMarkIcon className="size-5" />
               </button>
@@ -964,7 +964,7 @@ function ShareModal({
                         </p>
                       </div>
                       {!connected ? (
-                        <span className="border-primary-200 text-primary-600 dark:border-primary-500/40 dark:text-primary-300 inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs-plus font-semibold">
+                        <span className="border-primary-200 text-primary-600 dark:border-primary-500/40 dark:text-primary-300 inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 text-xs-plus font-semibold">
                           <PlusIcon className="size-3.5" />
                           Conectar
                         </span>

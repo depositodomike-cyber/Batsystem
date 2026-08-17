@@ -140,7 +140,7 @@ export function RegrasSection() {
             <Button
               onClick={() => setCreating(true)}
               color="primary"
-              className="h-10 gap-2 rounded-full px-4"
+              className="h-10 gap-2 rounded-lg px-4"
             >
               <PlusIcon className="size-4.5" />
               Nova regra
@@ -159,7 +159,7 @@ export function RegrasSection() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar nas regras…"
-              className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-full border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
+              className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
             />
             {query && (
               <button
@@ -173,7 +173,7 @@ export function RegrasSection() {
             )}
           </div>
 
-          <div className="dark:bg-dark-700 inline-flex flex-wrap gap-1 rounded-full bg-gray-200/70 p-1">
+          <div className="dark:bg-dark-700 inline-flex flex-wrap gap-1 rounded-lg bg-gray-200/70 p-1">
             <ChipStatus
               ativo={status === "all"}
               onClick={() => setStatus("all")}
@@ -285,7 +285,7 @@ function ChipStatus({
       onClick={onClick}
       aria-pressed={ativo}
       className={clsx(
-        "rounded-full px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+        "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
         ativo
           ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
           : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
@@ -471,7 +471,7 @@ function NewMemoryModal({
                   onClick={close}
                   variant="flat"
                   isIcon
-                  className="size-8 shrink-0 rounded-full"
+                  className="size-8 shrink-0 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />
@@ -623,7 +623,7 @@ function MemoryDrawer({
                   onClick={close}
                   variant="flat"
                   isIcon
-                  className="size-8 shrink-0 rounded-full"
+                  className="size-8 shrink-0 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />
@@ -639,14 +639,14 @@ function MemoryDrawer({
                   <Badge
                     color={confidenceColor[memory.confidence]}
                     variant="soft"
-                    className="rounded-full"
+                    className="rounded-lg"
                   >
                     {CONFIDENCE_LABEL[memory.confidence]}
                   </Badge>
                   <Badge
                     color={memory.active ? "success" : "neutral"}
                     variant="soft"
-                    className="rounded-full"
+                    className="rounded-lg"
                   >
                     {memory.active ? "Ativa" : "Inativa"}
                   </Badge>

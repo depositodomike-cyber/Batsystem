@@ -50,7 +50,7 @@ export function ContextoSelect() {
       tipo: "contexto/abrirRepositorio",
       payload: { repositorioId },
     });
-    // Só troca o contexto ativo — a tela abre pelo select de visualização.
+    // Só troca o contexto ativo — a tela do Repositório abre pelo item Home.
     if (lgAndDown) close();
   };
 

@@ -130,7 +130,7 @@ function LogoField({
               type="button"
               onClick={() => onChange("")}
               title="Remover"
-              className="absolute right-1 top-1 grid size-6 place-items-center rounded-full bg-gray-900/70 text-white"
+              className="absolute right-1 top-1 grid size-6 place-items-center rounded-lg bg-gray-900/70 text-white"
             >
               <XMarkIcon className="size-3.5" />
             </button>
@@ -237,7 +237,7 @@ export function DesignSystemEditor({ brandId, isOpen, close }: Props) {
                   onClick={close}
                   variant="flat"
                   isIcon
-                  className="size-8 rounded-full"
+                  className="size-8 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />

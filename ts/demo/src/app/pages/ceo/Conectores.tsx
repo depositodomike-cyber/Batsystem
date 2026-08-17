@@ -258,7 +258,7 @@ export default function Conectores() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar por nome, objetivo ou permissão…"
-                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-full border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
               />
               {query && (
                 <button
@@ -273,7 +273,7 @@ export default function Conectores() {
             </div>
 
             {/* Filtro de status segmentado */}
-            <div className="dark:bg-dark-700 inline-flex shrink-0 self-start rounded-full bg-gray-200/70 p-1 lg:self-auto">
+            <div className="dark:bg-dark-700 inline-flex shrink-0 self-start rounded-lg bg-gray-200/70 p-1 lg:self-auto">
               {(
                 [
                   { id: "all", label: "Todas" },
@@ -286,7 +286,7 @@ export default function Conectores() {
                   type="button"
                   onClick={() => setStatus(opt.id)}
                   className={clsx(
-                    "rounded-full px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+                    "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
                     status === opt.id
                       ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                       : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
@@ -367,7 +367,7 @@ export default function Conectores() {
             </p>
             <Button
               variant="outlined"
-              className="mt-4 rounded-full"
+              className="mt-4 rounded-lg"
               onClick={() => {
                 setQuery("");
                 setStatus("all");
@@ -436,7 +436,7 @@ function CategoryPill({
       type="button"
       onClick={onClick}
       className={clsx(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs-plus font-medium whitespace-nowrap transition-colors",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs-plus font-medium whitespace-nowrap transition-colors",
         active
           ? "border-primary-600 bg-primary-600 text-white dark:border-primary-500 dark:bg-primary-500"
           : "dark:border-dark-500 dark:bg-dark-700 dark:text-dark-200 dark:hover:border-dark-400 border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-800",
@@ -445,7 +445,7 @@ function CategoryPill({
       {label}
       <span
         className={clsx(
-          "rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
+          "rounded-lg px-1.5 text-[10px] font-semibold tabular-nums",
           active
             ? "bg-white/20 text-white"
             : "dark:bg-dark-500 dark:text-dark-200 bg-gray-100 text-gray-500",
@@ -635,7 +635,7 @@ function ConnectorDrawer({
                   onClick={close}
                   variant="flat"
                   isIcon
-                  className="size-8 shrink-0 rounded-full"
+                  className="size-8 shrink-0 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />
@@ -687,7 +687,7 @@ function ConnectorDrawer({
                   <ul className="mt-3 space-y-2">
                     {connector.permissions.map((p) => (
                       <li key={p} className="flex items-start gap-2.5">
-                        <span className="dark:bg-dark-600 mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary-50 dark:bg-primary-500/15">
+                        <span className="dark:bg-dark-600 mt-0.5 grid size-5 shrink-0 place-items-center rounded-lg bg-primary-50 dark:bg-primary-500/15">
                           <CheckIcon className="size-3.5 text-primary-600 dark:text-primary-400" />
                         </span>
                         <span className="dark:text-dark-100 text-sm text-gray-600">{p}</span>

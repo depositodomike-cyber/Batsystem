@@ -303,7 +303,7 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <Button onClick={togglePlay} variant="outlined" isIcon className="size-9 rounded-full">
+                        <Button onClick={togglePlay} variant="outlined" isIcon className="size-9 rounded-lg">
                           {playing ? <PauseIcon className="size-5" /> : <PlayIcon className="size-5" />}
                         </Button>
                         <span className="dark:text-dark-200 tabular-nums text-xs text-gray-500">
@@ -388,7 +388,7 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                         {texto.trim() && (
                           <div className="mt-1.5 flex gap-1.5">
                             {POSICOES.map(([id, nome]) => (
-                              <button key={id} type="button" onClick={() => setTextoPos(id)} className={clsx("rounded-full border px-2.5 py-0.5 text-xs transition-colors", textoPos === id ? "border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400" : "dark:border-dark-500 dark:text-dark-200 border-gray-300 text-gray-500")}>
+                              <button key={id} type="button" onClick={() => setTextoPos(id)} className={clsx("rounded-lg border px-2.5 py-0.5 text-xs transition-colors", textoPos === id ? "border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400" : "dark:border-dark-500 dark:text-dark-200 border-gray-300 text-gray-500")}>
                                 {nome}
                               </button>
                             ))}
@@ -404,7 +404,7 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                             {fase === "carregando" ? "Carregando o editor de vídeo…" : `Renderizando… ${Math.round(progresso * 100)}%`}
                           </div>
                           <div className="dark:bg-dark-500 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                            <div className="bg-primary-600 dark:bg-primary-500 h-full rounded-full transition-[width]" style={{ width: fase === "carregando" ? "15%" : `${Math.round(progresso * 100)}%` }} />
+                            <div className="bg-primary-600 dark:bg-primary-500 h-full rounded-lg transition-[width]" style={{ width: fase === "carregando" ? "15%" : `${Math.round(progresso * 100)}%` }} />
                           </div>
                         </div>
                       ) : resultUrl ? (

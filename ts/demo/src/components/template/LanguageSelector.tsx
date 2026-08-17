@@ -50,7 +50,7 @@ const LanguageSelector = () => {
           as={Button}
           variant="flat"
           isIcon
-          className="size-9 rounded-full"
+          className="size-9 rounded-lg"
         >
           {loading ? (
             <Spinner color="primary" className="size-5" />

@@ -85,7 +85,7 @@ export function PageTitle({
             isIcon
             aria-label={helpLabel}
             title={helpLabel}
-            className="pointer-events-auto size-6 shrink-0 rounded-full text-gray-400 hover:text-primary-600 dark:text-dark-300 dark:hover:text-primary-400"
+            className="pointer-events-auto size-6 shrink-0 rounded-lg text-gray-400 hover:text-primary-600 dark:text-dark-300 dark:hover:text-primary-400"
           >
             <QuestionMarkCircleIcon className="size-5" />
           </Button>
@@ -163,7 +163,7 @@ function HelpModal({
                 variant="flat"
                 isIcon
                 aria-label="Fechar"
-                className="size-7 rounded-full ltr:-mr-1.5 rtl:-ml-1.5"
+                className="size-7 rounded-lg ltr:-mr-1.5 rtl:-ml-1.5"
               >
                 <XMarkIcon className="size-4.5" />
               </Button>

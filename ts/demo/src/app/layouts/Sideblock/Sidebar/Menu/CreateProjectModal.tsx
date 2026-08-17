@@ -205,7 +205,7 @@ function CreateProjectForm({
           onClick={close}
           isIcon
           variant="flat"
-          className="size-8 shrink-0 rounded-full"
+          className="size-8 shrink-0 rounded-lg"
         >
           <XMarkIcon className="size-5" />
         </Button>

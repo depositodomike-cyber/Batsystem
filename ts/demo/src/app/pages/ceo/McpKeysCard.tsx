@@ -243,7 +243,7 @@ export function McpKeysCard() {
                       variant="flat"
                       color="error"
                       isIcon
-                      className="size-7 rounded-full"
+                      className="size-7 rounded-lg"
                       aria-label={`Revogar chave ${k.nome}`}
                       onClick={() => onRevoke(k)}
                     >

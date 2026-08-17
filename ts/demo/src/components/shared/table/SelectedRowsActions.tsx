@@ -66,7 +66,7 @@ export function SelectedRowsActions({
         <div className="flex space-x-1.5">
           <Button
             onClick={handleDeleteRows}
-            className="text-xs-plus w-7 gap-1.5 rounded-full px-3 py-1.5 sm:w-auto sm:rounded-sm"
+            className="text-xs-plus w-7 gap-1.5 rounded-lg px-3 py-1.5 sm:w-auto sm:rounded-sm"
             color="error"
             disabled={deleteLoading || selectedRows.length <= 0}
           >
@@ -84,7 +84,7 @@ export function SelectedRowsActions({
           </Button>
           <Button
             onClick={() => table.resetRowSelection()}
-            className="text-xs-plus w-7 gap-1.5 rounded-full px-3 py-1.5 sm:w-auto sm:rounded-sm"
+            className="text-xs-plus w-7 gap-1.5 rounded-lg px-3 py-1.5 sm:w-auto sm:rounded-sm"
           >
             <ArrowUturnLeftIcon className="size-3.5 shrink-0" />
             <span className="max-sm:hidden">Cancel</span>
@@ -92,7 +92,7 @@ export function SelectedRowsActions({
           <Menu as="div" className="relative inline-block text-left">
             <MenuButton
               as={Button}
-              className="text-xs-plus w-7 gap-1.5 rounded-full px-3 py-1.5 sm:w-auto sm:rounded-sm"
+              className="text-xs-plus w-7 gap-1.5 rounded-lg px-3 py-1.5 sm:w-auto sm:rounded-sm"
             >
               <EllipsisHorizontalIcon className="size-4 shrink-0" />
               <span className="max-sm:hidden"> More</span>{" "}

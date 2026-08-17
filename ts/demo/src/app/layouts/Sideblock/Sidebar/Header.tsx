@@ -20,7 +20,7 @@ export function Header() {
           onClick={close}
           variant="flat"
           isIcon
-          className="size-6 rounded-full"
+          className="size-6 rounded-lg"
         >
           <ChevronLeftIcon className="size-5 rtl:rotate-180" />
         </Button>

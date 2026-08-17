@@ -35,7 +35,7 @@ export function PromptBar({
   };
 
   return (
-    <div className="dark:border-dark-500 dark:bg-dark-750 border-t border-gray-200 bg-white p-4">
+    <div className="shrink-0 p-4">
       <div className="dark:border-dark-500 dark:bg-dark-700 focus-within:border-primary-400 mx-auto flex max-w-3xl flex-col rounded-lg border border-gray-300 bg-white transition-colors">
         <MemoriaTextarea
           value={value}
@@ -45,7 +45,7 @@ export function PromptBar({
           placeholder={placeholder}
           className="dark:text-dark-100 dark:placeholder:text-dark-300 w-full resize-none bg-transparent px-4 py-3 text-sm text-gray-800 outline-none placeholder:text-gray-400"
         />
-        <div className="dark:border-dark-500 flex items-center gap-2 border-t border-gray-200 px-2 py-2">
+        <div className="flex items-center gap-2 px-2 py-2">
           <span className="dark:text-dark-400 ml-2 text-xs text-gray-500">
             → {hint}
           </span>
@@ -57,7 +57,7 @@ export function PromptBar({
               type="button"
               onClick={submit}
               disabled={!value.trim()}
-              className="bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 dark:disabled:bg-dark-500 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:text-gray-400"
+              className="bg-primary-500 hover:bg-primary-600 disabled:bg-gray-200 dark:disabled:bg-dark-500 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:text-gray-400"
             >
               <PaperAirplaneIcon className="size-3.5" />
               Enviar

@@ -563,25 +563,38 @@ enum MensagemRole {
   assistant
 }
 
-/// Uma conversa de chat com um squad (ou um agente específico).
+enum ConversaOrigem {
+  prompt
+  squad
+}
+
+/// Uma conversa: prompt da Topbar (`origem = prompt`) ou chat de squad.
 model Conversa {
-  id           String   @id @default(cuid())
+  id           String         @id @default(cuid())
   empresaId    String
   usuarioId    String
-  /// Código do squad (Squad.id) consultado nesta conversa.
-  squadId      String
+  origem       ConversaOrigem @default(squad)
+  /// Código do squad (Squad.id). Nulo nas conversas do Prompt.
+  squadId      String?
   /// Agente específico (SquadAgent.id), quando a conversa é com um único agente.
   agentId      String?
+  /// Modo do Prompt (`vault` | `web` | `auto`). Nulo nos chats de squad.
+  modo         String?
+  /// Repositório (contexto) em que a conversa foi gerada. Isola o histórico
+  /// entre repositórios e, por consequência, entre organizações.
+  repositorioId String?
   /// Título exibido no histórico (derivado da 1ª mensagem do usuário).
   titulo       String
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  criadoEm     DateTime       @default(now())
+  atualizadoEm DateTime       @updatedAt
 
   empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   mensagens Mensagem[]
 
   @@index([empresaId, usuarioId, atualizadoEm])
+  @@index([empresaId, usuarioId, origem, atualizadoEm])
+  @@index([empresaId, usuarioId, repositorioId, origem, atualizadoEm], map: "conversas_repo_origem_idx")
   @@map("conversas")
 }
 
@@ -591,6 +604,8 @@ model Mensagem {
   conversaId String
   role       MensagemRole
   conteudo   String
+  /// Fontes/origem do turno do Prompt (`{ fontes, origem }`). Nulo no squad.
+  meta       Json?
   criadoEm   DateTime     @default(now())
 
   conversa Conversa @relation(fields: [conversaId], references: [id], onDelete: Cascade)

@@ -70,7 +70,7 @@ export function AgrupamentosGroup({ product }: { product: string }) {
               aria-label={t("sidebar.createGroup")}
               title={t("sidebar.createGroup")}
               className={clsx(
-                "-mr-1 grid size-5 shrink-0 place-items-center rounded-full text-gray-500 outline-hidden",
+                "-mr-1 grid size-5 shrink-0 place-items-center rounded-lg text-gray-500 outline-hidden",
                 DISABLED_MENU_CLASS,
               )}
             >
@@ -81,7 +81,7 @@ export function AgrupamentosGroup({ product }: { product: string }) {
               onClick={openCreate}
               aria-label={t("sidebar.createGroup")}
               title={t("sidebar.createGroup")}
-              className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900"
+              className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900"
             >
               <PlusIcon className="size-4" />
             </button>

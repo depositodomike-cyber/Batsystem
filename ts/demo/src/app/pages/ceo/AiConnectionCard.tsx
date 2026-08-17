@@ -414,7 +414,7 @@ function KeyMenu({ onRemove }: { onRemove: () => void }) {
     <Menu as="div" className="relative shrink-0">
       <MenuButton
         aria-label="Ações da chave"
-        className="dark:text-dark-300 dark:hover:bg-dark-500 dark:hover:text-dark-100 grid size-7 place-items-center rounded-md text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+        className="dark:text-dark-300 dark:hover:bg-dark-500 dark:hover:text-dark-100 grid size-7 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
       >
         <EllipsisVerticalIcon className="size-5" />
       </MenuButton>
@@ -1061,7 +1061,7 @@ function ModelRow({
         variant="flat"
         color="error"
         isIcon
-        className="size-7 rounded-full"
+        className="size-7 rounded-lg"
         aria-label={`Remover ${titulo}`}
         onClick={() => onRemove(conn)}
       >

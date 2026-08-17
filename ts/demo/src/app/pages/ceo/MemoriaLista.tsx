@@ -1,6 +1,6 @@
 // Import Dependencies
 import { useCallback, useEffect, useMemo, useState, type ElementType } from "react";
-import { Link, useLocation } from "react-router";
+import { useLocation } from "react-router";
 import { toast } from "sonner";
 import clsx from "clsx";
 import {
@@ -15,7 +15,6 @@ import {
   MicrophoneIcon,
   PhotoIcon,
   PresentationChartBarIcon,
-  ShareIcon,
   SpeakerWaveIcon,
   UserGroupIcon,
   UserIcon,
@@ -27,10 +26,10 @@ import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { Badge, Button, Spinner } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
-import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 import { syncVault } from "@/services/api/vault";
 import { NotaMemoriaModal } from "./NotaMemoriaModal";
+import { RepositorioViewSelect } from "./RepositorioViewSelect";
 import {
   escolherPastaContexto,
   filtrarInventario,
@@ -97,7 +96,6 @@ export default function MemoriaLista() {
   // `null` = a pasta ainda não foi lida nesta sessão (empty state de escolha);
   // `[]` = pasta lida e sem nenhum .md.
   const [itens, setItens] = useState<ItemContexto[] | null>(null);
-  const [nomePasta, setNomePasta] = useState("");
   const [lendo, setLendo] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [pasta, setPasta] = useState<string | null>(null);
@@ -129,7 +127,6 @@ export default function MemoriaLista() {
       try {
         const arquivos = await lerArquivosMd(handle);
         setItens(montarInventario(arquivos));
-        setNomePasta(handle.name);
         if (arquivos.length && opts?.indexar) void indexarNaIa(arquivos);
       } catch {
         toast("Falha ao ler a pasta", {
@@ -187,7 +184,6 @@ export default function MemoriaLista() {
         return;
       }
       setItens(null);
-      setNomePasta("");
       setPasta(null);
       setBusca("");
       setNota(null);
@@ -221,53 +217,34 @@ export default function MemoriaLista() {
             <PageTitle
               help={{
                 description: (
-                  <>
-                    <p>
-                      Esta é a <strong>lista do Repositório</strong>: todos os arquivos{" "}
-                      <span className="font-mono">.md</span> da sua pasta — uploads,
-                      transcrições, atas, documentos gerados pela IA e notas dos
-                      agrupamentos.
-                    </p>
-                    <p>
-                      É o mesmo conteúdo do <strong>Grafo</strong>, sem a teia de
-                      conexões: filtre por pasta, busque por título, tipo ou tag e
-                      clique numa linha para ler e editar o arquivo.
-                    </p>
-                  </>
+                  <p>
+                    Esta é a lista do Repositório: todos os arquivos da sua
+                    pasta — uploads, transcrições, atas, documentos gerados
+                    pela IA e notas dos agrupamentos.
+                  </p>
                 ),
               }}
             >
               Repositório · Lista
             </PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-              {semPasta
-                ? "Escolha a pasta do Repositório para ver tudo o que já está nela."
-                : `${total} ${total === 1 ? "nota" : "notas"} em ${nomePasta || "sua pasta"} · a mesma base que alimenta a IA.`}
+              {total} {total === 1 ? "nota" : "notas"} em:{" "}
+              {repositorio?.nome ?? "—"}
             </p>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            {!isFeatureTemporarilyDisabled("memoryGraph") && (
-              <Button
-                component={Link}
-                to={`/${product.code}/memoria-grafo`}
-                variant="outlined"
-                className="h-10 gap-2 rounded-full px-4"
-              >
-                <ShareIcon className="size-4.5" />
-                Ver no grafo
-              </Button>
-            )}
+            <RepositorioViewSelect compact />
             <Button
               onClick={sincronizar}
               color="primary"
               disabled={ocupado}
-              className="h-10 gap-2 rounded-full px-4"
+              className="h-8 gap-1.5 px-3 text-xs"
             >
               {ocupado ? (
-                <Spinner className="size-4.5" />
+                <Spinner className="size-4" />
               ) : (
-                <ArrowPathIcon className="size-4.5" />
+                <ArrowPathIcon className="size-4" />
               )}
               Sincronizar
             </Button>
@@ -314,7 +291,7 @@ export default function MemoriaLista() {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar por título, tipo ou tag…"
-                  className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-full border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
+                  className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
                 />
                 {busca && (
                   <button
@@ -329,7 +306,7 @@ export default function MemoriaLista() {
               </div>
 
               {pastas.length > 0 && (
-                <div className="dark:bg-dark-700 inline-flex flex-wrap gap-1 rounded-full bg-gray-200/70 p-1">
+                <div className="dark:bg-dark-700 inline-flex flex-wrap gap-1 rounded-lg bg-gray-200/70 p-1">
                   <ChipPasta
                     ativo={pastaAtiva === null}
                     onClick={() => setPasta(null)}
@@ -424,7 +401,7 @@ function ChipPasta({
       onClick={onClick}
       aria-pressed={ativo}
       className={clsx(
-        "rounded-full px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+        "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
         ativo
           ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
           : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",

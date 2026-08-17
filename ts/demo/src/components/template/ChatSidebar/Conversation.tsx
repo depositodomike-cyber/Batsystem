@@ -37,7 +37,7 @@ export function Conversation({ item, onBack, className }: ConversationProps) {
           onClick={onBack}
           variant="flat"
           isIcon
-          className="size-7 shrink-0 rounded-full sm:hidden"
+          className="size-7 shrink-0 rounded-lg sm:hidden"
           aria-label="Voltar"
         >
           <ChevronLeftIcon className="size-5" />
@@ -128,14 +128,14 @@ export function Conversation({ item, onBack, className }: ConversationProps) {
                 ? `Enviar mensagem para #${item.name}`
                 : `Mensagem para ${item.name}`
             }
-            className="rounded-full"
+            className="rounded-lg"
             classNames={{ root: "flex-1" }}
           />
           <Button
             type="submit"
             isIcon
             color="primary"
-            className="size-9 shrink-0 rounded-full"
+            className="size-9 shrink-0 rounded-lg"
             aria-label="Enviar"
           >
             <PaperAirplaneIcon className="size-5" />

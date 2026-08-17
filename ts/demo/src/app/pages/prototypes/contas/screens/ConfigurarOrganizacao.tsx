@@ -3,9 +3,8 @@
  *
  * Fluxo próprio (não é “etapa 2” da criação de conta). Usada no cadastro após
  * a confirmação de e-mail e também em `?novo=1` (menu de perfil).
- * Cadastro (pessoal ou corporativo): entra direto no produto com a sessão
- * da conta/organização acabadas de criar.
- * Perfil (`novo=1`): → seletor com as organizações existentes.
+ * Nos dois casos entra direto no produto com a organização recém-criada
+ * já ativa — o menu de perfil troca de contexto, sem seletor intermediário.
  */
 
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -48,7 +47,7 @@ export default function ConfigurarOrganizacao() {
   } = useForm<OrganizacaoFormValues>({
     resolver: yupResolver(organizacaoSchema),
     defaultValues: {
-      tipoUso: "personal",
+      tipoUso: novaOrganizacao ? "organization" : "personal",
       nomeOrganizacao: "",
       emails: [],
     },
@@ -80,6 +79,13 @@ export default function ConfigurarOrganizacao() {
       },
     });
 
+    // Pelo perfil a conta já existe: não registrar de novo o mesmo e-mail.
+    if (novaOrganizacao) {
+      setEnviando(false);
+      navigate(HOME_PATH);
+      return;
+    }
+
     const sessao = await garantirSessaoBackend({
       nome: usuario.nome,
       email: usuario.email,
@@ -99,14 +105,7 @@ export default function ConfigurarOrganizacao() {
     }
 
     adoptSession(sessao.authToken, sessao.user);
-
-    // Cadastro: entra direto no produto (a organização/repositório padrão já
-    // ficaram ativos no reducer). Perfil (`?novo=1`): passa pelo seletor.
-    if (novaOrganizacao) {
-      navigate("../repositorios");
-    } else {
-      navigate(HOME_PATH);
-    }
+    navigate(HOME_PATH);
   };
 
   return (

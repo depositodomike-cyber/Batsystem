@@ -149,7 +149,7 @@ export function Notifications() {
         aria-label="Notifications"
         title="Notifications"
         className={clsx(
-          "relative flex size-9 items-center justify-center rounded-full outline-hidden",
+          "relative flex size-9 items-center justify-center rounded-lg outline-hidden",
           DISABLED_MENU_CLASS,
         )}
       >
@@ -184,7 +184,7 @@ export function Notifications() {
         as={Button}
         variant="flat"
         isIcon
-        className="relative size-9 rounded-full"
+        className="relative size-9 rounded-lg"
       >
         <AlarmIcon className="size-6 text-gray-900 dark:text-dark-100" />
         {notifications.length > 0 && (
@@ -228,7 +228,7 @@ export function Notifications() {
                   <Button
                     component={Link}
                     to="/settings/notifications"
-                    className="size-7 rounded-full ltr:-mr-1.5 rtl:-ml-1.5"
+                    className="size-7 rounded-lg ltr:-mr-1.5 rtl:-ml-1.5"
                     isIcon
                     variant="flat"
                     onClick={close}
@@ -391,7 +391,7 @@ function NotificationItem({ data, remove }: NotificationItemProps) {
         variant="flat"
         isIcon
         onClick={() => remove(data.id)}
-        className="size-7 rounded-full opacity-0 group-hover:opacity-100 ltr:-mr-2 rtl:-ml-2"
+        className="size-7 rounded-lg opacity-0 group-hover:opacity-100 ltr:-mr-2 rtl:-ml-2"
       >
         <ArchiveBoxXMarkIcon className="size-4" />
       </Button>

@@ -115,7 +115,7 @@ function SystemAreaLink({
         title={label}
         aria-label={label}
         className={clsx(
-          "dark:text-dark-200 grid size-9 place-items-center rounded-full text-gray-500 outline-hidden",
+          "dark:text-dark-200 grid size-9 place-items-center rounded-lg text-gray-500 outline-hidden",
           DISABLED_MENU_CLASS,
         )}
       >
@@ -131,7 +131,7 @@ function SystemAreaLink({
       aria-label={label}
       className={({ isActive }) =>
         clsx(
-          "grid size-9 place-items-center rounded-full outline-hidden transition-colors",
+          "grid size-9 place-items-center rounded-lg outline-hidden transition-colors",
           isActive
             ? "text-primary-600 dark:text-primary-400 bg-primary-600/10 dark:bg-primary-400/10"
             : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900",

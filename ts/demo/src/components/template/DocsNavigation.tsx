@@ -39,11 +39,11 @@ export function DocsNavigation({ prefix, items, title }: DocsNavigationProps) {
   if (!lgAndUp) {
     return (
       <>
-        <div className="fixed bottom-3 right-3 z-10 rounded-full bg-white dark:bg-dark-700">
+        <div className="fixed bottom-3 right-3 z-10 rounded-lg bg-white dark:bg-dark-700">
           <Button
             onClick={open}
             color="primary"
-            className="size-14 rounded-full"
+            className="size-14 rounded-lg"
             isIcon
           >
             <Bars2Icon className="size-7" />
@@ -61,7 +61,7 @@ export function DocsNavigation({ prefix, items, title }: DocsNavigationProps) {
                 onClick={close}
                 isIcon
                 variant="flat"
-                className="size-6 rounded-full"
+                className="size-6 rounded-lg"
               >
                 <XMarkIcon className="size-4.5" />
               </Button>

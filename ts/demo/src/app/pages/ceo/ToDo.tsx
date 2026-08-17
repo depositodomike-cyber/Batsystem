@@ -162,7 +162,7 @@ function QuadrosSidebar({ boards }: { boards: Board[] }) {
             onClick={open}
             variant="flat"
             isIcon
-            className="size-6 rounded-full"
+            className="size-6 rounded-lg"
             aria-label="Novo quadro"
             title="Novo quadro"
           >
@@ -192,7 +192,7 @@ function QuadrosSidebar({ boards }: { boards: Board[] }) {
                   )}
                   <span
                     className={clsx(
-                      "grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1 text-tiny font-medium",
+                      "grid h-5 min-w-5 shrink-0 place-items-center rounded-lg px-1 text-tiny font-medium",
                       ativo
                         ? "bg-primary-600/15 text-primary-600 dark:text-primary-400"
                         : "dark:bg-dark-600 dark:text-dark-200 bg-gray-100 text-gray-500",
@@ -480,7 +480,7 @@ function NovaAtividadeModal({
                   onClick={close}
                   variant="flat"
                   isIcon
-                  className="size-8 shrink-0 rounded-full"
+                  className="size-8 shrink-0 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />

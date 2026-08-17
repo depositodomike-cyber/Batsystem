@@ -18,6 +18,7 @@ export interface PromptResposta {
   resposta: string;
   fontes: Fonte[];
   origem: "vault" | "web";
+  conversaId?: string;
 }
 
 export interface PromptParams {
@@ -29,6 +30,10 @@ export interface PromptParams {
   referencia?: string;
   /** Turnos anteriores (continuação de conversa). */
   historico?: HistoricoTurno[];
+  /** Conversa persistida a continuar. */
+  conversaId?: string;
+  /** Repositório ativo — a conversa fica isolada neste contexto. */
+  repositorioId?: string;
 }
 
 export async function perguntarPromptApi(p: PromptParams): Promise<PromptResposta> {
@@ -41,6 +46,8 @@ export async function perguntarPromptApi(p: PromptParams): Promise<PromptRespost
     if (p.arquivo) fd.append("arquivo", p.arquivo);
     if (p.referencia) fd.append("referencia", p.referencia);
     if (p.historico?.length) fd.append("historico", JSON.stringify(p.historico));
+    if (p.conversaId) fd.append("conversaId", p.conversaId);
+    if (p.repositorioId) fd.append("repositorioId", p.repositorioId);
     const { data } = await axios.post<PromptResposta>("/ai/prompt", fd);
     return data;
   }
@@ -50,6 +57,8 @@ export async function perguntarPromptApi(p: PromptParams): Promise<PromptRespost
     modo: p.modo,
     ...(p.referencia ? { referencia: p.referencia } : {}),
     ...(p.historico?.length ? { historico: JSON.stringify(p.historico) } : {}),
+    ...(p.conversaId ? { conversaId: p.conversaId } : {}),
+    ...(p.repositorioId ? { repositorioId: p.repositorioId } : {}),
   });
   return data;
 }

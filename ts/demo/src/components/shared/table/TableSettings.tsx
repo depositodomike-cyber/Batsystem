@@ -121,7 +121,7 @@ export function TableSettings({ table }: { table: Table<any> }) {
                   <Button
                     onClick={() => column.pin(false)}
                     variant="flat"
-                    className="size-6 rounded-full"
+                    className="size-6 rounded-lg"
                     isIcon
                     title="UnPin Column"
                     aria-label="UnPin Column"
@@ -135,7 +135,7 @@ export function TableSettings({ table }: { table: Table<any> }) {
                         column.pin("left");
                       }}
                       variant="flat"
-                      className="size-6 rounded-full rtl:rotate-180"
+                      className="size-6 rounded-lg rtl:rotate-180"
                       isIcon
                       title="Pin Left"
                       aria-label="Pin Left"
@@ -148,7 +148,7 @@ export function TableSettings({ table }: { table: Table<any> }) {
                         column.pin("right");
                       }}
                       variant="flat"
-                      className="size-6 -rotate-90 rounded-full"
+                      className="size-6 -rotate-90 rounded-lg"
                       isIcon
                       title="Pin Right"
                       aria-label="Pin Right"

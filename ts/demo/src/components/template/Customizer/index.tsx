@@ -58,7 +58,7 @@ export default function Customizer() {
         onClick={open}
         color="primary"
         isIcon
-        className="fixed top-1/2 z-50 size-9 rounded-full ltr:right-0 ltr:rounded-r-none rtl:left-0 rtl:rounded-l-none"
+        className="fixed top-1/2 z-50 size-9 rounded-lg ltr:right-0 ltr:rounded-r-none rtl:left-0 rtl:rounded-l-none"
       >
         <SettingIcon
           className="size-6 animate-spin"
@@ -111,7 +111,7 @@ function CustomizerContent({ close }: { close: () => void }) {
           onClick={close}
           variant="flat"
           isIcon
-          className="size-6 rounded-full ltr:-mr-1 rtl:-ml-1"
+          className="size-6 rounded-lg ltr:-mr-1 rtl:-ml-1"
         >
           <XMarkIcon className="size-4" />
         </Button>
@@ -311,7 +311,7 @@ function CustomizerContent({ close }: { close: () => void }) {
                           />
                         ))}
                       </div>
-                      <div className="dark:bg-dark-400 h-1 rounded-full bg-gray-400" />
+                      <div className="dark:bg-dark-400 h-1 rounded-lg bg-gray-400" />
                     </div>
                     <div className="flex-1">
                       <div className="dark:border-dark-600 dark:bg-dark-700 flex h-3 w-full items-center justify-end gap-1 border-l border-gray-300 bg-gray-200 px-1.5">
@@ -338,7 +338,7 @@ function CustomizerContent({ close }: { close: () => void }) {
                   >
                     <div className="dark:bg-dark-700 flex h-24 w-[30%] flex-col justify-between bg-gray-200 px-1 py-1.5">
                       <div className="space-y-2">
-                        <div className="dark:bg-dark-400 h-1 rounded-full bg-gray-400" />
+                        <div className="dark:bg-dark-400 h-1 rounded-lg bg-gray-400" />
                         <div className="space-y-1">
                           {range(1, 5).map((i) => (
                             <div
@@ -348,7 +348,7 @@ function CustomizerContent({ close }: { close: () => void }) {
                           ))}
                         </div>
                       </div>
-                      <div className="dark:bg-dark-400 h-1 rounded-full bg-gray-400" />
+                      <div className="dark:bg-dark-400 h-1 rounded-lg bg-gray-400" />
                     </div>
                     <div className="flex-1">
                       <div className="dark:border-dark-600 dark:bg-dark-700 flex h-3 w-full items-center justify-end gap-1 border-l border-gray-300 bg-gray-200 px-1.5">

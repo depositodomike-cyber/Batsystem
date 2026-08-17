@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from "react";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { ChatsProvider } from "@/app/contexts/chats/Provider";
+import { ConversasProvider } from "@/app/contexts/conversas/Provider";
 import { ProjectsProvider } from "@/app/contexts/projects/Provider";
 import { SquadsProvider } from "@/app/contexts/squads/Provider";
 import { DocumentsProvider } from "@/app/contexts/documents/Provider";
@@ -30,6 +31,7 @@ export function AccountScopedProviders({ children }: { children: ReactNode }) {
     <ProjectsProvider key={accountKey}>
       <SquadsProvider>
         <ChatsProvider>
+          <ConversasProvider>
           <DocumentsProvider>
             <LikesProvider>
               <CommentsProvider>
@@ -43,6 +45,7 @@ export function AccountScopedProviders({ children }: { children: ReactNode }) {
               </CommentsProvider>
             </LikesProvider>
           </DocumentsProvider>
+          </ConversasProvider>
         </ChatsProvider>
       </SquadsProvider>
     </ProjectsProvider>

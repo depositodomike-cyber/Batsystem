@@ -29,7 +29,7 @@ export function PaginationSection({ table }: { table: Table<any> }) {
           }}
           classNames={{
             root: "w-fit",
-            select: "h-7 rounded-full py-1 text-xs ltr:pr-7! rtl:pl-7!",
+            select: "h-7 rounded-lg py-1 text-xs ltr:pr-7! rtl:pl-7!",
           }}
         />
         <span>entries</span>

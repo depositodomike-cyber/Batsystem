@@ -809,7 +809,7 @@ function GravarMemoriaModal({
                 onClick={close}
                 variant="flat"
                 isIcon
-                className="size-8 shrink-0 rounded-full"
+                className="size-8 shrink-0 rounded-lg"
                 aria-label="Fechar"
               >
                 <XMarkIcon className="size-5" />

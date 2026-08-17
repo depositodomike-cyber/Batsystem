@@ -35,7 +35,7 @@ export function ChatSidebar() {
         onClick={open}
         variant="flat"
         isIcon
-        className="dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 relative size-9 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+        className="dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 relative size-9 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900"
         aria-label="Chat"
         title="Chat"
       >

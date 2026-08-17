@@ -119,7 +119,7 @@ function CategoryBar({
                 type="button"
                 onClick={() => onCategoryChange(cat)}
                 className={clsx(
-                  "rounded-full px-3 py-1.5 text-xs-plus font-medium transition-colors",
+                  "rounded-lg px-3 py-1.5 text-xs-plus font-medium transition-colors",
                   isActive
                     ? "bg-primary-600 text-white"
                     : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",

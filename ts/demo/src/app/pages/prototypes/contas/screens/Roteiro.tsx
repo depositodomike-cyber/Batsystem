@@ -46,7 +46,7 @@ const TELAS = [
     numero: 4,
     Icon: CircleStackIcon,
     titulo: "Seletor de contexto / organização",
-    desc: "Usado ao criar organização pelo perfil — não faz parte do cadastro.",
+    desc: "Referência do seletor — não faz parte do cadastro nem da criação pelo perfil.",
   },
 ] as const;
 

@@ -372,7 +372,7 @@ function CardFooter({
   const respondeu = liked || disliked;
   const muted = onLight ? "text-gray-400 dark:text-dark-300" : "text-white/75";
   const iconBtn = clsx(
-    "grid size-7 place-items-center rounded-md transition-colors",
+    "grid size-7 place-items-center rounded-lg transition-colors",
     onLight
       ? "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-dark-300 dark:hover:bg-dark-500"
       : "text-white/75 hover:bg-white/15 hover:text-white",
@@ -445,7 +445,7 @@ function ActionsMenu({ onLight = true }: { onLight?: boolean }) {
       <MenuButton
         aria-label="Ações do insight"
         className={clsx(
-          "grid size-7 place-items-center rounded-md transition-colors",
+          "grid size-7 place-items-center rounded-lg transition-colors",
           onLight
             ? "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-dark-300 dark:hover:bg-dark-500"
             : "text-white/80 hover:bg-white/15 hover:text-white",
@@ -649,7 +649,7 @@ function ActionDialog({
                       type="button"
                       onClick={close}
                       aria-label="Fechar"
-                      className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-8 shrink-0 place-items-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                      className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-8 shrink-0 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                     >
                       <XMarkIcon className="size-5" />
                     </button>
@@ -790,7 +790,7 @@ function MeetingForm({
           type="button"
           onClick={onCancel}
           aria-label="Fechar"
-          className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-8 shrink-0 place-items-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          className="dark:text-dark-300 dark:hover:bg-dark-500 grid size-8 shrink-0 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
         >
           <XMarkIcon className="size-5" />
         </button>
@@ -890,7 +890,7 @@ function MeetingForm({
                   </span>
                   <span
                     className={clsx(
-                      "grid size-5 shrink-0 place-items-center rounded-md border transition-colors",
+                      "grid size-5 shrink-0 place-items-center rounded-lg border transition-colors",
                       marcado
                         ? "border-primary-600 bg-primary-600 text-white dark:border-primary-500 dark:bg-primary-500"
                         : "dark:border-dark-400 border-gray-300",

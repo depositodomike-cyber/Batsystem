@@ -506,7 +506,7 @@ export default function Email() {
                 type="button"
                 onClick={() => setFiltro(f.id)}
                 className={clsx(
-                  "rounded-full px-3 py-1.5 text-xs-plus font-medium transition-colors",
+                  "rounded-lg px-3 py-1.5 text-xs-plus font-medium transition-colors",
                   filtro === f.id
                     ? "bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400"
                     : "dark:text-dark-300 dark:hover:bg-dark-600 text-gray-500 hover:bg-gray-100",
@@ -520,7 +520,7 @@ export default function Email() {
                 value={marcador}
                 onChange={(e) => setMarcador(e.target.value)}
                 aria-label="Filtrar por marcador"
-                className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 rounded-full border border-gray-300 bg-white py-1.5 ps-3 pe-8 text-xs-plus text-gray-600"
+                className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 rounded-lg border border-gray-300 bg-white py-1.5 ps-3 pe-8 text-xs-plus text-gray-600"
               >
                 <option value="">Todos os marcadores</option>
                 {marcadores.map((m) => (
@@ -671,7 +671,7 @@ export default function Email() {
                       variant="flat"
                       isIcon
                       onClick={() => setAbertoId(null)}
-                      className="size-8 shrink-0 rounded-full lg:hidden"
+                      className="size-8 shrink-0 rounded-lg lg:hidden"
                       aria-label="Voltar para a lista"
                     >
                       <ArrowLeftIcon className="size-5" />
@@ -1078,7 +1078,7 @@ function ModalShell({
                   onClick={close}
                   variant="flat"
                   isIcon
-                  className="size-8 shrink-0 rounded-full"
+                  className="size-8 shrink-0 rounded-lg"
                   aria-label="Fechar"
                 >
                   <XMarkIcon className="size-5" />

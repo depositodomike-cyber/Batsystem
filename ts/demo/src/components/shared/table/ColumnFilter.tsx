@@ -44,7 +44,7 @@ export function ColumnFilter({ column }: { column: Column<any> }) {
             columnFilterValue ? (
               <Button
                 onClick={() => column.setFilterValue([null, null])}
-                className="pointer-events-auto size-5 rounded-full"
+                className="pointer-events-auto size-5 rounded-lg"
                 isIcon
                 variant="flat"
               >

@@ -190,8 +190,8 @@ export default function ChatDetail() {
 
   return (
     <Page title={`${chat.title} · ${product.name}`}>
-      <div className="flex h-full min-h-0 flex-col">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div className="flex h-[calc(100dvh-65px)] min-h-0 flex-col overflow-hidden">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="transition-content mx-auto w-full max-w-3xl px-(--margin-x) py-6">
             <div className="flex flex-col gap-1">
               <p className="text-primary-600 dark:text-primary-400 text-tiny-plus font-semibold tracking-wider uppercase">

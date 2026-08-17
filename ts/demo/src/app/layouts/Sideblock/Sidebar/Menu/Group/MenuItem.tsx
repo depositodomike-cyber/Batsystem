@@ -27,6 +27,7 @@ const ITEM_IDLE_CLASS =
 export function MenuItem({
   data,
   onSelect,
+  active: activeOverride,
 }: {
   data: NavigationTree;
   /**
@@ -34,6 +35,8 @@ export function MenuItem({
    * vez de navegar — vira botão e nunca fica com estado "ativo" de rota.
    */
   onSelect?: () => void;
+  /** Força o estado ativo (ex.: Home cobre Grafo e Lista). */
+  active?: boolean;
 }) {
   const { icon, path, id, transKey, title } = data;
   const { lgAndDown } = useBreakpointsContext();
@@ -117,16 +120,17 @@ export function MenuItem({
         <NavLink
           to={path}
           onClick={handleMenuItemClick}
-          className={({ isActive }) =>
-            clsx(
+          className={({ isActive }) => {
+            const on = activeOverride ?? isActive;
+            return clsx(
               ITEM_CLASS,
-              isActive
+              on
                 ? "text-primary-600 dark:text-primary-400"
                 : ITEM_IDLE_CLASS,
-            )
-          }
+            );
+          }}
         >
-          {({ isActive }) => body(isActive)}
+          {({ isActive }) => body(activeOverride ?? isActive)}
         </NavLink>
       )}
     </div>

@@ -16,6 +16,12 @@ export function ChecklistSenha({
   mostrarErros: boolean;
 }) {
   const requisitos = avaliarRequisitosSenha(senha);
+  const faltaRequisito = requisitos.some((requisito) => !requisito.atendido);
+
+  // A lista só interessa enquanto falta algo: some quando a senha cumpre todos
+  // os requisitos e fica fora do caminho enquanto o campo nem foi preenchido
+  // (aí ela volta no submit, quando os erros precisam aparecer).
+  if (!faltaRequisito || (!senha && !mostrarErros)) return null;
 
   return (
     <ul

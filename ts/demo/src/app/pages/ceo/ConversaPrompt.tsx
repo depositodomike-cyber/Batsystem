@@ -90,7 +90,7 @@ export default function ConversaPrompt() {
   const { refresh } = useConversasContext();
   const repositorioId = useRepositorioAtivo()?.id ?? undefined;
 
-  const [titulo, setTitulo] = useState("Nova pesquisa");
+  const [titulo, setTitulo] = useState("Nova conversa");
   const [modo, setModo] = useState<ModoBusca>("vault");
   const [messages, setMessages] = useState<ConversaMessage[]>([]);
   const [loading, setLoading] = useState(!!conversaId);
@@ -101,7 +101,7 @@ export default function ConversaPrompt() {
   useEffect(() => {
     setId(conversaId ?? null);
     if (!conversaId) {
-      setTitulo("Nova pesquisa");
+      setTitulo("Nova conversa");
       setMessages([]);
       setModo("vault");
       setLoading(false);
@@ -224,7 +224,7 @@ export default function ConversaPrompt() {
 
   return (
     <Page title={`${titulo} · ${product.name}`}>
-      <div className="flex h-[calc(100dvh-65px)] min-h-0 flex-col overflow-hidden">
+      <div className="flex h-[calc(100dvh-var(--header-h))] min-h-0 flex-col overflow-hidden">
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="transition-content mx-auto w-full max-w-3xl px-(--margin-x) py-6">
             <PageTitle

@@ -20,7 +20,10 @@ export function MinimizedDock() {
   if (minimized.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pb-3">
+    // `pe-*` abre espaço para a bolinha do assistente (canto inferior direito,
+    // 76px do fundo): sem isso os chips passam sob ela e o "fechar" fica
+    // inalcançável, porque a bolinha está numa camada acima.
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-center px-4 pe-24 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pe-4 sm:pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
       <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-2">
         {minimized.map(({ id, Icon, tint }) => {
           const title = aiFunctionLabel(id);
@@ -36,7 +39,7 @@ export function MinimizedDock() {
                 title={t("ai.restore", { title })}
               >
                 <Icon className={clsx("size-4 shrink-0", tint)} />
-                <span className="max-w-[11rem] truncate text-xs-plus font-medium">
+                <span className="text-xs-plus max-w-[11rem] truncate font-medium">
                   {title}
                 </span>
               </button>

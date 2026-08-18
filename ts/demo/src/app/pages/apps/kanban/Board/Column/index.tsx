@@ -202,7 +202,7 @@ export function Column({ data, tasks }: ColumnProps) {
       <div
         ref={columnRef}
         className={clsx(
-          "relative flex max-h-full w-72 shrink-0 flex-col rounded-lg",
+          "relative flex max-h-full w-[85vw] max-w-72 shrink-0 flex-col rounded-lg sm:w-72",
           colDraggableState.type === "dragging" && "opacity-60",
         )}
       >

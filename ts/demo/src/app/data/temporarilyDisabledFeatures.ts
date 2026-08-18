@@ -36,9 +36,9 @@ export const TEMPORARILY_DISABLED: Record<
   TemporarilyDisabledFeature,
   boolean
 > = {
-  // false = tela do AI Studio acessível; funções individuais seguem
-  // `AI_STUDIO_ENABLED_FUNCTION_IDS` em ia-functions.ts (hoje só dashboard).
-  aiStudio: false,
+  // true = AI Studio inteiro inacessível (grade opaca + modal "Em breve"),
+  // incluindo "Criar Dashboard". A saída do modal leva ao Repositório.
+  aiStudio: true,
   squads: true,
   groups: true,
   history: false,
@@ -55,7 +55,10 @@ export const TEMPORARILY_DISABLED: Record<
   settingsMemory: false,
   memoryUploadAudio: true,
   memoryUploadTranscript: true,
-  memoryGraph: false,
+  // Grafo desabilitado: o item segue visível no menu, apenas sem clique.
+  // Com esta flag ligada, o modal do AI Studio aponta para a LISTA do
+  // Repositório (`memoria-lista`) em vez do grafo — ver `grafoPath` em Ia.tsx.
+  memoryGraph: true,
   rulesCorporatePin: true,
   legacySignup: true,
   legacyOnboarding: true,

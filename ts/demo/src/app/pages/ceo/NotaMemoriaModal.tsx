@@ -20,7 +20,11 @@ import { toast } from "sonner";
 import { Button, Spinner } from "@/components/ui";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { MarkdownView } from "./MarkdownView";
-import { lerNotaMemoria, salvarNotaMemoria, type VaultFalha } from "@/utils/memoriaVault";
+import {
+  lerNotaMemoria,
+  salvarNotaMemoria,
+  type VaultFalha,
+} from "@/utils/memoriaVault";
 import { syncVaultBatch } from "@/services/api/vault";
 
 // ----------------------------------------------------------------------
@@ -41,11 +45,13 @@ interface Props {
 }
 
 const MOTIVO: Record<VaultFalha, string> = {
-  "no-folder": "Nenhuma pasta do Repositório selecionada. Use “Sincronizar” para escolher a pasta.",
+  "no-folder":
+    "Nenhuma pasta do Repositório selecionada. Use “Sincronizar” para escolher a pasta.",
   denied: "Permissão negada para acessar a pasta do Repositório.",
   unsupported:
     "Este navegador abre o Repositório como cópia somente leitura. Para editar, ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
-  "not-found": "Arquivo não encontrado na pasta. Sincronize o Repositório e tente de novo.",
+  "not-found":
+    "Arquivo não encontrado na pasta. Sincronize o Repositório e tente de novo.",
   error: "Não foi possível gravar o arquivo.",
 };
 
@@ -54,16 +60,27 @@ function tituloDoMd(texto: string, fallback: string): string {
   const fm = texto.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   const m =
     fm &&
-    (fm[1].match(/^\s*t[íi]tulo\s*:\s*(.+)$/im) || fm[1].match(/^\s*title\s*:\s*(.+)$/im));
+    (fm[1].match(/^\s*t[íi]tulo\s*:\s*(.+)$/im) ||
+      fm[1].match(/^\s*title\s*:\s*(.+)$/im));
   return m ? m[1].trim().replace(/^["']|["']$/g, "") : fallback;
 }
 
-export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props) {
+export function NotaMemoriaModal({
+  isOpen,
+  close,
+  path,
+  titulo,
+  onSalvo,
+}: Props) {
   // `salvo` guarda o conteúdo em disco do arquivo aberto; comparado com o do
   // editor, dá o "não salvo". Ambos carregam o path para que o estado da nota
   // anterior nunca vaze para a próxima (o modal é reaproveitado).
-  const [salvo, setSalvo] = useState<{ path: string; texto: string } | null>(null);
-  const [falha, setFalha] = useState<{ path: string; msg: string } | null>(null);
+  const [salvo, setSalvo] = useState<{ path: string; texto: string } | null>(
+    null,
+  );
+  const [falha, setFalha] = useState<{ path: string; msg: string } | null>(
+    null,
+  );
   const [conteudo, setConteudo] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [modo, setModo] = useState<"editar" | "ler">("editar");
@@ -100,7 +117,8 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
 
   const fechar = useCallback(() => {
     if (salvando) return;
-    if (alterado && !window.confirm("Descartar as alterações não salvas?")) return;
+    if (alterado && !window.confirm("Descartar as alterações não salvas?"))
+      return;
     close();
   }, [alterado, close, salvando]);
 
@@ -117,8 +135,12 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
     const nome = path.split("/").pop()!.replace(/\.md$/i, "");
     // Reenvia só esta nota ao backend — a IA passa a responder pela versão nova.
     try {
-      await syncVaultBatch([{ path, titulo: tituloDoMd(conteudo, nome), conteudo }]);
-      toast.success("Nota salva", { description: `${path} · atualizada também para a IA.` });
+      await syncVaultBatch([
+        { path, titulo: tituloDoMd(conteudo, nome), conteudo },
+      ]);
+      toast.success("Nota salva", {
+        description: `${path} · atualizada também para a IA.`,
+      });
     } catch {
       toast.success("Nota salva", {
         description: "O arquivo foi gravado, mas não chegou ao servidor da IA.",
@@ -150,7 +172,9 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
           <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/40" />
         </TransitionChild>
 
-        <div className="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6">
+        {/* Sem scroller externo: quem rola é o corpo da nota (h-[55vh] abaixo),
+            senão os dois competem e o rodapé fica inalcançável no celular. */}
+        <div className="fixed inset-0 flex items-start justify-center sm:p-6">
           <TransitionChild
             enter="ease-out duration-200"
             enterFrom="opacity-0 translate-y-4"
@@ -161,7 +185,8 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
           >
             <DialogPanel
               onKeyDown={onKeyDown}
-              className="dark:bg-dark-700 my-4 flex w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl"
+              // Celular: folha de tela cheia; `sm:` reintroduz o card.
+              className="dark:bg-dark-700 flex h-[100dvh] max-h-[100dvh] w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[calc(100dvh-3rem)] sm:max-w-3xl sm:rounded-xl"
             >
               <div className="dark:border-dark-600 flex shrink-0 items-start justify-between gap-3 border-b border-gray-200 px-5 py-3.5">
                 <div className="min-w-0">
@@ -170,9 +195,11 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
                     <span className="truncate">{titulo || path || "Nota"}</span>
                   </DialogTitle>
                   {path && (
-                    <p className="dark:text-dark-300 mt-0.5 truncate font-mono text-tiny text-gray-500">
+                    <p className="dark:text-dark-300 text-tiny mt-0.5 truncate font-mono text-gray-500">
                       {path}
-                      {alterado && <span className="text-amber-500"> · não salvo</span>}
+                      {alterado && (
+                        <span className="text-amber-500"> · não salvo</span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -200,7 +227,7 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
 
                 {!carregando && erro && (
                   <div className="grid grow place-items-center">
-                    <p className="max-w-sm rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-center text-xs-plus text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
+                    <p className="text-xs-plus max-w-sm rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-center text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
                       {erro}
                     </p>
                   </div>
@@ -215,7 +242,7 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
                           type="button"
                           onClick={() => setModo(m)}
                           className={clsx(
-                            "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs-plus font-medium transition-colors",
+                            "text-xs-plus flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
                             modo === m
                               ? "dark:bg-dark-600 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                               : "dark:text-dark-300 text-gray-500",
@@ -237,7 +264,7 @@ export function NotaMemoriaModal({ isOpen, close, path, titulo, onSalvo }: Props
                         value={conteudo}
                         onChange={(e) => setConteudo(e.target.value)}
                         spellCheck={false}
-                        className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 focus:border-primary-500 h-[55vh] w-full resize-none rounded-lg border border-gray-200 bg-white p-3 font-mono text-xs-plus leading-relaxed text-gray-800 outline-hidden"
+                        className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 focus:border-primary-500 text-xs-plus h-[55vh] w-full resize-none rounded-lg border border-gray-200 bg-white p-3 font-mono leading-relaxed text-gray-800 outline-hidden"
                       />
                     ) : (
                       <div className="dark:border-dark-600 dark:bg-dark-800 h-[55vh] overflow-y-auto rounded-lg border border-gray-200 bg-white px-4 py-2">

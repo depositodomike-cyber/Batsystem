@@ -46,16 +46,17 @@ import { useProjectsContext } from "@/app/contexts/projects/context";
 import { useConnectorsContext } from "@/app/contexts/connectors/context";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { usePastasMemoria } from "./usePastasMemoria";
-import { emailsMock, marcadoresDaCaixa, type EmailItem } from "@/app/data/emails";
+import {
+  emailsMock,
+  marcadoresDaCaixa,
+  type EmailItem,
+} from "@/app/data/emails";
 import { MEMORIA_MAX_TITULO } from "@/app/data/memoria";
 import { fetchCaixaDeEntradaApi } from "@/services/api/email";
 import { formatBytes } from "@/utils/formatByte";
 import { memoriaVaultSupported } from "@/utils/memoriaVault";
 import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
-import {
-  avisarFalhaMemoria,
-  salvarDocumentoNoGrupo,
-} from "./memoria-grupos";
+import { avisarFalhaMemoria, salvarDocumentoNoGrupo } from "./memoria-grupos";
 import {
   avisarFalhaAoSalvarNaMemoria,
   salvarConteudoNaMemoria,
@@ -419,10 +420,18 @@ export default function Email() {
                 description: (
                   <>
                     <p>
-                      <strong>E-mail</strong> mostra a sua caixa de entrada aqui dentro. Conecte o Gmail ou o Outlook em Conectores para ler os e-mails reais; sem conector, você vê uma caixa de demonstração. Use a busca e os filtros (não lidos, com anexo, salvos) para encontrar mensagens.
+                      <strong>E-mail</strong> mostra a sua caixa de entrada aqui
+                      dentro. Conecte o Gmail ou o Outlook em Conectores para
+                      ler os e-mails reais; sem conector, você vê uma caixa de
+                      demonstração. Use a busca e os filtros (não lidos, com
+                      anexo, salvos) para encontrar mensagens.
                     </p>
                     <p>
-                      Ao abrir um e-mail, você pode <strong>Salvar no Repositório</strong> — o conteúdo vira um contexto da IA e aparece no grafo — ou <strong>Salvar no Grupo</strong>, guardando uma cópia dentro de um agrupamento.
+                      Ao abrir um e-mail, você pode{" "}
+                      <strong>Salvar no Repositório</strong> — o conteúdo vira
+                      um contexto da IA e aparece no grafo — ou{" "}
+                      <strong>Salvar no Grupo</strong>, guardando uma cópia
+                      dentro de um agrupamento.
                     </p>
                   </>
                 ),
@@ -447,7 +456,7 @@ export default function Email() {
                 variant="outlined"
                 onClick={carregar}
                 disabled={carregando}
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 {carregando ? (
                   <Spinner className="size-4" />
@@ -470,7 +479,7 @@ export default function Email() {
                 variant="outlined"
                 onClick={carregar}
                 disabled={carregando}
-                className="mt-2 h-7 gap-1.5 px-2.5 text-tiny"
+                className="text-tiny mt-2 h-7 gap-1.5 px-2.5"
               >
                 <ArrowPathIcon className="size-3.5" />
                 Tentar de novo
@@ -481,7 +490,7 @@ export default function Email() {
 
         {/* Sem conector de e-mail: a caixa exibida é a de demonstração. */}
         {!usarCaixaReal && (
-          <p className="dark:border-dark-600 dark:bg-dark-700 dark:text-dark-300 mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs-plus text-gray-500">
+          <p className="dark:border-dark-600 dark:bg-dark-700 dark:text-dark-300 text-xs-plus mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500">
             Esta é uma caixa de demonstração. Conecte o Gmail ou o Outlook em{" "}
             <span className="dark:text-dark-100 font-medium text-gray-700">
               Conectores
@@ -506,7 +515,7 @@ export default function Email() {
                 type="button"
                 onClick={() => setFiltro(f.id)}
                 className={clsx(
-                  "rounded-lg px-3 py-1.5 text-xs-plus font-medium transition-colors",
+                  "text-xs-plus rounded-lg px-3 py-1.5 font-medium transition-colors",
                   filtro === f.id
                     ? "bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400"
                     : "dark:text-dark-300 dark:hover:bg-dark-600 text-gray-500 hover:bg-gray-100",
@@ -520,7 +529,7 @@ export default function Email() {
                 value={marcador}
                 onChange={(e) => setMarcador(e.target.value)}
                 aria-label="Filtrar por marcador"
-                className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 rounded-lg border border-gray-300 bg-white py-1.5 ps-3 pe-8 text-xs-plus text-gray-600"
+                className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 text-xs-plus rounded-lg border border-gray-300 bg-white py-1.5 ps-3 pe-8 text-gray-600"
               >
                 <option value="">Todos os marcadores</option>
                 {marcadores.map((m) => (
@@ -558,7 +567,7 @@ export default function Email() {
                   : "Nenhum e-mail com esses filtros."}
               </p>
             ) : (
-              <ul className="flex max-h-[calc(100vh-320px)] flex-col gap-0.5 overflow-y-auto">
+              <ul className="panel-scroll flex flex-col gap-0.5 [--panel-offset:20rem]">
                 {emails.map((e) => {
                   const lido = foiLido(e);
                   const emGrupo = gruposPorEmail[e.id];
@@ -576,7 +585,7 @@ export default function Email() {
                       >
                         <span
                           className={clsx(
-                            "mt-0.5 grid size-9 shrink-0 place-items-center rounded-full text-tiny font-semibold",
+                            "text-tiny mt-0.5 grid size-9 shrink-0 place-items-center rounded-full font-semibold",
                             lido
                               ? "dark:bg-dark-500 dark:text-dark-200 bg-gray-100 text-gray-500"
                               : "bg-primary-600/15 text-primary-600 dark:bg-primary-400/15 dark:text-primary-400",
@@ -596,13 +605,13 @@ export default function Email() {
                             >
                               {e.remetenteNome}
                             </span>
-                            <span className="dark:text-dark-400 shrink-0 text-tiny text-gray-400">
+                            <span className="dark:text-dark-400 text-tiny shrink-0 text-gray-400">
                               {dataCurta(e.data)}
                             </span>
                           </span>
                           <span
                             className={clsx(
-                              "mt-0.5 block truncate text-xs-plus",
+                              "text-xs-plus mt-0.5 block truncate",
                               lido
                                 ? "dark:text-dark-300 text-gray-500"
                                 : "dark:text-dark-100 font-medium text-gray-700",
@@ -610,7 +619,7 @@ export default function Email() {
                           >
                             {e.assunto}
                           </span>
-                          <span className="dark:text-dark-400 mt-0.5 block truncate text-tiny text-gray-400">
+                          <span className="dark:text-dark-400 text-tiny mt-0.5 block truncate text-gray-400">
                             {previa(e.corpo)}
                           </span>
                           <span className="mt-1.5 flex flex-wrap items-center gap-1">
@@ -630,7 +639,7 @@ export default function Email() {
                               <Badge
                                 color="info"
                                 variant="soft"
-                                className="max-w-[9rem] truncate text-tiny"
+                                className="text-tiny max-w-[9rem] truncate"
                               >
                                 {emGrupo.length > 1
                                   ? `${emGrupo.length} grupos`
@@ -657,7 +666,7 @@ export default function Email() {
             {!aberto ? (
               <div className="grid grow place-items-center px-6 py-16 text-center">
                 <div>
-                  <EnvelopeIcon className="dark:text-dark-500 mx-auto size-10 text-gray-300 stroke-[1.5]" />
+                  <EnvelopeIcon className="dark:text-dark-500 mx-auto size-10 stroke-[1.5] text-gray-300" />
                   <p className="dark:text-dark-300 mt-3 text-sm text-gray-400">
                     Selecione um e-mail para ler.
                   </p>
@@ -680,13 +689,13 @@ export default function Email() {
                       <h3 className="dark:text-dark-50 text-lg font-semibold text-gray-800">
                         {aberto.assunto}
                       </h3>
-                      <p className="dark:text-dark-300 mt-1 text-xs-plus text-gray-500">
+                      <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-500">
                         <span className="dark:text-dark-100 font-medium text-gray-700">
                           {aberto.remetenteNome}
                         </span>{" "}
                         &lt;{aberto.remetenteEmail}&gt; · para {aberto.para}
                       </p>
-                      <p className="dark:text-dark-400 mt-0.5 text-tiny text-gray-400">
+                      <p className="dark:text-dark-400 text-tiny mt-0.5 text-gray-400">
                         {dataLonga(aberto.data)}
                       </p>
                     </div>
@@ -696,7 +705,7 @@ export default function Email() {
                     <Button
                       color="primary"
                       onClick={() => setMemEmail(aberto)}
-                      className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                      className="text-xs-plus h-8 gap-1.5 px-2.5"
                     >
                       {naMemoria.includes(aberto.id) ? (
                         <CheckCircleIcon className="size-4" />
@@ -710,7 +719,7 @@ export default function Email() {
                     <Button
                       variant="outlined"
                       onClick={() => setGrupoEmail(aberto)}
-                      className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                      className="text-xs-plus h-8 gap-1.5 px-2.5"
                     >
                       <FolderPlusIcon className="size-4" />
                       Salvar no Grupo
@@ -723,7 +732,7 @@ export default function Email() {
                   </div>
                 </div>
 
-                <div className="max-h-[calc(100vh-380px)] overflow-y-auto px-5 py-4">
+                <div className="panel-scroll px-5 py-4 [--panel-offset:23.75rem]">
                   <p className="dark:text-dark-200 text-sm leading-relaxed whitespace-pre-line text-gray-600">
                     {aberto.corpo}
                   </p>
@@ -740,10 +749,10 @@ export default function Email() {
                             className="dark:border-dark-500 dark:bg-dark-800 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
                           >
                             <PaperClipIcon className="dark:text-dark-300 size-4 shrink-0 text-gray-400" />
-                            <span className="dark:text-dark-100 max-w-[14rem] truncate text-xs-plus text-gray-700">
+                            <span className="dark:text-dark-100 text-xs-plus max-w-[14rem] truncate text-gray-700">
                               {a.nome}
                             </span>
-                            <span className="dark:text-dark-400 shrink-0 font-mono text-tiny text-gray-400">
+                            <span className="dark:text-dark-400 text-tiny shrink-0 font-mono text-gray-400">
                               {formatBytes(a.tamanho, 1024, 0)}
                             </span>
                           </li>
@@ -803,7 +812,11 @@ function SalvarNaMemoriaModal({
   email: EmailItem | null;
   categories: MemCategory[];
   close: () => void;
-  onConfirm: (categoria: string, titulo: string, conteudo: string) => Promise<void>;
+  onConfirm: (
+    categoria: string,
+    titulo: string,
+    conteudo: string,
+  ) => Promise<void>;
 }) {
   const [categoria, setCategoria] = useState("");
   const [titulo, setTitulo] = useState("");
@@ -872,7 +885,7 @@ function SalvarNaMemoriaModal({
         </p>
         {/* Sem isto o botão só fica cinza e o usuário não sabe o motivo. */}
         {!conteudo.trim() && (
-          <p className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-200 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs-plus text-gray-600">
+          <p className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-200 text-xs-plus rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-600">
             Este e-mail não trouxe texto (só anexo ou imagem). Escreva abaixo o
             que a IA deve lembrar dele para poder gravar.
           </p>
@@ -905,7 +918,7 @@ function SalvarNaMemoriaModal({
             }
             description="Edite antes de gravar — “[[” conecta o trecho a uma nota do Repositório."
           />
-          <p className="dark:text-dark-300 mt-1.5 text-tiny text-gray-400">
+          <p className="dark:text-dark-300 text-tiny mt-1.5 text-gray-400">
             {conteudo.trim().length.toLocaleString("pt-BR")} caracteres
           </p>
         </div>
@@ -958,7 +971,11 @@ function SalvarNoGrupoModal({
             Cancelar
           </Button>
           {semGrupos ? (
-            <Button color="primary" className="rounded-lg" onClick={onCriarGrupo}>
+            <Button
+              color="primary"
+              className="rounded-lg"
+              onClick={onCriarGrupo}
+            >
               Criar grupo
             </Button>
           ) : (
@@ -979,7 +996,7 @@ function SalvarNoGrupoModal({
           <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
             {email?.assunto}
           </p>
-          <p className="dark:text-dark-300 mt-1 line-clamp-2 text-xs-plus text-gray-500">
+          <p className="dark:text-dark-300 text-xs-plus mt-1 line-clamp-2 text-gray-500">
             {email ? previa(email.corpo) : ""}
           </p>
         </div>
@@ -1047,7 +1064,7 @@ function ModalShell({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="dark:bg-black/40 fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" />
+          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40" />
         </TransitionChild>
 
         <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">

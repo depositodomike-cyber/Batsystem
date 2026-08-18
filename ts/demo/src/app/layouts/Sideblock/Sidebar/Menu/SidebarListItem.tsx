@@ -192,135 +192,135 @@ export function SidebarListItem({
           <Badge
             color="primary"
             variant="soft"
-            className="mr-1 shrink-0 text-tiny"
+            className="text-tiny mr-1 shrink-0"
           >
             {badge}
           </Badge>
         )}
 
         {!disabled && (
-        <Menu as="div" className="shrink-0">
-          {({ open }) => (
-            <>
-              <MenuButton
-                aria-label="Ações do item"
-                onClick={() => setShowGroups(false)}
-                className={clsx(
-                  "dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-6 place-items-center rounded-md text-gray-400 outline-hidden transition-all hover:bg-gray-200 hover:text-gray-700 focus:opacity-100",
-                  open
-                    ? "opacity-100"
-                    : "opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100",
-                )}
-              >
-                <EllipsisHorizontalIcon className="size-5" />
-              </MenuButton>
-              <Transition
-                as={Fragment}
-                enter="transition ease-out"
-                enterFrom="opacity-0 translate-y-2"
-                enterTo="opacity-100 translate-y-0"
-                leave="transition ease-in"
-                leaveFrom="opacity-100 translate-y-0"
-                leaveTo="opacity-0 translate-y-2"
-              >
-                <MenuItems
-                  anchor={{ to: "bottom end", gap: 4 }}
-                  className="dark:border-dark-500 dark:bg-dark-750 z-100 min-w-[9rem] rounded-lg border border-gray-300 bg-white py-1 text-xs shadow-lg shadow-gray-200/50 outline-hidden focus-visible:outline-hidden dark:shadow-none"
-                >
-                  <MenuItem>
-                    {({ focus }) => (
-                      <button
-                        onClick={startRename}
-                        className={clsx(
-                          "flex h-8 w-full items-center gap-2.5 px-3 tracking-wide outline-hidden transition-colors",
-                          focus &&
-                            "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
-                        )}
-                      >
-                        <PencilSquareIcon className="size-4 stroke-[1.5]" />
-                        <span>Renomear</span>
-                      </button>
-                    )}
-                  </MenuItem>
-
-                  {canMove && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setShowGroups((v) => !v)}
-                        className="dark:text-dark-100 dark:hover:bg-dark-600 flex h-8 w-full items-center gap-2.5 px-3 tracking-wide text-gray-800 outline-hidden transition-colors hover:bg-gray-100"
-                      >
-                        <FolderArrowDownIcon className="size-4 stroke-[1.5]" />
-                        <span className="flex-1 text-start">
-                          Mudar para o grupo
-                        </span>
-                        <ChevronRightIcon
-                          className={clsx(
-                            "size-4 transition-transform",
-                            showGroups && "rotate-90",
-                          )}
-                        />
-                      </button>
-
-                      {showGroups && (
-                        <div className="dark:border-dark-600 ml-4 border-l border-gray-200">
-                          {!groups || groups.length === 0 ? (
-                            <p className="dark:text-dark-400 px-3 py-1.5 text-tiny text-gray-400">
-                              Nenhum grupo criado ainda.
-                            </p>
-                          ) : (
-                            groups.map((g) => {
-                              const active = g.id === currentGroupId;
-                              return (
-                                <MenuItem key={g.id}>
-                                  {({ focus }) => (
-                                    <button
-                                      onClick={() => onMoveToGroup?.(g.id)}
-                                      className={clsx(
-                                        "flex h-8 w-full items-center gap-2.5 px-3 tracking-wide outline-hidden transition-colors",
-                                        focus &&
-                                          "dark:bg-dark-600 bg-gray-100",
-                                        active
-                                          ? "text-primary-600 dark:text-primary-400 font-medium"
-                                          : "dark:text-dark-200 text-gray-700",
-                                      )}
-                                    >
-                                      <span className="min-w-0 flex-1 truncate text-start">
-                                        {g.title}
-                                      </span>
-                                      {active && (
-                                        <CheckIcon className="size-4 shrink-0" />
-                                      )}
-                                    </button>
-                                  )}
-                                </MenuItem>
-                              );
-                            })
-                          )}
-                        </div>
-                      )}
-                    </>
+          <Menu as="div" className="shrink-0">
+            {({ open }) => (
+              <>
+                <MenuButton
+                  aria-label="Ações do item"
+                  onClick={() => setShowGroups(false)}
+                  className={clsx(
+                    "dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-6 place-items-center rounded-md text-gray-400 outline-hidden transition-all hover:bg-gray-200 hover:text-gray-700 focus:opacity-100",
+                    open
+                      ? "opacity-100"
+                      : "opacity-100 lg:opacity-0 lg:group-focus-within/item:opacity-100 lg:group-hover/item:opacity-100",
                   )}
+                >
+                  <EllipsisHorizontalIcon className="size-5" />
+                </MenuButton>
+                <Transition
+                  as={Fragment}
+                  enter="transition ease-out"
+                  enterFrom="opacity-0 translate-y-2"
+                  enterTo="opacity-100 translate-y-0"
+                  leave="transition ease-in"
+                  leaveFrom="opacity-100 translate-y-0"
+                  leaveTo="opacity-0 translate-y-2"
+                >
+                  <MenuItems
+                    anchor={{ to: "bottom end", gap: 4 }}
+                    className="dark:border-dark-500 dark:bg-dark-750 z-100 min-w-[9rem] rounded-lg border border-gray-300 bg-white py-1 text-xs shadow-lg shadow-gray-200/50 outline-hidden focus-visible:outline-hidden dark:shadow-none"
+                  >
+                    <MenuItem>
+                      {({ focus }) => (
+                        <button
+                          onClick={startRename}
+                          className={clsx(
+                            "flex h-8 w-full items-center gap-2.5 px-3 tracking-wide outline-hidden transition-colors",
+                            focus &&
+                              "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800",
+                          )}
+                        >
+                          <PencilSquareIcon className="size-4 stroke-[1.5]" />
+                          <span>Renomear</span>
+                        </button>
+                      )}
+                    </MenuItem>
 
-                  <MenuItem>
-                    {({ focus }) => (
-                      <button
-                        onClick={openDelete}
-                        className={clsx(
-                          "this:error text-this dark:text-this-light flex h-8 w-full items-center gap-2.5 px-3 tracking-wide outline-hidden transition-colors",
-                          focus && "bg-this/10 dark:bg-this-light/10",
+                    {canMove && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setShowGroups((v) => !v)}
+                          className="dark:text-dark-100 dark:hover:bg-dark-600 flex h-8 w-full items-center gap-2.5 px-3 tracking-wide text-gray-800 outline-hidden transition-colors hover:bg-gray-100"
+                        >
+                          <FolderArrowDownIcon className="size-4 stroke-[1.5]" />
+                          <span className="flex-1 text-start">
+                            Mudar para o grupo
+                          </span>
+                          <ChevronRightIcon
+                            className={clsx(
+                              "size-4 transition-transform",
+                              showGroups && "rotate-90",
+                            )}
+                          />
+                        </button>
+
+                        {showGroups && (
+                          <div className="dark:border-dark-600 ml-4 border-l border-gray-200">
+                            {!groups || groups.length === 0 ? (
+                              <p className="dark:text-dark-400 text-tiny px-3 py-1.5 text-gray-400">
+                                Nenhum grupo criado ainda.
+                              </p>
+                            ) : (
+                              groups.map((g) => {
+                                const active = g.id === currentGroupId;
+                                return (
+                                  <MenuItem key={g.id}>
+                                    {({ focus }) => (
+                                      <button
+                                        onClick={() => onMoveToGroup?.(g.id)}
+                                        className={clsx(
+                                          "flex h-8 w-full items-center gap-2.5 px-3 tracking-wide outline-hidden transition-colors",
+                                          focus &&
+                                            "dark:bg-dark-600 bg-gray-100",
+                                          active
+                                            ? "text-primary-600 dark:text-primary-400 font-medium"
+                                            : "dark:text-dark-200 text-gray-700",
+                                        )}
+                                      >
+                                        <span className="min-w-0 flex-1 truncate text-start">
+                                          {g.title}
+                                        </span>
+                                        {active && (
+                                          <CheckIcon className="size-4 shrink-0" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </MenuItem>
+                                );
+                              })
+                            )}
+                          </div>
                         )}
-                      >
-                        <TrashIcon className="size-4 stroke-[1.5]" />
-                        <span>Excluir</span>
-                      </button>
+                      </>
                     )}
-                  </MenuItem>
-                </MenuItems>
-              </Transition>
-            </>
-          )}
-        </Menu>
+
+                    <MenuItem>
+                      {({ focus }) => (
+                        <button
+                          onClick={openDelete}
+                          className={clsx(
+                            "this:error text-this dark:text-this-light flex h-8 w-full items-center gap-2.5 px-3 tracking-wide outline-hidden transition-colors",
+                            focus && "bg-this/10 dark:bg-this-light/10",
+                          )}
+                        >
+                          <TrashIcon className="size-4 stroke-[1.5]" />
+                          <span>Excluir</span>
+                        </button>
+                      )}
+                    </MenuItem>
+                  </MenuItems>
+                </Transition>
+              </>
+            )}
+          </Menu>
         )}
       </div>
 

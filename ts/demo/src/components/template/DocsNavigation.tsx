@@ -39,7 +39,9 @@ export function DocsNavigation({ prefix, items, title }: DocsNavigationProps) {
   if (!lgAndUp) {
     return (
       <>
-        <div className="fixed bottom-3 right-3 z-10 rounded-lg bg-white dark:bg-dark-700">
+        {/* Canto inferior ESQUERDO: o direito é da bolinha do assistente, que
+            fica numa camada acima e engoliria o clique daqui. */}
+        <div className="fixed bottom-3 left-3 z-10 rounded-lg bg-white dark:bg-dark-700">
           <Button
             onClick={open}
             color="primary"

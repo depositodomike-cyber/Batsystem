@@ -1,4 +1,5 @@
 // Import Dependencies
+import { Fragment } from "react";
 import {
   Dialog,
   DialogPanel,
@@ -18,6 +19,7 @@ import clsx from "clsx";
 
 // Local Imports
 import { Button } from "@/components/ui";
+import { useDisclosure } from "@/hooks";
 import type { Chat } from "@/app/contexts/chats/context";
 import type {
   DocumentAttachment,
@@ -48,10 +50,93 @@ interface SidePanelProps {
 }
 
 /**
- * Painel lateral fixo (direita) com abas de Histórico (conversas) e Documentos.
- * Compartilhado entre as páginas de Squad e de Grupo.
+ * Painel de Histórico (conversas) e Documentos, compartilhado entre as páginas
+ * de Squad e de Grupo.
+ *
+ * A partir de `xl` é uma coluna fixa à direita — 1280px é justamente onde o
+ * layout já reserva espaço lateral (`styles/layouts.css:49-52`). Abaixo disso
+ * vira drawer com um gatilho na borda: como `aside` de 288px, ele roubava a
+ * tela toda em 375px e deixava ~55px de texto legível na conversa.
  */
-export function SidePanel({
+export function SidePanel(props: SidePanelProps) {
+  const [isDrawerOpen, { open, close }] = useDisclosure(false);
+  const total = props.chats.length + props.documents.length;
+
+  return (
+    <>
+      <aside className="dark:border-dark-500 dark:bg-dark-750 hidden w-72 shrink-0 flex-col border-l border-gray-200 bg-gray-50/50 xl:flex">
+        <PanelBody {...props} />
+      </aside>
+
+      {/* Gatilho: aba vertical na borda direita, centrada. Fica longe do canto
+          inferior direito, que é da bolinha do assistente. */}
+      <button
+        type="button"
+        onClick={open}
+        aria-label={`Histórico e documentos${total > 0 ? ` (${total})` : ""}`}
+        className="dark:border-dark-500 dark:bg-dark-700 dark:text-dark-100 fixed top-1/2 right-0 z-30 flex -translate-y-1/2 flex-col items-center gap-1 rounded-l-lg border border-r-0 border-gray-200 bg-white py-3 pr-1.5 pl-2 text-gray-600 shadow-md xl:hidden"
+      >
+        <ClockIcon className="size-4 stroke-[1.75]" />
+        {total > 0 && (
+          <span className="dark:bg-dark-500 dark:text-dark-200 rounded bg-gray-100 px-1 text-tiny text-gray-600">
+            {total > 99 ? "99+" : total}
+          </span>
+        )}
+      </button>
+
+      <Transition appear show={isDrawerOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-61" onClose={close}>
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/40" />
+          </TransitionChild>
+
+          <TransitionChild
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="translate-x-full"
+            enterTo="translate-x-0"
+            leave="ease-in duration-150"
+            leaveFrom="translate-x-0"
+            leaveTo="translate-x-full"
+          >
+            {/* Mobile-first: folha de largura total; `sm:` reintroduz a margem
+                e o canto arredondado, como no RightSidebar. */}
+            <DialogPanel className="dark:bg-dark-750 fixed inset-y-0 right-0 flex w-screen flex-col bg-gray-50 shadow-xl sm:inset-y-2 sm:mx-2 sm:w-80 sm:rounded-xl">
+              <div className="dark:border-dark-500 flex shrink-0 items-center justify-between border-b border-gray-200 px-3 py-2">
+                <DialogTitle className="dark:text-dark-100 text-sm font-medium text-gray-700">
+                  Histórico e documentos
+                </DialogTitle>
+                <Button
+                  onClick={close}
+                  variant="flat"
+                  isIcon
+                  aria-label="Fechar"
+                  className="size-8 rounded-lg"
+                >
+                  <XMarkIcon className="size-4.5" />
+                </Button>
+              </div>
+              <PanelBody {...props} />
+            </DialogPanel>
+          </TransitionChild>
+        </Dialog>
+      </Transition>
+    </>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+/** Abas + conteúdo, compartilhados pela coluna de desktop e pelo drawer. */
+function PanelBody({
   activeTab,
   onTabChange,
   chats,
@@ -63,7 +148,7 @@ export function SidePanel({
   renderChatItem,
 }: SidePanelProps) {
   return (
-    <aside className="dark:border-dark-500 dark:bg-dark-750 flex w-72 shrink-0 flex-col border-l border-gray-200 bg-gray-50/50">
+    <>
       {/* Abas */}
       <div className="dark:border-dark-500 flex border-b border-gray-200">
         <TabButton
@@ -154,7 +239,7 @@ export function SidePanel({
           </ul>
         )}
       </div>
-    </aside>
+    </>
   );
 }
 

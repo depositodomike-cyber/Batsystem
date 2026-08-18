@@ -59,7 +59,7 @@ export function SquadsGroup() {
         <div className="mb-2 flex items-center justify-between pt-2">
           <button
             onClick={toggle}
-            className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 flex cursor-pointer items-center gap-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase outline-hidden hover:text-gray-900 focus:text-gray-900"
+            className="dark:text-dark-300 dark:hover:text-dark-50 dark:focus:text-dark-50 text-tiny-plus flex cursor-pointer items-center gap-2 font-semibold tracking-wider text-gray-500 uppercase outline-hidden hover:text-gray-900 focus:text-gray-900"
           >
             <GroupChevron open={isOpened} />
             <span>{t("sidebar.squads")}</span>
@@ -79,64 +79,68 @@ export function SquadsGroup() {
               <PlusIcon className="size-4" />
             </span>
           ) : (
-          <Popover className="relative inline-flex">
-            <PopoverButton
-              aria-label="Adicionar squad"
-              title="Adicionar squad"
-              className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[open]:bg-gray-100 dark:data-[open]:bg-dark-300/10"
-            >
-              <PlusIcon className="size-4" />
-            </PopoverButton>
-
-            <Transition
-              enter="transition ease-out"
-              enterFrom="opacity-0 translate-y-1"
-              enterTo="opacity-100 translate-y-0"
-              leave="transition ease-in"
-              leaveFrom="opacity-100 translate-y-0"
-              leaveTo="opacity-0 translate-y-1"
-            >
-              <PopoverPanel
-                anchor={{ to: "bottom end", gap: 6 }}
-                className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 max-h-[20rem] w-60 overflow-y-auto rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
+            <Popover className="relative inline-flex">
+              <PopoverButton
+                aria-label="Adicionar squad"
+                title="Adicionar squad"
+                className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:data-[open]:bg-dark-300/10 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[open]:bg-gray-100"
               >
-                <p className="dark:text-dark-300 px-2.5 py-1 text-tiny-plus font-semibold tracking-wider text-gray-400 uppercase">
-                  {t("sidebar.allSquads")}
-                </p>
-                {catalog.map((squad) => {
-                  const Icon = navigationIcons[squad.icon];
-                  const active = isPinned(squad.id);
-                  return (
-                    <button
-                      key={squad.id}
-                      type="button"
-                      onClick={() => toggleSquad(squad.id)}
-                      className={clsx(
-                        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-start text-xs-plus outline-hidden transition-colors",
-                        "dark:hover:bg-dark-600 hover:bg-gray-100",
-                        active
-                          ? "text-primary-600 dark:text-primary-400 font-semibold"
-                          : "dark:text-dark-100 text-gray-800",
-                      )}
-                    >
-                      {Icon && <Icon className="size-4.5 shrink-0 stroke-[1.5]" />}
-                      <span className="min-w-0 flex-1 truncate">
-                        {squad.title}
-                      </span>
-                      {active && <CheckIcon className="size-4 shrink-0" />}
-                    </button>
-                  );
-                })}
-              </PopoverPanel>
-            </Transition>
-          </Popover>
+                <PlusIcon className="size-4" />
+              </PopoverButton>
+
+              <Transition
+                enter="transition ease-out"
+                enterFrom="opacity-0 translate-y-1"
+                enterTo="opacity-100 translate-y-0"
+                leave="transition ease-in"
+                leaveFrom="opacity-100 translate-y-0"
+                leaveTo="opacity-0 translate-y-1"
+              >
+                <PopoverPanel
+                  anchor={{ to: "bottom end", gap: 6 }}
+                  className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 max-h-[20rem] w-60 overflow-y-auto rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
+                >
+                  <p className="dark:text-dark-300 text-tiny-plus px-2.5 py-1 font-semibold tracking-wider text-gray-400 uppercase">
+                    {t("sidebar.allSquads")}
+                  </p>
+                  {catalog.map((squad) => {
+                    const Icon = navigationIcons[squad.icon];
+                    const active = isPinned(squad.id);
+                    return (
+                      <button
+                        key={squad.id}
+                        type="button"
+                        onClick={() => toggleSquad(squad.id)}
+                        className={clsx(
+                          "text-xs-plus flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-start outline-hidden transition-colors",
+                          "dark:hover:bg-dark-600 hover:bg-gray-100",
+                          active
+                            ? "text-primary-600 dark:text-primary-400 font-semibold"
+                            : "dark:text-dark-100 text-gray-800",
+                        )}
+                      >
+                        {Icon && (
+                          <Icon className="size-4.5 shrink-0 stroke-[1.5]" />
+                        )}
+                        <span className="min-w-0 flex-1 truncate">
+                          {squad.title}
+                        </span>
+                        {active && <CheckIcon className="size-4 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </PopoverPanel>
+              </Transition>
+            </Popover>
           )}
         </div>
 
         <div
           className={clsx(
             "pointer-events-none absolute inset-x-0 -bottom-3 h-3 bg-linear-to-b from-white to-transparent",
-            cardSkin === "bordered" ? "dark:from-dark-900" : "dark:from-dark-750",
+            cardSkin === "bordered"
+              ? "dark:from-dark-900"
+              : "dark:from-dark-750",
           )}
         ></div>
       </div>
@@ -174,7 +178,7 @@ export function SquadsGroup() {
                     <span className="truncate">{squad.title}</span>
                   </div>
                   {!disabled && isActive && (
-                    <div className="bg-primary-600 dark:bg-primary-400 absolute bottom-1 top-1 w-1 ltr:left-0 ltr:rounded-r-full rtl:right-0 rtl:rounded-l-lg" />
+                    <div className="bg-primary-600 dark:bg-primary-400 absolute top-1 bottom-1 w-1 ltr:left-0 ltr:rounded-r-full rtl:right-0 rtl:rounded-l-lg" />
                   )}
                 </>
               );
@@ -217,7 +221,7 @@ export function SquadsGroup() {
                       onClick={() => unpinSquad(squad.id)}
                       aria-label={`Remover ${squad.title}`}
                       title="Remover do menu"
-                      className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-400 opacity-0 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-700 focus:opacity-100 group-hover/squad:opacity-100"
+                      className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-400 opacity-100 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-700 lg:opacity-0 lg:group-hover/squad:opacity-100 lg:focus:opacity-100"
                     >
                       <XMarkIcon className="size-4" />
                     </button>

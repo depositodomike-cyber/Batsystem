@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  Transition,
-  TransitionChild,
-} from "@headlessui/react";
-import {
   ArrowUpTrayIcon,
   DocumentCheckIcon,
   DocumentTextIcon,
@@ -14,14 +7,12 @@ import {
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
-import { WindowControls } from "@/app/contexts/ia-modals/WindowControls";
+import { IaModalShell } from "@/app/contexts/ia-modals/IaModalShell";
 import { useIaModals } from "@/app/contexts/ia-modals/context";
 import type { IaModalOpenPayload } from "@/app/contexts/ia-modals/context";
 import { useDocumentoUpload } from "@/app/contexts/documento-upload/context";
 import type { DocumentoUpload } from "@/app/contexts/documento-upload/context";
-import {
-  isFeatureTemporarilyDisabled,
-} from "@/app/data/temporarilyDisabledFeatures";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import { DocumentoUploadPanel } from "./DocumentoUploadPanel";
 import { AudioUploadPanel } from "./AudioUploadPanel";
 import { TranscricaoUploadPanel } from "./TranscricaoUploadPanel";
@@ -201,114 +192,87 @@ export function UploadModal({ isOpen, close, onMinimize, payload }: Props) {
   );
 
   return (
-    <Transition show={isOpen} unmount={false}>
-      {/* Só o X fecha; clique fora e Escape não descartam o upload. */}
-      <Dialog onClose={() => {}} className="relative z-[70]">
-        <TransitionChild
-          enter="ease-out duration-200"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-150"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/40" />
-        </TransitionChild>
-
-        <div className="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6">
-          <TransitionChild
-            enter="ease-out duration-200"
-            enterFrom="opacity-0 translate-y-4"
-            enterTo="opacity-100 translate-y-0"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100 translate-y-0"
-            leaveTo="opacity-0 translate-y-4"
+    <IaModalShell
+      isOpen={isOpen}
+      close={fechar}
+      onMinimize={onMinimize}
+      closeDisabled={busy}
+      // Só o X fecha; clique fora e Escape não descartam o upload, e a janela
+      // fica montada para preservar o progresso.
+      dismissable={false}
+      keepMounted
+      title="Upload"
+      icon={ArrowUpTrayIcon}
+      belowHeader={
+        ABAS_VISIVEIS.length > 1 ? (
+          <div
+            role="tablist"
+            className="dark:border-dark-600 flex gap-1 overflow-x-auto border-b border-gray-200 px-4 pt-3 sm:px-5"
           >
-            <DialogPanel className="dark:bg-dark-700 my-4 flex w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl">
-              <div className="dark:border-dark-600 flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-3.5">
-                <DialogTitle className="dark:text-dark-50 flex items-center gap-2 text-base font-semibold text-gray-800">
-                  <ArrowUpTrayIcon className="size-5" />
-                  Upload
-                </DialogTitle>
-                <WindowControls
-                  onMinimize={onMinimize}
-                  onClose={fechar}
-                  closeDisabled={busy}
-                />
-              </div>
-
-              {ABAS_VISIVEIS.length > 1 && (
-                <div
-                  role="tablist"
-                  className="dark:border-dark-600 flex gap-1 border-b border-gray-200 px-5 pt-3"
-                >
-                  {ABAS_VISIVEIS.map(({ id, label, Icon }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      role="tab"
-                      aria-selected={aba === id}
-                      disabled={busy && aba !== id}
-                      onClick={() => setAba(id)}
-                      className={clsx(
-                        "text-xs-plus inline-flex items-center gap-1.5 border-b-2 px-3 pb-2.5 font-medium transition-colors",
-                        aba === id
-                          ? "border-primary-500 text-primary-600 dark:text-primary-400"
-                          : "dark:text-dark-300 dark:hover:text-dark-100 border-transparent text-gray-500 hover:text-gray-800",
-                      )}
-                    >
-                      <Icon className="size-4" />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="max-h-[78vh] overflow-y-auto px-5 py-4">
-                <div
-                  role="tabpanel"
-                  hidden={aba !== "documento"}
-                  className={clsx(aba !== "documento" && "hidden")}
-                >
-                  <DocumentoUploadPanel
-                    onBusyChange={onBusyDocumento}
-                    onFinished={onDocumentoPronto}
-                    onFailed={onFalha}
-                  />
-                </div>
-                {!isFeatureTemporarilyDisabled("memoryUploadAudio") && (
-                  <div
-                    role="tabpanel"
-                    hidden={aba !== "audio"}
-                    className={clsx(aba !== "audio" && "hidden")}
-                  >
-                    <AudioUploadPanel
-                      onBusyChange={onBusyAudio}
-                      minimizado={!isOpen}
-                      onFinished={onAudioPronto}
-                      onFailed={onFalha}
-                    />
-                  </div>
+            {ABAS_VISIVEIS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={aba === id}
+                disabled={busy && aba !== id}
+                onClick={() => setAba(id)}
+                className={clsx(
+                  "text-xs-plus inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-2.5 font-medium transition-colors",
+                  aba === id
+                    ? "border-primary-500 text-primary-600 dark:text-primary-400"
+                    : "dark:text-dark-300 dark:hover:text-dark-100 border-transparent text-gray-500 hover:text-gray-800",
                 )}
-                {!isFeatureTemporarilyDisabled("memoryUploadTranscript") && (
-                  <div
-                    role="tabpanel"
-                    hidden={aba !== "transcricao"}
-                    className={clsx(aba !== "transcricao" && "hidden")}
-                  >
-                    <TranscricaoUploadPanel
-                      onBusyChange={onBusyTranscricao}
-                      minimizado={!isOpen}
-                      onFinished={onTranscricaoPronta}
-                      onFailed={onFalha}
-                    />
-                  </div>
-                )}
-              </div>
-            </DialogPanel>
-          </TransitionChild>
+              >
+                <Icon className="size-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null
+      }
+    >
+      <div>
+        <div
+          role="tabpanel"
+          hidden={aba !== "documento"}
+          className={clsx(aba !== "documento" && "hidden")}
+        >
+          <DocumentoUploadPanel
+            onBusyChange={onBusyDocumento}
+            onFinished={onDocumentoPronto}
+            onFailed={onFalha}
+          />
         </div>
-      </Dialog>
-    </Transition>
+        {!isFeatureTemporarilyDisabled("memoryUploadAudio") && (
+          <div
+            role="tabpanel"
+            hidden={aba !== "audio"}
+            className={clsx(aba !== "audio" && "hidden")}
+          >
+            <AudioUploadPanel
+              onBusyChange={onBusyAudio}
+              minimizado={!isOpen}
+              onFinished={onAudioPronto}
+              onFailed={onFalha}
+            />
+          </div>
+        )}
+        {!isFeatureTemporarilyDisabled("memoryUploadTranscript") && (
+          <div
+            role="tabpanel"
+            hidden={aba !== "transcricao"}
+            className={clsx(aba !== "transcricao" && "hidden")}
+          >
+            <TranscricaoUploadPanel
+              onBusyChange={onBusyTranscricao}
+              minimizado={!isOpen}
+              onFinished={onTranscricaoPronta}
+              onFailed={onFalha}
+            />
+          </div>
+        )}
+      </div>
+    </IaModalShell>
   );
 }

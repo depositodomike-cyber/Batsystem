@@ -17,7 +17,7 @@ import clsx from "clsx";
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
-import { Button, Switch, Spinner } from "@/components/ui";
+import { Button, Switch, Spinner, ScrollShadow } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import {
   getGrafoAtivo,
@@ -96,9 +96,7 @@ const SECOES = [
 type SecaoId = (typeof SECOES)[number]["id"];
 
 function secaoEstaDesabilitada(secao: (typeof SECOES)[number]): boolean {
-  return (
-    secao.feature != null && isFeatureTemporarilyDisabled(secao.feature)
-  );
+  return secao.feature != null && isFeatureTemporarilyDisabled(secao.feature);
 }
 
 function primeiraSecaoAtiva(): SecaoId {
@@ -112,8 +110,7 @@ export default function Configuracoes() {
   const secaoSolicitada = searchParams.get("secao");
   const active =
     SECOES.find(
-      (secao) =>
-        secao.id === secaoSolicitada && !secaoEstaDesabilitada(secao),
+      (secao) => secao.id === secaoSolicitada && !secaoEstaDesabilitada(secao),
     )?.id ?? primeiraSecaoAtiva();
 
   const selecionarSecao = (secao: SecaoId) => {
@@ -131,8 +128,21 @@ export default function Configuracoes() {
             help={{
               description: (
                 <>
-                  <p><strong>Configurações</strong> reúne as preferências do painel: <strong>Aparência</strong> (animação de fundo e vinheta), <strong>Voz</strong> (resposta falada após comandos de voz), <strong>IA &amp; API</strong> (conexão dos provedores de IA da empresa e consumo de tokens), <strong>Regras</strong> (orientações que a IA segue nas respostas) e <strong>Repositório</strong> (a pasta de dados que alimenta o grafo).</p>
-                  <p>As preferências de aparência e voz ficam salvas só neste navegador, e a pasta do Repositório é lida localmente — nenhum arquivo é enviado a servidores.</p>
+                  <p>
+                    <strong>Configurações</strong> reúne as preferências do
+                    painel: <strong>Aparência</strong> (animação de fundo e
+                    vinheta), <strong>Voz</strong> (resposta falada após
+                    comandos de voz), <strong>IA &amp; API</strong> (conexão dos
+                    provedores de IA da empresa e consumo de tokens),{" "}
+                    <strong>Regras</strong> (orientações que a IA segue nas
+                    respostas) e <strong>Repositório</strong> (a pasta de dados
+                    que alimenta o grafo).
+                  </p>
+                  <p>
+                    As preferências de aparência e voz ficam salvas só neste
+                    navegador, e a pasta do Repositório é lida localmente —
+                    nenhum arquivo é enviado a servidores.
+                  </p>
                 </>
               ),
             }}
@@ -140,50 +150,58 @@ export default function Configuracoes() {
             Configurações
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-            Preferências de aparência, voz, inteligência artificial, regras e
-            a pasta de dados que alimenta o Repositório.
+            Configurações gerais da plataforma
           </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           {/* Navegação lateral */}
-          <nav className="lg:w-56 lg:shrink-0">
-            <ul className="dark:border-dark-600 dark:bg-dark-700 flex gap-1.5 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5 lg:flex-col lg:gap-1">
-              {SECOES.map((s) => {
-                const disabled = secaoEstaDesabilitada(s);
-                const isActive = !disabled && active === s.id;
-                return (
-                  <li key={s.id} className="shrink-0 lg:shrink">
-                    {disabled ? (
-                      <div
-                        aria-disabled="true"
-                        className={clsx(
-                          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 dark:text-dark-200",
-                          DISABLED_MENU_CLASS,
-                        )}
-                      >
-                        <s.icon className="size-4.5 shrink-0" />
-                        {s.titulo}
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => selecionarSecao(s.id)}
-                        className={clsx(
-                          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-primary-600 text-white dark:bg-primary-500"
-                            : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
-                        )}
-                      >
-                        <s.icon className="size-4.5 shrink-0" />
-                        {s.titulo}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+          {/* Abaixo de lg a lista de seções vira uma strip horizontal: em 375px
+              cabem ~2,5 de 5 abas, e sem o ScrollShadow nada sinalizava que
+              havia mais. Mesmo componente já usado nas pílulas de Conectores. */}
+          <nav className="min-w-0 lg:w-56 lg:shrink-0">
+            <ScrollShadow
+              orientation="horizontal"
+              size={24}
+              className="dark:border-dark-600 dark:bg-dark-700 hide-scrollbar flex gap-1.5 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5 lg:overflow-visible"
+            >
+              <ul className="flex gap-1.5 lg:w-full lg:flex-col lg:gap-1">
+                {SECOES.map((s) => {
+                  const disabled = secaoEstaDesabilitada(s);
+                  const isActive = !disabled && active === s.id;
+                  return (
+                    <li key={s.id} className="shrink-0 lg:shrink">
+                      {disabled ? (
+                        <div
+                          aria-disabled="true"
+                          className={clsx(
+                            "dark:text-dark-200 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600",
+                            DISABLED_MENU_CLASS,
+                          )}
+                        >
+                          <s.icon className="size-4.5 shrink-0" />
+                          {s.titulo}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => selecionarSecao(s.id)}
+                          className={clsx(
+                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-primary-600 dark:bg-primary-500 text-white"
+                              : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
+                          )}
+                        >
+                          <s.icon className="size-4.5 shrink-0" />
+                          {s.titulo}
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollShadow>
           </nav>
 
           {/* Painel da seção ativa */}
@@ -244,7 +262,7 @@ function ToggleRow({
         <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
           {nome}
         </p>
-        <p className="dark:text-dark-300 mt-0.5 text-xs-plus text-gray-500">
+        <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-500">
           {descricao}
         </p>
       </div>
@@ -269,7 +287,7 @@ function AparenciaSection() {
       titulo="Aparência"
       descricao="Ajustes visuais do painel. As escolhas ficam salvas só neste navegador."
     >
-      <div className="divide-y divide-gray-100 dark:divide-dark-500">
+      <div className="dark:divide-dark-500 divide-y divide-gray-100">
         <ToggleRow
           nome="Animação de fundo"
           descricao="A rede de nós animada por trás do painel."
@@ -304,7 +322,7 @@ function VozSection() {
       titulo="Voz"
       descricao="Como o assistente responde a comandos de voz."
     >
-      <div className="divide-y divide-gray-100 dark:divide-dark-500">
+      <div className="dark:divide-dark-500 divide-y divide-gray-100">
         <ToggleRow
           nome="Resposta falada"
           descricao="Lê as respostas em voz alta após um comando de voz."
@@ -409,7 +427,7 @@ function TokenUsagePanel() {
               {uso ? fmtTokens(uso[j.chave].total) : "—"}
             </p>
             {uso && (
-              <p className="dark:text-dark-300 mt-0.5 text-tiny text-gray-400 tabular-nums">
+              <p className="dark:text-dark-300 text-tiny mt-0.5 text-gray-400 tabular-nums">
                 ↑ {fmtTokens(uso[j.chave].entrada)} · ↓{" "}
                 {fmtTokens(uso[j.chave].saida)}
               </p>
@@ -481,27 +499,31 @@ function MemoriaSection() {
     };
   }, [ids]);
 
-  const pickFolder = useCallback(async (repositorioId: string, nomeRepo: string) => {
-    const escolha = await escolherPastaContexto(repositorioId);
-    if (!escolha.ok) {
-      if (escolha.reason === "unsupported") {
-        toast("Navegador sem suporte", {
-          description: "Este navegador não permite selecionar pastas.",
-        });
+  const pickFolder = useCallback(
+    async (repositorioId: string, nomeRepo: string) => {
+      const escolha = await escolherPastaContexto(repositorioId);
+      if (!escolha.ok) {
+        if (escolha.reason === "unsupported") {
+          toast("Navegador sem suporte", {
+            description: "Este navegador não permite selecionar pastas.",
+          });
+        }
+        return;
       }
-      return;
-    }
-    setPastas((prev) => ({
-      ...prev,
-      [repositorioId]: {
-        nome: escolha.dir.name,
-        copia: pastaEhCopia(escolha.dir),
-      },
-    }));
-    toast.success(`Pasta vinculada a “${nomeRepo}”: “${escolha.dir.name}”.`, {
-      description: "Abra a tela Repositório com este contexto ativo para carregar as notas.",
-    });
-  }, []);
+      setPastas((prev) => ({
+        ...prev,
+        [repositorioId]: {
+          nome: escolha.dir.name,
+          copia: pastaEhCopia(escolha.dir),
+        },
+      }));
+      toast.success(`Pasta vinculada a “${nomeRepo}”: “${escolha.dir.name}”.`, {
+        description:
+          "Abra a tela Repositório com este contexto ativo para carregar as notas.",
+      });
+    },
+    [],
+  );
 
   return (
     <SectionCard
@@ -538,7 +560,7 @@ function MemoriaSection() {
                         </span>
                       ) : null}
                     </p>
-                    <p className="dark:text-dark-300 mt-0.5 flex items-center gap-1.5 truncate text-xs-plus text-gray-500">
+                    <p className="dark:text-dark-300 text-xs-plus mt-0.5 flex items-center gap-1.5 truncate text-gray-500">
                       <FolderIcon className="size-3.5 shrink-0" />
                       <span className="truncate">
                         {folderName
@@ -566,22 +588,25 @@ function MemoriaSection() {
       )}
 
       {!supported ? (
-        <p className="mt-3 text-xs-plus text-warning">
+        <p className="text-xs-plus text-warning mt-3">
           Seleção de pasta indisponível neste navegador. Use o Chrome ou o Edge.
         </p>
       ) : (
         !nativa && (
-          <p className="mt-3 text-xs-plus text-warning">
-            Este navegador lê a pasta como cópia: o Repositório abre normalmente, mas
-            a IA não grava notas de volta nos arquivos e mudanças feitas fora do
-            navegador só aparecem quando você reselecionar a pasta. No Brave, o
-            acesso completo liga em{" "}
-            <span className="font-mono">brave://flags/#file-system-access-api</span>.
+          <p className="text-xs-plus text-warning mt-3">
+            Este navegador lê a pasta como cópia: o Repositório abre
+            normalmente, mas a IA não grava notas de volta nos arquivos e
+            mudanças feitas fora do navegador só aparecem quando você
+            reselecionar a pasta. No Brave, o acesso completo liga em{" "}
+            <span className="font-mono">
+              brave://flags/#file-system-access-api
+            </span>
+            .
           </p>
         )
       )}
 
-      <p className="dark:text-dark-300 mt-4 text-xs-plus text-gray-400">
+      <p className="dark:text-dark-300 text-xs-plus mt-4 text-gray-400">
         A pasta é lida localmente pelo navegador — nenhum arquivo é enviado a
         servidores. A escolha é compartilhada com a tela Repositório do mesmo
         contexto.

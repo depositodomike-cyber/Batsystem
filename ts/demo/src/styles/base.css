@@ -70,6 +70,44 @@ body.is-monochrome::before {
   }
 }
 
+/*
+ * Painel que rola dentro de uma página, com altura acompanhando o viewport.
+ *
+ * Substitui os `max-h-[calc(100vh-Npx)]` que estavam espalhados pelo Email e
+ * pelo Slack: aqueles N eram calibrados para desktop e usavam `vh` cru, que no
+ * celular não encolhe com a barra de URL — em 375x667 sobravam ~180px de
+ * leitura no Email e ~130px na thread do Slack.
+ *
+ * `--panel-offset` é o espaço ocupado por header do app, cabeçalho da página,
+ * filtros e rodapé. Cada uso ajusta o seu com `[--panel-offset:Nrem]`.
+ */
+.panel-scroll {
+  --panel-offset: 18rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* No celular a altura é generosa: o painel é quase toda a tela. */
+  max-height: calc(100vh - var(--header-h, 65px) - 6rem);
+}
+
+@supports (height: 100dvh) {
+  .panel-scroll {
+    max-height: calc(100dvh - var(--header-h, 65px) - 6rem);
+  }
+}
+
+/* Acima de lg o painel divide a tela com o resto do layout da página. */
+@media (width >= 64rem) {
+  .panel-scroll {
+    max-height: calc(100vh - var(--panel-offset));
+  }
+
+  @supports (height: 100dvh) {
+    .panel-scroll {
+      max-height: calc(100dvh - var(--panel-offset));
+    }
+  }
+}
+
 /* Demo inline space */
 .inline-space > :not([hidden]) {
   @apply mb-2.5 mr-2.5;

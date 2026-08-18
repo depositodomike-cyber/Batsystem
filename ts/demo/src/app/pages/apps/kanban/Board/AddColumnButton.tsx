@@ -13,7 +13,10 @@ export function AddColumnButton() {
 
   return (
     <>
-      <Button className="w-72 shrink-0 gap-2" onClick={open}>
+      <Button
+        className="w-[85vw] max-w-72 shrink-0 gap-2 sm:w-72"
+        onClick={open}
+      >
         <PlusIcon className="size-4.5" />
         <span>Nova etapa</span>
       </Button>

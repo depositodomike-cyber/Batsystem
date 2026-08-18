@@ -47,7 +47,10 @@ const PRIORITY_OPTIONS: { label: string; value: string }[] = [
   { label: "Baixa", value: "baixa" },
 ];
 
-const PRIORITY_META: Record<Priority, { label: string; dot: string; badge: string }> = {
+const PRIORITY_META: Record<
+  Priority,
+  { label: string; dot: string; badge: string }
+> = {
   alta: { label: "Alta", dot: "bg-error", badge: "text-error" },
   media: { label: "Média", dot: "bg-warning", badge: "text-warning" },
   baixa: { label: "Baixa", dot: "bg-info", badge: "text-info" },
@@ -100,7 +103,7 @@ function ToDoBoard() {
   }, [currentBoard, busca, prioridade]);
 
   return (
-    <div className="flex h-[calc(100vh-65px)] min-h-0">
+    <div className="flex h-[calc(100dvh-var(--header-h))] min-h-0">
       {/* Sidebar de quadros */}
       <QuadrosSidebar boards={boards} />
 
@@ -153,9 +156,12 @@ function QuadrosSidebar({ boards }: { boards: Board[] }) {
 
   return (
     <>
-      <aside className="dark:border-dark-600 dark:bg-dark-750 flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white">
+      {/* `hidden md:flex`: os 224px fixos comiam 60% de uma tela de 375px e
+          deixavam o kanban inutilizável. Abaixo de md os quadros ficam
+          acessíveis pelo seletor da Toolbar. */}
+      <aside className="dark:border-dark-600 dark:bg-dark-750 hidden w-56 shrink-0 flex-col border-r border-gray-200 bg-white md:flex">
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <span className="dark:text-dark-300 text-tiny-plus font-semibold uppercase tracking-wider text-gray-500">
+          <span className="dark:text-dark-300 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
             Quadros
           </span>
           <Button
@@ -192,7 +198,7 @@ function QuadrosSidebar({ boards }: { boards: Board[] }) {
                   )}
                   <span
                     className={clsx(
-                      "grid h-5 min-w-5 shrink-0 place-items-center rounded-lg px-1 text-tiny font-medium",
+                      "text-tiny grid h-5 min-w-5 shrink-0 place-items-center rounded-lg px-1 font-medium",
                       ativo
                         ? "bg-primary-600/15 text-primary-600 dark:text-primary-400"
                         : "dark:bg-dark-600 dark:text-dark-200 bg-gray-100 text-gray-500",
@@ -247,10 +253,16 @@ function Toolbar({
             description: (
               <>
                 <p>
-                  <strong>To Do</strong> organiza suas tarefas em quadros no estilo Kanban. Cada quadro tem etapas (como A fazer, Em andamento e Concluído) e atividades que você arrasta de uma etapa para outra.
+                  <strong>To Do</strong> organiza suas tarefas em quadros no
+                  estilo Kanban. Cada quadro tem etapas (como A fazer, Em
+                  andamento e Concluído) e atividades que você arrasta de uma
+                  etapa para outra.
                 </p>
                 <p>
-                  Crie quantos quadros quiser na barra lateral, adicione etapas e atividades com prioridade, filtre por texto ou prioridade e alterne entre a visão Kanban e a visão em Lista. Tudo fica salvo no seu navegador.
+                  Crie quantos quadros quiser na barra lateral, adicione etapas
+                  e atividades com prioridade, filtre por texto ou prioridade e
+                  alterne entre a visão Kanban e a visão em Lista. Tudo fica
+                  salvo no seu navegador.
                 </p>
               </>
             ),
@@ -264,7 +276,7 @@ function Toolbar({
             type="button"
             onClick={() => onView("kanban")}
             className={clsx(
-              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs-plus font-medium transition-colors",
+              "text-xs-plus flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
               view === "kanban"
                 ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                 : "dark:text-dark-300 text-gray-500",
@@ -277,7 +289,7 @@ function Toolbar({
             type="button"
             onClick={() => onView("lista")}
             className={clsx(
-              "flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs-plus font-medium transition-colors",
+              "text-xs-plus flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
               view === "lista"
                 ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                 : "dark:text-dark-300 text-gray-500",
@@ -304,15 +316,15 @@ function Toolbar({
           className="h-9 text-xs"
           aria-label="Filtrar por prioridade"
         />
-        <Button
-          onClick={onAddEtapa}
-          variant="outlined"
-          className="h-9 gap-1.5"
-        >
+        <Button onClick={onAddEtapa} variant="outlined" className="h-9 gap-1.5">
           <PlusIcon className="size-4.5" />
           Etapa
         </Button>
-        <Button onClick={onAddAtividade} color="primary" className="h-9 gap-1.5">
+        <Button
+          onClick={onAddAtividade}
+          color="primary"
+          className="h-9 gap-1.5"
+        >
           <PlusIcon className="size-4.5" />
           Atividade
         </Button>
@@ -391,7 +403,7 @@ function ListaView({ board }: { board: Board }) {
                       {t.priority && (
                         <span
                           className={clsx(
-                            "flex shrink-0 items-center gap-1 text-tiny-plus font-medium",
+                            "text-tiny-plus flex shrink-0 items-center gap-1 font-medium",
                             PRIORITY_META[t.priority].badge,
                           )}
                         >
@@ -459,7 +471,7 @@ function NovaAtividadeModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="dark:bg-black/40 fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" />
+          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40" />
         </TransitionChild>
 
         <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
@@ -520,7 +532,11 @@ function NovaAtividadeModal({
               </div>
 
               <div className="mt-6 flex justify-end gap-3">
-                <Button variant="outlined" className="rounded-lg" onClick={close}>
+                <Button
+                  variant="outlined"
+                  className="rounded-lg"
+                  onClick={close}
+                >
                   Cancelar
                 </Button>
                 <Button

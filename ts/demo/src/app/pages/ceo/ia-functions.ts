@@ -44,10 +44,12 @@ export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
  * - `null` → todas as funções da grade liberadas (quando `AI_STUDIO_DISABLED` é false)
  * - `Set([...])` → só esses ids ficam clicáveis; o restante permanece opaco
  *
- * Hoje só “Criar Dashboard” está liberado.
+ * Sem liberação parcial no momento: o AI Studio está desabilitado por inteiro
+ * (`aiStudio` em temporarilyDisabledFeatures.ts), então esta lista não tem
+ * efeito. Ao reabrir o Studio, `null` devolve a grade completa; para voltar a
+ * liberar só algumas funções, troque por um `Set` com os ids.
  */
-export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null =
-  new Set(["dashboard"]);
+export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null = null;
 
 /** Indica se uma função da grade do AI Studio está temporariamente desabilitada. */
 export function isAiStudioFunctionDisabled(id: string): boolean {

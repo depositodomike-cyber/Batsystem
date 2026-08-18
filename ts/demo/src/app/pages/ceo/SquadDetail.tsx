@@ -27,10 +27,7 @@ import { useChatsContext } from "@/app/contexts/chats/context";
 import { useProjectsContext } from "@/app/contexts/projects/context";
 import { useDocumentsContext } from "@/app/contexts/documents/context";
 import type { SquadDocument } from "@/app/contexts/documents/context";
-import {
-  avisarFalhaMemoria,
-  salvarDocumentoNoGrupo,
-} from "./memoria-grupos";
+import { avisarFalhaMemoria, salvarDocumentoNoGrupo } from "./memoria-grupos";
 import {
   SidePanel,
   DocumentPreviewModal,
@@ -104,7 +101,9 @@ export default function SquadDetail() {
       })
       .catch(() => {
         if (!cancelled)
-          setDetailError("Não foi possível carregar este squad. Tente novamente.");
+          setDetailError(
+            "Não foi possível carregar este squad. Tente novamente.",
+          );
       });
     return () => {
       cancelled = true;
@@ -221,9 +220,7 @@ export default function SquadDetail() {
           err instanceof Error ? err.message : "Erro ao gerar resposta.";
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId && !m.text
-              ? { ...m, text: `⚠️ ${msg}` }
-              : m,
+            m.id === assistantId && !m.text ? { ...m, text: `⚠️ ${msg}` } : m,
           ),
         );
       })
@@ -260,9 +257,7 @@ export default function SquadDetail() {
       });
     }
     setMessages((prev) =>
-      prev.map((m) =>
-        m.id === msg.id ? { ...m, documentId: doc.id } : m,
-      ),
+      prev.map((m) => (m.id === msg.id ? { ...m, documentId: doc.id } : m)),
     );
     // Abre a aba de documentos pra dar feedback visual.
     setActiveTab("documents");
@@ -279,111 +274,111 @@ export default function SquadDetail() {
     <Page title={`${squad.title} · ${product.name}`}>
       {/* Layout: coluna do chat à esquerda + painel lateral à direita. */}
       <div className="flex h-full min-h-0">
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Cabeçalho fixo */}
-        <header className="dark:border-dark-500 dark:bg-dark-750 sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-200 bg-white/95 px-(--margin-x) py-3 backdrop-blur">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300 grid size-9 shrink-0 place-items-center rounded-lg">
-              {Icon && <Icon className="size-5 stroke-[1.5]" />}
-            </div>
-            <div className="min-w-0">
-              <p className="text-primary-600 dark:text-primary-400 text-tiny-plus font-semibold tracking-wider uppercase">
-                Squad
-              </p>
-              <h1 className="dark:text-dark-50 truncate text-sm font-semibold text-gray-800">
-                {squad.title}
-                {selectedAgent && (
-                  <span className="dark:text-dark-300 font-normal text-gray-500">
-                    {" · "}
-                    <span className="dark:text-dark-100 text-gray-700">
-                      {selectedAgent.reference}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Cabeçalho fixo */}
+          <header className="dark:border-dark-500 dark:bg-dark-750 sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-200 bg-white/95 px-(--margin-x) py-3 backdrop-blur">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300 grid size-9 shrink-0 place-items-center rounded-lg">
+                {Icon && <Icon className="size-5 stroke-[1.5]" />}
+              </div>
+              <div className="min-w-0">
+                <p className="text-primary-600 dark:text-primary-400 text-tiny-plus font-semibold tracking-wider uppercase">
+                  Squad
+                </p>
+                <h1 className="dark:text-dark-50 truncate text-sm font-semibold text-gray-800">
+                  {squad.title}
+                  {selectedAgent && (
+                    <span className="dark:text-dark-300 font-normal text-gray-500">
+                      {" · "}
+                      <span className="dark:text-dark-100 text-gray-700">
+                        {selectedAgent.reference}
+                      </span>
                     </span>
-                  </span>
-                )}
-              </h1>
+                  )}
+                </h1>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {selectedAgent && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedAgent(null)}
+                  title="Falar com o squad inteiro"
+                  className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                >
+                  <XMarkIcon className="size-3.5" />
+                  Conversar com o squad
+                </button>
+              )}
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  title="Nova conversa"
+                  className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                >
+                  <ArrowPathIcon className="size-3.5" />
+                  Nova conversa
+                </button>
+              )}
+            </div>
+          </header>
+
+          {/* Área de conversa rolável */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-3xl px-(--margin-x) py-6">
+              {isEmpty ? (
+                detailError ? (
+                  <div className="dark:text-dark-300 py-16 text-center text-sm text-gray-500">
+                    {detailError}
+                  </div>
+                ) : !detail ? (
+                  <div className="flex justify-center py-16">
+                    <Spinner color="primary" className="size-6" />
+                  </div>
+                ) : (
+                  <EmptyState
+                    squad={squad}
+                    detail={detail}
+                    selectedAgent={selectedAgent}
+                    onSelectAgent={(a) => setSelectedAgent(a)}
+                    onPickQuestion={(q) => handleSubmit(q)}
+                    onPickAction={(a) => handleSubmit(a)}
+                  />
+                )
+              ) : (
+                <MessageList
+                  messages={messages}
+                  pendingAgent={pendingAgent}
+                  squadTitle={squad.title}
+                  onSaveAsDocument={handleSaveAsDocument}
+                />
+              )}
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {selectedAgent && (
-              <button
-                type="button"
-                onClick={() => setSelectedAgent(null)}
-                title="Falar com o squad inteiro"
-                className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-              >
-                <XMarkIcon className="size-3.5" />
-                Conversar com o squad
-              </button>
-            )}
-            {messages.length > 0 && (
-              <button
-                type="button"
-                onClick={handleReset}
-                title="Nova pesquisa"
-                className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-              >
-                <ArrowPathIcon className="size-3.5" />
-                Nova pesquisa
-              </button>
-            )}
-          </div>
-        </header>
 
-        {/* Área de conversa rolável */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-3xl px-(--margin-x) py-6">
-            {isEmpty ? (
-              detailError ? (
-                <div className="dark:text-dark-300 py-16 text-center text-sm text-gray-500">
-                  {detailError}
-                </div>
-              ) : !detail ? (
-                <div className="flex justify-center py-16">
-                  <Spinner color="primary" className="size-6" />
-                </div>
-              ) : (
-                <EmptyState
-                  squad={squad}
-                  detail={detail}
-                  selectedAgent={selectedAgent}
-                  onSelectAgent={(a) => setSelectedAgent(a)}
-                  onPickQuestion={(q) => handleSubmit(q)}
-                  onPickAction={(a) => handleSubmit(a)}
-                />
-              )
-            ) : (
-              <MessageList
-                messages={messages}
-                pendingAgent={pendingAgent}
-                squadTitle={squad.title}
-                onSaveAsDocument={handleSaveAsDocument}
-              />
-            )}
-          </div>
+          {/* Caixa de envio */}
+          <PromptBar
+            placeholder={
+              selectedAgent
+                ? `Pergunte a ${selectedAgent.reference}…`
+                : `Pergunte ao squad ${squad.title}…`
+            }
+            hint={selectedAgent?.reference ?? squad.title}
+            onSubmit={handleSubmit}
+          />
         </div>
 
-        {/* Caixa de envio */}
-        <PromptBar
-          placeholder={
-            selectedAgent
-              ? `Pergunte a ${selectedAgent.reference}…`
-              : `Pergunte ao squad ${squad.title}…`
-          }
-          hint={selectedAgent?.reference ?? squad.title}
-          onSubmit={handleSubmit}
+        {/* Painel lateral: Histórico + Documentos (sempre visível) */}
+        <SidePanel
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          chats={squadChats}
+          documents={squadDocs}
+          onOpenChat={(c) => navigate(`/${product.code}/historico/${c.id}`)}
+          onOpenDocument={(d) => setPreviewDoc(d)}
+          emptyChatsText="As conversas com este squad aparecem aqui."
         />
-      </div>
-
-      {/* Painel lateral: Histórico + Documentos (sempre visível) */}
-      <SidePanel
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        chats={squadChats}
-        documents={squadDocs}
-        onOpenChat={(c) => navigate(`/${product.code}/historico/${c.id}`)}
-        onOpenDocument={(d) => setPreviewDoc(d)}
-        emptyChatsText="As conversas com este squad aparecem aqui."
-      />
       </div>
 
       <DocumentPreviewModal
@@ -429,7 +424,7 @@ function EmptyState({
 
       {/* Agentes */}
       <section className="mt-7">
-        <h3 className="dark:text-dark-300 mb-1 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
+        <h3 className="dark:text-dark-300 text-tiny-plus mb-1 font-semibold tracking-wider text-gray-500 uppercase">
           Membros do squad
         </h3>
         <p className="dark:text-dark-400 mb-2 max-w-xl text-xs text-gray-400">
@@ -448,7 +443,7 @@ function EmptyState({
                   "rounded-lg border px-3 py-1 text-xs transition-colors",
                   active
                     ? "border-primary-500 bg-primary-500 text-white"
-                    : "dark:border-dark-500 dark:text-dark-200 dark:hover:border-primary-500/50 dark:hover:text-primary-300 border-gray-300 text-gray-700 hover:border-primary-400 hover:text-primary-600",
+                    : "dark:border-dark-500 dark:text-dark-200 dark:hover:border-primary-500/50 dark:hover:text-primary-300 hover:border-primary-400 hover:text-primary-600 border-gray-300 text-gray-700",
                 )}
               >
                 <span className="font-medium">{agent.reference}</span>
@@ -476,13 +471,13 @@ function EmptyState({
           count={detail.starterQuestions.length}
           defaultOpen={false}
         >
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {detail.starterQuestions.map((q, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => onPickQuestion(q)}
-                className="dark:border-dark-500 dark:bg-dark-700 dark:hover:bg-dark-600 dark:text-dark-100 flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-start text-sm text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50/40 dark:hover:border-primary-500/40"
+                className="dark:border-dark-500 dark:bg-dark-700 dark:hover:bg-dark-600 dark:text-dark-100 hover:border-primary-300 hover:bg-primary-50/40 dark:hover:border-primary-500/40 flex items-start gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-start text-sm text-gray-700 transition-colors"
               >
                 <ChatBubbleLeftRightIcon className="text-primary-500 mt-0.5 size-4 shrink-0 stroke-[1.75]" />
                 <span className="min-w-0 flex-1">{q}</span>
@@ -498,7 +493,7 @@ function EmptyState({
             count={detail.starterActions.length}
             defaultOpen={false}
           >
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {detail.starterActions.map((a, i) => (
                 <button
                   key={i}
@@ -544,7 +539,7 @@ function CollapsibleSection({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         title={open ? "Minimizar" : "Maximizar"}
-        className="dark:text-dark-300 dark:hover:text-dark-100 mb-2 flex w-full items-center gap-2 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700"
+        className="dark:text-dark-300 dark:hover:text-dark-100 text-tiny-plus mb-2 flex w-full items-center gap-2 font-semibold tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700"
       >
         <ChevronDownIcon
           className={clsx(
@@ -553,7 +548,7 @@ function CollapsibleSection({
           )}
         />
         <span className="flex-1 text-start">{title}</span>
-        <span className="dark:bg-dark-600 dark:text-dark-200 rounded-lg bg-gray-100 px-2 py-0.5 text-[11px] font-medium normal-case tracking-normal text-gray-500">
+        <span className="dark:bg-dark-600 dark:text-dark-200 rounded-lg bg-gray-100 px-2 py-0.5 text-[11px] font-medium tracking-normal text-gray-500 normal-case">
           {count}
         </span>
       </button>
@@ -589,7 +584,7 @@ function MessageList({
         ))}
       {pendingAgent && (
         <div className="flex justify-start">
-          <div className="dark:border-dark-500 dark:bg-dark-700 max-w-[80%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm">
+          <div className="dark:border-dark-500 dark:bg-dark-700 max-w-[92%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm sm:max-w-[80%]">
             <p className="dark:text-dark-300 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
               {pendingAgent}
             </p>
@@ -626,7 +621,7 @@ function MessageBubble({
     <div className={clsx("flex", isUser ? "justify-end" : "justify-start")}>
       <div
         className={clsx(
-          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm",
+          "max-w-[92%] rounded-2xl px-4 py-2.5 text-sm sm:max-w-[80%]",
           isUser
             ? "bg-primary-500 dark:bg-primary-600 rounded-tr-sm text-white"
             : "dark:border-dark-500 dark:bg-dark-700 dark:text-dark-100 rounded-tl-sm border border-gray-200 bg-white text-gray-800",
@@ -638,9 +633,9 @@ function MessageBubble({
             isUser ? "text-white/70" : "dark:text-dark-300 text-gray-500",
           )}
         >
-          {isUser ? "Você" : message.agentReference ?? squadTitle}
+          {isUser ? "Você" : (message.agentReference ?? squadTitle)}
         </p>
-        <p className="mt-1 whitespace-pre-wrap leading-relaxed">
+        <p className="mt-1 leading-relaxed whitespace-pre-wrap">
           {message.text}
         </p>
         {!isUser && (
@@ -666,4 +661,3 @@ function MessageBubble({
     </div>
   );
 }
-

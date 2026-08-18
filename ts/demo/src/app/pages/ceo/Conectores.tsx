@@ -208,8 +208,20 @@ export default function Conectores() {
               help={{
                 description: (
                   <>
-                    <p><strong>Conectores</strong> ligam o GregHub às ferramentas que sua empresa já usa — e-mail, agenda, mensagens e outros serviços — para sincronizar dados e automatizar fluxos.</p>
-                    <p>Use a busca, o filtro por status (todas, conectadas ou disponíveis) e as categorias para encontrar uma integração. Abra um card para ver as permissões e ative a conexão; integrações via OAuth pedem sua autorização no provedor. Depois de conectar, você pode testar a conexão ou desconectar a qualquer momento.</p>
+                    <p>
+                      <strong>Conectores</strong> ligam o GregHub às ferramentas
+                      que sua empresa já usa — e-mail, agenda, mensagens e
+                      outros serviços — para sincronizar dados e automatizar
+                      fluxos.
+                    </p>
+                    <p>
+                      Use a busca, o filtro por status (todas, conectadas ou
+                      disponíveis) e as categorias para encontrar uma
+                      integração. Abra um card para ver as permissões e ative a
+                      conexão; integrações via OAuth pedem sua autorização no
+                      provedor. Depois de conectar, você pode testar a conexão
+                      ou desconectar a qualquer momento.
+                    </p>
                   </>
                 ),
               }}
@@ -246,7 +258,10 @@ export default function Conectores() {
         </div>
 
         {/* Barra de ferramentas fixa: busca + status + categorias */}
-        <div className="dark:bg-dark-900 sticky top-0 z-10 -mx-(--margin-x) mt-5 bg-gray-50 px-(--margin-x) pt-2 pb-3">
+        {/* `top-(--header-h)`: com `top-0` a barra grudava atrás do
+            `.app-header` (sticky, 65px, z-20) e busca e filtros desapareciam ao
+            rolar — justamente a única navegação da tela no celular. */}
+        <div className="dark:bg-dark-900 sticky top-(--header-h) z-10 -mx-(--margin-x) mt-5 bg-gray-50 px-(--margin-x) pt-2 pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Busca */}
             <div className="relative w-full lg:max-w-xs">
@@ -258,7 +273,7 @@ export default function Conectores() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar por nome, objetivo ou permissão…"
-                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
               />
               {query && (
                 <button
@@ -286,7 +301,7 @@ export default function Conectores() {
                   type="button"
                   onClick={() => setStatus(opt.id)}
                   className={clsx(
-                    "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+                    "text-xs-plus rounded-lg px-3.5 py-1.5 font-medium transition-colors",
                     status === opt.id
                       ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                       : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
@@ -337,7 +352,7 @@ export default function Conectores() {
                       {items.length}
                     </span>
                   </div>
-                  <p className="dark:text-dark-300 mt-0.5 text-xs-plus text-gray-400">
+                  <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-400">
                     {cat.description}
                   </p>
 
@@ -362,7 +377,7 @@ export default function Conectores() {
             <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
               Nenhum conector encontrado
             </p>
-            <p className="dark:text-dark-300 mt-1 text-xs-plus text-gray-400">
+            <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-400">
               Ajuste a busca ou os filtros para ver mais integrações.
             </p>
             <Button
@@ -407,12 +422,21 @@ function StatCard({
 }) {
   return (
     <div className="dark:border-dark-600 dark:bg-dark-700 flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2.5">
-      <span className={clsx("grid size-9 place-items-center rounded-lg bg-current/10", tint)}>
+      <span
+        className={clsx(
+          "grid size-9 place-items-center rounded-lg bg-current/10",
+          tint,
+        )}
+      >
         <Icon className={clsx("size-5 stroke-[1.5]", tint)} />
       </span>
       <div className="leading-tight">
-        <p className="dark:text-dark-50 text-lg font-semibold text-gray-800">{value}</p>
-        <p className="dark:text-dark-300 text-tiny-plus text-gray-400">{label}</p>
+        <p className="dark:text-dark-50 text-lg font-semibold text-gray-800">
+          {value}
+        </p>
+        <p className="dark:text-dark-300 text-tiny-plus text-gray-400">
+          {label}
+        </p>
       </div>
     </div>
   );
@@ -436,9 +460,9 @@ function CategoryPill({
       type="button"
       onClick={onClick}
       className={clsx(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-xs-plus font-medium whitespace-nowrap transition-colors",
+        "text-xs-plus inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-3.5 py-1.5 font-medium whitespace-nowrap transition-colors",
         active
-          ? "border-primary-600 bg-primary-600 text-white dark:border-primary-500 dark:bg-primary-500"
+          ? "border-primary-600 bg-primary-600 dark:border-primary-500 dark:bg-primary-500 text-white"
           : "dark:border-dark-500 dark:bg-dark-700 dark:text-dark-200 dark:hover:border-dark-400 border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:text-gray-800",
       )}
     >
@@ -501,7 +525,7 @@ function ConnectorCard({
         <h4 className="dark:text-dark-50 line-clamp-1 font-semibold text-gray-800">
           {connector.name}
         </h4>
-        <p className="dark:text-dark-300 mt-0.5 line-clamp-1 text-xs-plus text-gray-500">
+        <p className="dark:text-dark-300 text-xs-plus mt-0.5 line-clamp-1 text-gray-500">
           {connector.objective}
         </p>
 
@@ -526,7 +550,7 @@ function ConnectorCard({
         <Button
           variant={connected ? "outlined" : "filled"}
           color={connected ? "neutral" : "primary"}
-          className="h-9 w-full gap-1.5 rounded-lg text-xs-plus"
+          className="text-xs-plus h-9 w-full gap-1.5 rounded-lg"
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
@@ -566,7 +590,7 @@ function TestarConexao({ conectorId }: { conectorId: string }) {
   return (
     <Button
       variant="outlined"
-      className="mt-3 h-9 w-full rounded-lg text-xs-plus"
+      className="text-xs-plus mt-3 h-9 w-full rounded-lg"
       disabled={testando}
       onClick={testar}
     >
@@ -603,7 +627,7 @@ function ConnectorDrawer({
           leave="ease-in duration-200"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
-          className="dark:bg-black/40 fixed inset-0 z-60 bg-gray-900/50 backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 z-60 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40"
         />
 
         <TransitionChild
@@ -654,12 +678,20 @@ function ConnectorDrawer({
                     </Badge>
                   )}
                   {connected ? (
-                    <Badge color="success" variant="soft" className="gap-1 rounded-full">
+                    <Badge
+                      color="success"
+                      variant="soft"
+                      className="gap-1 rounded-full"
+                    >
                       <CheckCircleIcon className="size-3.5" />
                       Conectado
                     </Badge>
                   ) : (
-                    <Badge color="neutral" variant="soft" className="rounded-full">
+                    <Badge
+                      color="neutral"
+                      variant="soft"
+                      className="rounded-full"
+                    >
                       Não conectado
                     </Badge>
                   )}
@@ -687,10 +719,12 @@ function ConnectorDrawer({
                   <ul className="mt-3 space-y-2">
                     {connector.permissions.map((p) => (
                       <li key={p} className="flex items-start gap-2.5">
-                        <span className="dark:bg-dark-600 mt-0.5 grid size-5 shrink-0 place-items-center rounded-lg bg-primary-50 dark:bg-primary-500/15">
-                          <CheckIcon className="size-3.5 text-primary-600 dark:text-primary-400" />
+                        <span className="dark:bg-dark-600 bg-primary-50 dark:bg-primary-500/15 mt-0.5 grid size-5 shrink-0 place-items-center rounded-lg">
+                          <CheckIcon className="text-primary-600 dark:text-primary-400 size-3.5" />
                         </span>
-                        <span className="dark:text-dark-100 text-sm text-gray-600">{p}</span>
+                        <span className="dark:text-dark-100 text-sm text-gray-600">
+                          {p}
+                        </span>
                       </li>
                     ))}
                   </ul>

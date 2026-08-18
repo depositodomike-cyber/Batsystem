@@ -367,9 +367,7 @@ export default function Slack() {
     const rotulo = rotuloConversa(conversa);
     return {
       id: comThread ? m.id + THREAD : m.id,
-      titulo: comThread
-        ? `Thread · ${tituloDe(m.texto)}`
-        : tituloDe(m.texto),
+      titulo: comThread ? `Thread · ${tituloDe(m.texto)}` : tituloDe(m.texto),
       conteudo: textoParaSalvar(conversa, m, comThread),
       origem: `Slack · ${rotulo}`,
       contexto: `${rotulo} · ${m.autor} · ${dataCompleta(m.data)}${
@@ -399,7 +397,9 @@ export default function Slack() {
       avisarFalhaAoSalvarNaMemoria(r.reason);
       return;
     }
-    setNaMemoria((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
+    setNaMemoria((prev) =>
+      prev.includes(item.id) ? prev : [...prev, item.id],
+    );
     setMemItem(null);
     toast.success("Salvo no Repositório.", {
       description: `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
@@ -455,10 +455,19 @@ export default function Slack() {
                 description: (
                   <>
                     <p>
-                      <strong>Slack</strong> mostra as conversas do seu workspace — canais, conversas em grupo e mensagens diretas. Conecte o Slack em Conectores para ler o workspace real; sem conector, você vê um workspace de demonstração. Mensagens com respostas abrem a thread em um painel à direita.
+                      <strong>Slack</strong> mostra as conversas do seu
+                      workspace — canais, conversas em grupo e mensagens
+                      diretas. Conecte o Slack em Conectores para ler o
+                      workspace real; sem conector, você vê um workspace de
+                      demonstração. Mensagens com respostas abrem a thread em um
+                      painel à direita.
                     </p>
                     <p>
-                      De cada mensagem, ou da thread inteira, você pode <strong>Salvar no Repositório</strong> — o conteúdo vira um contexto da IA e aparece no grafo — ou <strong>Salvar no Grupo</strong>, guardando uma cópia dentro de um agrupamento.
+                      De cada mensagem, ou da thread inteira, você pode{" "}
+                      <strong>Salvar no Repositório</strong> — o conteúdo vira
+                      um contexto da IA e aparece no grafo — ou{" "}
+                      <strong>Salvar no Grupo</strong>, guardando uma cópia
+                      dentro de um agrupamento.
                     </p>
                   </>
                 ),
@@ -480,7 +489,7 @@ export default function Slack() {
                 variant="outlined"
                 onClick={carregar}
                 disabled={carregandoConversas}
-                className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
               >
                 {carregandoConversas ? (
                   <Spinner className="size-4" />
@@ -505,7 +514,7 @@ export default function Slack() {
                 variant="outlined"
                 onClick={carregar}
                 disabled={carregandoConversas}
-                className="mt-2 h-7 gap-1.5 px-2.5 text-tiny"
+                className="text-tiny mt-2 h-7 gap-1.5 px-2.5"
               >
                 <ArrowPathIcon className="size-3.5" />
                 Tentar de novo
@@ -516,7 +525,7 @@ export default function Slack() {
 
         {/* Sem conector: o workspace exibido é o de demonstração. */}
         {!usarWorkspaceReal && (
-          <p className="dark:border-dark-600 dark:bg-dark-700 dark:text-dark-300 mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs-plus text-gray-500">
+          <p className="dark:border-dark-600 dark:bg-dark-700 dark:text-dark-300 text-xs-plus mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500">
             Este é um workspace de demonstração. Conecte o Slack em{" "}
             <span className="dark:text-dark-100 font-medium text-gray-700">
               Conectores
@@ -528,7 +537,7 @@ export default function Slack() {
         {/* A leitura é em nome de quem autorizou: aqui aparece o que essa
             pessoa vê no Slack. Nada na lista é raro — vale dizer o porquê. */}
         {semConversas && (
-          <p className="dark:border-dark-600 dark:bg-dark-700 dark:text-dark-300 mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs-plus text-gray-500">
+          <p className="dark:border-dark-600 dark:bg-dark-700 dark:text-dark-300 text-xs-plus mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-500">
             Nenhuma conversa disponível. A leitura é feita em nome da conta que
             autorizou o Slack
             {contaSlack ? ` (${contaSlack})` : ""} — só aparecem aqui os canais
@@ -552,7 +561,7 @@ export default function Slack() {
                 type="button"
                 onClick={() => setFiltro(f.id)}
                 className={clsx(
-                  "rounded-lg px-3 py-1.5 text-xs-plus font-medium transition-colors",
+                  "text-xs-plus rounded-lg px-3 py-1.5 font-medium transition-colors",
                   filtro === f.id
                     ? "bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400"
                     : "dark:text-dark-300 dark:hover:bg-dark-600 text-gray-500 hover:bg-gray-100",
@@ -573,15 +582,25 @@ export default function Slack() {
               : "lg:grid-cols-[240px_1fr]",
           )}
         >
+          {/* Com a thread aberta abaixo de lg, o grid é de uma coluna só e a
+              thread caía no fim da página, fora da viewport — tocar em
+              "N respostas" parecia não fazer nada. Aqui a thread passa a ser a
+              única superfície visível, no idioma master-detail do Email. */}
           <ListaConversas
             conversas={conversas}
             ativa={conversa?.id ?? ""}
             carregando={carregandoConversas}
             onSelecionar={abrirConversa}
+            className={clsx(thread && "max-lg:hidden")}
           />
 
           {/* Mensagens */}
-          <section className="dark:border-dark-600 dark:bg-dark-700 flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white">
+          <section
+            className={clsx(
+              "dark:border-dark-600 dark:bg-dark-700 flex min-w-0 flex-col rounded-xl border border-gray-200 bg-white",
+              thread && "max-lg:hidden",
+            )}
+          >
             {!conversa ? (
               <div className="grid grow place-items-center px-6 py-16">
                 {carregandoConversas ? (
@@ -604,7 +623,7 @@ export default function Slack() {
                     <IconeConversa conversa={conversa} className="size-4.5" />
                     {rotuloConversa(conversa)}
                   </h3>
-                  <p className="dark:text-dark-300 mt-0.5 text-xs-plus text-gray-500">
+                  <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-500">
                     {conversa.topico ??
                       (conversa.tipo === "dm"
                         ? conversa.online
@@ -615,7 +634,7 @@ export default function Slack() {
                   </p>
                 </div>
 
-                <div className="max-h-[calc(100vh-360px)] overflow-y-auto px-5 py-4">
+                <div className="panel-scroll px-5 py-4 [--panel-offset:22.5rem]">
                   {carregandoMensagens ? (
                     <div className="flex items-center justify-center gap-2 py-8">
                       <Spinner className="size-4" />
@@ -643,7 +662,7 @@ export default function Slack() {
                           <li key={m.id}>
                             {novoDia && (
                               <div className="dark:border-dark-600 my-3 flex items-center gap-3 border-t border-gray-200 pt-3 first:mt-0 first:border-0 first:pt-0">
-                                <span className="dark:border-dark-500 dark:text-dark-300 rounded-full border border-gray-200 px-2.5 py-0.5 text-tiny text-gray-500">
+                                <span className="dark:border-dark-500 dark:text-dark-300 text-tiny rounded-full border border-gray-200 px-2.5 py-0.5 text-gray-500">
                                   {diaLongo(m.data)}
                                 </span>
                               </div>
@@ -679,7 +698,7 @@ export default function Slack() {
                   <h3 className="dark:text-dark-50 text-sm font-semibold text-gray-800">
                     Thread
                   </h3>
-                  <p className="dark:text-dark-300 truncate text-tiny text-gray-500">
+                  <p className="dark:text-dark-300 text-tiny truncate text-gray-500">
                     {rotuloConversa(conversa)} · {totalRespostas(thread)}{" "}
                     {totalRespostas(thread) === 1 ? "resposta" : "respostas"}
                   </p>
@@ -695,22 +714,22 @@ export default function Slack() {
                 </Button>
               </div>
 
-              <div className="max-h-[calc(100vh-430px)] flex-1 overflow-y-auto px-4 py-3">
+              <div className="panel-scroll flex-1 px-4 py-3 [--panel-offset:26.875rem]">
                 <Mensagem mensagem={thread} compacta />
                 <div className="dark:border-dark-600 mt-3 space-y-3 border-t border-gray-200 pt-3">
                   {(thread.respostas ?? []).map((r) => (
                     <div key={r.id} className="flex items-start gap-2.5">
-                      <Avatar nome={r.autor} className="size-7 text-tiny" />
+                      <Avatar nome={r.autor} className="text-tiny size-7" />
                       <div className="min-w-0 flex-1">
                         <p className="flex items-baseline gap-2">
-                          <span className="dark:text-dark-100 truncate text-xs-plus font-semibold text-gray-800">
+                          <span className="dark:text-dark-100 text-xs-plus truncate font-semibold text-gray-800">
                             {r.autor}
                           </span>
-                          <span className="dark:text-dark-400 shrink-0 text-tiny text-gray-400">
+                          <span className="dark:text-dark-400 text-tiny shrink-0 text-gray-400">
                             {hora(r.data)}
                           </span>
                         </p>
-                        <p className="dark:text-dark-200 mt-0.5 text-xs-plus whitespace-pre-line text-gray-600">
+                        <p className="dark:text-dark-200 text-xs-plus mt-0.5 whitespace-pre-line text-gray-600">
                           {r.texto}
                         </p>
                       </div>
@@ -723,7 +742,7 @@ export default function Slack() {
                 <Button
                   color="primary"
                   onClick={() => salvarMensagem(thread, true)}
-                  className="h-8 flex-1 gap-1.5 px-2.5 text-xs-plus"
+                  className="text-xs-plus h-8 flex-1 gap-1.5 px-2.5"
                 >
                   <CpuChipIcon className="size-4" />
                   Thread no Repositório
@@ -731,7 +750,7 @@ export default function Slack() {
                 <Button
                   variant="outlined"
                   onClick={() => salvarMensagemNoGrupo(thread, true)}
-                  className="h-8 flex-1 gap-1.5 px-2.5 text-xs-plus"
+                  className="text-xs-plus h-8 flex-1 gap-1.5 px-2.5"
                 >
                   <FolderPlusIcon className="size-4" />
                   Thread no Grupo
@@ -783,14 +802,21 @@ function ListaConversas({
   ativa,
   carregando,
   onSelecionar,
+  className,
 }: {
   conversas: SlackConversaResumo[];
   ativa: string;
   carregando?: boolean;
   onSelecionar: (id: string) => void;
+  className?: string;
 }) {
   return (
-    <aside className="dark:border-dark-600 dark:bg-dark-700 flex max-h-64 flex-col gap-3 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 lg:max-h-[calc(100vh-300px)]">
+    <aside
+      className={clsx(
+        "dark:border-dark-600 dark:bg-dark-700 panel-scroll flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 [--panel-offset:18.75rem]",
+        className,
+      )}
+    >
       {carregando && conversas.length === 0 && (
         <div className="flex items-center gap-2 px-1 py-3">
           <Spinner className="size-4" />
@@ -804,7 +830,7 @@ function ListaConversas({
         if (doTipo.length === 0) return null;
         return (
           <div key={tipo}>
-            <p className="dark:text-dark-200 mb-1 px-1 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
+            <p className="dark:text-dark-200 text-tiny-plus mb-1 px-1 font-semibold tracking-wider text-gray-500 uppercase">
               {titulo}
             </p>
             <ul className="flex flex-col gap-0.5">
@@ -884,7 +910,8 @@ function Mensagem({
 }) {
   const respostas = totalRespostas(mensagem);
   const salvaNaMemoria =
-    naMemoria.includes(mensagem.id) || naMemoria.includes(`${mensagem.id}#thread`);
+    naMemoria.includes(mensagem.id) ||
+    naMemoria.includes(`${mensagem.id}#thread`);
   const grupos =
     emGrupo[mensagem.id] ?? emGrupo[`${mensagem.id}#thread`] ?? null;
 
@@ -895,14 +922,16 @@ function Mensagem({
         !compacta && "dark:hover:bg-dark-600/50 hover:bg-gray-50",
       )}
     >
-      <Avatar nome={mensagem.autor} className="size-8 text-tiny" />
+      <Avatar nome={mensagem.autor} className="text-tiny size-8" />
 
-      <div className="min-w-0 flex-1">
+      {/* `pe-16` abaixo de lg: o overlay de ações é sempre visível no toque
+          (não há hover) e cobria o horário e o fim do nome do autor. */}
+      <div className="min-w-0 flex-1 pe-16 lg:pe-0">
         <p className="flex items-baseline gap-2">
           <span className="dark:text-dark-100 truncate text-sm font-semibold text-gray-800">
             {mensagem.autor}
           </span>
-          <span className="dark:text-dark-400 shrink-0 text-tiny text-gray-400">
+          <span className="dark:text-dark-400 text-tiny shrink-0 text-gray-400">
             {hora(mensagem.data)}
           </span>
         </p>
@@ -917,7 +946,7 @@ function Mensagem({
             {mensagem.reacoes!.map((r) => (
               <span
                 key={r.emoji}
-                className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-200 inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-tiny text-gray-600"
+                className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-200 text-tiny inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-gray-600"
               >
                 <span aria-hidden="true">{r.emoji}</span>
                 {r.total}
@@ -932,7 +961,7 @@ function Mensagem({
               type="button"
               onClick={onAbrirThread}
               className={clsx(
-                "inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-tiny font-medium transition-colors",
+                "text-tiny inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5 font-medium transition-colors",
                 threadAberta
                   ? "bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400"
                   : "text-primary-600 dark:text-primary-400 hover:bg-primary-600/10 dark:hover:bg-primary-400/10",
@@ -951,7 +980,7 @@ function Mensagem({
             <Badge
               color="info"
               variant="soft"
-              className="max-w-[9rem] truncate text-tiny"
+              className="text-tiny max-w-[9rem] truncate"
             >
               {grupos.length > 1 ? `${grupos.length} grupos` : grupos[0]}
             </Badge>

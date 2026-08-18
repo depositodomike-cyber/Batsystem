@@ -83,23 +83,28 @@ function AiCard({
 }
 
 /**
- * Aviso de lançamento desligado temporariamente: com o AI Studio parcialmente
- * liberado (Criar Dashboard), o bloqueio de tela inteira impediria o acesso.
- * Volte para `true` para reativar o aviso.
+ * Aviso de lançamento ("Em breve") bloqueando a tela do AI Studio. Ficou
+ * desligado enquanto "Criar Dashboard" estava parcialmente liberado; com o
+ * Studio inteiro desabilitado de novo, o aviso volta. A única saída do modal
+ * leva ao Repositório (ver `grafoPath`).
  */
-const AVISO_EM_BREVE_ATIVO = false;
+const AVISO_EM_BREVE_ATIVO = true;
 
 /**
  * Aviso de lançamento: a grade desabilitada fica atrás, e a única saída é o
- * botão que leva ao Grafo. `onClose` é no-op de propósito — clique fora e Esc
- * não fecham.
+ * botão que leva ao Repositório (grafo ou lista, conforme `grafoPath`).
+ * `onClose` é no-op de propósito — clique fora e Esc não fecham.
  */
 function AiStudioComingSoonModal({
   open,
   grafoPath,
+  destinoLista,
 }: {
   open: boolean;
   grafoPath: string;
+  /** Grafo desabilitado: a saída vai para a LISTA do Repositório. O texto
+      acompanha, senão o botão promete um destino que não é o dele. */
+  destinoLista: boolean;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -144,7 +149,7 @@ function AiStudioComingSoonModal({
                 {t("ai.comingSoonTitle")}
               </DialogTitle>
               <p className="dark:text-dark-300 mt-3 text-sm text-gray-500">
-                {t("ai.comingSoonBody")}
+                {t(destinoLista ? "ai.comingSoonBodyRepo" : "ai.comingSoonBody")}
               </p>
 
               <div className="mt-6 flex justify-end">
@@ -152,7 +157,7 @@ function AiStudioComingSoonModal({
                   color="primary"
                   onClick={() => navigate(grafoPath)}
                 >
-                  {t("ai.comingSoonCta")}
+                  {t(destinoLista ? "ai.comingSoonCtaRepo" : "ai.comingSoonCta")}
                 </Button>
               </div>
             </DialogPanel>
@@ -269,7 +274,11 @@ export default function Ia() {
         </section>
       </div>
 
-      <AiStudioComingSoonModal open={avisoVisivel} grafoPath={grafoPath} />
+      <AiStudioComingSoonModal
+        open={avisoVisivel}
+        grafoPath={grafoPath}
+        destinoLista={isFeatureTemporarilyDisabled("memoryGraph")}
+      />
     </Page>
   );
 }

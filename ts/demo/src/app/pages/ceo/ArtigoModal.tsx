@@ -1,12 +1,5 @@
 // Import Dependencies
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  Transition,
-  TransitionChild,
-} from "@headlessui/react";
 import { toast } from "sonner";
 import {
   DocumentTextIcon,
@@ -18,8 +11,11 @@ import {
 
 // Local Imports
 import { Button, Checkbox, Spinner } from "@/components/ui";
-import { MemoriaTextarea, MemoriaInput } from "@/components/shared/MemoriaMentions";
-import { WindowControls } from "@/app/contexts/ia-modals/WindowControls";
+import {
+  MemoriaTextarea,
+  MemoriaInput,
+} from "@/components/shared/MemoriaMentions";
+import { IaModalShell } from "@/app/contexts/ia-modals/IaModalShell";
 import { DesignSystemBar, useActiveDesignSystem } from "./design-system";
 import { MarkdownView } from "./MarkdownView";
 import { gerarArtigoApi, type Artigo } from "@/services/api/artigo";
@@ -136,7 +132,9 @@ export function ArtigoModal({ isOpen, close, onMinimize }: Props) {
     if (!artigo) return;
     try {
       await navigator.clipboard.writeText(markdownCompleto(artigo));
-      toast("Copiado", { description: "Artigo copiado para a área de transferência." });
+      toast("Copiado", {
+        description: "Artigo copiado para a área de transferência.",
+      });
     } catch {
       toast("Não foi possível copiar");
     }
@@ -158,174 +156,181 @@ export function ArtigoModal({ isOpen, close, onMinimize }: Props) {
   };
 
   return (
-    <Transition show={isOpen}>
-      <Dialog onClose={fechar} className="relative z-[70]">
-        <TransitionChild
-          enter="ease-out duration-200"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-150"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/40" />
-        </TransitionChild>
+    <IaModalShell
+      isOpen={isOpen}
+      close={fechar}
+      onMinimize={onMinimize}
+      closeDisabled={loading || refinando}
+      title="IA · Criar artigo"
+      icon={DocumentTextIcon}
+    >
+      <div>
+        {/* Resultado */}
+        {artigo ? (
+          <div>
+            <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
+              <Button
+                onClick={novo}
+                variant="outlined"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
+              >
+                <ArrowPathIcon className="size-4" /> Novo
+              </Button>
+              <Button
+                onClick={copiar}
+                variant="outlined"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
+              >
+                <ClipboardDocumentIcon className="size-4" /> Copiar
+              </Button>
+              <Button
+                onClick={baixar}
+                variant="outlined"
+                className="text-xs-plus h-8 gap-1.5 px-2.5"
+              >
+                <ArrowDownTrayIcon className="size-4" /> .md
+              </Button>
+              <SalvarNaMemoriaButton
+                pasta={PASTA_MEMORIA.artigo}
+                titulo={artigo.titulo}
+                conteudo={notaMemoria(artigo)}
+                tags={["artigo"]}
+              />
+              <EnviarParaGrupoButton
+                funcao="artigo"
+                titulo={artigo.titulo}
+                conteudo={`${artigo.subtitulo ? `*${artigo.subtitulo}*\n\n` : ""}${artigo.conteudo}`}
+              />
+            </div>
 
-        <div className="fixed inset-0 flex items-start justify-center overflow-y-auto p-4 sm:p-6">
-          <TransitionChild
-            enter="ease-out duration-200"
-            enterFrom="opacity-0 translate-y-4"
-            enterTo="opacity-100 translate-y-0"
-            leave="ease-in duration-150"
-            leaveFrom="opacity-100 translate-y-0"
-            leaveTo="opacity-0 translate-y-4"
-          >
-            <DialogPanel className="dark:bg-dark-700 my-4 flex w-full max-w-3xl flex-col rounded-xl bg-white shadow-xl">
-              {/* Cabeçalho */}
-              <div className="dark:border-dark-600 flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-3.5">
-                <DialogTitle className="dark:text-dark-50 flex items-center gap-2 text-base font-semibold text-gray-800">
-                  <DocumentTextIcon className="size-5" />
-                  IA · Criar artigo
-                </DialogTitle>
-                <WindowControls
-                  onMinimize={onMinimize}
-                  onClose={fechar}
-                  closeDisabled={loading || refinando}
+            <h2 className="dark:text-dark-50 text-2xl font-bold text-gray-800">
+              {artigo.titulo}
+            </h2>
+            {artigo.subtitulo && (
+              <p className="dark:text-dark-300 mt-1 text-base text-gray-500">
+                {artigo.subtitulo}
+              </p>
+            )}
+            <div className="dark:border-dark-600 mt-3 border-t border-gray-100 pt-3">
+              <MarkdownView>{artigo.conteudo}</MarkdownView>
+            </div>
+            {artigo.conexoes?.trim() && (
+              <div className="dark:border-dark-600 mt-4 border-t border-gray-100 pt-3">
+                <MarkdownView>{artigo.conexoes.trim()}</MarkdownView>
+              </div>
+            )}
+
+            {/* Refino iterativo */}
+            <div className="dark:border-dark-600 dark:bg-dark-800/40 mt-5 rounded-xl border border-gray-200 p-3">
+              <label className="dark:text-dark-200 text-xs-plus mb-1.5 flex items-center gap-1.5 font-medium text-gray-600">
+                <SparklesIcon className="size-4" /> Peça um ajuste
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <MemoriaInput
+                  value={ajuste}
+                  onChange={(e) => setAjuste(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !refinando) refazer();
+                  }}
+                  disabled={refinando}
+                  placeholder="Ex.: mais curto, mais formal, foque em exemplos práticos…"
+                  className="form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
                 />
+                <Button
+                  onClick={refazer}
+                  color="primary"
+                  disabled={!ajuste.trim() || refinando}
+                  className="gap-2"
+                >
+                  {refinando ? (
+                    <Spinner className="size-4" />
+                  ) : (
+                    <ArrowPathIcon className="size-4" />
+                  )}
+                  Refazer
+                </Button>
               </div>
+              {erro && (
+                <p className="text-xs-plus mt-2 text-rose-500">{erro}</p>
+              )}
+            </div>
+          </div>
+        ) : loading ? (
+          <div className="grid place-items-center py-10">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Spinner className="size-6" />
+              <p className="dark:text-dark-200 text-sm text-gray-600">
+                A IA está escrevendo o artigo…
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Formulário */
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              gerar();
+            }}
+            className="flex flex-col gap-3"
+          >
+            <DesignSystemBar />
 
-              <div className="max-h-[76vh] overflow-y-auto px-5 py-4">
-                {/* Resultado */}
-                {artigo ? (
-                  <div>
-                    <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
-                      <Button onClick={novo} variant="outlined" className="h-8 gap-1.5 px-2.5 text-xs-plus">
-                        <ArrowPathIcon className="size-4" /> Novo
-                      </Button>
-                      <Button onClick={copiar} variant="outlined" className="h-8 gap-1.5 px-2.5 text-xs-plus">
-                        <ClipboardDocumentIcon className="size-4" /> Copiar
-                      </Button>
-                      <Button onClick={baixar} variant="outlined" className="h-8 gap-1.5 px-2.5 text-xs-plus">
-                        <ArrowDownTrayIcon className="size-4" /> .md
-                      </Button>
-                      <SalvarNaMemoriaButton
-                        pasta={PASTA_MEMORIA.artigo}
-                        titulo={artigo.titulo}
-                        conteudo={notaMemoria(artigo)}
-                        tags={["artigo"]}
-                      />
-                      <EnviarParaGrupoButton
-                        funcao="artigo"
-                        titulo={artigo.titulo}
-                        conteudo={`${artigo.subtitulo ? `*${artigo.subtitulo}*\n\n` : ""}${artigo.conteudo}`}
-                      />
-                    </div>
+            <div>
+              <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
+                Tema do artigo <span className="text-rose-500">*</span>
+              </label>
+              <MemoriaTextarea
+                value={tema}
+                onChange={(e) => setTema(e.target.value)}
+                rows={2}
+                placeholder="Ex.: Como conduzir reuniões que geram decisões"
+                className="form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
+              />
+            </div>
 
-                    <h2 className="dark:text-dark-50 text-2xl font-bold text-gray-800">{artigo.titulo}</h2>
-                    {artigo.subtitulo && (
-                      <p className="dark:text-dark-300 mt-1 text-base text-gray-500">{artigo.subtitulo}</p>
-                    )}
-                    <div className="dark:border-dark-600 mt-3 border-t border-gray-100 pt-3">
-                      <MarkdownView>{artigo.conteudo}</MarkdownView>
-                    </div>
-                    {artigo.conexoes?.trim() && (
-                      <div className="dark:border-dark-600 mt-4 border-t border-gray-100 pt-3">
-                        <MarkdownView>{artigo.conexoes.trim()}</MarkdownView>
-                      </div>
-                    )}
+            <div>
+              <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
+                Contexto / instruções{" "}
+                <span className="text-gray-400">(opcional)</span>
+              </label>
+              <MemoriaTextarea
+                value={contexto}
+                onChange={(e) => setContexto(e.target.value)}
+                rows={3}
+                placeholder="Público, tom, pontos que não podem faltar, extensão desejada…"
+                className="form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
+              />
+            </div>
 
-                    {/* Refino iterativo */}
-                    <div className="dark:border-dark-600 dark:bg-dark-800/40 mt-5 rounded-xl border border-gray-200 p-3">
-                      <label className="dark:text-dark-200 mb-1.5 flex items-center gap-1.5 text-xs-plus font-medium text-gray-600">
-                        <SparklesIcon className="size-4" /> Peça um ajuste
-                      </label>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <MemoriaInput
-                          value={ajuste}
-                          onChange={(e) => setAjuste(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !refinando) refazer();
-                          }}
-                          disabled={refinando}
-                          placeholder="Ex.: mais curto, mais formal, foque em exemplos práticos…"
-                          className="form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
-                        />
-                        <Button onClick={refazer} color="primary" disabled={!ajuste.trim() || refinando} className="gap-2">
-                          {refinando ? <Spinner className="size-4" /> : <ArrowPathIcon className="size-4" />}
-                          Refazer
-                        </Button>
-                      </div>
-                      {erro && <p className="mt-2 text-xs-plus text-rose-500">{erro}</p>}
-                    </div>
-                  </div>
-                ) : loading ? (
-                  <div className="grid place-items-center py-10">
-                    <div className="flex flex-col items-center gap-3 text-center">
-                      <Spinner className="size-6" />
-                      <p className="dark:text-dark-200 text-sm text-gray-600">A IA está escrevendo o artigo…</p>
-                    </div>
-                  </div>
-                ) : (
-                  /* Formulário */
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      gerar();
-                    }}
-                    className="flex flex-col gap-3"
-                  >
-                    <DesignSystemBar />
+            <label className="dark:text-dark-200 text-xs-plus flex cursor-pointer items-center gap-2 text-gray-600">
+              <Checkbox
+                checked={usarMemoria}
+                onChange={(e) => setUsarMemoria(e.target.checked)}
+                className="size-4"
+              />
+              Usar o Repositório como referência
+            </label>
 
-                    <div>
-                      <label className="dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600">
-                        Tema do artigo <span className="text-rose-500">*</span>
-                      </label>
-                      <MemoriaTextarea
-                        value={tema}
-                        onChange={(e) => setTema(e.target.value)}
-                        rows={2}
-                        placeholder="Ex.: Como conduzir reuniões que geram decisões"
-                        className="form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600">
-                        Contexto / instruções <span className="text-gray-400">(opcional)</span>
-                      </label>
-                      <MemoriaTextarea
-                        value={contexto}
-                        onChange={(e) => setContexto(e.target.value)}
-                        rows={3}
-                        placeholder="Público, tom, pontos que não podem faltar, extensão desejada…"
-                        className="form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
-                      />
-                    </div>
-
-                    <label className="dark:text-dark-200 flex cursor-pointer items-center gap-2 text-xs-plus text-gray-600">
-                      <Checkbox checked={usarMemoria} onChange={(e) => setUsarMemoria(e.target.checked)} className="size-4" />
-                      Usar o Repositório como referência
-                    </label>
-
-                    {erro && (
-                      <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs-plus text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
-                        {erro}
-                      </div>
-                    )}
-
-                    <div className="flex justify-end pt-1">
-                      <Button type="submit" color="primary" disabled={!tema.trim()} className="gap-2">
-                        <DocumentTextIcon className="size-5" />
-                        Gerar artigo
-                      </Button>
-                    </div>
-                  </form>
-                )}
+            {erro && (
+              <div className="text-xs-plus rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
+                {erro}
               </div>
-            </DialogPanel>
-          </TransitionChild>
-        </div>
-      </Dialog>
-    </Transition>
+            )}
+
+            <div className="flex justify-end pt-1">
+              <Button
+                type="submit"
+                color="primary"
+                disabled={!tema.trim()}
+                className="gap-2"
+              >
+                <DocumentTextIcon className="size-5" />
+                Gerar artigo
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
+    </IaModalShell>
   );
 }

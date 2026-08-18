@@ -45,6 +45,7 @@ import {
   getAiProviders,
   listAiCredentials,
   removeAiCredential,
+  PROVEDORES_PADRAO,
   type AiCredential,
   type AiModality,
   type CatalogProvider,
@@ -180,26 +181,27 @@ function rotuloCredencial(
  * prioridade dos modelos em cada modalidade. A chave nunca volta do servidor.
  */
 export function AiConnectionCard() {
-  const [providers, setProviders] = useState<CatalogProvider[]>([]);
+  // Começa no espelho local do catálogo (ver `PROVEDORES_PADRAO`): o select de
+  // provedor já nasce preenchido e a resposta do servidor só o substitui.
+  const [providers, setProviders] =
+    useState<CatalogProvider[]>(PROVEDORES_PADRAO);
   const [creds, setCreds] = useState<AiCredential[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      try {
-        const [provs, lista] = await Promise.all([
-          getAiProviders(),
-          listAiCredentials(),
-        ]);
-        if (!alive) return;
-        setProviders(provs);
-        setCreds(lista);
-      } catch {
-        /* lista vazia; o usuário tenta de novo pelo modal */
-      } finally {
-        if (alive) setLoading(false);
-      }
+      // `allSettled`: uma falha ao listar as chaves não pode descartar o
+      // catálogo (nem o contrário, como acontecia com o `Promise.all`).
+      await Promise.allSettled([
+        getAiProviders().then((provs) => {
+          if (alive) setProviders(provs);
+        }),
+        listAiCredentials().then((lista) => {
+          if (alive) setCreds(lista);
+        }),
+      ]);
+      if (alive) setLoading(false);
     })();
     return () => {
       alive = false;
@@ -460,19 +462,28 @@ function AddKeyModal({
   providers: CatalogProvider[];
   onCreated: (c: AiCredential) => void;
 }) {
-  const [providerId, setProviderId] = useState(providers[0]?.id ?? "");
+  const [escolhido, setEscolhido] = useState("");
   const [nome, setNome] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset só quando abre. Antes dependia também de `providers`, então a
+  // chegada do catálogo no meio do preenchimento apagava a chave já digitada.
   useEffect(() => {
     if (!open) return;
-    setProviderId(providers[0]?.id ?? "");
+    setEscolhido("");
     setNome("");
     setApiKey("");
     setError(null);
-  }, [open, providers]);
+  }, [open]);
+
+  // Derivado, não sincronizado por efeito: a lista do servidor chega depois da
+  // primeira renderização, então o valor escolhido só vale enquanto existir no
+  // catálogo; fora isso, cai no primeiro provedor da lista.
+  const providerId = providers.some((p) => p.id === escolhido)
+    ? escolhido
+    : (providers[0]?.id ?? "");
 
   const salvar = async () => {
     setError(null);
@@ -540,8 +551,8 @@ function AddKeyModal({
                 </span>
                 <select
                   value={providerId}
-                  onChange={(e) => setProviderId(e.target.value)}
-                  className="form-select dark:border-dark-450 dark:bg-dark-700 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  onChange={(e) => setEscolhido(e.target.value)}
+                  className="form-select dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
                 >
                   {providers.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -906,7 +917,7 @@ function AddModelPanel({
           <select
             value={credentialId}
             onChange={(e) => setCredentialId(e.target.value)}
-            className="form-select dark:border-dark-450 dark:bg-dark-700 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="form-select dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           >
             {creds.map((c) => (
               <option key={c.id} value={c.id}>
@@ -922,7 +933,7 @@ function AddModelPanel({
           <select
             value={model}
             onChange={(e) => setModel(e.target.value)}
-            className="form-select dark:border-dark-450 dark:bg-dark-700 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            className="form-select dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
           >
             {modelos.length === 0 ? (
               <option value="">Todos os modelos já estão na fila</option>

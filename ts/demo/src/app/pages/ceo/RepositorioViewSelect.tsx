@@ -1,6 +1,10 @@
 /**
  * Select Grafo / Lista no cabeçalho do Repositório. Mesmo padrão do sidebar
  * (ícone, rótulo, chevron e menu), com borda para conviver com o Sincronizar.
+ *
+ * Com `memoryGraph` desabilitado o seletor CONTINUA visível — a opção Grafo
+ * fica opaca e sem clique, em vez de sumir. Esconder o seletor tirava do
+ * usuário a informação de que a visão existe.
  */
 
 import { useEffect } from "react";
@@ -17,7 +21,10 @@ import clsx from "clsx";
 
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { navigationIcons } from "@/app/navigation/icons";
-import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 export type RepositorioView = "lista" | "grafo";
 
@@ -84,12 +91,12 @@ export function RepositorioViewSelect({ compact = false }: { compact?: boolean }
     if (!grafoOff) salvarViewRepositorio(atual);
   }, [atual, grafoOff]);
 
-  if (grafoOff) return null;
-
   const selecionado = VIEWS.find((v) => v.id === atual) ?? VIEWS[0];
   const Icon = navigationIcons[selecionado.icon];
 
   const escolher = (view: RepositorioView) => {
+    // Grafo desabilitado: a opção continua na lista, só não navega.
+    if (view === "grafo" && grafoOff) return;
     if (view === atual) return;
     salvarViewRepositorio(view);
     navigate(caminhoRepositorio(product.code, view));
@@ -132,16 +139,19 @@ export function RepositorioViewSelect({ compact = false }: { compact?: boolean }
           </p>
           {VIEWS.map((view) => {
             const active = view.id === selecionado.id;
+            const desabilitada = view.id === "grafo" && grafoOff;
             const ViewIcon = navigationIcons[view.icon];
             return (
-              <MenuItem key={view.id}>
+              <MenuItem key={view.id} disabled={desabilitada}>
                 {({ focus }) => (
                   <button
                     type="button"
+                    disabled={desabilitada}
                     onClick={() => escolher(view.id)}
                     className={clsx(
                       "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-start text-xs-plus outline-hidden transition-colors",
-                      focus && "dark:bg-dark-600 bg-gray-100",
+                      focus && !desabilitada && "dark:bg-dark-600 bg-gray-100",
+                      desabilitada && DISABLED_MENU_CLASS,
                       active
                         ? "text-primary-600 dark:text-primary-400 font-semibold"
                         : "dark:text-dark-100 text-gray-800",

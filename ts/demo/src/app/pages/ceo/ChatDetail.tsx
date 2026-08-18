@@ -190,7 +190,7 @@ export default function ChatDetail() {
 
   return (
     <Page title={`${chat.title} · ${product.name}`}>
-      <div className="flex h-[calc(100dvh-65px)] min-h-0 flex-col overflow-hidden">
+      <div className="flex h-[calc(100dvh-var(--header-h))] min-h-0 flex-col overflow-hidden">
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className="transition-content mx-auto w-full max-w-3xl px-(--margin-x) py-6">
             <div className="flex flex-col gap-1">
@@ -250,7 +250,7 @@ function Bubble({ role, text }: { role: "user" | "assistant"; text: string }) {
   if (role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="bg-primary-500 dark:bg-primary-600 max-w-[80%] rounded-2xl rounded-tr-sm px-4 py-2 text-sm whitespace-pre-line text-white">
+        <div className="bg-primary-500 dark:bg-primary-600 max-w-[92%] rounded-2xl rounded-tr-sm px-4 py-2 text-sm whitespace-pre-line text-white sm:max-w-[80%]">
           {text}
         </div>
       </div>
@@ -258,7 +258,7 @@ function Bubble({ role, text }: { role: "user" | "assistant"; text: string }) {
   }
   return (
     <div className="flex justify-start">
-      <div className="dark:border-dark-500 dark:bg-dark-700 dark:text-dark-100 max-w-[80%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm whitespace-pre-line text-gray-800">
+      <div className="dark:border-dark-500 dark:bg-dark-700 dark:text-dark-100 max-w-[92%] rounded-2xl rounded-tl-sm border border-gray-200 bg-white px-4 py-2 text-sm whitespace-pre-line text-gray-800 sm:max-w-[80%]">
         {text}
       </div>
     </div>

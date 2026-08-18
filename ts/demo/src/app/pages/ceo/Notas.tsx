@@ -1,11 +1,5 @@
 // Import Dependencies
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 import {
@@ -179,7 +173,8 @@ export default function Notas() {
   );
   const contagem = useMemo(() => {
     const map: Record<string, number> = {};
-    for (const n of notas) map[n.assunto || ""] = (map[n.assunto || ""] ?? 0) + 1;
+    for (const n of notas)
+      map[n.assunto || ""] = (map[n.assunto || ""] ?? 0) + 1;
     return map;
   }, [notas]);
 
@@ -211,9 +206,7 @@ export default function Notas() {
   };
 
   const excluirAssunto = (nome: string) => {
-    if (
-      !window.confirm(`Excluir o assunto “${nome}” e todas as suas notas?`)
-    )
+    if (!window.confirm(`Excluir o assunto “${nome}” e todas as suas notas?`))
       return;
     setAssuntos((prev) => prev.filter((a) => a !== nome));
     setNotas((prev) => prev.filter((n) => n.assunto !== nome));
@@ -335,7 +328,7 @@ export default function Notas() {
       <div className="transition-content flex min-h-0 w-full flex-col px-(--margin-x) py-6">
         {/* Cabeçalho */}
         <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400">
+          <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-11 place-items-center rounded-xl">
             <PencilSquareIcon className="size-6 stroke-[1.5]" />
           </span>
           <div className="flex flex-col gap-0.5">
@@ -344,10 +337,17 @@ export default function Notas() {
                 description: (
                   <>
                     <p>
-                      <strong>Notas</strong> é o seu bloco de anotações dentro do produto: crie notas rápidas e organize-as por assunto na coluna à esquerda. As notas ficam salvas no seu navegador.
+                      <strong>Notas</strong> é o seu bloco de anotações dentro
+                      do produto: crie notas rápidas e organize-as por assunto
+                      na coluna à esquerda. As notas ficam salvas no seu
+                      navegador.
                     </p>
                     <p>
-                      Quando uma nota importar, use <strong>Gravar no Repositório</strong> para enviá-la ao grafo da IA, ou as ações de IA (Apresentação, Artigo e Melhorar) para transformar o conteúdo direto na tela de IA.
+                      Quando uma nota importar, use{" "}
+                      <strong>Gravar no Repositório</strong> para enviá-la ao
+                      grafo da IA, ou as ações de IA (Apresentação, Artigo e
+                      Melhorar) para transformar o conteúdo direto na tela de
+                      IA.
                     </p>
                   </>
                 ),
@@ -356,17 +356,18 @@ export default function Notas() {
               Notas
             </PageTitle>
             <p className="dark:text-dark-300 text-sm text-gray-400">
-              Organize suas notas por assunto e grave o que importa no Repositório.
+              Organize suas notas por assunto e grave o que importa no
+              Repositório.
             </p>
           </div>
         </div>
 
         {/* Corpo: duas colunas */}
-        <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]">
+        <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr]">
           {/* Coluna de assuntos */}
           <aside className="dark:border-dark-600 dark:bg-dark-700 flex flex-col rounded-xl border border-gray-200 bg-white p-3">
             <div className="mb-2 flex items-center justify-between px-1">
-              <span className="dark:text-dark-200 text-tiny-plus font-semibold uppercase tracking-wider text-gray-500">
+              <span className="dark:text-dark-200 text-tiny-plus font-semibold tracking-wider text-gray-500 uppercase">
                 Assuntos
               </span>
               <Button
@@ -512,7 +513,11 @@ export default function Notas() {
                   <h3 className="dark:text-dark-100 truncate text-base font-semibold text-gray-800">
                     {sel === SEM_ASSUNTO ? "Sem assunto" : sel}
                   </h3>
-                  <Button color="primary" onClick={novaNota} className="gap-1.5">
+                  <Button
+                    color="primary"
+                    onClick={novaNota}
+                    className="gap-1.5"
+                  >
                     <PlusIcon className="size-4.5" />
                     Nova nota
                   </Button>
@@ -524,7 +529,7 @@ export default function Notas() {
                       <p className="dark:text-dark-200 text-sm text-gray-500">
                         Nenhuma nota aqui ainda.
                       </p>
-                      <p className="dark:text-dark-300 mt-1 text-xs-plus text-gray-400">
+                      <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-400">
                         Clique em “Nova nota” para começar.
                       </p>
                     </div>
@@ -534,7 +539,7 @@ export default function Notas() {
                     {notasDoAssunto.map((n) => (
                       <li
                         key={n.id}
-                        className="dark:border-dark-500 dark:bg-dark-800 group flex cursor-pointer flex-col rounded-xl border border-gray-200 bg-white p-3.5 transition-colors hover:border-primary-400 dark:hover:border-primary-500/60"
+                        className="dark:border-dark-500 dark:bg-dark-800 group hover:border-primary-400 dark:hover:border-primary-500/60 flex cursor-pointer flex-col rounded-xl border border-gray-200 bg-white p-3.5 transition-colors"
                         onClick={() => abrirNota(n)}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -548,7 +553,7 @@ export default function Notas() {
                                 e.stopPropagation();
                                 setMemNota(n);
                               }}
-                              className="dark:hover:bg-dark-600 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-primary-600 dark:hover:text-primary-400"
+                              className="dark:hover:bg-dark-600 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
                               aria-label="Gravar no Repositório"
                               title="Gravar no Repositório"
                             >
@@ -569,11 +574,11 @@ export default function Notas() {
                           </div>
                         </div>
                         {previa(n.corpo) && (
-                          <p className="dark:text-dark-300 mt-1.5 line-clamp-2 text-xs-plus text-gray-500">
+                          <p className="dark:text-dark-300 text-xs-plus mt-1.5 line-clamp-2 text-gray-500">
                             {previa(n.corpo)}
                           </p>
                         )}
-                        <span className="dark:text-dark-400 mt-2 text-tiny text-gray-400">
+                        <span className="dark:text-dark-400 text-tiny mt-2 text-gray-400">
                           {formatData(n.atualizadaEm)}
                         </span>
                       </li>
@@ -633,7 +638,11 @@ export default function Notas() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <Button color="primary" onClick={salvarEditor} className="gap-1.5">
+                  <Button
+                    color="primary"
+                    onClick={salvarEditor}
+                    className="gap-1.5"
+                  >
                     <CheckIcon className="size-4.5" />
                     Salvar
                   </Button>
@@ -662,7 +671,7 @@ export default function Notas() {
 
                   <span className="dark:border-dark-500 mx-1 hidden h-6 border-l border-gray-200 sm:block" />
 
-                  <span className="dark:text-dark-300 mr-1 text-tiny-plus text-gray-400">
+                  <span className="dark:text-dark-300 text-tiny-plus mr-1 text-gray-400">
                     Ações de IA:
                   </span>
                   <Button
@@ -771,88 +780,95 @@ function GravarMemoriaModal({
     <Transition show={!!nota}>
       <Dialog onClose={close} className="relative z-60">
         <TransitionChild
-        enter="ease-out duration-300"
-        enterFrom="opacity-0"
-        enterTo="opacity-100"
-        leave="ease-in duration-200"
-        leaveFrom="opacity-100"
-        leaveTo="opacity-0"
-      >
-        <div className="dark:bg-black/40 fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" />
-      </TransitionChild>
-
-      <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
-        <TransitionChild
           enter="ease-out duration-300"
-          enterFrom="opacity-0 scale-95"
-          enterTo="opacity-100 scale-100"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
           leave="ease-in duration-200"
-          leaveFrom="opacity-100 scale-100"
-          leaveTo="opacity-0 scale-95"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          <DialogPanel className="dark:bg-dark-750 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="dark:bg-primary-500/15 grid size-10 place-items-center rounded-xl bg-primary-50">
-                  <ArrowUpTrayIcon className="size-5.5 text-primary-600 dark:text-primary-400" />
-                </span>
-                <div>
-                  <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
-                    Gravar no Repositório
-                  </DialogTitle>
-                  <p className="dark:text-dark-300 text-xs-plus text-gray-500">
-                    A nota vira um contexto e passa a aparecer no grafo.
-                  </p>
-                </div>
-              </div>
-              <Button
-                onClick={close}
-                variant="flat"
-                isIcon
-                className="size-8 shrink-0 rounded-lg"
-                aria-label="Fechar"
-              >
-                <XMarkIcon className="size-5" />
-              </Button>
-            </div>
-
-            <div className="mt-5 space-y-4">
-              <div className="dark:border-dark-500 dark:bg-dark-800 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
-                  {nota?.titulo}
-                </p>
-                {nota && previa(nota.corpo) && (
-                  <p className="dark:text-dark-300 mt-1 line-clamp-2 text-xs-plus text-gray-500">
-                    {previa(nota.corpo)}
-                  </p>
-                )}
-              </div>
-              <Select
-                label="Tema"
-                value={categoria}
-                onChange={(e) => setCategoria(e.target.value)}
-                data={categories.map((c) => ({ label: c.label, value: c.id }))}
-                description="Os temas são as pastas disponíveis no Repositório."
-              />
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outlined" className="rounded-lg" onClick={close}>
-                Cancelar
-              </Button>
-              <Button
-                color="primary"
-                className="gap-1.5 rounded-lg"
-                disabled={!categoria || salvando}
-                onClick={confirmar}
-              >
-                <ArrowUpTrayIcon className="size-4.5" />
-                {salvando ? "Enviando…" : "Gravar"}
-              </Button>
-            </div>
-          </DialogPanel>
+          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40" />
         </TransitionChild>
-      </div>
+
+        <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">
+          <TransitionChild
+            enter="ease-out duration-300"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
+          >
+            <DialogPanel className="dark:bg-dark-750 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="dark:bg-primary-500/15 bg-primary-50 grid size-10 place-items-center rounded-xl">
+                    <ArrowUpTrayIcon className="text-primary-600 dark:text-primary-400 size-5.5" />
+                  </span>
+                  <div>
+                    <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
+                      Gravar no Repositório
+                    </DialogTitle>
+                    <p className="dark:text-dark-300 text-xs-plus text-gray-500">
+                      A nota vira um contexto e passa a aparecer no grafo.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={close}
+                  variant="flat"
+                  isIcon
+                  className="size-8 shrink-0 rounded-lg"
+                  aria-label="Fechar"
+                >
+                  <XMarkIcon className="size-5" />
+                </Button>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div className="dark:border-dark-500 dark:bg-dark-800 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                  <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
+                    {nota?.titulo}
+                  </p>
+                  {nota && previa(nota.corpo) && (
+                    <p className="dark:text-dark-300 text-xs-plus mt-1 line-clamp-2 text-gray-500">
+                      {previa(nota.corpo)}
+                    </p>
+                  )}
+                </div>
+                <Select
+                  label="Tema"
+                  value={categoria}
+                  onChange={(e) => setCategoria(e.target.value)}
+                  data={categories.map((c) => ({
+                    label: c.label,
+                    value: c.id,
+                  }))}
+                  description="Os temas são as pastas disponíveis no Repositório."
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  variant="outlined"
+                  className="rounded-lg"
+                  onClick={close}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  color="primary"
+                  className="gap-1.5 rounded-lg"
+                  disabled={!categoria || salvando}
+                  onClick={confirmar}
+                >
+                  <ArrowUpTrayIcon className="size-4.5" />
+                  {salvando ? "Enviando…" : "Gravar"}
+                </Button>
+              </div>
+            </DialogPanel>
+          </TransitionChild>
+        </div>
       </Dialog>
     </Transition>
   );

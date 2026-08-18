@@ -1,6 +1,6 @@
 /* Main Layout Styles */
 [data-layout="main-layout"] {
-  @apply [--main-panel-width:4.5rem] [--margin-x:1rem] [--prime-panel-min-width:64px] [--prime-panel-width:230px] md:[--margin-x:1.5rem] lg:[--main-panel-width:5rem] lg:[--prime-panel-width:240px] xl:[--margin-x:4rem];
+  @apply [--header-h:65px] [--main-panel-width:4.5rem] [--margin-x:1rem] [--prime-panel-min-width:64px] [--prime-panel-width:230px] md:[--margin-x:1.5rem] lg:[--main-panel-width:5rem] lg:[--prime-panel-width:240px] xl:[--margin-x:4rem];
 }
 
 [data-layout="main-layout"] #root {
@@ -39,7 +39,27 @@
 
 /* Sideblock */
 [data-layout="sideblock"] {
-  @apply [--margin-x:1rem] [--sidebar-panel-width:14rem] md:[--margin-x:1.5rem] 2xl:[--margin-x:3rem];
+  @apply [--assistant-panel-width:26rem] [--header-h:65px] [--margin-x:1rem] [--sidebar-panel-width:14rem] md:[--margin-x:1.5rem] 2xl:[--assistant-panel-width:28rem] 2xl:[--margin-x:3rem];
+}
+
+/*
+ * Chat encaixado: expandido, o painel do assistente vira a coluna da direita
+ * e EMPURRA o conteudo, em vez de cobri-lo com backdrop. Mesmo idioma do
+ * `.sidebar-panel`: uma classe no `body` (posta pelo Panel) e a margem no
+ * header e no main, que ja carregam `.transition-content`.
+ *
+ * So a partir de `lg` — abaixo disso nao sobra largura para dividir, e o
+ * painel segue como folha central / tela cheia.
+ */
+[data-layout="sideblock"].is-assistant-docked main.main-content,
+[data-layout="sideblock"].is-assistant-docked .app-header {
+  /*
+   * `min-w-0` é obrigatório: header e main são itens de grid, e o mínimo
+   * automático de um item de grid é o min-content do seu conteúdo. Sem isto
+   * a margem entra mas a coluna não encolhe — o conteúdo transborda por
+   * cima do painel em vez de ser empurrado.
+   */
+  @apply lg:min-w-0 lg:ltr:mr-(--assistant-panel-width) lg:rtl:ml-(--assistant-panel-width);
 }
 
 [data-layout="sideblock"] #root {

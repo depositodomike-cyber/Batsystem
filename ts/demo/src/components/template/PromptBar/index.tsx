@@ -84,15 +84,25 @@ export function PromptBar() {
   };
 
   // ⌘K / "/" foca a barra (herda o atalho da antiga busca).
+  //
+  // Só focamos se a barra estiver realmente visível: abaixo de `lg` o header a
+  // esconde por CSS e mostra a lupa no lugar, e `offsetParent === null` é o
+  // jeito de perguntar isso ao próprio CSS — usar os breakpoints em JS aqui
+  // divergiria da media query, porque eles medem `window.innerWidth`.
+  const focarBarra = () => {
+    const el = inputRef.current;
+    if (el && el.offsetParent !== null) el.focus();
+  };
+
   // Desligados com o assistente ampliado: focar esta barra jogaria o cursor
   // atrás do backdrop. `mod+k` tem enableOnFormTags, então dispararia até de
   // dentro do textarea do painel.
-  useHotkeys("mod+k", () => inputRef.current?.focus(), {
+  useHotkeys("mod+k", focarBarra, {
     enableOnFormTags: true,
     preventDefault: true,
     enabled: !expandido,
   });
-  useHotkeys("/", () => inputRef.current?.focus(), {
+  useHotkeys("/", focarBarra, {
     preventDefault: true,
     enabled: !expandido,
   });
@@ -206,23 +216,6 @@ export function PromptBar() {
         onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
       />
 
-      {/* Chip do anexo (acima da barra) */}
-      {arquivo && (
-        <div className="dark:border-dark-500 dark:bg-dark-700 absolute -top-8 left-0 flex max-w-full items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 shadow-sm">
-          <PaperClipIcon className="text-primary-500 size-3.5 shrink-0" />
-          <span className="text-primary-600 dark:text-primary-400 max-w-[240px] truncate text-tiny">
-            {arquivo.name}
-          </span>
-          <button
-            onClick={limparAnexo}
-            title="Remover anexo"
-            className="dark:text-dark-300 text-gray-400 hover:text-red-500"
-          >
-            <XMarkIcon className="size-3.5" />
-          </button>
-        </div>
-      )}
-
       <div className="flex items-stretch">
         {/* Seletor de fonte (texto horizontal, grudado à barra) */}
         <div className="dark:border-dark-500 dark:bg-dark-700 flex shrink-0 overflow-hidden rounded-l-lg border border-r-0 border-gray-200 bg-gray-100/70">
@@ -294,19 +287,41 @@ export function PromptBar() {
         </div>
       </div>
 
-      {/* Linha de status */}
-      {status.msg && (
-        <div
-          className={clsx(
-            "absolute top-full left-0 mt-1 max-w-full truncate text-tiny",
-            status.cls === "err"
-              ? "text-red-500"
-              : status.cls === "ok"
-                ? "text-emerald-500"
-                : "text-primary-600 dark:text-primary-400",
+      {/* Chip do anexo e linha de status, empilhados abaixo da barra. Antes o
+          chip ficava em -top-8, dentro de um header sticky de 65px — ou seja,
+          acima do viewport e nunca visível. */}
+      {(arquivo || status.msg) && (
+        <div className="absolute top-full left-0 mt-1 flex max-w-full flex-col items-start gap-1">
+          {arquivo && (
+            <div className="dark:border-dark-500 dark:bg-dark-700 flex max-w-full items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1 shadow-sm">
+              <PaperClipIcon className="text-primary-500 size-3.5 shrink-0" />
+              <span className="text-primary-600 dark:text-primary-400 max-w-[240px] truncate text-tiny">
+                {arquivo.name}
+              </span>
+              <button
+                onClick={limparAnexo}
+                title="Remover anexo"
+                className="dark:text-dark-300 shrink-0 text-gray-400 hover:text-red-500"
+              >
+                <XMarkIcon className="size-3.5" />
+              </button>
+            </div>
           )}
-        >
-          {status.msg}
+
+          {status.msg && (
+            <div
+              className={clsx(
+                "max-w-full truncate text-tiny",
+                status.cls === "err"
+                  ? "text-red-500"
+                  : status.cls === "ok"
+                    ? "text-emerald-500"
+                    : "text-primary-600 dark:text-primary-400",
+              )}
+            >
+              {status.msg}
+            </div>
+          )}
         </div>
       )}
     </div>

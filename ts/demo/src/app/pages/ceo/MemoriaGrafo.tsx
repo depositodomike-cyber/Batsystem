@@ -78,7 +78,18 @@ const PASTA_COR: Record<string, string> = {
   Áudios: "#38BDF8",
   Estratégico: "#FB923C",
 };
-const PALETA = ["#A3E635", "#FACC15", "#818CF8", "#2DD4BF", "#FB7185", "#C4B5FD", "#FDBA74", "#F87171", "#5EEAD4", "#D8B4FE"];
+const PALETA = [
+  "#A3E635",
+  "#FACC15",
+  "#818CF8",
+  "#2DD4BF",
+  "#FB7185",
+  "#C4B5FD",
+  "#FDBA74",
+  "#F87171",
+  "#5EEAD4",
+  "#D8B4FE",
+];
 const COR_TAG = "#22D3EE";
 
 // Mapa pasta→cor único (mesma lógica de montarCoresPastas do beculture).
@@ -129,13 +140,24 @@ function buildGraph(files: ArquivoMd[]): Graph {
     if (n.titulo) indice.set(n.titulo.toLowerCase(), n.id);
   }
 
-  const nodes: GNode[] = notas.map((n) => ({ id: n.id, kind: "nota", pasta: n.pasta, tipo: "nota", titulo: n.titulo, grau: 0 }));
+  const nodes: GNode[] = notas.map((n) => ({
+    id: n.id,
+    kind: "nota",
+    pasta: n.pasta,
+    tipo: "nota",
+    titulo: n.titulo,
+    grau: 0,
+  }));
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const notaNodes = [...nodes];
 
   const links: GLink[] = [];
   const vistos = new Set<string>();
-  const ligar = (a: string | undefined, b: string | undefined, tipo: LinkTipo) => {
+  const ligar = (
+    a: string | undefined,
+    b: string | undefined,
+    tipo: LinkTipo,
+  ) => {
     if (!a || !b || a === b) return;
     const chave = [a, b].sort().join("::");
     if (vistos.has(chave)) return;
@@ -147,7 +169,12 @@ function buildGraph(files: ArquivoMd[]): Graph {
     if (nb) nb.grau += 1;
   };
 
-  const garantirHub = (id: string, kind: Kind, titulo: string, pasta: string | null = null) => {
+  const garantirHub = (
+    id: string,
+    kind: Kind,
+    titulo: string,
+    pasta: string | null = null,
+  ) => {
     if (!nodeById.has(id)) {
       const hub: GNode = { id, kind, titulo, tipo: kind, pasta, grau: 0 };
       nodes.push(hub);
@@ -170,25 +197,38 @@ function buildGraph(files: ArquivoMd[]): Graph {
   const tagsPorNota = new Map<string, string[]>();
   const tagCount = new Map<string, number>();
   for (const n of notas) {
-    const limpas = [...new Set(n.tags.map((t) => String(t || "").trim()).filter(Boolean))];
+    const limpas = [
+      ...new Set(n.tags.map((t) => String(t || "").trim()).filter(Boolean)),
+    ];
     tagsPorNota.set(n.id, limpas);
-    for (const t of limpas) tagCount.set(t.toLowerCase(), (tagCount.get(t.toLowerCase()) || 0) + 1);
+    for (const t of limpas)
+      tagCount.set(t.toLowerCase(), (tagCount.get(t.toLowerCase()) || 0) + 1);
   }
   for (const n of notaNodes) {
     for (const t of tagsPorNota.get(n.id) || []) {
       if ((tagCount.get(t.toLowerCase()) || 0) < 2) continue;
-      ligar(n.id, garantirHub("tag::" + t.toLowerCase(), "tag", "#" + t), "tag");
+      ligar(
+        n.id,
+        garantirHub("tag::" + t.toLowerCase(), "tag", "#" + t),
+        "tag",
+      );
     }
   }
 
   // 3) Pastas (hub só quando 2+ notas, pulando a Raiz)
   const pastaCount = new Map<string, number>();
   for (const n of notaNodes) {
-    if (n.pasta && n.pasta !== "Raiz") pastaCount.set(n.pasta, (pastaCount.get(n.pasta) || 0) + 1);
+    if (n.pasta && n.pasta !== "Raiz")
+      pastaCount.set(n.pasta, (pastaCount.get(n.pasta) || 0) + 1);
   }
   for (const n of notaNodes) {
-    if (!n.pasta || n.pasta === "Raiz" || (pastaCount.get(n.pasta) || 0) < 2) continue;
-    ligar(n.id, garantirHub("pasta::" + n.pasta, "pasta", n.pasta, n.pasta), "pasta");
+    if (!n.pasta || n.pasta === "Raiz" || (pastaCount.get(n.pasta) || 0) < 2)
+      continue;
+    ligar(
+      n.id,
+      garantirHub("pasta::" + n.pasta, "pasta", n.pasta, n.pasta),
+      "pasta",
+    );
   }
 
   return { nodes, links };
@@ -214,7 +254,9 @@ export default function MemoriaGrafo() {
   const [sugerirTitulo, setSugerirTitulo] = useState("");
   // Nó clicado: abre o .md correspondente para leitura/edição. O id do nó é o
   // caminho relativo do arquivo dentro da pasta, então basta repassá-lo.
-  const [nota, setNota] = useState<{ path: string; titulo: string } | null>(null);
+  const [nota, setNota] = useState<{ path: string; titulo: string } | null>(
+    null,
+  );
   // Estado da sincronização dos .md com o backend (o que a IA consulta).
   const [sync, setSync] = useState<{
     state: "idle" | "syncing" | "done" | "error";
@@ -246,7 +288,8 @@ export default function MemoriaGrafo() {
     } catch {
       setSync({ state: "error", done: 0, total: 0 });
       toast.error("Falha ao sincronizar o Repositório com a IA.", {
-        description: "O grafo foi montado, mas as notas não chegaram ao servidor.",
+        description:
+          "O grafo foi montado, mas as notas não chegaram ao servidor.",
       });
     }
   }, []);
@@ -260,9 +303,13 @@ export default function MemoriaGrafo() {
         setGraph(g);
         const notas = g.nodes.filter((n) => n.kind === "nota").length;
         if (files.length === 0) {
-          toast("Nenhuma nota .md encontrada", { description: `A pasta “${handle.name}” não tem arquivos .md.` });
+          toast("Nenhuma nota .md encontrada", {
+            description: `A pasta “${handle.name}” não tem arquivos .md.`,
+          });
         } else {
-          toast("Repositório carregado", { description: `${notas} notas · ${g.links.length} conexões` });
+          toast("Repositório carregado", {
+            description: `${notas} notas · ${g.links.length} conexões`,
+          });
           void syncToBackend(files);
           // Só pergunta quando o carregamento veio de um upload do usuário.
           if (opts?.fromUpload) {
@@ -271,7 +318,9 @@ export default function MemoriaGrafo() {
           }
         }
       } catch {
-        toast("Falha ao ler a pasta", { description: "Não foi possível ler os arquivos da pasta." });
+        toast("Falha ao ler a pasta", {
+          description: "Não foi possível ler os arquivos da pasta.",
+        });
       } finally {
         setLoading(false);
       }
@@ -381,11 +430,19 @@ export default function MemoriaGrafo() {
     };
 
     // Cor por pasta (única) a partir das pastas presentes.
-    const pastasPresentes = [...new Set(graph.nodes.filter((n) => n.kind === "nota").map((n) => n.pasta).filter((p): p is string => !!p && p !== "Raiz"))];
+    const pastasPresentes = [
+      ...new Set(
+        graph.nodes
+          .filter((n) => n.kind === "nota")
+          .map((n) => n.pasta)
+          .filter((p): p is string => !!p && p !== "Raiz"),
+      ),
+    ];
     const corPasta = montarCores(pastasPresentes);
     const nodeColor = (n: GNode): string => {
       if (n.kind === "tag") return COR_TAG;
-      if (n.pasta && n.pasta !== "Raiz") return corPasta.get(n.pasta) || PASTA_COR[n.pasta] || "#94A3B8";
+      if (n.pasta && n.pasta !== "Raiz")
+        return corPasta.get(n.pasta) || PASTA_COR[n.pasta] || "#94A3B8";
       return "#94A3B8";
     };
 
@@ -409,7 +466,11 @@ export default function MemoriaGrafo() {
     }));
     const idx = new Map(nodes.map((n) => [n.id, n]));
     const links = graph.links
-      .map((l) => ({ source: idx.get(l.source)!, target: idx.get(l.target)!, tipo: l.tipo }))
+      .map((l) => ({
+        source: idx.get(l.source)!,
+        target: idx.get(l.target)!,
+        tipo: l.tipo,
+      }))
       .filter((l) => l.source && l.target);
 
     let dragging: GNode | null = null;
@@ -584,13 +645,23 @@ export default function MemoriaGrafo() {
       // Pulso de brilho no conjunto das arestas (só enquanto pensa).
       const brilho = buscando ? 0.14 + (Math.sin(t * 3) + 1) * 0.13 : 0;
       for (const l of links) {
-        const ativo = highlighted.has(l.source.id) || highlighted.has(l.target.id) || l.source === hover || l.target === hover;
+        const ativo =
+          highlighted.has(l.source.id) ||
+          highlighted.has(l.target.id) ||
+          l.source === hover ||
+          l.target === hover;
         const dim = l.tipo === "wikilink" ? 0.18 : 0.12;
         // No fundo claro as arestas somem: reforça a opacidade quando inativas.
         const base = ativo ? 0.6 : isDark ? dim : dim * 1.7;
         ctx.strokeStyle = corLink(l.tipo, Math.min(base + brilho, 0.85));
         ctx.lineWidth = (ativo ? 1.6 : 1) * inv;
-        ctx.setLineDash(l.tipo === "pasta" ? [2 * inv, 4 * inv] : l.tipo === "tag" ? [5 * inv, 4 * inv] : []);
+        ctx.setLineDash(
+          l.tipo === "pasta"
+            ? [2 * inv, 4 * inv]
+            : l.tipo === "tag"
+              ? [5 * inv, 4 * inv]
+              : [],
+        );
         ctx.beginPath();
         ctx.moveTo(l.source.x!, l.source.y!);
         ctx.lineTo(l.target.x!, l.target.y!);
@@ -649,9 +720,14 @@ export default function MemoriaGrafo() {
         const hub = n.kind !== "nota";
         if (hub || poucos || destaque) {
           ctx.fillStyle = destaque ? LABEL_HL : hub ? cor : LABEL;
-          ctx.font = (hub ? "600 " : "") + `${11 * inv}px Inter, system-ui, sans-serif`;
+          ctx.font =
+            (hub ? "600 " : "") + `${11 * inv}px Inter, system-ui, sans-serif`;
           ctx.textAlign = "center";
-          ctx.fillText((n.titulo || "").slice(0, 26), n.x!, n.y! + r + 13 * inv);
+          ctx.fillText(
+            (n.titulo || "").slice(0, 26),
+            n.x!,
+            n.y! + r + 13 * inv,
+          );
         }
       }
 
@@ -722,8 +798,45 @@ export default function MemoriaGrafo() {
       }
       return null;
     }
-    function onDown(e: MouseEvent) {
+    // Ponteiros ativos, por id — é o que permite distinguir um dedo (pan) de
+    // dois (pinça). Pointer Events cobrem mouse, toque e caneta com o mesmo
+    // código; antes só havia `mouse*`, então em celular e tablet não havia pan,
+    // zoom nem seleção de nó.
+    const ponteiros = new Map<number, { x: number; y: number }>();
+    let pinca: {
+      dist: number;
+      scale: number;
+      wx: number;
+      wy: number;
+    } | null = null;
+
+    const distancia = () => {
+      const [a, b] = [...ponteiros.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const centro = () => {
+      const [a, b] = [...ponteiros.values()];
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    };
+
+    function onDown(e: PointerEvent) {
       const p = posMouse(e);
+      ponteiros.set(e.pointerId, p);
+      // Sem `setPointerCapture`: `pointermove`/`pointerup` já são escutados no
+      // window, e capturar lança se o ponteiro não estiver mais ativo.
+
+      // Segundo dedo: vira pinça e cancela arraste/pan em andamento.
+      if (ponteiros.size === 2) {
+        const c = centro();
+        const w = toWorld(c.x, c.y);
+        pinca = { dist: distancia(), scale: view.scale, wx: w.x, wy: w.y };
+        dragging = null;
+        panning = false;
+        autoFit = false;
+        return;
+      }
+      if (ponteiros.size > 2) return;
+
       const w = toWorld(p.x, p.y);
       mouse.x = p.x;
       mouse.y = p.y;
@@ -744,8 +857,23 @@ export default function MemoriaGrafo() {
         panStart.oy = view.oy;
       }
     }
-    function onMove(e: MouseEvent) {
+    function onMove(e: PointerEvent) {
       const p = posMouse(e);
+      if (ponteiros.has(e.pointerId)) ponteiros.set(e.pointerId, p);
+
+      // Pinça: mantém fixo o ponto do mundo que está entre os dois dedos.
+      if (pinca && ponteiros.size === 2) {
+        const ns = Math.max(
+          0.03,
+          Math.min(4, (pinca.scale * distancia()) / (pinca.dist || 1)),
+        );
+        const c = centro();
+        view.scale = ns;
+        view.ox = c.x - pinca.wx * ns;
+        view.oy = c.y - pinca.wy * ns;
+        return;
+      }
+
       if (mouse.down) mouse.moved = true;
       mouse.x = p.x;
       mouse.y = p.y;
@@ -770,13 +898,29 @@ export default function MemoriaGrafo() {
           tip.style.display = "none";
         }
       }
-      canvas!.style.cursor = hover ? "pointer" : mouse.down ? "grabbing" : "grab";
+      canvas!.style.cursor = hover
+        ? "pointer"
+        : mouse.down
+          ? "grabbing"
+          : "grab";
     }
-    function onUp() {
+    function onUp(e?: PointerEvent) {
+      if (e) ponteiros.delete(e.pointerId);
+      // Saindo da pinça: só encerra quando sobra menos de dois dedos.
+      if (ponteiros.size < 2) pinca = null;
+      if (ponteiros.size > 0) return;
+
       if (dragging && !mouse.moved) acionar(dragging);
       dragging = null;
       panning = false;
       mouse.down = false;
+      // No toque não existe hover: sem isso o nó ficaria destacado e o tooltip
+      // preso na tela depois de soltar o dedo.
+      if (e && e.pointerType !== "mouse") {
+        hover = null;
+        const tip = tipRef.current;
+        if (tip) tip.style.display = "none";
+      }
     }
     // Zoom com a roda, ancorado no cursor (mundo sob o cursor fica fixo).
     function onWheel(e: WheelEvent) {
@@ -784,7 +928,10 @@ export default function MemoriaGrafo() {
       autoFit = false;
       const p = posMouse(e);
       const w = toWorld(p.x, p.y);
-      const ns = Math.max(0.03, Math.min(4, view.scale * Math.exp(-e.deltaY * 0.0015)));
+      const ns = Math.max(
+        0.03,
+        Math.min(4, view.scale * Math.exp(-e.deltaY * 0.0015)),
+      );
       view.scale = ns;
       view.ox = p.x - w.x * ns;
       view.oy = p.y - w.y * ns;
@@ -817,20 +964,24 @@ export default function MemoriaGrafo() {
 
     const ro = new ResizeObserver(() => resize());
     ro.observe(wrap);
-    canvas.addEventListener("mousedown", onDown);
+    canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("dblclick", onDbl);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    // `pointercancel` dispara quando o sistema toma o gesto (ex.: gesto de
+    // sistema no iOS). Sem isso o pan ficaria travado ligado.
+    window.addEventListener("pointercancel", onUp);
 
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
-      canvas.removeEventListener("mousedown", onDown);
+      canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("dblclick", onDbl);
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
     };
   }, [graph, isDark]);
 
@@ -839,12 +990,19 @@ export default function MemoriaGrafo() {
       {/* Grafo solto na página, em tela cheia (abaixo do header de 65px) */}
       <div
         ref={wrapRef}
-        className="relative h-[calc(100vh-65px)] w-full overflow-hidden bg-slate-50 dark:bg-[#0b1220]"
+        className="relative h-[calc(100dvh-var(--header-h))] w-full overflow-hidden bg-slate-50 dark:bg-[#0b1220]"
       >
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+        {/* `touch-none`: sem isso o navegador consome o gesto para rolar/dar
+            zoom na página e o pan/pinça do grafo nunca recebe os eventos. */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full touch-none"
+        />
 
         {/* Canto superior direito: botão de sincronizar + status com a IA. */}
-        <div className="absolute end-4 top-4 z-10 flex flex-col items-end gap-1.5">
+        {/* `max-w` + `end-2` no celular: com 224px fixos o overlay cobria boa
+            parte do grafo numa tela de 375px. */}
+        <div className="absolute end-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-col items-end gap-1.5 sm:end-4 sm:top-4 sm:max-w-none">
           <div className="flex items-center gap-2">
             <RepositorioViewSelect compact />
             <Button
@@ -865,10 +1023,10 @@ export default function MemoriaGrafo() {
           {sync.state !== "idle" && (
             <span
               className={clsx(
-                "flex items-center gap-1.5 rounded-md px-2 py-1 text-tiny shadow-sm",
+                "text-tiny flex items-center gap-1.5 rounded-md px-2 py-1 shadow-sm",
                 sync.state === "error"
                   ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400"
-                  : "bg-white text-gray-600 dark:bg-dark-700 dark:text-dark-200",
+                  : "dark:bg-dark-700 dark:text-dark-200 bg-white text-gray-600",
               )}
             >
               {sync.state === "syncing" && (
@@ -890,42 +1048,45 @@ export default function MemoriaGrafo() {
 
         {/* Dica: o clique no nó abre o arquivo .md. */}
         {!loading && graph.nodes.length > 0 && (
-          <span className="dark:bg-dark-700/70 dark:text-dark-300 pointer-events-none absolute bottom-4 start-4 z-10 rounded-md bg-white/70 px-2 py-1 text-tiny text-gray-500 backdrop-blur-sm">
+          <span className="dark:bg-dark-700/70 dark:text-dark-300 text-tiny pointer-events-none absolute start-4 bottom-4 z-10 rounded-md bg-white/70 px-2 py-1 text-gray-500 backdrop-blur-sm">
             Clique em uma nota para abrir e editar o .md
           </span>
         )}
 
         {/* Estados: carregando / vazio */}
         {loading && (
-            <div className="absolute inset-0 z-[5] grid place-items-center bg-slate-50/60 dark:bg-[#0b1220]/60">
-              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-200">
-                <Spinner className="size-5" />
-                Lendo a pasta…
-              </div>
+          <div className="absolute inset-0 z-[5] grid place-items-center bg-slate-50/60 dark:bg-[#0b1220]/60">
+            <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-200">
+              <Spinner className="size-5" />
+              Lendo a pasta…
             </div>
-          )}
-          {!loading && graph.nodes.length === 0 && (
-            <div className="absolute inset-0 z-[5] grid place-items-center px-6 text-center">
-              <div className="flex max-w-sm flex-col items-center gap-4">
-                <span className="grid size-14 place-items-center rounded-2xl bg-gray-900/5 text-gray-500 dark:bg-white/5 dark:text-slate-300">
-                  <FolderIcon className="size-7 stroke-[1.5]" />
-                </span>
-                <p className="text-sm text-gray-500 dark:text-slate-300">
-                  Escolha a pasta onde ficam as notas <span className="font-mono">.md</span> do seu Repositório. O grafo é montado a partir dos <span className="font-mono">[[wikilinks]]</span>, tags e pastas.
-                </p>
-                <Button onClick={pickFolder} color="primary" className="gap-2">
-                  <FolderIcon className="size-5" />
-                  Selecionar pasta
-                </Button>
-              </div>
+          </div>
+        )}
+        {!loading && graph.nodes.length === 0 && (
+          <div className="absolute inset-0 z-[5] grid place-items-center px-6 text-center">
+            <div className="flex max-w-sm flex-col items-center gap-4">
+              <span className="grid size-14 place-items-center rounded-2xl bg-gray-900/5 text-gray-500 dark:bg-white/5 dark:text-slate-300">
+                <FolderIcon className="size-7 stroke-[1.5]" />
+              </span>
+              <p className="text-sm text-gray-500 dark:text-slate-300">
+                Escolha a pasta onde ficam as notas{" "}
+                <span className="font-mono">.md</span> do seu Repositório. O
+                grafo é montado a partir dos{" "}
+                <span className="font-mono">[[wikilinks]]</span>, tags e pastas.
+              </p>
+              <Button onClick={pickFolder} color="primary" className="gap-2">
+                <FolderIcon className="size-5" />
+                Selecionar pasta
+              </Button>
             </div>
-          )}
+          </div>
+        )}
       </div>
 
       {/* Tooltip flutuante do nó sob o cursor */}
       <div
         ref={tipRef}
-        className="pointer-events-none fixed z-[60] hidden rounded-md bg-gray-900 px-2 py-1 text-xs text-white shadow-lg dark:bg-dark-50 dark:text-dark-900"
+        className="dark:bg-dark-50 dark:text-dark-900 pointer-events-none fixed z-[60] hidden rounded-md bg-gray-900 px-2 py-1 text-xs text-white shadow-lg"
       />
 
       {/* Nó clicado: abre o .md para ler e editar direto na pasta. */}
@@ -945,7 +1106,9 @@ export default function MemoriaGrafo() {
           setNota({ ...nota, titulo: novo });
           setGraph((g) => ({
             ...g,
-            nodes: g.nodes.map((n) => (n.id === nota.path ? { ...n, titulo: novo } : n)),
+            nodes: g.nodes.map((n) =>
+              n.id === nota.path ? { ...n, titulo: novo } : n,
+            ),
           }));
         }}
       />

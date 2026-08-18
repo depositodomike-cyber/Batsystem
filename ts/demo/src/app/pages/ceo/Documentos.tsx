@@ -139,7 +139,11 @@ function readAsDataUrl(file: File): Promise<string> {
 
 /** Redimensiona a imagem para no máx. `max`px no maior lado e reencoda, mantendo
  *  o data-URI pequeno o suficiente para o localStorage. PNG preserva alpha. */
-function downscaleImage(file: File, max = 1600, quality = 0.85): Promise<string> {
+function downscaleImage(
+  file: File,
+  max = 1600,
+  quality = 0.85,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
@@ -303,8 +307,7 @@ const SEED_NODES: FsNode[] = [
 function loadLegacyNodes(): FsNode[] | null {
   try {
     const key = storageKey();
-    const raw =
-      localStorage.getItem(key) ?? localStorage.getItem(STORAGE_BASE);
+    const raw = localStorage.getItem(key) ?? localStorage.getItem(STORAGE_BASE);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed as FsNode[];
@@ -533,8 +536,19 @@ export default function Documentos() {
               help={{
                 description: (
                   <>
-                    <p><strong>Documentos</strong> é a biblioteca de arquivos e imagens da sua empresa. Organize o conteúdo em pastas, envie novos arquivos (pelo botão ou arrastando para a área), visualize imagens e faça o download quando precisar.</p>
-                    <p>Você pode alternar entre visualização em grade ou lista, filtrar por imagens ou documentos e buscar dentro da pasta atual. Os arquivos ficam salvos localmente neste navegador.</p>
+                    <p>
+                      <strong>Documentos</strong> é a biblioteca de arquivos e
+                      imagens da sua empresa. Organize o conteúdo em pastas,
+                      envie novos arquivos (pelo botão ou arrastando para a
+                      área), visualize imagens e faça o download quando
+                      precisar.
+                    </p>
+                    <p>
+                      Você pode alternar entre visualização em grade ou lista,
+                      filtrar por imagens ou documentos e buscar dentro da pasta
+                      atual. Os arquivos ficam salvos localmente neste
+                      navegador.
+                    </p>
                   </>
                 ),
               }}
@@ -543,7 +557,8 @@ export default function Documentos() {
             </PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
               Centralize e gerencie os arquivos e imagens da sua empresa.
-              Organize em pastas, envie, visualize e baixe — tudo em um só lugar.
+              Organize em pastas, envie, visualize e baixe — tudo em um só
+              lugar.
             </p>
           </div>
 
@@ -582,7 +597,7 @@ export default function Documentos() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar nesta pasta…"
-                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+                className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
               />
               {query && (
                 <button
@@ -611,7 +626,7 @@ export default function Documentos() {
                     type="button"
                     onClick={() => setTypeFilter(opt.id)}
                     className={clsx(
-                      "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
+                      "text-xs-plus rounded-lg px-3.5 py-1.5 font-medium transition-colors",
                       typeFilter === opt.id
                         ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
                         : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
@@ -628,7 +643,11 @@ export default function Documentos() {
                   [
                     { id: "grid", Icon: Squares2X2Icon, label: "Grade" },
                     { id: "list", Icon: ListBulletIcon, label: "Lista" },
-                  ] as { id: ViewMode; Icon: typeof Squares2X2Icon; label: string }[]
+                  ] as {
+                    id: ViewMode;
+                    Icon: typeof Squares2X2Icon;
+                    label: string;
+                  }[]
                 ).map((opt) => (
                   <button
                     key={opt.id}
@@ -712,7 +731,7 @@ export default function Documentos() {
         )}
 
         {!dragging && visible.length > 0 && view === "grid" && (
-          <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="mt-5 grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {visible.map((n) =>
               n.kind === "folder" ? (
                 <FolderCard
@@ -754,7 +773,9 @@ export default function Documentos() {
         close={() => setNewFolderOpen(false)}
         onCreate={createFolder}
         locationLabel={
-          breadcrumb.length ? breadcrumb[breadcrumb.length - 1].name : "Documentos"
+          breadcrumb.length
+            ? breadcrumb[breadcrumb.length - 1].name
+            : "Documentos"
         }
       />
     </Page>
@@ -830,7 +851,9 @@ function StatCard({
         <p className="dark:text-dark-50 text-lg font-semibold text-gray-800">
           {value}
         </p>
-        <p className="dark:text-dark-300 text-tiny-plus text-gray-500">{label}</p>
+        <p className="dark:text-dark-300 text-tiny-plus text-gray-500">
+          {label}
+        </p>
       </div>
     </div>
   );
@@ -850,10 +873,10 @@ function FileThumb({ file }: { file: FsNode }) {
   return (
     <div className="grid size-full place-items-center">
       <div className="relative">
-        <DocumentIcon className="text-gray-300 dark:text-dark-400 size-12 stroke-[1.25]" />
+        <DocumentIcon className="dark:text-dark-400 size-12 stroke-[1.25] text-gray-300" />
         <span
           className={clsx(
-            "absolute -bottom-1 left-1/2 -translate-x-1/2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase text-white",
+            "absolute -bottom-1 left-1/2 -translate-x-1/2 rounded px-1.5 py-0.5 text-[10px] font-bold text-white uppercase",
             tintForExt(file.ext ?? ""),
           )}
         >
@@ -886,7 +909,7 @@ function FolderCard({
           }}
           title="Remover pasta"
           aria-label={`Remover pasta ${folder.name}`}
-          className="dark:bg-dark-800/90 grid size-7 place-items-center rounded-lg bg-white/90 text-gray-600 shadow-sm backdrop-blur hover:text-rose-600 dark:text-dark-200"
+          className="dark:bg-dark-800/90 dark:text-dark-200 grid size-7 place-items-center rounded-lg bg-white/90 text-gray-600 shadow-sm backdrop-blur hover:text-rose-600"
         >
           <TrashIcon className="size-4" />
         </button>
@@ -897,12 +920,12 @@ function FolderCard({
         onClick={onOpen}
         className="dark:bg-dark-600/40 grid aspect-[4/3] w-full cursor-pointer place-items-center bg-amber-50/60"
       >
-        <FolderIcon className="size-14 text-amber-400 stroke-[1.25]" />
+        <FolderIcon className="size-14 stroke-[1.25] text-amber-400" />
       </button>
 
       <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2.5">
         <p
-          className="dark:text-dark-100 truncate text-xs-plus font-medium text-gray-700"
+          className="dark:text-dark-100 text-xs-plus truncate font-medium text-gray-700"
           title={folder.name}
         >
           {folder.name}
@@ -934,7 +957,7 @@ function FileCard({
           onClick={(e) => e.stopPropagation()}
           title="Baixar"
           aria-label={`Baixar ${file.name}`}
-          className="dark:bg-dark-800/90 grid size-7 place-items-center rounded-lg bg-white/90 text-gray-600 shadow-sm backdrop-blur hover:text-primary-600 dark:text-dark-200"
+          className="dark:bg-dark-800/90 hover:text-primary-600 dark:text-dark-200 grid size-7 place-items-center rounded-lg bg-white/90 text-gray-600 shadow-sm backdrop-blur"
         >
           <ArrowDownTrayIcon className="size-4" />
         </a>
@@ -946,7 +969,7 @@ function FileCard({
           }}
           title="Remover"
           aria-label={`Remover ${file.name}`}
-          className="dark:bg-dark-800/90 grid size-7 place-items-center rounded-lg bg-white/90 text-gray-600 shadow-sm backdrop-blur hover:text-rose-600 dark:text-dark-200"
+          className="dark:bg-dark-800/90 dark:text-dark-200 grid size-7 place-items-center rounded-lg bg-white/90 text-gray-600 shadow-sm backdrop-blur hover:text-rose-600"
         >
           <TrashIcon className="size-4" />
         </button>
@@ -967,7 +990,7 @@ function FileCard({
       {/* Meta */}
       <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2.5">
         <p
-          className="dark:text-dark-100 truncate text-xs-plus font-medium text-gray-700"
+          className="dark:text-dark-100 text-xs-plus truncate font-medium text-gray-700"
           title={file.name}
         >
           {file.name}
@@ -994,10 +1017,10 @@ function FileTable({
   onRemove: (id: string) => void;
 }) {
   return (
-    <div className="dark:border-dark-600 mt-5 overflow-hidden rounded-xl border border-gray-200">
+    <div className="dark:border-dark-600 mt-5 overflow-x-auto rounded-xl border border-gray-200">
       <table className="w-full text-sm">
         <thead className="dark:bg-dark-800 dark:text-dark-300 bg-gray-50 text-gray-500">
-          <tr className="text-tiny-plus uppercase tracking-wide">
+          <tr className="text-tiny-plus tracking-wide uppercase">
             <th className="px-4 py-2.5 text-start font-semibold">Nome</th>
             <th className="px-4 py-2.5 text-start font-semibold max-sm:hidden">
               Tipo
@@ -1048,7 +1071,7 @@ function FileTable({
                       ) : (
                         <span
                           className={clsx(
-                            "text-[9px] font-bold uppercase text-white grid size-full place-items-center",
+                            "grid size-full place-items-center text-[9px] font-bold text-white uppercase",
                             tintForExt(n.ext ?? ""),
                           )}
                         >
@@ -1064,7 +1087,7 @@ function FileTable({
                           : n.kind === "image" && onPreview(n)
                       }
                       className={clsx(
-                        "dark:text-dark-100 min-w-0 max-w-xs truncate text-start font-medium text-gray-700",
+                        "dark:text-dark-100 max-w-xs min-w-0 truncate text-start font-medium text-gray-700",
                         isFolder && "hover:text-primary-600",
                       )}
                       title={n.name}
@@ -1098,7 +1121,7 @@ function FileTable({
                         download={n.name}
                         title="Baixar"
                         aria-label={`Baixar ${n.name}`}
-                        className="dark:text-dark-200 dark:hover:bg-dark-500 grid size-8 place-items-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-primary-600"
+                        className="dark:text-dark-200 dark:hover:bg-dark-500 hover:text-primary-600 grid size-8 place-items-center rounded-lg text-gray-500 hover:bg-gray-100"
                       >
                         <ArrowDownTrayIcon className="size-4.5" />
                       </a>
@@ -1249,7 +1272,7 @@ function NewFolderModal({
                 if (e.key === "Enter") submit();
               }}
               placeholder="Nome da pasta"
-              className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 mt-4 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+              className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 mt-4 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
             />
 
             <div className="mt-5 flex justify-end gap-2">
@@ -1323,7 +1346,7 @@ function ImagePreview({
                     href={file.url}
                     download={file.name}
                     title="Baixar"
-                    className="dark:text-dark-200 dark:hover:bg-dark-600 grid size-8 place-items-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-primary-600"
+                    className="dark:text-dark-200 dark:hover:bg-dark-600 hover:text-primary-600 grid size-8 place-items-center rounded-lg text-gray-500 hover:bg-gray-100"
                   >
                     <ArrowDownTrayIcon className="size-4.5" />
                   </a>

@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useMemo, useState, type ElementType } from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
-import clsx from "clsx";
 import {
   ArrowPathIcon,
   ChartBarIcon,
@@ -37,7 +36,6 @@ import {
   montarInventario,
   notasParaVault,
   parseNotaMd,
-  pastasDoInventario,
   pastaContextoSalva,
   pastaEhCopia,
   permissaoDeLeitura,
@@ -98,7 +96,6 @@ export default function MemoriaLista() {
   const [itens, setItens] = useState<ItemContexto[] | null>(null);
   const [lendo, setLendo] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
-  const [pasta, setPasta] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
   const [nota, setNota] = useState<{ path: string; titulo: string } | null>(null);
 
@@ -184,7 +181,6 @@ export default function MemoriaLista() {
         return;
       }
       setItens(null);
-      setPasta(null);
       setBusca("");
       setNota(null);
     })();
@@ -194,14 +190,12 @@ export default function MemoriaLista() {
     };
   }, [carregar, repositorioId]);
 
-  const pastas = useMemo(() => pastasDoInventario(itens ?? []), [itens]);
-  // Uma pasta filtrada pode desaparecer ao sincronizar; nesse caso o filtro cai
-  // em "Todas" em vez de esvaziar a lista sem explicação.
-  const pastaAtiva =
-    pasta && pastas.some((p) => p.pasta === pasta) ? pasta : null;
+  // Sem filtro por pasta: a lista mostra o inventário inteiro, recortado só
+  // pela busca. `filtrarInventario` segue aceitando `pasta` — outros usos do
+  // helper continuam válidos.
   const visiveis = useMemo(
-    () => filtrarInventario(itens ?? [], { pasta: pastaAtiva, busca }),
-    [itens, pastaAtiva, busca],
+    () => filtrarInventario(itens ?? [], { pasta: null, busca }),
+    [itens, busca],
   );
 
   const total = itens?.length ?? 0;
@@ -280,8 +274,8 @@ export default function MemoriaLista() {
 
         {!semPasta && (
           <>
-            {/* Busca + filtro por pasta */}
-            <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Busca */}
+            <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
               <div className="relative w-full lg:max-w-xs">
                 <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <MagnifyingGlassIcon className="size-4.5 text-gray-400" />
@@ -305,25 +299,6 @@ export default function MemoriaLista() {
                 )}
               </div>
 
-              {pastas.length > 0 && (
-                <div className="dark:bg-dark-700 inline-flex flex-wrap gap-1 rounded-lg bg-gray-200/70 p-1">
-                  <ChipPasta
-                    ativo={pastaAtiva === null}
-                    onClick={() => setPasta(null)}
-                    rotulo="Todas"
-                    total={total}
-                  />
-                  {pastas.map((p) => (
-                    <ChipPasta
-                      key={p.pasta}
-                      ativo={pastaAtiva === p.pasta}
-                      onClick={() => setPasta(p.pasta)}
-                      rotulo={p.pasta}
-                      total={p.total}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Itens */}
@@ -384,34 +359,6 @@ export default function MemoriaLista() {
 
 // ----------------------------------------------------------------------
 
-function ChipPasta({
-  ativo,
-  onClick,
-  rotulo,
-  total,
-}: {
-  ativo: boolean;
-  onClick: () => void;
-  rotulo: string;
-  total: number;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={ativo}
-      className={clsx(
-        "rounded-lg px-3.5 py-1.5 text-xs-plus font-medium transition-colors",
-        ativo
-          ? "dark:bg-dark-500 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
-          : "dark:text-dark-300 dark:hover:text-dark-100 text-gray-500 hover:text-gray-700",
-      )}
-    >
-      {rotulo}
-      <span className="dark:text-dark-400 ml-1.5 text-tiny text-gray-400">{total}</span>
-    </button>
-  );
-}
 
 function LinhaNota({ item, onAbrir }: { item: ItemContexto; onAbrir: () => void }) {
   const Icone = ICONE_POR_TIPO[item.tipo] ?? DocumentTextIcon;

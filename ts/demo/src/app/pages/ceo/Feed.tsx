@@ -83,8 +83,16 @@ export default function Feed() {
             <>
               <HeroSection base={base} />
               <FeaturedPair base={base} />
-              <CardGrid items={FEED_ITEMS.slice(8, 12)} base={base} columns={4} />
-              <CardGrid items={FEED_ITEMS.slice(4, 7)} base={base} columns={3} />
+              <CardGrid
+                items={FEED_ITEMS.slice(8, 12)}
+                base={base}
+                columns={4}
+              />
+              <CardGrid
+                items={FEED_ITEMS.slice(4, 7)}
+                base={base}
+                columns={3}
+              />
             </>
           )}
         </div>
@@ -119,7 +127,7 @@ function CategoryBar({
                 type="button"
                 onClick={() => onCategoryChange(cat)}
                 className={clsx(
-                  "rounded-lg px-3 py-1.5 text-xs-plus font-medium transition-colors",
+                  "text-xs-plus rounded-lg px-3 py-1.5 font-medium transition-colors",
                   isActive
                     ? "bg-primary-600 text-white"
                     : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
@@ -238,7 +246,7 @@ function AuthorFooter({ item, base }: { item: FeedItem; base: string }) {
           className="size-8 shrink-0 rounded-full object-cover"
         />
         <div className="min-w-0">
-          <p className="dark:text-dark-100 truncate text-xs-plus font-semibold text-gray-800">
+          <p className="dark:text-dark-100 text-xs-plus truncate font-semibold text-gray-800">
             {item.author}
           </p>
           <p className="dark:text-dark-300 text-tiny text-gray-400">
@@ -271,7 +279,7 @@ function LikeButton({ item }: { item: FeedItem }) {
         toggleLike(item.id);
       }}
       className={clsx(
-        "inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs-plus font-semibold transition-colors",
+        "text-xs-plus inline-flex h-8 items-center gap-1 rounded-lg px-2 font-semibold transition-colors",
         liked
           ? "bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300"
           : "dark:bg-dark-600 dark:text-dark-200 dark:hover:bg-dark-500 bg-gray-100 text-gray-500 hover:bg-gray-200",
@@ -291,7 +299,7 @@ function CommentLink({ item, base }: { item: FeedItem; base: string }) {
       to={`${base}/${item.id}`}
       aria-label="Comentar"
       onClick={(e) => e.stopPropagation()}
-      className="dark:bg-dark-600 dark:text-dark-200 dark:hover:bg-dark-500 inline-flex h-8 items-center gap-1 rounded-lg bg-gray-100 px-2 text-xs-plus font-semibold text-gray-500 transition-colors hover:bg-gray-200"
+      className="dark:bg-dark-600 dark:text-dark-200 dark:hover:bg-dark-500 text-xs-plus inline-flex h-8 items-center gap-1 rounded-lg bg-gray-100 px-2 font-semibold text-gray-500 transition-colors hover:bg-gray-200"
     >
       <ChatBubbleOvalLeftIcon className="size-4" />
       {count}
@@ -384,18 +392,33 @@ function HorizontalCard({
   showTitle?: boolean;
   className?: string;
 }) {
+  // Abaixo de sm o card empilha: com `w-1/3` fixo, em 375px sobravam ~200px
+  // para descrição + rodapé (avatar, nome, data, likes). São até 5 destes por
+  // render, então era o pior ofensor visual da tela no celular.
   const img = (
-    <Link to={`${base}/${item.id}`} className="w-1/3 shrink-0">
-      <img src={item.image} alt={item.title} className="size-full object-cover" />
+    <Link
+      to={`${base}/${item.id}`}
+      className="h-40 w-full shrink-0 sm:h-auto sm:w-1/3"
+    >
+      <img
+        src={item.image}
+        alt={item.title}
+        className="size-full object-cover"
+      />
     </Link>
   );
   return (
-    <Card className={clsx("flex overflow-hidden", className)}>
+    <Card
+      className={clsx("flex flex-col overflow-hidden sm:flex-row", className)}
+    >
       {imageSide === "left" && img}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Link to={`${base}/${item.id}`} className="flex flex-1 flex-col px-4 py-3">
+        <Link
+          to={`${base}/${item.id}`}
+          className="flex flex-1 flex-col px-4 py-3"
+        >
           {showTitle && (
-            <p className="dark:text-dark-100 hover:text-primary-600 dark:hover:text-primary-400 mb-1 text-sm-plus font-semibold text-gray-800">
+            <p className="dark:text-dark-100 hover:text-primary-600 dark:hover:text-primary-400 text-sm-plus mb-1 font-semibold text-gray-800">
               {item.title}
             </p>
           )}
@@ -472,7 +495,7 @@ function VerticalCard({ item, base }: { item: FeedItem; base: string }) {
       <div className="flex flex-1 flex-col px-4 py-3">
         <Link
           to={to}
-          className="dark:text-dark-100 hover:text-primary-600 dark:hover:text-primary-400 mb-1 text-sm-plus font-semibold text-gray-800"
+          className="dark:text-dark-100 hover:text-primary-600 dark:hover:text-primary-400 text-sm-plus mb-1 font-semibold text-gray-800"
         >
           {item.title}
         </Link>

@@ -6,7 +6,7 @@ import type { MemoryItem } from "@/app/data/memoria";
  * Regras não pede tema, e a API grava o tema padrão quando ele não vem.
  */
 export type NewMemoryInput = Pick<MemoryItem, "title" | "content"> &
-  Partial<Pick<MemoryItem, "category" | "source" | "confidence">> & {
+  Partial<Pick<MemoryItem, "category" | "source">> & {
     /** Fixar como definição corporativa (só admin). */
     corporate?: boolean;
   };

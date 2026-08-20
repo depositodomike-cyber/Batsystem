@@ -1,5 +1,5 @@
 import axios from "@/utils/axios";
-import type { MemoryItem, MemoryConfidence } from "@/app/data/memoria";
+import type { MemoryItem } from "@/app/data/memoria";
 
 // ----------------------------------------------------------------------
 // Cliente da API de Memória (backend NestJS: /memorias, escopo por empresa).
@@ -13,7 +13,6 @@ export interface CreateMemoryPayload {
   title: string;
   content: string;
   source?: string;
-  confidence?: MemoryConfidence;
   /** Fixar como definição corporativa (só honrado para admin/owner no backend). */
   corporate?: boolean;
 }
@@ -23,7 +22,6 @@ export type UpdateMemoryPayload = Partial<{
   title: string;
   content: string;
   source: string;
-  confidence: MemoryConfidence;
   active: boolean;
 }>;
 

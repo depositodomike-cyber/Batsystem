@@ -59,9 +59,6 @@ export function buildMemoryCategories(pastas: string[]): MemoryCategory[] {
     }));
 }
 
-/** Confiança da IA no fato memorizado. */
-export type MemoryConfidence = "alta" | "media" | "baixa";
-
 export interface MemoryItem {
   id: string;
   /** Tema da memória = pasta do Repositório em que ela se encaixa. */
@@ -78,7 +75,6 @@ export interface MemoryItem {
   active: boolean;
   /** Definição corporativa (read-only): não pode ser desativada nem alterada. */
   corporate: boolean;
-  confidence: MemoryConfidence;
 }
 
 // Limites validados pela API (ts/api/src/memorias/dto). Ficam aqui para os
@@ -86,9 +82,3 @@ export interface MemoryItem {
 // gravação parece simplesmente "não ter funcionado".
 export const MEMORIA_MAX_TITULO = 160;
 export const MEMORIA_MAX_CONTEUDO = 8000;
-
-export const CONFIDENCE_LABEL: Record<MemoryConfidence, string> = {
-  alta: "Alta confiança",
-  media: "Confiança média",
-  baixa: "A confirmar",
-};

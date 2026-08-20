@@ -27,11 +27,7 @@ import { Input, Switch, Textarea } from "@/components/ui/Form";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
-import {
-  CONFIDENCE_LABEL,
-  type MemoryItem,
-  type MemoryConfidence,
-} from "@/app/data/memoria";
+import { type MemoryItem } from "@/app/data/memoria";
 import { useMemoryContext } from "@/app/contexts/memory/context";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
@@ -39,12 +35,6 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 // ----------------------------------------------------------------------
 
 type StatusFilter = "all" | "active" | "inactive";
-
-const confidenceColor: Record<MemoryConfidence, "success" | "warning" | "neutral"> = {
-  alta: "success",
-  media: "warning",
-  baixa: "neutral",
-};
 
 /** Estimativa de tokens de uma memória (~4 caracteres por token). */
 function memoryTokens(m: { title: string; content: string }): number {
@@ -130,9 +120,7 @@ export function RegrasSection() {
               <p>Cada regra pode ser ativada ou desativada; só as ativas entram no contexto da IA. Use a busca e os filtros para gerenciar, ou crie uma nova.</p>
             </>) }}>Regras</PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-              {total === 0
-                ? "Registre a primeira regra para a IA seguir em toda resposta."
-                : `${total} ${total === 1 ? "regra" : "regras"} · ${activeCount} ativas · ~${estimatedTokens.toLocaleString("pt-BR")} tokens no contexto da IA.`}
+              {`${total} ${total === 1 ? "regra" : "regras"} · ${activeCount} ${activeCount === 1 ? "ativa" : "ativas"} · ~${estimatedTokens.toLocaleString("pt-BR")} tokens no contexto da IA.`}
             </p>
           </div>
 
@@ -223,7 +211,7 @@ export function RegrasSection() {
               </h3>
               <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
                 {total === 0
-                  ? "Crie a primeira regra para definir o que a IA deve seguir em toda resposta."
+                  ? "Crie regras para orientar como a IA deve se comportar e responder."
                   : "Ajuste a busca ou escolha outro filtro."}
               </p>
             </div>
@@ -335,13 +323,6 @@ function LinhaRegra({
             >
               {memory.title}
             </span>
-            <Badge
-              variant="soft"
-              color={confidenceColor[memory.confidence]}
-              className="shrink-0 text-tiny"
-            >
-              {CONFIDENCE_LABEL[memory.confidence]}
-            </Badge>
             {memory.corporate && (
               <Badge variant="soft" color="info" className="shrink-0 gap-1 text-tiny">
                 <LockClosedIcon className="size-3" />
@@ -409,7 +390,6 @@ function NewMemoryModal({
     title: string;
     content: string;
     source?: string;
-    confidence?: MemoryConfidence;
     corporate?: boolean;
   }) => void;
 }) {
@@ -463,7 +443,7 @@ function NewMemoryModal({
                       Nova regra
                     </DialogTitle>
                     <p className="dark:text-dark-300 text-xs-plus text-gray-500">
-                      Defina uma regra que a IA deve seguir em toda resposta.
+                      Defina uma orientação para as respostas da IA.
                     </p>
                   </div>
                 </div>
@@ -636,13 +616,6 @@ function MemoryDrawer({
                 className="hide-scrollbar flex-1 overflow-y-auto overscroll-contain px-5 py-4"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    color={confidenceColor[memory.confidence]}
-                    variant="soft"
-                    className="rounded-lg"
-                  >
-                    {CONFIDENCE_LABEL[memory.confidence]}
-                  </Badge>
                   <Badge
                     color={memory.active ? "success" : "neutral"}
                     variant="soft"

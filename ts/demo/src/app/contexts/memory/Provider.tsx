@@ -57,7 +57,6 @@ function memoriaLocalDe(input: NewMemoryInput): MemoryItem {
     date: new Date().toLocaleDateString("pt-BR"),
     active: true,
     corporate: !!input.corporate,
-    confidence: input.confidence ?? "alta",
   };
 }
 
@@ -128,7 +127,6 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
           title: input.title,
           content: input.content,
           source: input.source,
-          confidence: input.confidence,
           corporate: input.corporate,
         });
         const mapped = fromApi(created);
@@ -173,7 +171,6 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
           title: patch.title,
           content: patch.content,
           source: patch.source,
-          confidence: patch.confidence,
           active: patch.active,
         });
         const mapped = fromApi(updated);

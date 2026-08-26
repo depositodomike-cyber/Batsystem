@@ -707,9 +707,11 @@ export default function MemoriaGrafo() {
         // No fundo claro as arestas somem: reforça a opacidade quando inativas.
         const base = ativo ? 0.6 : isDark ? dim : dim * 1.7;
         ctx.strokeStyle = corLink(l.tipo, Math.min(base + brilho, 0.85));
-        // A espessura carrega o peso da relação: quanto mais conteúdos a
-        // sustentam, mais grossa a linha.
-        ctx.lineWidth = (ativo ? 1.6 : 1) * espessura(l) * inv;
+        // Espessura constante, como sempre foi. O peso da relação existe (ver
+        // `espessura`), mas fica fora do traço: aplicá-lo aqui engrossava todas
+        // as linhas de 1,25× a 3× e mudava a cara do grafo. O peso segue valendo
+        // para a tolerância de clique na aresta.
+        ctx.lineWidth = (ativo ? 1.6 : 1) * inv;
         ctx.setLineDash(
           l.tipo === "pasta"
             ? [2 * inv, 4 * inv]

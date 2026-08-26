@@ -14,7 +14,13 @@ import { RepositorioViewSelect } from "./RepositorioViewSelect";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
-import { syncVault, getVaultStatus } from "@/services/api/vault";
+import {
+  syncVault,
+  getVaultStatus,
+  getVaultCategorias,
+  classificarVaultCompleto,
+  type CategoriasDoVault,
+} from "@/services/api/vault";
 import { buscandoMemoria, onBuscaMemoria } from "@/utils/memoriaBusca";
 import { memoriaVaultSupported } from "@/utils/memoriaVault";
 import { criarRelacao, removerRelacao } from "./grafo-relacoes";
@@ -33,19 +39,21 @@ import {
   type ItemContexto,
 } from "./memoria-inventario";
 import {
+  COR_CATEGORIA,
   COR_PESSOA,
   COR_TAG,
   PASTA_COR,
   construirGrafoDoVault,
   ehEntidade,
   montarCores,
+  temContexto,
   pesoDoKind,
   raio,
   repousoDoLink,
   unirCamadas,
-  type EntKind,
   type GNode,
   type Graph,
+  type Kind,
   type LinkTipo,
 } from "./memoria-grafo-modelo";
 import {
@@ -70,6 +78,7 @@ import {
 
 /** Camadas visíveis no canvas. "Conteúdos" é o grafo de arquivos original. */
 interface Filtros {
+  categoria: boolean;
   pessoa: boolean;
   projeto: boolean;
   tag: boolean;
@@ -77,28 +86,73 @@ interface Filtros {
 }
 
 const FILTROS_INICIAIS: Filtros = {
+  categoria: true,
   pessoa: true,
   projeto: true,
   tag: true,
   conteudos: false,
 };
 
-// Camadas com chip próprio no overlay. Tags e Conteúdos ficam de fora: as tags
-// são a camada base (nunca faz sentido desligá-las) e os conteúdos só
-// entram pelo fallback de vaults sem termo recorrente. As duas camadas
-// continuam existindo em `Filtros` — só não têm botão.
-const CHIPS: { chave: keyof Filtros; label: string; cor: string | null }[] = [
-  { chave: "pessoa", label: "Pessoas", cor: COR_PESSOA },
-  { chave: "projeto", label: "Projetos", cor: PASTA_COR.Documentos },
+/**
+ * Chips do overlay, que também funcionam como legenda.
+ *
+ * Um chip só: tudo que não é conteúdo se apresenta como "Tag" (ver
+ * ROTULO_ENTIDADE), então três botões chamados "Categorias", "Pessoas" e
+ * "Projetos" contradiriam o que o resto da tela diz. As camadas seguem
+ * separadas em `Filtros` — o chip liga e desliga as quatro juntas.
+ *
+ * Conteúdos continuam sem botão: essa camada só entra pelo fallback de vaults
+ * sem termo recorrente.
+ */
+const CHIPS: {
+  id: string;
+  label: string;
+  cor: string | null;
+  camadas: (keyof Filtros)[];
+}[] = [
+  {
+    id: "tags",
+    label: "Tags",
+    cor: COR_TAG,
+    camadas: ["categoria", "pessoa", "projeto", "tag"],
+  },
 ];
 
+/**
+ * Camada de cada kind — fonte única para a visibilidade E para a contagem dos
+ * chips. `satisfies Record<Kind, …>` de propósito: a cadeia de `if` que existia
+ * aqui terminava em `return f.conteudos`, e `conteudos` nasce DESLIGADO. Um kind
+ * novo cairia nesse fallback e ficaria invisível sem erro nenhum.
+ */
+const CAMADA_POR_KIND = {
+  categoria: "categoria",
+  pessoa: "pessoa",
+  projeto: "projeto",
+  tag: "tag",
+  nota: "conteudos",
+  pasta: "conteudos",
+  "tag-hub": "conteudos",
+} satisfies Record<Kind, keyof Filtros>;
+
 /** O nó está numa camada ligada? */
-function visivelPor(kind: GNode["kind"], f: Filtros): boolean {
-  if (kind === "pessoa") return f.pessoa;
-  if (kind === "projeto") return f.projeto;
-  if (kind === "tag") return f.tag;
-  return f.conteudos;
+function visivelPor(kind: Kind, f: Filtros): boolean {
+  return f[CAMADA_POR_KIND[kind]];
 }
+
+/**
+ * Cor fixa por kind; `null` significa "a cor vem da pasta do nó".
+ * Exaustivo pelo mesmo motivo: sem isto um kind novo cai no cinza de fallback e
+ * fica indistinguível de uma nota sem pasta.
+ */
+const COR_POR_KIND = {
+  tag: COR_TAG,
+  "tag-hub": COR_TAG,
+  pessoa: COR_PESSOA,
+  categoria: COR_CATEGORIA,
+  projeto: null,
+  pasta: null,
+  nota: null,
+} satisfies Record<Kind, string | null>;
 
 // ----------------------------------------------------------------------
 
@@ -123,6 +177,19 @@ export default function MemoriaGrafo() {
   const [nota, setNota] = useState<{ path: string; titulo: string } | null>(
     null,
   );
+  /**
+   * Tags de que a nota aberta faz parte — badges no NotaMemoriaModal.
+   *
+   * Sai dos nós de ENTIDADE do grafo (`conteudos` lista os .md que citam a tag)
+   * e não do frontmatter do arquivo: na prática o frontmatter só traz o tipo
+   * ("documento"), enquanto os assuntos são derivados do vault inteiro.
+   */
+  const tagsDaNota = useMemo(() => {
+    if (!nota) return undefined;
+    return graph.nodes
+      .filter((n) => n.kind === "tag" && n.conteudos?.includes(nota.path))
+      .map((n) => n.titulo);
+  }, [graph.nodes, nota]);
   // Estado da sincronização dos .md com o backend (o que a IA consulta).
   const [sync, setSync] = useState<{
     state: "idle" | "syncing" | "done" | "error";
@@ -144,23 +211,53 @@ export default function MemoriaGrafo() {
     [itens],
   );
   const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIAIS);
+  /**
+   * Categorias macro vindas do backend. O grafo é montado no navegador, mas a
+   * classificação mora no servidor (custa uma chamada de IA por nota) — então
+   * ela entra por aqui, como parâmetro, e os módulos do grafo seguem puros.
+   */
+  const [categorias, setCategorias] = useState<CategoriasDoVault>({
+    categorias: [],
+    porPath: {},
+  });
+  /** Últimos .md lidos, para remontar o grafo sem reler a pasta. */
+  const arquivosRef = useRef<ArquivoMd[]>([]);
+  /**
+   * Categorias já refletidas no grafo desenhado. `loadFromHandle` marca as que
+   * usou na montagem inicial, então o efeito abaixo só age quando a
+   * classificação trouxe novidade — sem isso ele remontaria o grafo logo depois
+   * do primeiro desenho, jogando os nós de volta ao seed à toa.
+   */
+  const categoriasAplicadasRef = useRef<CategoriasDoVault>(categorias);
+
+  useEffect(() => {
+    if (categorias === categoriasAplicadasRef.current) return;
+    categoriasAplicadasRef.current = categorias;
+    const files = arquivosRef.current;
+    if (files.length === 0) return;
+    // Remonta só o grafo: filtros e seleção ficam como o usuário deixou (a
+    // seleção é dado plano por id, e os ids não mudam).
+    const { entidades, conteudos, itens: inv } = construirGrafoDoVault(
+      files,
+      categorias,
+    );
+    setItens(inv);
+    setGraph(unirCamadas(entidades, conteudos));
+  }, [categorias]);
   // Pasta aberta como cópia: leitura funciona, gravação não.
   const [copiaSomenteLeitura, setCopiaSomenteLeitura] = useState(false);
   // Quantos nós cada camada tem. Alimenta a contagem nos chips e esconde os das
   // camadas vazias — um chip "Pessoas" num vault sem pessoa nenhuma só confunde.
   const camadas = useMemo(() => {
     const c: Record<keyof Filtros, number> = {
+      categoria: 0,
       pessoa: 0,
       projeto: 0,
       tag: 0,
       conteudos: 0,
     };
-    for (const n of graph.nodes) {
-      if (n.kind === "pessoa") c.pessoa += 1;
-      else if (n.kind === "projeto") c.projeto += 1;
-      else if (n.kind === "tag") c.tag += 1;
-      else c.conteudos += 1;
-    }
+    // Mesmo mapa da visibilidade: chip e filtro não podem divergir.
+    for (const n of graph.nodes) c[CAMADA_POR_KIND[n.kind]] += 1;
     return c;
   }, [graph]);
 
@@ -252,6 +349,21 @@ export default function MemoriaGrafo() {
       toast.success("Repositório sincronizado", {
         description: `${r.total} notas disponíveis para a IA.`,
       });
+
+      // Segunda etapa: classificar em categorias macro. Fica DEPOIS do toast
+      // porque a sincronização já está completa neste ponto — a classificação
+      // é um extra que nunca pode fazer o Sincronizar parecer ter falhado.
+      const c = await classificarVaultCompleto((feitas, total) =>
+        setSync({ state: "syncing", done: feitas, total }),
+      );
+      setSync({ state: "done", done: r.total, total: r.total });
+      if (c.classificadas > 0) {
+        // Recarrega o grafo com as categorias novas.
+        setCategorias(await getVaultCategorias());
+        toast.success("Conteúdos classificados", {
+          description: `${c.classificadas} ${c.classificadas === 1 ? "nota categorizada" : "notas categorizadas"} pela IA.`,
+        });
+      }
     } catch {
       setSync({ state: "error", done: 0, total: 0 });
       toast.error("Falha ao sincronizar o Repositório com a IA.", {
@@ -274,8 +386,17 @@ export default function MemoriaGrafo() {
       try {
         const files = await lerArquivosMd(handle);
         if (opts?.obsoleto?.()) return;
+        // Guardado para remontar o grafo quando a classificação terminar, sem
+        // reler a pasta inteira do disco.
+        arquivosRef.current = files;
+        // As categorias já classificadas entram junto do primeiro desenho; as
+        // que a IA produzir agora chegam depois, pelo efeito de `categorias`.
+        const cats = await getVaultCategorias();
+        if (opts?.obsoleto?.()) return;
+        setCategorias(cats);
+        categoriasAplicadasRef.current = cats;
         const { entidades, conteudos, itens: inv, temEntidades } =
-          construirGrafoDoVault(files);
+          construirGrafoDoVault(files, cats);
         setItens(inv);
         setSelecao(null);
         // Vault sem entidades reconhecíveis (sem grupos, sem pasta Pessoas, sem
@@ -442,8 +563,8 @@ export default function MemoriaGrafo() {
     // cor da pasta, tag = o ciano de sempre, pessoa = o rosa fixo da pasta
     // "Pessoas". Nenhuma cor nova entra no grafo.
     const nodeColor = (n: GNode): string => {
-      if (n.kind === "tag" || n.kind === "tag-hub") return COR_TAG;
-      if (n.kind === "pessoa") return COR_PESSOA;
+      const fixa = COR_POR_KIND[n.kind];
+      if (fixa) return fixa;
       if (n.pasta && n.pasta !== "Raiz")
         return corPasta.get(n.pasta) || PASTA_COR[n.pasta] || "#94A3B8";
       return "#94A3B8";
@@ -1094,7 +1215,9 @@ export default function MemoriaGrafo() {
       highlighted = ids;
       arestaSelecionada = null;
 
-      if (ehEntidade(n.kind)) {
+      // `temContexto` e não `ehEntidade`: a categoria também abre o painel,
+      // mesmo não sendo entidade para os demais efeitos do grafo.
+      if (temContexto(n.kind)) {
         // Entidade: revela o contexto no painel. Abrir o .md (quando existe,
         // caso das pessoas) vira ação explícita lá dentro — se o editor
         // abrisse já no clique, o contexto nunca chegaria a aparecer.
@@ -1103,7 +1226,7 @@ export default function MemoriaGrafo() {
           id: n.id,
           titulo: n.titulo,
           rotulo: n.rotulo ?? "",
-          kind: n.kind as EntKind,
+          kind: n.kind,
           notaPath: n.notaPath,
           relacoes: vizinhosDe(n),
           conteudos: n.conteudos ?? [],
@@ -1259,14 +1382,28 @@ export default function MemoriaGrafo() {
               também funciona como legenda. */}
           {graph.nodes.length > 0 && (
             <div className="flex flex-wrap items-center justify-end gap-1">
-              {CHIPS.filter(({ chave }) => camadas[chave] > 0).map(({ chave, label, cor }) => {
-                const ligado = filtros[chave];
+              {CHIPS.map((chip) => {
+                const total = chip.camadas.reduce((s, k) => s + camadas[k], 0);
+                return { chip, total };
+              })
+                .filter(({ total }) => total > 0)
+                .map(({ chip, total }) => {
+                const { id, label, cor, camadas: doChip } = chip;
+                // Ligado enquanto QUALQUER camada do chip estiver ligada; o
+                // clique alinha todas no estado oposto.
+                const ligado = doChip.some((k) => filtros[k]);
                 return (
                   <button
-                    key={chave}
+                    key={id}
                     type="button"
                     onClick={() =>
-                      setFiltros((f) => ({ ...f, [chave]: !f[chave] }))
+                      setFiltros((f) => {
+                        const proximo = !ligado;
+                        const patch = Object.fromEntries(
+                          doChip.map((k) => [k, proximo]),
+                        ) as Partial<Filtros>;
+                        return { ...f, ...patch };
+                      })
                     }
                     aria-pressed={ligado}
                     className={clsx(
@@ -1284,7 +1421,7 @@ export default function MemoriaGrafo() {
                         opacity: ligado ? 1 : 0.35,
                       }}
                     />
-                    {label} <span className="tabular-nums opacity-60">{camadas[chave]}</span>
+                    {label} <span className="tabular-nums opacity-60">{total}</span>
                   </button>
                 );
               })}
@@ -1320,7 +1457,7 @@ export default function MemoriaGrafo() {
         {/* Dica: entidade e relação são os dois caminhos para o contexto. */}
         {!loading && graph.nodes.length > 0 && (
           <span className="dark:bg-dark-700/70 dark:text-dark-300 text-tiny pointer-events-none absolute start-4 bottom-4 z-10 rounded-md bg-white/70 px-2 py-1 text-gray-500 backdrop-blur-sm">
-            {filtros.pessoa || filtros.projeto || filtros.tag
+            {filtros.categoria || filtros.pessoa || filtros.projeto || filtros.tag
               ? "Clique em um nó ou em uma conexão para ver o contexto"
               : "Clique em uma nota para abrir e editar o .md"}
           </span>
@@ -1385,6 +1522,7 @@ export default function MemoriaGrafo() {
         close={() => setNota(null)}
         path={nota?.path ?? null}
         titulo={nota?.titulo}
+        tags={tagsDaNota}
         onSalvo={(conteudo) => {
           if (!nota) return;
           // O título pode ter mudado no frontmatter — atualiza o rótulo do nó

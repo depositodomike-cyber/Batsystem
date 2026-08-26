@@ -17,7 +17,7 @@ import clsx from "clsx";
 import { toast } from "sonner";
 
 // Local Imports
-import { Button, Spinner } from "@/components/ui";
+import { Badge, Button, Spinner } from "@/components/ui";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { MarkdownView } from "./MarkdownView";
 import {
@@ -26,12 +26,20 @@ import {
   type VaultFalha,
 } from "@/utils/memoriaVault";
 import { syncVaultBatch } from "@/services/api/vault";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 // Nota do Repositório aberta a partir de um nó do grafo. Lê o .md direto da Pasta
 // do Repositório (File System Access API), deixa editar e regrava o arquivo. Ao
 // salvar, a nota também é reenviada ao backend para a IA ver a versão nova.
 // ----------------------------------------------------------------------
+
+/**
+ * Edição desligada temporariamente: o modal fica só com a nota renderizada.
+ * A máquina de edição (estado, `salvar`, ⌘S, aviso de não salvo) continua
+ * inteira no arquivo — voltar é trocar a flag para `false`.
+ */
+const SEM_EDICAO = isFeatureTemporarilyDisabled("memoryNoteEditing");
 
 interface Props {
   isOpen: boolean;
@@ -40,6 +48,13 @@ interface Props {
   path: string | null;
   /** Título do nó (frontmatter ou nome do arquivo), usado no cabeçalho. */
   titulo?: string;
+  /**
+   * Tags de que este conteúdo faz parte, em badges acima do corpo da nota.
+   * Vêm de fora porque a fonte é a camada de ENTIDADES do grafo (`extrairTags`,
+   * que precisa do vault inteiro para medir recorrência) — não do frontmatter
+   * do arquivo, que na prática só traz o tipo ("documento").
+   */
+  tags?: string[];
   /** Avisa a tela do grafo que o arquivo mudou (para atualizar o rótulo do nó). */
   onSalvo?: (conteudo: string) => void;
 }
@@ -70,6 +85,7 @@ export function NotaMemoriaModal({
   close,
   path,
   titulo,
+  tags,
   onSalvo,
 }: Props) {
   // `salvo` guarda o conteúdo em disco do arquivo aberto; comparado com o do
@@ -84,6 +100,11 @@ export function NotaMemoriaModal({
   const [conteudo, setConteudo] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [modo, setModo] = useState<"editar" | "ler">("editar");
+
+  // Derivado, e não um `useState("ler")`: os pontos que inicializam `modo`
+  // ficam intactos, então religar a flag devolve o comportamento de antes.
+  const modoEfetivo = SEM_EDICAO ? "ler" : modo;
+  const listaTags = tags ?? [];
 
   const pronto = !!path && salvo?.path === path;
   const erro = falha?.path === path ? falha.msg : "";
@@ -235,30 +256,50 @@ export function NotaMemoriaModal({
 
                 {!carregando && !erro && (
                   <>
-                    <div className="dark:bg-dark-800 mb-3 flex w-fit gap-1 rounded-lg bg-gray-100 p-1">
-                      {(["editar", "ler"] as const).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setModo(m)}
-                          className={clsx(
-                            "text-xs-plus flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
-                            modo === m
-                              ? "dark:bg-dark-600 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
-                              : "dark:text-dark-300 text-gray-500",
-                          )}
-                        >
-                          {m === "editar" ? (
-                            <PencilSquareIcon className="size-4" />
-                          ) : (
-                            <EyeIcon className="size-4" />
-                          )}
-                          {m === "editar" ? "Editar" : "Ler"}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Faixa acima do corpo: com a edição desligada ela mostra
+                        as tags do conteúdo; quando a edição voltar, o seletor
+                        "Editar / Ler" reaparece no começo da mesma linha. */}
+                    {(!SEM_EDICAO || listaTags.length > 0) && (
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        {!SEM_EDICAO && (
+                          <div className="dark:bg-dark-800 flex w-fit gap-1 rounded-lg bg-gray-100 p-1">
+                            {(["editar", "ler"] as const).map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setModo(m)}
+                                className={clsx(
+                                  "text-xs-plus flex items-center gap-1.5 rounded-md px-2.5 py-1 font-medium transition-colors",
+                                  modo === m
+                                    ? "dark:bg-dark-600 dark:text-dark-50 bg-white text-gray-800 shadow-sm"
+                                    : "dark:text-dark-300 text-gray-500",
+                                )}
+                              >
+                                {m === "editar" ? (
+                                  <PencilSquareIcon className="size-4" />
+                                ) : (
+                                  <EyeIcon className="size-4" />
+                                )}
+                                {m === "editar" ? "Editar" : "Ler"}
+                              </button>
+                            ))}
+                          </div>
+                        )}
 
-                    {modo === "editar" ? (
+                        {listaTags.map((t) => (
+                          <Badge
+                            key={t}
+                            variant="soft"
+                            color="neutral"
+                            className="text-tiny"
+                          >
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {modoEfetivo === "editar" ? (
                       <MemoriaTextarea
                         autoFocus
                         value={conteudo}
@@ -279,15 +320,17 @@ export function NotaMemoriaModal({
                 <Button variant="outlined" onClick={fechar} disabled={salvando}>
                   Fechar
                 </Button>
-                <Button
-                  color="primary"
-                  onClick={salvar}
-                  disabled={!alterado || salvando || carregando || !!erro}
-                  className="gap-1.5"
-                >
-                  {salvando && <Spinner className="size-4" />}
-                  {salvando ? "Salvando…" : "Salvar"}
-                </Button>
+                {!SEM_EDICAO && (
+                  <Button
+                    color="primary"
+                    onClick={salvar}
+                    disabled={!alterado || salvando || carregando || !!erro}
+                    className="gap-1.5"
+                  >
+                    {salvando && <Spinner className="size-4" />}
+                    {salvando ? "Salvando…" : "Salvar"}
+                  </Button>
+                )}
               </div>
             </DialogPanel>
           </TransitionChild>

@@ -27,6 +27,40 @@ export function slugTag(texto: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** Sem acento e sem caixa, mas PRESERVANDO os separadores — ao contrário do slug. */
+export function normalizarTexto(texto: string): string {
+  return texto
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+/** Caractere que continua uma palavra (com acento já removido pela normalização). */
+const LETRA = /[\p{L}\p{N}_]/u;
+
+/** Comprimento mínimo de um rótulo para valer como menção — evita casar sigla curta em tudo. */
+const MIN_ROTULO = 3;
+
+/**
+ * O rótulo aparece no texto como palavra inteira?
+ *
+ * Ambos os argumentos já devem vir de `normalizarTexto`. A fronteira é testada à
+ * mão porque `\b` do JS é ASCII: `\bJosé\b` falharia justamente nos nomes
+ * acentuados. Fazer `indexOf` em texto normalizado também evita escapar
+ * metacaracteres de regex que aparecem em nomes ("Assunção (RH)").
+ */
+export function mencionaRotulo(textoNorm: string, rotuloNorm: string): boolean {
+  if (rotuloNorm.length < MIN_ROTULO) return false;
+  let i = textoNorm.indexOf(rotuloNorm);
+  while (i !== -1) {
+    const antes = i > 0 ? textoNorm[i - 1] : "";
+    const depois = textoNorm[i + rotuloNorm.length] ?? "";
+    if (!LETRA.test(antes) && !LETRA.test(depois)) return true;
+    i = textoNorm.indexOf(rotuloNorm, i + 1);
+  }
+  return false;
+}
+
 // Palavras que nunca viram tag: funcionais (PT/EN) e genéricos de documento.
 // Em minúsculas e sem acento — comparadas depois do slug.
 const STOPWORDS = new Set(
@@ -204,9 +238,22 @@ export function extrairTags(files: ArquivoMd[]): TagCandidata[] {
       registrar(c.termo, f.path, c.forte, c.heading);
   }
 
-  const minimo = Math.max(2, Math.ceil(files.length * 0.08));
+  // Piso ABSOLUTO, não proporcional ao vault.
+  //
+  // Era `Math.max(2, Math.ceil(files.length * 0.08))`. Com piso relativo um
+  // assunto presente em 3 arquivos PERDIA o nó quando o vault passava de 38 —
+  // sem nada ter mudado nele. O grafo se reorganizava por uma razão invisível ao
+  // usuário, e um tema estabelecido simplesmente desaparecia.
+  //
+  // Fica em 2 (e não em 3) porque 3 removeria agora tags que já existem, o que
+  // seria a mesma quebra pelo outro lado. Os filtros de candidato
+  // (`ehCandidato`, STOPWORDS, exigência de sinal `forte` para palavra isolada)
+  // já sustentam esse piso. A contrapartida é que, num vault grande, a oferta de
+  // assuntos cresce e a pressão passa a ser no TETO de exibição (`TETO_TAGS`) —
+  // que hoje corta com `break`, e é o próximo ponto a resolver.
+  const MINIMO_ARQUIVOS = 2;
   return [...acc.entries()]
-    .filter(([, c]) => c.arquivos.size >= minimo)
+    .filter(([, c]) => c.arquivos.size >= MINIMO_ARQUIVOS)
     // Se um termo recorre em vários arquivos mas SÓ como título de seção, ele
     // descreve a estrutura do documento ("Próximos passos", "Validações em
     // aberto"), não o tema. Tema de verdade também é citado no corpo.

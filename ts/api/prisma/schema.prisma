@@ -116,6 +116,8 @@ model Empresa {
   memorias     Memoria[]
   insights     Insight[]
   vaultNotas   VaultNota[]
+  vaultCategorias     VaultCategoria[]
+  vaultNotaCategorias VaultNotaCategoria[]
   conversas    Conversa[]
   conectores   EmpresaConector[]
   mcpApiKeys   McpApiKey[]
@@ -472,6 +474,12 @@ model VaultNota {
   conteudo  String
   /// Hash do conteúdo, para pular o reprocessamento de arquivos inalterados.
   hash      String
+  /// Hash com que esta nota foi classificada em categorias pela última vez.
+  /// `null` = nunca classificada; diferente de `hash` = o texto mudou e a
+  /// classificação está velha. É o que faz resincronizar um vault intocado
+  /// custar zero token — e o que evita reprocessar para sempre uma nota que a
+  /// IA classificou em NENHUMA categoria (ela fica com o hash gravado igual).
+  categoriasHash String?
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
@@ -480,6 +488,57 @@ model VaultNota {
   @@unique([empresaId, repositorioId, path])
   @@index([empresaId, repositorioId])
   @@map("vault_notas")
+}
+
+/// Vocabulário de categorias macro de um repositório, descoberto pela IA.
+///
+/// Não é lista fixa: a IA propõe a partir do conteúdo. Mas também não é livre
+/// por nota — classificar cada nota isoladamente produz deriva ("Gestão de
+/// Pessoas", "Pessoas", "RH"). Uma categoria proposta durante a atribuição
+/// entra como não confirmada e só passa a valer quando 2+ notas a propõem.
+model VaultCategoria {
+  id            String   @id @default(cuid())
+  empresaId     String
+  repositorioId String
+  /// Chave de merge: sem acento, sem caixa, sem pontuação. Espelha `slugTag`
+  /// do front (ts/demo/src/app/pages/ceo/grafo-tags.ts) — as duas
+  /// implementações têm de concordar, senão o grafo não acha a categoria.
+  slug          String
+  label         String
+  /// Frase curta da IA sobre o que a categoria cobre. Entra no prompt de
+  /// atribuição para o modelo não reinterpretar o rótulo a cada nota.
+  definicao     String?
+  /// Só categorias confirmadas viram nó no grafo.
+  confirmada    Boolean  @default(false)
+  /// Quantas notas já propuseram esta categoria (2 confirma).
+  propostas     Int      @default(0)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, repositorioId, slug])
+  @@index([empresaId, repositorioId])
+  @@map("vault_categorias")
+}
+
+/// Atribuição nota↔categoria. `hash` é o do conteúdo no momento da
+/// classificação, para invalidar quando o texto muda.
+model VaultNotaCategoria {
+  id            String   @id @default(cuid())
+  empresaId     String
+  repositorioId String
+  path          String
+  categoriaSlug String
+  hash          String
+  criadoEm      DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, repositorioId, path, categoriaSlug])
+  @@index([empresaId, repositorioId, path])
+  @@index([empresaId, repositorioId, categoriaSlug])
+  @@map("vault_nota_categorias")
 }
 
 // ---------- Conectores (integrações) por tenant ----------

@@ -20,6 +20,7 @@ import { InsightsController } from '@/insights/insights.controller';
 import { InsightsService } from '@/insights/insights.service';
 import { VaultController } from '@/vault/vault.controller';
 import { VaultService } from '@/vault/vault.service';
+import { VaultCategoriasService } from '@/vault/categorias.service';
 import { AiService } from './ai.service';
 import { AiConnectionsService } from './connections.service';
 import { AiCredentialsService } from './credentials.service';
@@ -61,6 +62,7 @@ import { UsoModule } from '@/uso/uso.module';
     CryptoService,
     InsightsService,
     VaultService,
+    VaultCategoriasService,
   ],
 })
 export class AiModule {}

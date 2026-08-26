@@ -26,6 +26,7 @@ export type TemporarilyDisabledFeature =
   | "memoryUploadAudio"
   | "memoryUploadTranscript"
   | "memoryGraph"
+  | "memoryNoteEditing"
   | "rulesCorporatePin"
   // Funil legado de criação de conta — ver bloco no fim deste arquivo.
   | "legacySignup"
@@ -59,6 +60,10 @@ export const TEMPORARILY_DISABLED: Record<
   // a rota /memoria-grafo redireciona para /memoria-lista e o modal do AI
   // Studio aponta para a LISTA do Repositório — ver `grafoPath` em Ia.tsx.
   memoryGraph: false,
+  // true = NotaMemoriaModal só-leitura: sem o seletor "Editar / Ler", sem a
+  // caixa de edição e sem "Salvar", só a nota renderizada. Vale para os dois
+  // caminhos que abrem o modal (grafo e lista do Repositório).
+  memoryNoteEditing: true,
   rulesCorporatePin: true,
   legacySignup: true,
   legacyOnboarding: true,

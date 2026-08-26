@@ -33,7 +33,7 @@ import {
 import { Badge, Button, Spinner } from "@/components/ui";
 import { Combobox } from "@/components/shared/form/StyledCombobox";
 import type { ItemContexto } from "./memoria-inventario";
-import type { EntKind } from "./memoria-grafo-modelo";
+import type { KindComContexto } from "./memoria-grafo-modelo";
 
 // Mesma tabela de ICONE_POR_TIPO de MemoriaLista.tsx. Duplicada de propósito:
 // lá ela é um const de módulo não exportado, e extraí-la exigiria editar
@@ -78,7 +78,7 @@ export type Selecao =
       id: string;
       titulo: string;
       rotulo: string;
-      kind: EntKind;
+      kind: KindComContexto;
       /** Só pessoa: caminho do .md próprio, para o botão "Abrir nota". */
       notaPath?: string;
       relacoes: RelacaoVizinha[];
@@ -142,8 +142,12 @@ function plural(tipo: string): string {
   return PLURAL[t] ?? t + "s";
 }
 
-/** Agrupa os vizinhos por tipo, na ordem Pessoas → Projetos → Tags. */
-const ORDEM_ROTULO = ["Pessoa", "Projeto", "Tag"];
+/**
+ * Ordem dos grupos de vizinhos. Hoje tudo que não é conteúdo se chama "Tag"
+ * (ver ROTULO_ENTIDADE), então na prática há um grupo só — a lista existe para
+ * o caso de o produto voltar a distinguir rótulos na interface.
+ */
+const ORDEM_ROTULO = ["Tag"];
 function agruparPorRotulo(
   relacoes: RelacaoVizinha[],
 ): [string, RelacaoVizinha[]][] {
@@ -218,7 +222,7 @@ function SeletorDeTag({
   ocupado: boolean;
 }) {
   return (
-    <div className="mb-2 px-2">
+    <div className="mb-2">
       <Combobox
         data={opcoes}
         displayField="titulo"
@@ -325,6 +329,14 @@ export function GrafoPainelContexto({
   }, [tagsDisponiveis, idAtual, jaRelacionados]);
 
   const relacionando = relacionandoPara !== null && relacionandoPara === idAtual;
+
+  /** Motivo de o "+" estar bloqueado, ou null quando a ação está liberada. */
+  const bloqueioRelacionar = !podeEscrever
+    ? "O Repositório está aberto como cópia somente leitura — não dá para gravar."
+    : opcoes.length === 0
+      ? "Não há outra tag para relacionar."
+      : null;
+
   useEffect(() => {
     if (!selecao) return;
     const onKey = (e: KeyboardEvent) => {
@@ -353,28 +365,32 @@ export function GrafoPainelContexto({
     >
       <div className="dark:border-dark-600 flex items-start gap-2 border-b border-gray-200 px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h3
-            className="dark:text-dark-50 truncate text-sm font-semibold text-gray-800"
-            title={titulo}
-          >
-            {titulo}
-          </h3>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {/* Badge na mesma linha do título; o resumo dos conteúdos desce para
+              a linha de baixo, como subtítulo. O `min-w-0` no h3 é o que deixa
+              o `truncate` funcionar dentro do flex — sem ele o título empurra o
+              badge para fora em vez de cortar. */}
+          <div className="flex items-center gap-2">
+            <h3
+              className="dark:text-dark-50 min-w-0 truncate text-sm font-semibold text-gray-800"
+              title={titulo}
+            >
+              {titulo}
+            </h3>
             {selecao.tipo === "entidade" ? (
-              <Badge variant="soft" color="neutral" className="text-tiny">
+              <Badge variant="soft" color="neutral" className="shrink-0 text-tiny">
                 {selecao.rotulo}
               </Badge>
             ) : (
-              <Badge variant="soft" color="neutral" className="text-tiny">
+              <Badge variant="soft" color="neutral" className="shrink-0 text-tiny">
                 Relação
               </Badge>
             )}
-            {conteudos.length > 0 && (
-              <span className="dark:text-dark-300 text-tiny text-gray-400">
-                {resumirPorTipo(conteudos)}
-              </span>
-            )}
           </div>
+          {conteudos.length > 0 && (
+            <p className="dark:text-dark-300 mt-1 text-tiny text-gray-400">
+              {resumirPorTipo(conteudos)}
+            </p>
+          )}
         </div>
         <Button
           isIcon
@@ -393,26 +409,27 @@ export function GrafoPainelContexto({
             titulo="Relacionamentos"
             acao={
               <Button
+                isIcon
                 variant="flat"
                 onClick={() =>
                   setRelacionandoPara(relacionando ? null : idAtual)
                 }
                 disabled={!podeEscrever || ocupado || opcoes.length === 0}
-                title={
-                  !podeEscrever
-                    ? "O Repositório está aberto como cópia somente leitura — não dá para gravar."
-                    : opcoes.length === 0
-                      ? "Não há outra tag para relacionar."
-                      : "Relacionar com outra tag"
-                }
-                className="h-6 gap-1 px-1.5 text-tiny"
+                // Tooltip do template (react-tooltip, ancorado em
+                // `[data-tooltip]` no Root). O `title` fica só para o caso
+                // bloqueado: botão desabilitado não dispara mouseenter em
+                // alguns navegadores, e aí o nativo é o único que aparece.
+                data-tooltip
+                data-tooltip-content={bloqueioRelacionar ?? "Relacionar tag"}
+                title={bloqueioRelacionar ?? undefined}
+                aria-label="Relacionar tag"
+                className="size-6 rounded-full"
               >
                 {ocupado ? (
                   <Spinner className="size-3" />
                 ) : (
                   <PlusIcon className="size-3.5" />
                 )}
-                Relacionar
               </Button>
             }
           >
@@ -439,10 +456,13 @@ export function GrafoPainelContexto({
               // ler "Tags: A, B, C" diz mais do que uma lista achatada.
               agruparPorRotulo(selecao.relacoes).map(([rotulo, itens]) => (
                 <div key={rotulo} className="mb-2 last:mb-0">
-                  <p className="dark:text-dark-300 mb-0.5 px-2 text-tiny text-gray-400">
+                  <p className="dark:text-dark-300 mb-0.5 text-tiny text-gray-400">
                     {rotulo}
                   </p>
-                  <ul className="flex flex-col gap-0.5">
+                  {/* `-mx-2` cancela o `px-2` das linhas: o texto fica nos 16px
+                      do painel, alinhado com o título da seção, e o realce de
+                      hover continua sangrando 8px para os lados. */}
+                  <ul className="-mx-2 flex flex-col gap-0.5">
                     {itens.map((r) => (
                       <li key={r.id} className="group/rel relative">
                         <button
@@ -501,7 +521,7 @@ export function GrafoPainelContexto({
             <Vazio>Nenhum conteúdo neste contexto.</Vazio>
           ) : (
             <>
-              <ul className="flex flex-col gap-0.5">
+              <ul className="-mx-2 flex flex-col gap-0.5">
                 {conteudos.slice(0, TETO_LISTA).map((item) => (
                   <LinhaConteudo
                     key={item.path}
@@ -511,7 +531,7 @@ export function GrafoPainelContexto({
                 ))}
               </ul>
               {conteudos.length > TETO_LISTA && (
-                <p className="dark:text-dark-300 mt-2 px-2 text-tiny text-gray-400">
+                <p className="dark:text-dark-300 mt-2 text-tiny text-gray-400">
                   + {conteudos.length - TETO_LISTA} outros
                 </p>
               )}

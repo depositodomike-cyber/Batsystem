@@ -61,6 +61,80 @@ export async function getVaultStatus(): Promise<{ total: number }> {
   return data;
 }
 
+// ---------- Categorias macro (descobertas pela IA no backend) ----------
+
+export interface CategoriaVault {
+  slug: string;
+  label: string;
+  definicao: string | null;
+}
+
+export interface CategoriasDoVault {
+  categorias: CategoriaVault[];
+  /** path → slugs das categorias daquela nota. */
+  porPath: Record<string, string[]>;
+}
+
+/** GET /ai/vault/categorias — vocabulário confirmado + o mapa path→categorias. */
+export async function getVaultCategorias(): Promise<CategoriasDoVault> {
+  try {
+    const { data } = await axios.get<CategoriasDoVault>("/ai/vault/categorias");
+    return { categorias: data?.categorias ?? [], porPath: data?.porPath ?? {} };
+  } catch {
+    // Sem categorias o grafo monta como antes desta funcionalidade — nunca é
+    // motivo para a tela falhar.
+    return { categorias: [], porPath: {} };
+  }
+}
+
+export interface ResultadoClassificacao {
+  processadas: number;
+  pendentes: number;
+  vocabulario: number;
+  /** Presente quando a IA não pôde ser consultada — encerra o laço. */
+  erro?: string;
+}
+
+/** POST /ai/vault/classificar — classifica a próxima fatia de notas pendentes. */
+export async function classificarVault(): Promise<ResultadoClassificacao> {
+  const { data } = await axios.post<ResultadoClassificacao>(
+    "/ai/vault/classificar",
+  );
+  return data;
+}
+
+/**
+ * Classifica em laço até não sobrar pendência.
+ *
+ * O backend processa poucas notas por chamada de propósito (uma chamada de IA
+ * por nota dentro de um único request levaria minutos e encostaria no teto da
+ * função serverless). Para o usuário isto é uma etapa do Sincronizar.
+ *
+ * Nunca lança: sem IA conectada, o backend devolve `erro` e o laço encerra em
+ * silêncio, deixando o grafo como era. Também para se uma volta não avançar,
+ * para nunca girar à toa.
+ */
+export async function classificarVaultCompleto(
+  onProgress?: (feitas: number, total: number) => void,
+): Promise<{ classificadas: number; pendentes: number; erro?: string }> {
+  let classificadas = 0;
+  let pendentes = 0;
+  for (;;) {
+    let r: ResultadoClassificacao;
+    try {
+      r = await classificarVault();
+    } catch {
+      return { classificadas, pendentes, erro: "Falha ao falar com o servidor." };
+    }
+    classificadas += r.processadas;
+    pendentes = r.pendentes;
+    onProgress?.(classificadas, classificadas + r.pendentes);
+    if (r.erro) return { classificadas, pendentes, erro: r.erro };
+    if (r.pendentes === 0 || r.processadas === 0) break;
+  }
+  return { classificadas, pendentes };
+}
+
 /**
  * Sincroniza a pasta inteira: envia as notas em lotes e depois poda as
  * removidas. `onProgress` reporta quantas já foram processadas, para a UI.

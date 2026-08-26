@@ -26,7 +26,12 @@ import {
   type ItemContexto,
 } from "./memoria-inventario";
 import { PASTA_MEMORIA } from "./memoria-pastas";
-import { extrairTags, slugTag } from "./grafo-tags";
+import {
+  extrairTags,
+  mencionaRotulo,
+  normalizarTexto,
+  slugTag,
+} from "./grafo-tags";
 
 // ---- Tipos ----
 
@@ -36,7 +41,12 @@ export type EntKind = "pessoa" | "projeto" | "tag";
 // `tag-hub` é o hub de uma tag de frontmatter na camada de CONTEÚDOS. Nome
 // distinto do kind `tag` (entidade) de propósito: são coisas diferentes e
 // colidir os dois faria um hub de arquivo se passar por entidade.
-export type Kind = "nota" | "pasta" | "tag-hub" | EntKind;
+// `categoria` é o tema macro descoberto pela IA no backend (vault_categorias).
+// Fica FORA de `EntKind` de propósito: `EntKind` governa ehEntidade, o corte por
+// relevância, `tagsDisponiveis` (alvos de "+ Relacionar") e as sementes — e a
+// categoria teria comportamento errado em quase todos. Ela só compartilha com as
+// entidades o fato de abrir o painel de contexto (ver `temContexto`).
+export type Kind = "nota" | "pasta" | "tag-hub" | "categoria" | EntKind;
 /** `relacao` é a aresta entidade↔entidade, sustentada por documentos (`fontes`). */
 export type LinkTipo = "wikilink" | "tag" | "pasta" | "relacao";
 
@@ -55,7 +65,7 @@ export interface GNode {
   grau: number;
   /** Só entidade: paths dos .md que a mencionam, do mais recente ao mais antigo. */
   conteudos?: string[];
-  /** Só entidade: rótulo do badge no painel ("Pessoa", "Projeto", "Tag"). */
+  /** Rótulo do badge no painel. Hoje "Tag" para tudo — ver ROTULO_ENTIDADE. */
   rotulo?: string;
   /** Só pessoa: caminho do .md próprio (=== id). Habilita "Abrir nota" sem heurística. */
   notaPath?: string;
@@ -109,17 +119,43 @@ const PALETA = [
 export const COR_TAG = "#22D3EE";
 /** Pessoa reusa a cor fixa da pasta "Pessoas" — nenhuma cor nova no grafo. */
 export const COR_PESSOA = PASTA_COR.Pessoas;
+/** Categoria reusa a cor da pasta "Estratégico" — também nenhuma cor nova. */
+export const COR_CATEGORIA = PASTA_COR.Estratégico;
 
-/** Rótulo do badge por tipo de entidade. */
+/**
+ * Rótulo do badge por tipo de entidade.
+ *
+ * Tudo que não é conteúdo se chama "Tag" na interface. Os kinds continuam
+ * distintos por dentro — eles governam cor, tamanho, massa na física e as
+ * regras de co-ocorrência —, mas essa distinção é de implementação e não
+ * ajudava ninguém a ler o mapa. Para quem usa, o grafo tem tags e conteúdos.
+ */
 export const ROTULO_ENTIDADE: Record<EntKind, string> = {
-  pessoa: "Pessoa",
-  projeto: "Projeto",
+  pessoa: "Tag",
+  projeto: "Tag",
   tag: "Tag",
 };
 
 /** `true` para os kinds da camada primária. */
 export function ehEntidade(kind: Kind): kind is EntKind {
   return kind === "pessoa" || kind === "projeto" || kind === "tag";
+}
+
+/** Categoria também se apresenta como "Tag" — ver ROTULO_ENTIDADE. */
+export const ROTULO_CATEGORIA = "Tag";
+
+/** Kinds que abrem o painel de contexto: as entidades e a categoria. */
+export type KindComContexto = EntKind | "categoria";
+
+/**
+ * O clique neste nó revela contexto no painel?
+ *
+ * Separado de `ehEntidade` porque as duas perguntas divergiram: categoria abre
+ * painel, mas não é entidade (não entra no corte por relevância, não é alvo de
+ * relação manual e não conta para `temEntidades`).
+ */
+export function temContexto(kind: Kind): kind is KindComContexto {
+  return ehEntidade(kind) || kind === "categoria";
 }
 
 // Mapa pasta→cor único (mesma lógica de montarCoresPastas do beculture).
@@ -145,25 +181,55 @@ export function montarCores(pastas: string[]): Map<string, string> {
   return map;
 }
 
+// ---- Despacho por kind ----
+//
+// Os mapas abaixo são `satisfies Record<Kind, …>` de propósito, e não cadeias de
+// `if` com um `return` final. Uma cadeia com fallback aceita um kind novo em
+// silêncio e o entrega ao ramo errado — massa de folha para um hub, raio por
+// grau para um nó que dimensiona por acervo. Com o mapa exaustivo, acrescentar
+// um kind é ERRO DE COMPILAÇÃO aqui e em todo consumidor equivalente.
+
+/** Acervo que a entidade carrega, saturado — a base do raio dela. */
+function acervo(n: GNode): number {
+  return Math.min(n.conteudos?.length ?? 0, 24);
+}
+
+/**
+ * Raio por kind. Entidades dimensionam pelo acervo que carregam: quanto mais
+ * conteúdo uma pessoa/projeto/tag reúne, maior o nó. `grau` não serve para elas
+ * porque os documentos saíram do canvas — todas teriam grau parecido.
+ */
+const RAIO_POR_KIND = {
+  pessoa: (n: GNode) => 8 + acervo(n) * 0.6,
+  projeto: (n: GNode) => 8 + acervo(n) * 0.6,
+  tag: (n: GNode) => 7 + acervo(n) * 0.6,
+  // Categoria também dimensiona por acervo: é o hub mais abrangente do mapa.
+  categoria: (n: GNode) => 9 + acervo(n) * 0.6,
+  pasta: (n: GNode) => 10 + Math.min(n.grau, 20) * 0.7,
+  "tag-hub": (n: GNode) => 7 + Math.min(n.grau, 16) * 0.6,
+  nota: (n: GNode) => 6 + Math.min(n.grau, 8) * 1.6,
+} satisfies Record<Kind, (n: GNode) => number>;
+
 export function raio(n: GNode): number {
-  // Entidades dimensionam pelo acervo que carregam: quanto mais conteúdo uma
-  // pessoa/projeto/tag reúne, maior o nó. `grau` não serve aqui porque os
-  // documentos saíram do canvas — todas as entidades teriam grau parecido.
-  if (ehEntidade(n.kind)) {
-    const base = n.kind === "tag" ? 7 : 8;
-    return base + Math.min(n.conteudos?.length ?? 0, 24) * 0.6;
-  }
-  if (n.kind === "pasta") return 10 + Math.min(n.grau, 20) * 0.7;
-  if (n.kind === "tag-hub") return 7 + Math.min(n.grau, 16) * 0.6;
-  return 6 + Math.min(n.grau, 8) * 1.6;
+  return RAIO_POR_KIND[n.kind](n);
 }
 
 /** Massa na repulsão: hubs empurram mais que folhas. */
+const PESO_POR_KIND = {
+  // Massa de hub, como projeto e pasta. Com massa de folha (o que a antiga
+  // cadeia de `if` daria por fallback) um hub ligado a muita coisa seria puxado
+  // para o centro e o grafo enrolaria.
+  categoria: 2.2,
+  projeto: 2.2,
+  pasta: 2.2,
+  tag: 1.7,
+  "tag-hub": 1.7,
+  pessoa: 1.9,
+  nota: 1,
+} satisfies Record<Kind, number>;
+
 export function pesoDoKind(kind: Kind): number {
-  if (kind === "projeto" || kind === "pasta") return 2.2;
-  if (kind === "tag" || kind === "tag-hub") return 1.7;
-  if (kind === "pessoa") return 1.9;
-  return 1;
+  return PESO_POR_KIND[kind];
 }
 
 /** Comprimento de repouso da mola, por tipo de aresta. */
@@ -423,9 +489,21 @@ function sementesDeclaradas(itens: ItemContexto[]): Semente[] {
  * documento entra em `fontes`. Pessoa↔Pessoa fica de fora — participantes
  * frequentes co-ocorrem em tudo, dominariam por peso e não informariam nada.
  */
+/**
+ * Categorias macro vindas do backend (descobertas pela IA). Entram por
+ * PARÂMETRO para este módulo seguir puro — o cabeçalho de `grafo-tags.ts`
+ * promete "nenhuma chamada de rede", e quem busca é a tela.
+ */
+export interface CategoriasDoVault {
+  categorias: { slug: string; label: string; definicao: string | null }[];
+  /** path → slugs das categorias daquela nota. */
+  porPath: Record<string, string[]>;
+}
+
 export function construirGrafoEntidades(
   itens: ItemContexto[],
   files: ArquivoMd[],
+  categorias?: CategoriasDoVault,
 ): Graph {
   const corpoPorPath = new Map(
     files.map((f) => [f.path, parseNotaMd(f.text).body]),
@@ -547,9 +625,45 @@ export function construirGrafoEntidades(
     for (const p of t.arquivos) alvo.add(p);
   }
 
+  // ---- 2b) Categorias macro (vocabulário descoberto pela IA) ----
+  //
+  // Entram DEPOIS de sementes, declarações e extração, e pulam slug já tomado.
+  // É o guarda contra a IA emitir nome de projeto ou de pessoa como tema: se
+  // "Plataforma V1" já é um assunto, ela continua sendo assunto — a categoria
+  // não sequestra o nó. Não dependem de recorrência: é o que faz a primeira
+  // nota de uma pasta vazia já ter onde se encaixar.
+  const idsDeCategoria = new Set<string>();
+  for (const c of categorias?.categorias ?? []) {
+    if (!c.slug || idPorSlug.has(c.slug)) continue;
+    const id = "categoria::" + c.slug;
+    const n: GNode = {
+      id,
+      kind: "categoria",
+      pasta: null,
+      titulo: c.label,
+      rotulo: ROTULO_CATEGORIA,
+      grau: 0,
+      conteudos: [],
+    };
+    nodes.push(n);
+    nodeById.set(id, n);
+    idPorSlug.set(c.slug, id);
+    conteudosPorId.set(id, new Set());
+    idsDeCategoria.add(id);
+  }
+
   // ---- 3) Que tags cada documento menciona ----
   // As tags extraídas já sabem seus arquivos; falta cobrir as sementes, que
   // podem não ter recorrido no texto (uma pessoa citada uma vez só).
+  //
+  // Nomes próprios entram por MENÇÃO EM TEXTO PURO, e não só por frontmatter,
+  // wikilink ou pasta: sem isso "Michael Silva" escrito no corpo de uma ata não
+  // colocava a ata nos conteúdos dele, mesmo o nó dele já existindo. Só liga a
+  // nós que JÁ existem — esta passada não cria entidade nenhuma.
+  const nomeados = nodes
+    .filter((n) => n.kind === "pessoa" || n.kind === "projeto")
+    .map((n) => ({ id: n.id, rotulo: normalizarTexto(n.titulo) }));
+
   for (const it of itens) {
     // Declaração não é conteúdo de ninguém — nem da própria tag.
     if (it.pasta === PASTA_TAGS) continue;
@@ -563,6 +677,30 @@ export function construirGrafoEntidades(
     for (const m of mencoes) {
       const id = idPorSlug.get(slugTag(m));
       if (id) conteudosPorId.get(id)!.add(it.path);
+    }
+    if (nomeados.length > 0) {
+      const corpoNorm = normalizarTexto(body);
+      for (const n of nomeados) {
+        if (mencionaRotulo(corpoNorm, n.rotulo))
+          conteudosPorId.get(n.id)!.add(it.path);
+      }
+    }
+
+    // Categoria vem da classificação persistida, não do texto.
+    //
+    // Quando o slug colidiu com um nó que já existia, a categoria não foi
+    // criada (2b) — mas a classificação continua valendo e o conteúdo vai para
+    // o nó que ficou. "Comunicação" declarada como tag e proposta como
+    // categoria são o mesmo conceito; descartar o vínculo deixaria a nota
+    // órfã só por causa do nome. Só vale para nós de ASSUNTO: jogar um
+    // conteúdo dentro de uma pessoa ou de um projeto por homonímia seria erro.
+    for (const slug of categorias?.porPath[it.path] ?? []) {
+      const id = idPorSlug.get(slug);
+      if (!id) continue;
+      const alvo = nodeById.get(id);
+      if (alvo && (alvo.kind === "categoria" || alvo.kind === "tag")) {
+        conteudosPorId.get(id)!.add(it.path);
+      }
     }
   }
 
@@ -600,6 +738,11 @@ export function construirGrafoEntidades(
         // frequentes co-ocorrem em tudo. A relação útil é entre kinds
         // diferentes ("Mike × V2", "Mike × Arquitetura").
         if (na.kind === "pessoa" && nb.kind === "pessoa") continue;
+        // Categoria↔Categoria pelo MESMO motivo, e com força ainda maior: temas
+        // macro dividem quase todo documento, e ligá-los entre si viraria um
+        // novelo de arestas óbvias ("Produto × Estratégia" com peso 20). A
+        // relação que informa é Categoria×Assunto ("Produto × Plataforma V1").
+        if (na.kind === "categoria" && nb.kind === "categoria") continue;
         const [a, b] = [na.id, nb.id].sort();
         const chave = a + "::" + b;
         const atual = rel.get(chave);
@@ -692,6 +835,10 @@ export function construirGrafoEntidades(
   // Quando isso aconteceria, o corte simplesmente não se aplica: um mapa com
   // tags pouco conectadas ainda é um mapa de temas, e é melhor que voltar ao
   // mapa de arquivos.
+  // `ehEntidade` e não `temContexto`: categoria não conta aqui. Ela existe
+  // sempre que houver classificação, então contá-la faria a salvaguarda achar
+  // que há entidades mesmo num vault sem termo recorrente nenhum — e o corte
+  // passaria a se aplicar justamente no caso que a salvaguarda protege.
   const restantes = cortados.filter((n) => ehEntidade(n.kind));
   const corteViavel =
     restantes.length >= MIN_ENTIDADES_APOS_CORTE &&
@@ -721,9 +868,12 @@ export interface GrafoDoVault {
 }
 
 /** Ponto de entrada único: lê os .md uma vez e devolve as duas camadas. */
-export function construirGrafoDoVault(files: ArquivoMd[]): GrafoDoVault {
+export function construirGrafoDoVault(
+  files: ArquivoMd[],
+  categorias?: CategoriasDoVault,
+): GrafoDoVault {
   const itens = montarInventario(files);
-  const entidades = construirGrafoEntidades(itens, files);
+  const entidades = construirGrafoEntidades(itens, files, categorias);
   return {
     entidades,
     conteudos: construirGrafoConteudos(files),
@@ -731,7 +881,13 @@ export function construirGrafoDoVault(files: ArquivoMd[]): GrafoDoVault {
     // Com as tags vindas do texto, um vault sem nenhum termo recorrente é raro
     // de verdade. Quando acontece, a camada de conteúdos assume e o grafo abre
     // como sempre, em vez de vir vazio.
-    temEntidades: entidades.nodes.length > 0 && entidades.links.length > 0,
+    //
+    // Categoria NÃO conta: ela existe sempre que houver classificação, e
+    // contá-la tornaria esta condição sempre verdadeira — matando o fallback
+    // para a camada de conteúdos exatamente no vault que precisa dele.
+    temEntidades:
+      entidades.nodes.some((n) => ehEntidade(n.kind)) &&
+      entidades.links.length > 0,
   };
 }
 

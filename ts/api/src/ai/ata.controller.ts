@@ -17,6 +17,7 @@ import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface UploadedFileLike {
@@ -53,6 +54,7 @@ export class AtaController {
   @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
   async ata(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @UploadedFile() arquivo: UploadedFileLike | undefined,
     @Body() body: AtaBody,
   ): Promise<Ata & { memoria: boolean }> {
@@ -88,7 +90,7 @@ export class AtaController {
     // "Memória": a ata pode ser salva na pasta da Memória de qualquer forma.
     let titulosVault: string[] = [];
     try {
-      titulosVault = await this.vault.titulos(user.empresaId, conteudo.slice(0, 1000), 40);
+      titulosVault = await this.vault.titulos(user.empresaId, repositorioId, conteudo.slice(0, 1000), 40);
     } catch (err) {
       this.logger.warn(`Falha ao carregar títulos do Vault: ${String(err)}`);
     }

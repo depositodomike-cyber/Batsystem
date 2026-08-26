@@ -13,6 +13,7 @@
 // ----------------------------------------------------------------------
 
 import { buscarNotasVault, type VaultNotaRef } from "@/services/api/vault";
+import { repositorioPastaAtivo } from "@/app/pages/ceo/memoria-inventario";
 
 export interface AlvoMemoria {
   /** Texto inserido dentro dos colchetes. */
@@ -27,7 +28,11 @@ const LIMITE_CACHE = 300;
 /** Quanto tempo o cache vale — o vault muda quando o usuário sincroniza. */
 const VALIDADE_MS = 2 * 60 * 1000;
 
-let cache: { em: number; alvos: AlvoMemoria[] } | null = null;
+// O cache guarda o repositório de onde veio: cada um aponta para uma pasta
+// diferente, e sem essa chave o autocomplete continuaria oferecendo as notas do
+// repositório anterior depois da troca.
+let cache: { em: number; repositorioId: string | null; alvos: AlvoMemoria[] } | null =
+  null;
 let carregando: Promise<AlvoMemoria[]> | null = null;
 
 /** Pasta da nota ("Reuniões/2026-01.md" → "Reuniões"). */
@@ -46,20 +51,26 @@ function paraAlvo(nota: VaultNotaRef): AlvoMemoria {
 
 /** Notas do vault, do cache quando ainda válido. */
 export function carregarNotas(): Promise<AlvoMemoria[]> {
-  if (cache && Date.now() - cache.em < VALIDADE_MS) {
+  const repositorioId = repositorioPastaAtivo();
+  if (
+    cache &&
+    cache.repositorioId === repositorioId &&
+    Date.now() - cache.em < VALIDADE_MS
+  ) {
     return Promise.resolve(cache.alvos);
   }
+  if (cache && cache.repositorioId !== repositorioId) cache = null;
   if (carregando) return carregando;
   carregando = buscarNotasVault("", LIMITE_CACHE)
     .then((notas) => {
       const alvos = notas.map(paraAlvo);
-      cache = { em: Date.now(), alvos };
+      cache = { em: Date.now(), repositorioId, alvos };
       return alvos;
     })
     .catch(() => {
       // Vault não sincronizado, offline ou sem permissão: a lista fica só com
       // as regras. Silencioso de propósito — é um autocomplete, não uma ação.
-      cache = { em: Date.now(), alvos: [] };
+      cache = { em: Date.now(), repositorioId, alvos: [] };
       return [];
     })
     .finally(() => {

@@ -457,7 +457,14 @@ model Insight {
 model VaultNota {
   id        String   @id @default(cuid())
   empresaId String
-  /// Caminho relativo dentro da pasta (ex.: "Reuniões/2026-01.md"). Único por empresa.
+  /// Repositório (contexto) de onde a nota veio. Isola o índice entre
+  /// repositórios: cada um sincroniza a sua pasta sem apagar nem ler o do
+  /// outro. Espelha o mesmo isolamento que `Conversa.repositorioId` já faz
+  /// para o histórico.
+  repositorioId String
+  /// Caminho relativo dentro da pasta (ex.: "Reuniões/2026-01.md").
+  /// Único por empresa + repositório — dois repositórios podem ter um
+  /// "README.md" cada, sem se sobrescreverem.
   path      String
   /// Título derivado (frontmatter `título`/`title` ou nome do arquivo).
   titulo    String
@@ -470,8 +477,8 @@ model VaultNota {
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
-  @@unique([empresaId, path])
-  @@index([empresaId])
+  @@unique([empresaId, repositorioId, path])
+  @@index([empresaId, repositorioId])
   @@map("vault_notas")
 }
 

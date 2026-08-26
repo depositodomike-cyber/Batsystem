@@ -55,10 +55,10 @@ export const TEMPORARILY_DISABLED: Record<
   settingsMemory: false,
   memoryUploadAudio: true,
   memoryUploadTranscript: true,
-  // Grafo desabilitado: o item segue visível no menu, apenas sem clique.
-  // Com esta flag ligada, o modal do AI Studio aponta para a LISTA do
-  // Repositório (`memoria-lista`) em vez do grafo — ver `grafoPath` em Ia.tsx.
-  memoryGraph: true,
+  // Grafo REATIVADO. Com a flag ligada o item fica visível mas sem clique,
+  // a rota /memoria-grafo redireciona para /memoria-lista e o modal do AI
+  // Studio aponta para a LISTA do Repositório — ver `grafoPath` em Ia.tsx.
+  memoryGraph: false,
   rulesCorporatePin: true,
   legacySignup: true,
   legacyOnboarding: true,

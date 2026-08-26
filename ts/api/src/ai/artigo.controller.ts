@@ -13,6 +13,7 @@ import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface ArtigoBody {
@@ -45,6 +46,7 @@ export class ArtigoController {
   @Post('artigo')
   async artigo(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @Body() body: ArtigoBody,
   ): Promise<Artigo> {
     const tema = (body.tema || '').trim();
@@ -74,6 +76,7 @@ export class ArtigoController {
     try {
       titulosVault = await this.vault.titulos(
         user.empresaId,
+        repositorioId,
         `${tema}\n${(body.contexto || '').trim()}`,
         40,
       );

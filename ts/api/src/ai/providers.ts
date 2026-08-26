@@ -62,9 +62,106 @@ export interface LlmProvider {
    * provedor oferece busca — quem não implementa cai no `complete` sem fontes.
    */
   completeWeb?(params: LlmCompleteParams): Promise<LlmWebResult>;
-  /** true se a chave autentica; false se inválida (401); lança em outros erros. */
-  validateKey(apiKey: string): Promise<boolean>;
+  /** Confere a chave junto ao provedor. Nunca lança: classifica o resultado. */
+  validateKey(apiKey: string): Promise<KeyCheck>;
 }
+
+// ---------- Checagem de chave ----------
+
+/**
+ * Resultado de conferir uma chave junto ao provedor.
+ *
+ * São três estados, e não um booleano, porque "não deu para conferir" é
+ * diferente de "o provedor recusou". Só o segundo justifica barrar o cadastro;
+ * tratar os dois como o mesmo `false` deixava o usuário sem conseguir conectar
+ * chave boa quando a checagem esbarrava em rede, cota ou escopo da chave.
+ */
+export type KeyCheck =
+  | { status: 'valida' }
+  /** O provedor autenticou a requisição e recusou a chave (401). */
+  | { status: 'invalida'; detalhe: string }
+  /** Rede, cota, escopo restrito ou instabilidade — inconclusivo. */
+  | { status: 'indeterminada'; detalhe: string };
+
+/**
+ * Frase legível dentro do corpo de erro dos dois SDKs. A Anthropic aninha em
+ * `{ error: { message } }` e a OpenAI devolve `{ message }` direto; sem isso o
+ * `err.message` chega ao usuário como o JSON cru da resposta.
+ */
+function mensagemDoCorpo(corpo: unknown): string | undefined {
+  if (!corpo || typeof corpo !== 'object') return undefined;
+  const erro = (corpo as { error?: unknown }).error ?? corpo;
+  if (!erro || typeof erro !== 'object') return undefined;
+  const msg = (erro as { message?: unknown }).message;
+  return typeof msg === 'string' && msg.trim() ? msg.trim() : undefined;
+}
+
+/** Erro de qualquer um dos dois SDKs, normalizado em status HTTP + mensagem. */
+function detalharErro(err: unknown): { http?: number; detalhe: string } {
+  if (err instanceof Anthropic.APIError || err instanceof OpenAI.APIError) {
+    return { http: err.status, detalhe: mensagemDoCorpo(err.error) ?? err.message };
+  }
+  if (err instanceof Error) return { detalhe: err.message };
+  return { detalhe: String(err) };
+}
+
+/** Mensagens de cota/crédito: a chave é boa, mas o uso vai falhar mesmo assim. */
+function pareceCota(detalhe: string): boolean {
+  return /credit|balance|quota|billing|payment/i.test(detalhe);
+}
+
+/**
+ * Traduz a falha de UMA chamada autenticada em veredito sobre a chave.
+ *
+ * O único status que prova chave ruim é 401. 400/404/413/422/429 significam que
+ * a requisição chegou autenticada e travou por outro motivo (parâmetro, limite
+ * de taxa) — a chave serve. 403 costuma ser escopo restrito da chave ou bloqueio
+ * regional: inconclusivo, não recusado.
+ */
+function classificar(err: unknown): KeyCheck {
+  const { http, detalhe } = detalharErro(err);
+  if (http === 401) return { status: 'invalida', detalhe };
+  if (http === 400 || http === 429) {
+    // Sem crédito o provedor responde 400/429 com a chave já autenticada: é
+    // chave válida, mas vale avisar antes que o primeiro chat falhe.
+    return pareceCota(detalhe)
+      ? { status: 'indeterminada', detalhe }
+      : { status: 'valida' };
+  }
+  if (http === 404 || http === 413 || http === 422) return { status: 'valida' };
+  return { status: 'indeterminada', detalhe };
+}
+
+/**
+ * Última palavra sobre a chave: uma inferência mínima (1 token).
+ *
+ * `models.list()` exige um escopo próprio de leitura de modelos, que chaves
+ * restritas não têm — elas geram texto normalmente e mesmo assim tomavam 401 na
+ * listagem. Quando a listagem falha, quem decide é esta sonda; a mensagem da
+ * listagem só sobrevive como detalhe caso a sonda também seja inconclusiva.
+ */
+async function sondarInferencia(
+  chamada: () => Promise<unknown>,
+  detalheDaListagem: string,
+): Promise<KeyCheck> {
+  try {
+    await chamada();
+    return { status: 'valida' };
+  } catch (err) {
+    const sonda = classificar(err);
+    if (sonda.status !== 'indeterminada') return sonda;
+    return { status: 'indeterminada', detalhe: sonda.detalhe || detalheDaListagem };
+  }
+}
+
+/** Cliente da checagem: falha rápido em vez de segurar o cadastro por minutos. */
+const CHECAGEM = { maxRetries: 1, timeout: 20_000 } as const;
+
+/** Modelo mais barato de cada provedor, usado só como sonda de autenticação. */
+const MODELO_SONDA = {
+  anthropic: 'claude-haiku-4-5',
+  openai: 'gpt-4o-mini',
+} as const;
 
 /**
  * Último filtro antes do texto virar JSON de request. Textos montados a partir
@@ -206,13 +303,24 @@ class AnthropicProvider implements LlmProvider {
     };
   }
 
-  async validateKey(apiKey: string): Promise<boolean> {
+  async validateKey(apiKey: string): Promise<KeyCheck> {
+    const client = new Anthropic({ apiKey, ...CHECAGEM });
     try {
-      await new Anthropic({ apiKey }).models.list();
-      return true;
+      // Grátis e sem gastar token — o caminho normal para uma chave comum.
+      await client.models.list({ limit: 1 });
+      return { status: 'valida' };
     } catch (err) {
-      if (err instanceof Anthropic.AuthenticationError) return false;
-      throw err;
+      const pelaListagem = classificar(err);
+      if (pelaListagem.status === 'valida') return pelaListagem;
+      return sondarInferencia(
+        () =>
+          client.messages.create({
+            model: MODELO_SONDA.anthropic,
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        pelaListagem.detalhe,
+      );
     }
   }
 }
@@ -268,13 +376,25 @@ class OpenAiProvider implements LlmProvider {
     };
   }
 
-  async validateKey(apiKey: string): Promise<boolean> {
+  async validateKey(apiKey: string): Promise<KeyCheck> {
+    const client = new OpenAI({ apiKey, ...CHECAGEM });
     try {
-      await new OpenAI({ apiKey }).models.list();
-      return true;
+      await client.models.list();
+      return { status: 'valida' };
     } catch (err) {
-      if (err instanceof OpenAI.AuthenticationError) return false;
-      throw err;
+      const pelaListagem = classificar(err);
+      if (pelaListagem.status === 'valida') return pelaListagem;
+      // Chave de projeto/restrita sem o escopo `model.read` toma 401 aqui e
+      // ainda assim gera texto: quem decide é a sonda.
+      return sondarInferencia(
+        () =>
+          client.chat.completions.create({
+            model: MODELO_SONDA.openai,
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'ping' }],
+          }),
+        pelaListagem.detalhe,
+      );
     }
   }
 }

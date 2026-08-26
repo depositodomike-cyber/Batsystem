@@ -26,29 +26,42 @@ function hashConteudo(conteudo: string): string {
   return createHash('sha256').update(conteudo).digest('hex');
 }
 
+/**
+ * Índice das notas .md que o cliente sincroniza.
+ *
+ * TODO método é escopado por empresa **e repositório**. O repositório vem do
+ * header `X-Repositorio-Id` (ver RepositorioAtual) e pode ser `null` quando não
+ * há contexto ativo; nesse caso nada é lido nem gravado. Cair no escopo da
+ * empresa faria uma sincronização apagar as notas de outro repositório e a IA
+ * responder com notas de contextos que o usuário não abriu.
+ */
 @Injectable()
 export class VaultService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Quantas notas o tenant tem sincronizadas. */
-  count(empresaId: string): Promise<number> {
-    return this.prisma.vaultNota.count({ where: { empresaId } });
+  /** Quantas notas o repositório tem sincronizadas. */
+  count(empresaId: string, repositorioId: string | null): Promise<number> {
+    if (!repositorioId) return Promise.resolve(0);
+    return this.prisma.vaultNota.count({ where: { empresaId, repositorioId } });
   }
 
   /**
-   * Sincroniza um lote de notas: faz upsert por (empresa, path) e pula as que
-   * não mudaram (mesmo hash de conteúdo). Retorna quantas foram gravadas e
-   * quantas ficaram inalteradas — para o cliente mostrar progresso.
+   * Sincroniza um lote de notas: faz upsert por (empresa, repositório, path) e
+   * pula as que não mudaram (mesmo hash de conteúdo). Retorna quantas foram
+   * gravadas e quantas ficaram inalteradas — para o cliente mostrar progresso.
    */
   async syncBatch(
     empresaId: string,
+    repositorioId: string | null,
     notas: VaultNotaInput[],
   ): Promise<{ gravadas: number; inalteradas: number }> {
-    if (notas.length === 0) return { gravadas: 0, inalteradas: 0 };
+    if (!repositorioId || notas.length === 0) {
+      return { gravadas: 0, inalteradas: 0 };
+    }
 
     const paths = notas.map((n) => n.path);
     const existentes = await this.prisma.vaultNota.findMany({
-      where: { empresaId, path: { in: paths } },
+      where: { empresaId, repositorioId, path: { in: paths } },
       select: { path: true, hash: true },
     });
     const hashPorPath = new Map(existentes.map((e) => [e.path, e.hash]));
@@ -65,9 +78,16 @@ export class VaultService {
       gravadas++;
       ops.push(
         this.prisma.vaultNota.upsert({
-          where: { empresaId_path: { empresaId, path: nota.path } },
+          where: {
+            empresaId_repositorioId_path: {
+              empresaId,
+              repositorioId,
+              path: nota.path,
+            },
+          },
           create: {
             empresaId,
+            repositorioId,
             path: nota.path,
             titulo: nota.titulo,
             conteudo: nota.conteudo,
@@ -82,18 +102,24 @@ export class VaultService {
   }
 
   /**
-   * Fecha a sincronização: remove do tenant as notas cujo `path` não está mais
-   * na pasta (lista completa de paths atuais). Retorna o total final e quantas
-   * foram removidas.
+   * Fecha a sincronização: remove as notas cujo `path` não está mais na pasta
+   * (lista completa de paths atuais). Retorna o total final e quantas foram
+   * removidas.
+   *
+   * O `deleteMany` é escopado ao repositório. Sem esse filtro ele apagaria as
+   * notas de todos os outros repositórios da empresa — cujos caminhos nunca
+   * estarão na lista da pasta que está sendo sincronizada.
    */
   async finalize(
     empresaId: string,
+    repositorioId: string | null,
     paths: string[],
   ): Promise<{ total: number; removidas: number }> {
+    if (!repositorioId) return { total: 0, removidas: 0 };
     const del = await this.prisma.vaultNota.deleteMany({
-      where: { empresaId, path: { notIn: paths } },
+      where: { empresaId, repositorioId, path: { notIn: paths } },
     });
-    const total = await this.count(empresaId);
+    const total = await this.count(empresaId, repositorioId);
     return { total, removidas: del.count };
   }
 
@@ -104,15 +130,18 @@ export class VaultService {
    */
   async search(
     empresaId: string,
+    repositorioId: string | null,
     query: string,
     k = 8,
   ): Promise<VaultNotaHit[]> {
+    if (!repositorioId) return [];
     const q = query.trim();
     if (q) {
       const rows = await this.prisma.$queryRaw<VaultNotaHit[]>`
         SELECT "path", "titulo", "conteudo"
         FROM "vault_notas"
         WHERE "empresaId" = ${empresaId}
+          AND "repositorioId" = ${repositorioId}
           AND to_tsvector('portuguese', coalesce("titulo", '') || ' ' || coalesce("conteudo", ''))
               @@ websearch_to_tsquery('portuguese', ${q})
         ORDER BY ts_rank(
@@ -126,7 +155,7 @@ export class VaultService {
 
     // Fallback: notas mais recentes.
     const recentes = await this.prisma.vaultNota.findMany({
-      where: { empresaId },
+      where: { empresaId, repositorioId },
       orderBy: { atualizadoEm: 'desc' },
       take: k,
       select: { path: true, titulo: true, conteudo: true },
@@ -144,13 +173,16 @@ export class VaultService {
    */
   async buscarNotas(
     empresaId: string,
+    repositorioId: string | null,
     query = '',
     k = 200,
   ): Promise<VaultNotaRef[]> {
+    if (!repositorioId) return [];
     const q = query.trim().slice(0, 120);
     return this.prisma.vaultNota.findMany({
       where: {
         empresaId,
+        repositorioId,
         ...(q ? { titulo: { contains: q, mode: 'insensitive' as const } } : {}),
       },
       orderBy: { atualizadoEm: 'desc' },
@@ -165,13 +197,20 @@ export class VaultService {
    * (e sem o conteúdo) porque aqui o que importa é a variedade de assuntos que a
    * IA pode ligar, não o texto das notas. Sem casamento, cai nas mais recentes.
    */
-  async titulos(empresaId: string, query = '', k = 40): Promise<string[]> {
+  async titulos(
+    empresaId: string,
+    repositorioId: string | null,
+    query = '',
+    k = 40,
+  ): Promise<string[]> {
+    if (!repositorioId) return [];
     const q = query.trim().slice(0, 1000);
     if (q) {
       const rows = await this.prisma.$queryRaw<{ titulo: string }[]>`
         SELECT "titulo"
         FROM "vault_notas"
         WHERE "empresaId" = ${empresaId}
+          AND "repositorioId" = ${repositorioId}
           AND to_tsvector('portuguese', coalesce("titulo", '') || ' ' || coalesce("conteudo", ''))
               @@ websearch_to_tsquery('portuguese', ${q})
         ORDER BY ts_rank(
@@ -184,7 +223,7 @@ export class VaultService {
     }
 
     const recentes = await this.prisma.vaultNota.findMany({
-      where: { empresaId },
+      where: { empresaId, repositorioId },
       orderBy: { atualizadoEm: 'desc' },
       take: k,
       select: { titulo: true },

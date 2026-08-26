@@ -17,6 +17,7 @@ import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 // O multer (memoryStorage) entrega o arquivo com estes campos.
@@ -71,6 +72,7 @@ export class AnaliseController {
   )
   async analise(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @UploadedFile() arquivo: UploadedFileLike | undefined,
     @Body() body: AnaliseBody,
   ): Promise<{ titulo: string; analise: string; origem: string }> {
@@ -147,6 +149,7 @@ export class AnaliseController {
     try {
       titulosVault = await this.vault.titulos(
         user.empresaId,
+        repositorioId,
         `${objetivo}\n${descricao}\n${conteudo.slice(0, 600)}`,
         40,
       );

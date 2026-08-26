@@ -5,6 +5,7 @@ import { designBrief, parseDesign, type DesignSystemDto } from './design/design'
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface MelhorarBody {
@@ -31,6 +32,7 @@ export class MelhorarController {
   @Post('melhorar')
   async melhorar(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @Body() body: MelhorarBody,
   ): Promise<Melhorado> {
     const texto = (body.texto || '').trim();
@@ -39,7 +41,7 @@ export class MelhorarController {
     // vault pelo próprio texto (o começo já basta para achar os assuntos).
     let titulosVault: string[] = [];
     try {
-      titulosVault = await this.vault.titulos(user.empresaId, texto.slice(0, 1000), 40);
+      titulosVault = await this.vault.titulos(user.empresaId, repositorioId, texto.slice(0, 1000), 40);
     } catch (err) {
       this.logger.warn(`Falha ao carregar títulos do Vault: ${String(err)}`);
     }

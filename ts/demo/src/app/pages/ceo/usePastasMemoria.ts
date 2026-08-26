@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 // Local Imports
 import { buildMemoryCategories, type MemoryCategory } from "@/app/data/memoria";
 import { listarPastasMemoria } from "@/utils/memoriaVault";
+import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 import { PASTA_MEMORIA } from "./memoria-pastas";
 
 // ----------------------------------------------------------------------
@@ -41,6 +42,9 @@ export function usePastasMemoria(): PastasMemoria {
   const [carregando, setCarregando] = useState(true);
   const [doVault, setDoVault] = useState(false);
   const [tick, setTick] = useState(0);
+  // As pastas vêm do vault do repositório ativo. Sem esta dependência a lista
+  // continuaria mostrando as pastas do repositório anterior depois da troca.
+  const repositorioId = useRepositorioAtivo()?.id ?? null;
 
   useEffect(() => {
     let vivo = true;
@@ -60,7 +64,7 @@ export function usePastasMemoria(): PastasMemoria {
     return () => {
       vivo = false;
     };
-  }, [tick]);
+  }, [tick, repositorioId]);
 
   const temas = useMemo(() => buildMemoryCategories(pastas), [pastas]);
   const recarregar = useCallback(() => setTick((t) => t + 1), []);

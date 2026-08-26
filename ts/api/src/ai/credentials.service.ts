@@ -3,7 +3,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import type { AiConnectionStatus } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -26,6 +25,11 @@ export interface PublicCredential {
   validatedAt: Date | null;
   /** Quantos modelos (texto + imagem + vídeo) usam esta chave. */
   modelCount: number;
+  /**
+   * Só na resposta do cadastro: a chave foi salva, mas o provedor não confirmou
+   * (rede, cota, escopo). Não é persistido — `validatedAt: null` é o registro.
+   */
+  aviso?: string;
 }
 
 export interface CreateCredentialInput {
@@ -85,20 +89,23 @@ export class AiCredentialsService {
     }
     const nome = input.nome?.trim() || null;
 
+    // Só uma recusa explícita do provedor barra o cadastro. Antes, qualquer
+    // tropeço na checagem (rede, cota, escopo restrito da chave) virava erro e
+    // deixava o tenant sem conseguir conectar chave boa; agora a chave entra
+    // sem carimbo de validação e o aviso explica o porquê.
+    let aviso: string | undefined;
     if (isLlmProvider(provider)) {
-      let valida: boolean;
-      try {
-        valida = await getProvider(provider).validateKey(apiKey);
-      } catch (err) {
-        this.logger.error(err);
-        throw new ServiceUnavailableException(
-          'Não foi possível validar a chave junto ao provedor. Tente novamente.',
+      const check = await getProvider(provider).validateKey(apiKey);
+      if (check.status === 'invalida') {
+        throw new BadRequestException(
+          `O provedor recusou esta chave: ${check.detalhe}`,
         );
       }
-      if (!valida) {
-        throw new BadRequestException(
-          'Chave de API inválida para o provedor selecionado.',
+      if (check.status === 'indeterminada') {
+        this.logger.warn(
+          `Chave ${provider} salva sem confirmação do provedor: ${check.detalhe}`,
         );
+        aviso = `A chave foi salva, mas o provedor não confirmou que ela funciona: ${check.detalhe}`;
       }
     }
 
@@ -110,13 +117,13 @@ export class AiCredentialsService {
         apiKeyEncrypted: this.crypto.encrypt(apiKey),
         keyLast4: apiKey.slice(-4),
         status: 'ativa',
-        validatedAt: new Date(),
+        validatedAt: aviso ? null : new Date(),
       },
       include: {
         _count: { select: { textModels: true, mediaModels: true } },
       },
     });
-    return this.toPublic(c);
+    return { ...this.toPublic(c), aviso };
   }
 
   /** Remove a chave e, em cascata, os modelos das três filas. */

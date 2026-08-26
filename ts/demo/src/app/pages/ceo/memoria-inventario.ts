@@ -588,6 +588,19 @@ const TIPO_POR_PASTA: Record<string, string> = {
   [PASTA_MEMORIA.video]: "Vídeo",
 };
 
+/**
+ * `true` para tags que classificam o TIPO da nota ("reunião", "e-mail",
+ * "documento"…), escritas pelo próprio app ao gravar. O grafo usa isto como
+ * stoplist: essas tags marcam o formato do conteúdo, não um assunto, e viram
+ * mega-hubs ligados a tudo se entrarem no mapa de entidades.
+ */
+export function ehTagDeTipo(tag: string): boolean {
+  const t = tag.trim();
+  if (!t) return false;
+  if (/^(grupo|conversa)$/i.test(t)) return true;
+  return TIPO_POR_TAG.some(([padrao]) => padrao.test(t));
+}
+
 function tipoDoItem(tags: string[], pasta: string): string {
   for (const [padrao, rotulo] of TIPO_POR_TAG) {
     if (tags.some((t) => padrao.test(t))) return rotulo;

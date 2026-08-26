@@ -16,6 +16,7 @@ import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface UploadedFileLike {
@@ -49,6 +50,7 @@ export class DocumentoController {
   @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
   async documento(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @UploadedFile() arquivo: UploadedFileLike | undefined,
     @Body() body: DocumentoBody,
   ): Promise<{ titulo: string; conteudo: string; resumo: string; salvo: boolean; memoriaId?: string }> {
@@ -78,7 +80,7 @@ export class DocumentoController {
     // Alvos dos [[wikilinks]] do bloco "Conexões no Vault".
     let titulosVault: string[] = [];
     try {
-      titulosVault = await this.vault.titulos(user.empresaId, texto.slice(0, 1000), 40);
+      titulosVault = await this.vault.titulos(user.empresaId, repositorioId, texto.slice(0, 1000), 40);
     } catch (err) {
       this.logger.warn(`Falha ao carregar títulos do Vault: ${String(err)}`);
     }

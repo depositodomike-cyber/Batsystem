@@ -27,6 +27,7 @@ import { VaultService } from '@/vault/vault.service';
 import { ConversasService } from '@/conversas/conversas.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface UploadedFileLike {
@@ -96,6 +97,7 @@ export class PromptController {
   )
   async prompt(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioDoHeader: string | null,
     @UploadedFile() arquivo: UploadedFileLike | undefined,
     @Body() body: PromptBody,
   ): Promise<PromptResposta> {
@@ -113,7 +115,11 @@ export class PromptController {
     const historico = parseHistorico(body.historico);
     const referencia = (body.referencia || '').trim();
     const conversaIdIn = (body.conversaId || '').trim() || undefined;
-    const repositorioId = (body.repositorioId || '').trim() || undefined;
+    // O corpo já mandava o repositório (usado para gravar a conversa); o header
+    // é a fonte nova, comum a todos os endpoints. Preferimos o corpo quando ele
+    // vem, para não mudar o comportamento de quem já o envia.
+    const repositorioId =
+      (body.repositorioId || '').trim() || repositorioDoHeader || undefined;
     const modoPedido = modo;
 
     // Modo Auto: o modelo decide entre Memória e Web.
@@ -141,7 +147,7 @@ export class PromptController {
     // Vault" que fecha a resposta (vale para os dois modos).
     let titulosVault: string[] = [];
     try {
-      titulosVault = await this.vault.titulos(user.empresaId, texto, 40);
+      titulosVault = await this.vault.titulos(user.empresaId, repositorioId ?? null, texto, 40);
     } catch (err) {
       this.logger.warn(`Falha ao carregar títulos do Vault: ${String(err)}`);
     }
@@ -193,6 +199,7 @@ export class PromptController {
       // Busca uma margem além do teto para o orçamento poder escolher.
       const hits = await this.vault.search(
         user.empresaId,
+        repositorioId ?? null,
         texto,
         MEMORIA_MAX_NOTAS + 2,
       );

@@ -31,6 +31,10 @@ export function configureApp(app: INestApplication): void {
   app.enableCors({
     origin: origins,
     credentials: true,
+    // `X-Repositorio-Id` é um header custom: sem declará-lo o preflight o
+    // bloqueia e o isolamento por repositório cai, em silêncio, para o escopo
+    // do tenant — que é exatamente o que ele existe para evitar.
+    allowedHeaders: ["Content-Type", "Authorization", "X-Repositorio-Id"],
   });
 
   app.useGlobalPipes(

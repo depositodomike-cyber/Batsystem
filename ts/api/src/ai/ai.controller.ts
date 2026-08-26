@@ -12,6 +12,7 @@ import { AiService } from './ai.service';
 import { ChatStreamDto } from './dto/chat.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { ConversasService } from '@/conversas/conversas.service';
 
@@ -36,6 +37,7 @@ export class AiController {
   @UseGuards(JwtAuthGuard)
   async chatStream(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @Body() dto: ChatStreamDto,
     @Res() res: Response,
   ): Promise<void> {
@@ -84,6 +86,7 @@ export class AiController {
       const stream = this.ai.chatStream({
         ...dto,
         empresaId: user.empresaId,
+        repositorioId,
         usuarioId: user.id,
       });
       for await (const chunk of stream) {

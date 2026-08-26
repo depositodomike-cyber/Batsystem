@@ -27,6 +27,8 @@ export interface ChatTurn {
 
 export interface ChatInput {
   empresaId: string;
+  /** Repositório ativo — escopa o vault lido para montar as conexões. */
+  repositorioId: string | null;
   usuarioId: string;
   squadId: string;
   agentId?: string;
@@ -137,7 +139,12 @@ ${PLATFORM_FRAMING}${conexoes}`;
     const ultima = [...input.messages].reverse().find((m) => m.role === 'user');
     let titulos: string[] = [];
     try {
-      titulos = await this.vault.titulos(input.empresaId, ultima?.text ?? '', 40);
+      titulos = await this.vault.titulos(
+        input.empresaId,
+        input.repositorioId,
+        ultima?.text ?? '',
+        40,
+      );
     } catch {
       /* sem vault sincronizado: segue só com a regra */
     }

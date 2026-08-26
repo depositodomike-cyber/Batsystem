@@ -29,6 +29,12 @@ export interface AiCredential {
   status: "ativa" | "invalida";
   validatedAt: string | null;
   modelCount: number;
+  /**
+   * Só vem na resposta do cadastro: a chave foi salva sem que o provedor
+   * confirmasse que funciona (rede, cota, escopo da chave). Na listagem isso
+   * aparece como `validatedAt: null`.
+   */
+  aviso?: string;
 }
 
 export interface CreateCredentialInput {

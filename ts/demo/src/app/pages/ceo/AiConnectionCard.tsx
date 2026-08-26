@@ -277,9 +277,13 @@ function KeysSection({
   const [deleteState, setDeleteState] = useState<"pending" | "success" | "error">(
     "pending",
   );
+  // Chave salva sem o provedor confirmar: o cadastro deu certo, então o modal
+  // fecha, mas o motivo não pode sumir junto com ele.
+  const [aviso, setAviso] = useState<string | null>(null);
 
   const onCreated = (c: AiCredential) => {
     onCredsChange([...creds, c]);
+    setAviso(c.aviso ?? null);
     modal.close();
   };
 
@@ -307,6 +311,22 @@ function KeysSection({
         Conecte os provedores de IA utilizados pela sua empresa. As chaves são
         armazenadas de forma segura e nunca são exibidas por completo.
       </p>
+
+      {aviso && (
+        <div className="bg-warning/10 mt-4 flex items-start gap-2 rounded-xl px-4 py-3">
+          <ExclamationTriangleIcon className="text-warning mt-0.5 size-4 shrink-0" />
+          <p className="dark:text-dark-200 flex-1 text-xs text-gray-600">
+            {aviso}
+          </p>
+          <button
+            type="button"
+            onClick={() => setAviso(null)}
+            className="dark:text-dark-300 shrink-0 text-xs text-gray-400 hover:underline"
+          >
+            Ok
+          </button>
+        </div>
+      )}
 
       {creds.length === 0 ? (
         <div className="dark:border-dark-500 dark:bg-dark-600 mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-5">
@@ -346,11 +366,20 @@ function KeysSection({
                       : `${c.modelCount} ${c.modelCount === 1 ? "modelo conectado" : "modelos conectados"}`}
                   </p>
                 </div>
-                {c.status === "invalida" && (
+                {c.status === "invalida" ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
                     <ExclamationTriangleIcon className="size-3.5" />
                     chave recusada
                   </span>
+                ) : (
+                  !c.validatedAt && (
+                    <span
+                      title="A chave foi salva, mas o provedor não confirmou que ela funciona. Ela será usada normalmente."
+                      className="dark:bg-dark-500 dark:text-dark-200 inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-500"
+                    >
+                      não verificada
+                    </span>
+                  )
                 )}
                 <KeyMenu onRemove={() => {
                   setDeleteState("pending");

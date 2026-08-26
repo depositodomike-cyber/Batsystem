@@ -1,5 +1,5 @@
 // Import Dependencies
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
 import clsx from "clsx";
@@ -16,6 +16,9 @@ import { useThemeContext } from "@/app/contexts/theme/context";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 import { syncVault, getVaultStatus } from "@/services/api/vault";
 import { buscandoMemoria, onBuscaMemoria } from "@/utils/memoriaBusca";
+import { memoriaVaultSupported } from "@/utils/memoriaVault";
+import { criarRelacao, removerRelacao } from "./grafo-relacoes";
+import { avisarFalhaAoSalvarNaMemoria } from "./memoria-conteudo";
 import {
   escolherPastaContexto,
   lerArquivosMd,
@@ -27,7 +30,29 @@ import {
   tituloPadrao,
   type ArquivoMd,
   type FSDirHandle,
+  type ItemContexto,
 } from "./memoria-inventario";
+import {
+  COR_PESSOA,
+  COR_TAG,
+  PASTA_COR,
+  construirGrafoDoVault,
+  ehEntidade,
+  montarCores,
+  pesoDoKind,
+  raio,
+  repousoDoLink,
+  unirCamadas,
+  type EntKind,
+  type GNode,
+  type Graph,
+  type LinkTipo,
+} from "./memoria-grafo-modelo";
+import {
+  GrafoPainelContexto,
+  type RelacaoVizinha,
+  type Selecao,
+} from "./GrafoPainelContexto";
 
 // ----------------------------------------------------------------------
 // Memória — grafo force-directed migrado do beculture/Confi (graph.js + a
@@ -39,199 +64,40 @@ import {
 // A leitura da pasta (handle, permissão, varredura dos .md, frontmatter) vem de
 // memoria-inventario.ts — o mesmo módulo que alimenta a Lista do Repositório, para
 // as duas telas mostrarem sempre o mesmo conjunto de notas.
+// O modelo (tipos, paleta e construção das camadas) vive em
+// memoria-grafo-modelo.ts. Aqui fica só o desenho: física, câmera e eventos.
 // ----------------------------------------------------------------------
 
-type Kind = "nota" | "pasta" | "tag";
-type LinkTipo = "wikilink" | "tag" | "pasta";
-
-interface GNode {
-  id: string;
-  kind: Kind;
-  pasta: string | null;
-  tipo?: string;
-  titulo: string;
-  grau: number;
-  _peso?: number;
-  _fase?: number;
-  x?: number;
-  y?: number;
-  vx?: number;
-  vy?: number;
-}
-interface GLink {
-  source: string;
-  target: string;
-  tipo: LinkTipo;
-}
-interface Graph {
-  nodes: GNode[];
-  links: GLink[];
+/** Camadas visíveis no canvas. "Conteúdos" é o grafo de arquivos original. */
+interface Filtros {
+  pessoa: boolean;
+  projeto: boolean;
+  tag: boolean;
+  conteudos: boolean;
 }
 
-// ---- Cores (paleta de marca beculture) ----
-const PASTA_COR: Record<string, string> = {
-  Reuniões: "#FFCA28",
-  Insights: "#C084FC",
-  Documentos: "#10B981",
-  Notas: "#94A3B8",
-  Pessoas: "#F472B6",
-  Áudios: "#38BDF8",
-  Estratégico: "#FB923C",
+const FILTROS_INICIAIS: Filtros = {
+  pessoa: true,
+  projeto: true,
+  tag: true,
+  conteudos: false,
 };
-const PALETA = [
-  "#A3E635",
-  "#FACC15",
-  "#818CF8",
-  "#2DD4BF",
-  "#FB7185",
-  "#C4B5FD",
-  "#FDBA74",
-  "#F87171",
-  "#5EEAD4",
-  "#D8B4FE",
+
+// Camadas com chip próprio no overlay. Tags e Conteúdos ficam de fora: as tags
+// são a camada base (nunca faz sentido desligá-las) e os conteúdos só
+// entram pelo fallback de vaults sem termo recorrente. As duas camadas
+// continuam existindo em `Filtros` — só não têm botão.
+const CHIPS: { chave: keyof Filtros; label: string; cor: string | null }[] = [
+  { chave: "pessoa", label: "Pessoas", cor: COR_PESSOA },
+  { chave: "projeto", label: "Projetos", cor: PASTA_COR.Documentos },
 ];
-const COR_TAG = "#22D3EE";
 
-// Mapa pasta→cor único (mesma lógica de montarCoresPastas do beculture).
-function montarCores(pastas: string[]): Map<string, string> {
-  const map = new Map<string, string>();
-  const usados = new Set<string>();
-  for (const p of pastas) {
-    const fixa = PASTA_COR[p];
-    if (fixa && !usados.has(fixa)) {
-      map.set(p, fixa);
-      usados.add(fixa);
-    }
-  }
-  const pool = PALETA.filter((c) => !usados.has(c));
-  let i = 0;
-  for (const p of [...pastas].sort((a, b) => a.localeCompare(b))) {
-    if (map.has(p)) continue;
-    const cor = pool[i] || PALETA[i % PALETA.length];
-    i++;
-    map.set(p, cor);
-    usados.add(cor);
-  }
-  return map;
-}
-
-function raio(n: GNode): number {
-  if (n.kind === "pasta") return 10 + Math.min(n.grau, 20) * 0.7;
-  if (n.kind === "tag") return 7 + Math.min(n.grau, 16) * 0.6;
-  return 6 + Math.min(n.grau, 8) * 1.6;
-}
-
-// ----------------------------------------------------------------------
-// Construção do grafo (espelha grafo() de lib/vault.js).
-// ----------------------------------------------------------------------
-
-function buildGraph(files: ArquivoMd[]): Graph {
-  const notas = files.map((f) => {
-    const { titulo, tags, body } = parseNotaMd(f.text);
-    const base = tituloPadrao(f.name);
-    const seg = f.path.split("/");
-    const pasta = seg.length > 1 ? seg[0] : "Raiz";
-    return { id: f.path, titulo: titulo || base, base, tags, body, pasta };
-  });
-
-  const indice = new Map<string, string>();
-  for (const n of notas) {
-    indice.set(n.base.toLowerCase(), n.id);
-    if (n.titulo) indice.set(n.titulo.toLowerCase(), n.id);
-  }
-
-  const nodes: GNode[] = notas.map((n) => ({
-    id: n.id,
-    kind: "nota",
-    pasta: n.pasta,
-    tipo: "nota",
-    titulo: n.titulo,
-    grau: 0,
-  }));
-  const nodeById = new Map(nodes.map((n) => [n.id, n]));
-  const notaNodes = [...nodes];
-
-  const links: GLink[] = [];
-  const vistos = new Set<string>();
-  const ligar = (
-    a: string | undefined,
-    b: string | undefined,
-    tipo: LinkTipo,
-  ) => {
-    if (!a || !b || a === b) return;
-    const chave = [a, b].sort().join("::");
-    if (vistos.has(chave)) return;
-    vistos.add(chave);
-    links.push({ source: a, target: b, tipo });
-    const na = nodeById.get(a);
-    const nb = nodeById.get(b);
-    if (na) na.grau += 1;
-    if (nb) nb.grau += 1;
-  };
-
-  const garantirHub = (
-    id: string,
-    kind: Kind,
-    titulo: string,
-    pasta: string | null = null,
-  ) => {
-    if (!nodeById.has(id)) {
-      const hub: GNode = { id, kind, titulo, tipo: kind, pasta, grau: 0 };
-      nodes.push(hub);
-      nodeById.set(id, hub);
-    }
-    return id;
-  };
-
-  // 1) Wikilinks [[...]] — só conectam quando o alvo tem uma nota (.md) de fato.
-  // Links não resolvidos ficam de fora do grafo de propósito, para não poluí-lo
-  // com nós soltos de entidades sem nota própria.
-  for (const n of notas) {
-    for (const m of n.body.matchAll(/\[\[([^\]]+)\]\]/g)) {
-      const alvo = m[1].split("|")[0].split("#")[0].trim().toLowerCase();
-      ligar(n.id, indice.get(alvo), "wikilink");
-    }
-  }
-
-  // 2) Tags (hub só quando 2+ notas usam)
-  const tagsPorNota = new Map<string, string[]>();
-  const tagCount = new Map<string, number>();
-  for (const n of notas) {
-    const limpas = [
-      ...new Set(n.tags.map((t) => String(t || "").trim()).filter(Boolean)),
-    ];
-    tagsPorNota.set(n.id, limpas);
-    for (const t of limpas)
-      tagCount.set(t.toLowerCase(), (tagCount.get(t.toLowerCase()) || 0) + 1);
-  }
-  for (const n of notaNodes) {
-    for (const t of tagsPorNota.get(n.id) || []) {
-      if ((tagCount.get(t.toLowerCase()) || 0) < 2) continue;
-      ligar(
-        n.id,
-        garantirHub("tag::" + t.toLowerCase(), "tag", "#" + t),
-        "tag",
-      );
-    }
-  }
-
-  // 3) Pastas (hub só quando 2+ notas, pulando a Raiz)
-  const pastaCount = new Map<string, number>();
-  for (const n of notaNodes) {
-    if (n.pasta && n.pasta !== "Raiz")
-      pastaCount.set(n.pasta, (pastaCount.get(n.pasta) || 0) + 1);
-  }
-  for (const n of notaNodes) {
-    if (!n.pasta || n.pasta === "Raiz" || (pastaCount.get(n.pasta) || 0) < 2)
-      continue;
-    ligar(
-      n.id,
-      garantirHub("pasta::" + n.pasta, "pasta", n.pasta, n.pasta),
-      "pasta",
-    );
-  }
-
-  return { nodes, links };
+/** O nó está numa camada ligada? */
+function visivelPor(kind: GNode["kind"], f: Filtros): boolean {
+  if (kind === "pessoa") return f.pessoa;
+  if (kind === "projeto") return f.projeto;
+  if (kind === "tag") return f.tag;
+  return f.conteudos;
 }
 
 // ----------------------------------------------------------------------
@@ -267,6 +133,107 @@ export default function MemoriaGrafo() {
   const [buscaIA, setBuscaIA] = useState(buscandoMemoria);
   useEffect(() => onBuscaMemoria(setBuscaIA), []);
 
+  // Entidade ou relação selecionada no canvas. Dado plano copiado no clique —
+  // nunca um GNode vivo, que a simulação muta a cada quadro.
+  const [selecao, setSelecao] = useState<Selecao | null>(null);
+  // Inventário compartilhado com a Lista: dá título, tipo e origem de cada
+  // conteúdo que o painel lista.
+  const [itens, setItens] = useState<ItemContexto[]>([]);
+  const itensPorPath = useMemo(
+    () => new Map(itens.map((i) => [i.path, i])),
+    [itens],
+  );
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_INICIAIS);
+  // Pasta aberta como cópia: leitura funciona, gravação não.
+  const [copiaSomenteLeitura, setCopiaSomenteLeitura] = useState(false);
+  // Quantos nós cada camada tem. Alimenta a contagem nos chips e esconde os das
+  // camadas vazias — um chip "Pessoas" num vault sem pessoa nenhuma só confunde.
+  const camadas = useMemo(() => {
+    const c: Record<keyof Filtros, number> = {
+      pessoa: 0,
+      projeto: 0,
+      tag: 0,
+      conteudos: 0,
+    };
+    for (const n of graph.nodes) {
+      if (n.kind === "pessoa") c.pessoa += 1;
+      else if (n.kind === "projeto") c.projeto += 1;
+      else if (n.kind === "tag") c.tag += 1;
+      else c.conteudos += 1;
+    }
+    return c;
+  }, [graph]);
+
+  // Canal React → canvas. A simulação lê estes refs a cada quadro; passar por
+  // deps do useEffect remontaria tudo e jogaria os nós de volta ao seed().
+  const filtrosRef = useRef(filtros);
+  filtrosRef.current = filtros;
+  // Bump para o loop saber que o painel foi fechado por fora e limpar o realce.
+  const limparRef = useRef(0);
+  // Canal canvas → React, no mesmo padrão de animandoRef: reatribuído a cada
+  // render, lido de dentro do effect na hora do clique.
+  const onSelecaoRef = useRef<(s: Selecao | null) => void>(() => {});
+  onSelecaoRef.current = setSelecao;
+  // Canal painel → canvas: preenchido dentro do effect.
+  const comandosRef = useRef<{
+    selecionar: (id: string) => void;
+    ligar: (aId: string, bId: string) => void;
+    desligar: (aId: string, bId: string) => void;
+    reselecionar: (id: string) => void;
+  } | null>(null);
+
+  // Tags que podem virar destino de um novo relacionamento — as que estão no
+  // canvas. Uma relação declarada para uma tag ausente seria ignorada pelo
+  // construtor, então não faz sentido oferecê-la.
+  const tagsDisponiveis = useMemo(
+    () =>
+      graph.nodes
+        .filter((n) => ehEntidade(n.kind))
+        .map((n) => ({ id: n.id, titulo: n.titulo }))
+        .sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR")),
+    [graph],
+  );
+
+  // Gravar exige a File System Access API e uma pasta viva. No modo cópia
+  // (Firefox/Safari/Brave sem a flag) o Repositório é somente leitura.
+  const podeEscrever = memoriaVaultSupported() && !copiaSomenteLeitura;
+
+  const relacionar = useCallback(
+    async (alvo: { id: string; titulo: string }) => {
+      if (!selecao || selecao.tipo !== "entidade") return;
+      const r = await criarRelacao(selecao.titulo, alvo.titulo);
+      if (!r.ok) {
+        avisarFalhaAoSalvarNaMemoria(r.reason);
+        return;
+      }
+      // Canvas e painel são atualizados sem tocar em `graph` — ver o comentário
+      // em `comandosRef`.
+      comandosRef.current?.ligar(selecao.id, alvo.id);
+      comandosRef.current?.reselecionar(selecao.id);
+      toast.success("Tags relacionadas", {
+        description: `${selecao.titulo} × ${alvo.titulo}`,
+      });
+    },
+    [selecao],
+  );
+
+  const desrelacionar = useCallback(
+    async (alvo: { id: string; titulo: string }) => {
+      if (!selecao || selecao.tipo !== "entidade") return;
+      const r = await removerRelacao(selecao.titulo, alvo.titulo);
+      if (!r.ok) {
+        avisarFalhaAoSalvarNaMemoria(r.reason);
+        return;
+      }
+      comandosRef.current?.desligar(selecao.id, alvo.id);
+      comandosRef.current?.reselecionar(selecao.id);
+      toast.success("Relação removida", {
+        description: `${selecao.titulo} × ${alvo.titulo}`,
+      });
+    },
+    [selecao],
+  );
+
   // Enquanto lê a pasta, sincroniza com a IA ou responde uma busca, o grafo
   // "pensa": respira, pulsa as arestas e faz os dados correrem pelas conexões.
   // Vai por ref porque a simulação (canvas) não pode remontar a cada mudança.
@@ -295,20 +262,39 @@ export default function MemoriaGrafo() {
   }, []);
 
   const loadFromHandle = useCallback(
-    async (handle: FSDirHandle, opts?: { fromUpload?: boolean }) => {
+    async (
+      handle: FSDirHandle,
+      // `obsoleto` deixa quem chamou abortar a escrita do resultado. Ler uma
+      // pasta grande demora, e sem isso a troca de repositório no meio da
+      // leitura faria o grafo do repositório anterior aparecer no novo.
+      opts?: { fromUpload?: boolean; obsoleto?: () => boolean },
+    ) => {
       setLoading(true);
+      setCopiaSomenteLeitura(pastaEhCopia(handle));
       try {
         const files = await lerArquivosMd(handle);
-        const g = buildGraph(files);
-        setGraph(g);
-        const notas = g.nodes.filter((n) => n.kind === "nota").length;
+        if (opts?.obsoleto?.()) return;
+        const { entidades, conteudos, itens: inv, temEntidades } =
+          construirGrafoDoVault(files);
+        setItens(inv);
+        setSelecao(null);
+        // Vault sem entidades reconhecíveis (sem grupos, sem pasta Pessoas, sem
+        // termo recorrente): o canvas abre com a camada de conteúdos, que é o
+        // grafo de arquivos de sempre. Melhor que uma tela vazia.
+        const filtrosIniciais: Filtros = temEntidades
+          ? FILTROS_INICIAIS
+          : { ...FILTROS_INICIAIS, conteudos: true };
+        setFiltros(filtrosIniciais);
+        setGraph(unirCamadas(entidades, conteudos));
         if (files.length === 0) {
           toast("Nenhuma nota .md encontrada", {
             description: `A pasta “${handle.name}” não tem arquivos .md.`,
           });
         } else {
           toast("Repositório carregado", {
-            description: `${notas} notas · ${g.links.length} conexões`,
+            description: temEntidades
+              ? `${entidades.nodes.length} entidades · ${entidades.links.length} relações · ${inv.length} notas`
+              : `${inv.length} notas · ${conteudos.links.length} conexões`,
           });
           void syncToBackend(files);
           // Só pergunta quando o carregamento veio de um upload do usuário.
@@ -363,6 +349,8 @@ export default function MemoriaGrafo() {
 
   // Ao abrir, mostra quantas notas já estão no servidor (sync anterior), para
   // o usuário saber que a IA já tem contexto mesmo sem re-selecionar a pasta.
+  // Depende do repositório: o total é por repositório, e sem isso o badge
+  // continuaria mostrando a contagem do repositório anterior.
   useEffect(() => {
     let alive = true;
     getVaultStatus()
@@ -380,22 +368,31 @@ export default function MemoriaGrafo() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [repositorioId]);
 
   // Restaura a pasta do repositório ativo. Ao trocar de repo, limpa o grafo.
   useEffect(() => {
     let cancelado = false;
 
+    // Estado do repositório anterior sai de cena ANTES da leitura da pasta: a
+    // nota aberta e o contador de sincronização são daquele contexto, e deixá-los
+    // na tela enquanto o novo carrega mostra dado de um repositório dentro de
+    // outro.
+    setSelecao(null);
+    setNota(null);
+    setSync({ state: "idle", done: 0, total: 0 });
+
     (async () => {
       const handle = await pastaContextoSalva(repositorioId);
       if (cancelado) return;
       if (handle && (await permissaoDeLeitura(handle))) {
-        await loadFromHandle(handle);
+        if (cancelado) return;
+        await loadFromHandle(handle, { obsoleto: () => cancelado });
         return;
       }
+      if (cancelado) return;
       setGraph({ nodes: [], links: [] });
-      setNota(null);
-      setSync({ state: "idle", done: 0, total: 0 });
+      setItens([]);
     })();
 
     return () => {
@@ -426,6 +423,8 @@ export default function MemoriaGrafo() {
     const corLink = (tipo: LinkTipo, a: number): string => {
       if (tipo === "wikilink") return `rgba(255,202,40,${a})`;
       if (tipo === "tag") return `rgba(34,211,238,${a})`;
+      // `relacao` cai no cinza neutro das arestas de pasta — o peso da relação
+      // aparece na espessura, não numa cor nova.
       return isDark ? `rgba(148,163,184,${a})` : `rgba(100,116,139,${a})`;
     };
 
@@ -433,14 +432,18 @@ export default function MemoriaGrafo() {
     const pastasPresentes = [
       ...new Set(
         graph.nodes
-          .filter((n) => n.kind === "nota")
+          .filter((n) => n.kind === "nota" || n.kind === "projeto")
           .map((n) => n.pasta)
           .filter((p): p is string => !!p && p !== "Raiz"),
       ),
     ];
     const corPasta = montarCores(pastasPresentes);
+    // Cada entidade herda a cor que o kind equivalente já tinha: projeto = a
+    // cor da pasta, tag = o ciano de sempre, pessoa = o rosa fixo da pasta
+    // "Pessoas". Nenhuma cor nova entra no grafo.
     const nodeColor = (n: GNode): string => {
-      if (n.kind === "tag") return COR_TAG;
+      if (n.kind === "tag" || n.kind === "tag-hub") return COR_TAG;
+      if (n.kind === "pessoa") return COR_PESSOA;
       if (n.pasta && n.pasta !== "Raiz")
         return corPasta.get(n.pasta) || PASTA_COR[n.pasta] || "#94A3B8";
       return "#94A3B8";
@@ -457,7 +460,7 @@ export default function MemoriaGrafo() {
 
     const nodes: GNode[] = graph.nodes.map((n, i) => ({
       ...n,
-      _peso: n.kind === "pasta" ? 2.2 : n.kind === "tag" ? 1.7 : 1,
+      _peso: pesoDoKind(n.kind),
       _fase: (i * 0.618) % 6.283,
       x: 0,
       y: 0,
@@ -465,17 +468,62 @@ export default function MemoriaGrafo() {
       vy: 0,
     }));
     const idx = new Map(nodes.map((n) => [n.id, n]));
-    const links = graph.links
+    type Aresta = {
+      source: GNode;
+      target: GNode;
+      tipo: LinkTipo;
+      fontes?: string[];
+      manual?: boolean;
+    };
+    const links: Aresta[] = graph.links
       .map((l) => ({
         source: idx.get(l.source)!,
         target: idx.get(l.target)!,
         tipo: l.tipo,
+        fontes: l.fontes,
+        manual: l.manual,
       }))
       .filter((l) => l.source && l.target);
+
+    // ---- Camadas visíveis ----
+    // Filtrar por FLAG, nunca mexendo no comprimento de `nodes`/`links`: recriar
+    // os arrays reposicionaria tudo. Com flag, ligar/desligar uma camada
+    // preserva o layout que o usuário já reconhece.
+    const visiveis = new Set<GNode>();
+    const nosVisiveis: GNode[] = [];
+    const arestasVisiveis: Aresta[] = [];
+    let filtrosAplicados: Filtros | null = null;
+    function aplicarFiltros(f: Filtros) {
+      visiveis.clear();
+      nosVisiveis.length = 0;
+      for (const n of nodes) {
+        if (!visivelPor(n.kind, f)) continue;
+        visiveis.add(n);
+        nosVisiveis.push(n);
+      }
+      arestasVisiveis.length = 0;
+      for (const l of links) {
+        if (visiveis.has(l.source) && visiveis.has(l.target))
+          arestasVisiveis.push(l);
+      }
+    }
+    aplicarFiltros(filtrosRef.current);
+    filtrosAplicados = filtrosRef.current;
+    let limparVisto = limparRef.current;
 
     let dragging: GNode | null = null;
     let hover: GNode | null = null;
     let highlighted = new Set<string>();
+    // Aresta sob o cursor, pressionada e selecionada. A relação é uma interação
+    // de primeira classe: é por ela que se chega ao contexto sem que cada
+    // documento precise virar um nó.
+    let arestaHover: Aresta | null = null;
+    let arestaSob: Aresta | null = null;
+    let arestaSelecionada: Aresta | null = null;
+
+    /** Espessura da linha pelo número de conteúdos que sustentam a relação. */
+    const espessura = (l: Aresta) =>
+      1 + Math.min(l.fontes?.length ?? 1, 8) * 0.25;
     const mouse = { x: 0, y: 0, down: false, moved: false };
     // Coordenadas do mouse em espaço-mundo (após a câmera). O arrasto de nó
     // precisa disso; sem converter, o nó "pula" quando há zoom/pan.
@@ -494,12 +542,12 @@ export default function MemoriaGrafo() {
     // Enquadramento alvo: bounding box de todos os nós → escala/offset que o
     // centraliza na tela com uma margem. Nunca amplia demais grafos pequenos.
     function computeFit(): { scale: number; ox: number; oy: number } | null {
-      if (!nodes.length || !W || !H) return null;
+      if (!nosVisiveis.length || !W || !H) return null;
       let minX = Infinity;
       let minY = Infinity;
       let maxX = -Infinity;
       let maxY = -Infinity;
-      for (const n of nodes) {
+      for (const n of nosVisiveis) {
         const r = raio(n) + 24; // inclui glow + rótulo
         if (n.x! - r < minX) minX = n.x! - r;
         if (n.y! - r < minY) minY = n.y! - r;
@@ -529,6 +577,9 @@ export default function MemoriaGrafo() {
       // direção nula: os nós nunca se separam e o grafo colapsa num ponto.
       const w = W || wrap!.clientWidth || 1000;
       const h = H || wrap!.clientHeight || 700;
+      // Semeia TODOS os nós, inclusive os de camadas desligadas: se um nó
+      // entrasse depois com x=y=0, a repulsão (que usa a direção entre nós)
+      // teria direção nula e a camada inteira colapsaria num ponto.
       for (const n of nodes) {
         n.x = w / 2 + (Math.random() - 0.5) * Math.min(w, 900);
         n.y = h / 2 + (Math.random() - 0.5) * Math.min(h, 700);
@@ -537,16 +588,16 @@ export default function MemoriaGrafo() {
 
     function step(): number {
       // Repulsão adaptativa: grafos grandes precisam espalhar mais.
-      const C = 3600 + nodes.length * 12;
+      const C = 3600 + nosVisiveis.length * 12;
       const K = 0.013;
       const G = 0.009;
       const DAMP = 0.9;
       const VMAX = 14;
 
-      for (let i = 0; i < nodes.length; i++) {
-        const a = nodes[i];
-        for (let j = i + 1; j < nodes.length; j++) {
-          const b = nodes[j];
+      for (let i = 0; i < nosVisiveis.length; i++) {
+        const a = nosVisiveis[i];
+        for (let j = i + 1; j < nosVisiveis.length; j++) {
+          const b = nosVisiveis[j];
           const dx = a.x! - b.x!;
           const dy = a.y! - b.y!;
           const d2 = dx * dx + dy * dy || 0.01;
@@ -558,11 +609,11 @@ export default function MemoriaGrafo() {
           b.vy! -= (dy / d) * f;
         }
       }
-      for (const l of links) {
+      for (const l of arestasVisiveis) {
         const dx = l.target.x! - l.source.x!;
         const dy = l.target.y! - l.source.y!;
         const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        const rest = l.tipo === "pasta" ? 58 : l.tipo === "tag" ? 66 : 110;
+        const rest = repousoDoLink(l.tipo);
         const f = (d - rest) * K;
         l.source.vx! += (dx / d) * f;
         l.source.vy! += (dy / d) * f;
@@ -572,7 +623,7 @@ export default function MemoriaGrafo() {
       const cx = W / 2;
       const cy = H / 2;
       let maxMov = 0;
-      for (const n of nodes) {
+      for (const n of nosVisiveis) {
         n.vx! += (cx - n.x!) * G;
         n.vy! += (cy - n.y!) * G;
         // Agitação durante a busca/sync: o grafo nunca assenta enquanto pensa.
@@ -605,7 +656,7 @@ export default function MemoriaGrafo() {
     }
 
     function preaquecer() {
-      if (!nodes.length || !W || !H) return;
+      if (!nosVisiveis.length || !W || !H) return;
       // Pensando (ou arrastando): a física fica ao vivo — assentar em rajada
       // com a agitação ligada nunca converge e só queimaria os 3000 passos.
       if (buscando || dragging) {
@@ -625,7 +676,7 @@ export default function MemoriaGrafo() {
     function draw() {
       if (!ctx) return;
       ctx.clearRect(0, 0, W, H);
-      const poucos = nodes.length <= 40;
+      const poucos = nosVisiveis.length <= 40;
       // `inv` mantém traços/rótulos com espessura constante na tela,
       // independentemente do zoom (senão somem quando o grafo se afasta).
       const inv = 1 / view.scale;
@@ -644,8 +695,10 @@ export default function MemoriaGrafo() {
 
       // Pulso de brilho no conjunto das arestas (só enquanto pensa).
       const brilho = buscando ? 0.14 + (Math.sin(t * 3) + 1) * 0.13 : 0;
-      for (const l of links) {
+      for (const l of arestasVisiveis) {
         const ativo =
+          l === arestaSelecionada ||
+          l === arestaHover ||
           highlighted.has(l.source.id) ||
           highlighted.has(l.target.id) ||
           l.source === hover ||
@@ -654,11 +707,13 @@ export default function MemoriaGrafo() {
         // No fundo claro as arestas somem: reforça a opacidade quando inativas.
         const base = ativo ? 0.6 : isDark ? dim : dim * 1.7;
         ctx.strokeStyle = corLink(l.tipo, Math.min(base + brilho, 0.85));
-        ctx.lineWidth = (ativo ? 1.6 : 1) * inv;
+        // A espessura carrega o peso da relação: quanto mais conteúdos a
+        // sustentam, mais grossa a linha.
+        ctx.lineWidth = (ativo ? 1.6 : 1) * espessura(l) * inv;
         ctx.setLineDash(
           l.tipo === "pasta"
             ? [2 * inv, 4 * inv]
-            : l.tipo === "tag"
+            : l.tipo === "tag" || l.tipo === "relacao"
               ? [5 * inv, 4 * inv]
               : [],
         );
@@ -674,8 +729,8 @@ export default function MemoriaGrafo() {
         ctx.shadowColor = "#FFCA28";
         ctx.shadowBlur = 10 * view.scale;
         ctx.fillStyle = "rgba(255,213,79,.95)";
-        for (let k = 0; k < links.length; k++) {
-          const l = links[k];
+        for (let k = 0; k < arestasVisiveis.length; k++) {
+          const l = arestasVisiveis[k];
           const f = (t * 0.55 + k * 0.17) % 1;
           ctx.beginPath();
           ctx.arc(
@@ -690,7 +745,7 @@ export default function MemoriaGrafo() {
         ctx.shadowBlur = 0;
       }
 
-      for (const n of nodes) {
+      for (const n of nosVisiveis) {
         const cor = nodeColor(n);
         const r = raio(n);
         const destaque = highlighted.has(n.id) || n === hover;
@@ -704,7 +759,7 @@ export default function MemoriaGrafo() {
         ctx.globalAlpha = highlighted.size && !destaque ? 0.35 : 1;
         ctx.beginPath();
         ctx.arc(n.x!, n.y!, r, 0, Math.PI * 2);
-        if (n.kind === "pasta") {
+        if (n.kind === "pasta" || n.kind === "projeto") {
           ctx.fillStyle = PASTA_FILL;
           ctx.fill();
           ctx.lineWidth = 2.2 * inv;
@@ -717,14 +772,18 @@ export default function MemoriaGrafo() {
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
+        // Entidades e hubs sempre rotulados: são o mapa que o usuário lê.
         const hub = n.kind !== "nota";
         if (hub || poucos || destaque) {
           ctx.fillStyle = destaque ? LABEL_HL : hub ? cor : LABEL;
           ctx.font =
             (hub ? "600 " : "") + `${11 * inv}px Inter, system-ui, sans-serif`;
           ctx.textAlign = "center";
+          // Reticências ao cortar: sem elas, dois nomes longos de mesmo prefixo
+          // ficam com rótulos idênticos e não há como saber que foram cortados.
+          const rotulo = n.titulo || "";
           ctx.fillText(
-            (n.titulo || "").slice(0, 26),
+            rotulo.length > 26 ? rotulo.slice(0, 25) + "…" : rotulo,
             n.x!,
             n.y! + r + 13 * inv,
           );
@@ -742,6 +801,23 @@ export default function MemoriaGrafo() {
       if (anim !== buscando) {
         buscando = anim;
         acordar();
+      }
+      // Camadas ligadas/desligadas por fora. Só remarca as flags — os arrays de
+      // nós continuam os mesmos, então o layout não se embaralha.
+      if (filtrosRef.current !== filtrosAplicados) {
+        filtrosAplicados = filtrosRef.current;
+        aplicarFiltros(filtrosAplicados);
+        if (arestaSelecionada && !arestasVisiveis.includes(arestaSelecionada))
+          arestaSelecionada = null;
+        arestaHover = null;
+        autoFit = true;
+        acordar();
+      }
+      // Painel fechado pelo X ou pelo Esc: solta o realce.
+      if (limparRef.current !== limparVisto) {
+        limparVisto = limparRef.current;
+        highlighted = new Set();
+        arestaSelecionada = null;
       }
       const dormindo = quieto >= FRAMES_PARADO && !dragging && !buscando;
       if (!dormindo) {
@@ -790,13 +866,44 @@ export default function MemoriaGrafo() {
     }
     function noEm(wx: number, wy: number): GNode | null {
       const tol = 6 / view.scale; // tolerância constante na tela
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const n = nodes[i];
+      for (let i = nosVisiveis.length - 1; i >= 0; i--) {
+        const n = nosVisiveis[i];
         const dx = n.x! - wx;
         const dy = n.y! - wy;
         if (dx * dx + dy * dy <= (raio(n) + tol) ** 2) return n;
       }
       return null;
+    }
+    /**
+     * Aresta sob o ponto, por distância ponto→segmento. Mesma tolerância de tela
+     * do `noEm`. Perto das pontas quem ganha é o nó — senão a aresta roubaria o
+     * clique de quem ela liga.
+     */
+    function arestaEm(wx: number, wy: number): Aresta | null {
+      const tol = 6 / view.scale;
+      let melhor: Aresta | null = null;
+      let melhorD = Infinity;
+      for (const l of arestasVisiveis) {
+        const ax = l.source.x!;
+        const ay = l.source.y!;
+        const bx = l.target.x!;
+        const by = l.target.y!;
+        const dx = bx - ax;
+        const dy = by - ay;
+        const len2 = dx * dx + dy * dy;
+        if (len2 < 1e-6) continue;
+        let u = ((wx - ax) * dx + (wy - ay) * dy) / len2;
+        u = u < 0 ? 0 : u > 1 ? 1 : u; // clamp: é segmento, não reta infinita
+        const d = Math.hypot(wx - (ax + dx * u), wy - (ay + dy * u));
+        if (d > tol + espessura(l) * 0.5 * (1 / view.scale)) continue;
+        if (Math.hypot(wx - ax, wy - ay) < raio(l.source) + tol) continue;
+        if (Math.hypot(wx - bx, wy - by) < raio(l.target) + tol) continue;
+        if (d < melhorD) {
+          melhorD = d;
+          melhor = l;
+        }
+      }
+      return melhor;
     }
     // Ponteiros ativos, por id — é o que permite distinguir um dedo (pan) de
     // dois (pinça). Pointer Events cobrem mouse, toque e caneta com o mesmo
@@ -845,6 +952,10 @@ export default function MemoriaGrafo() {
       mouse.down = true;
       mouse.moved = false;
       dragging = noEm(w.x, w.y);
+      // Aresta sob o ponteiro: guardada para o onUp decidir clique vs. arrasto.
+      // O pan continua exatamente como era — arrastar a partir de uma aresta
+      // ainda move a câmera.
+      arestaSob = dragging ? null : arestaEm(w.x, w.y);
       if (dragging) {
         acordar();
       } else {
@@ -887,6 +998,10 @@ export default function MemoriaGrafo() {
       mouseW.x = w.x;
       mouseW.y = w.y;
       hover = dragging || noEm(w.x, w.y);
+      // Testa aresta só quando não há nó sob o cursor e nada está em curso —
+      // mantém o custo por pointermove baixo.
+      arestaHover =
+        hover || mouse.down || panning || buscando ? null : arestaEm(w.x, w.y);
       const tip = tipRef.current;
       if (tip) {
         if (hover && !dragging) {
@@ -894,15 +1009,20 @@ export default function MemoriaGrafo() {
           tip.style.left = `${e.clientX + 12}px`;
           tip.style.top = `${e.clientY + 12}px`;
           tip.textContent = hover.titulo;
+        } else if (arestaHover) {
+          const n = arestaHover.fontes?.length ?? 0;
+          tip.style.display = "block";
+          tip.style.left = `${e.clientX + 12}px`;
+          tip.style.top = `${e.clientY + 12}px`;
+          tip.textContent =
+            `${arestaHover.source.titulo} × ${arestaHover.target.titulo}` +
+            (n ? ` · ${n} ${n === 1 ? "conteúdo" : "conteúdos"}` : "");
         } else {
           tip.style.display = "none";
         }
       }
-      canvas!.style.cursor = hover
-        ? "pointer"
-        : mouse.down
-          ? "grabbing"
-          : "grab";
+      canvas!.style.cursor =
+        hover || arestaHover ? "pointer" : mouse.down ? "grabbing" : "grab";
     }
     function onUp(e?: PointerEvent) {
       if (e) ponteiros.delete(e.pointerId);
@@ -911,6 +1031,8 @@ export default function MemoriaGrafo() {
       if (ponteiros.size > 0) return;
 
       if (dragging && !mouse.moved) acionar(dragging);
+      else if (arestaSob && !mouse.moved) acionarRelacao(arestaSob);
+      arestaSob = null;
       dragging = null;
       panning = false;
       mouse.down = false;
@@ -918,6 +1040,7 @@ export default function MemoriaGrafo() {
       // preso na tela depois de soltar o dedo.
       if (e && e.pointerType !== "mouse") {
         hover = null;
+        arestaHover = null;
         const tip = tipRef.current;
         if (tip) tip.style.display = "none";
       }
@@ -942,21 +1065,130 @@ export default function MemoriaGrafo() {
       const w = toWorld(p.x, p.y);
       if (!noEm(w.x, w.y)) autoFit = true;
     }
+    /** Vizinhos visíveis de uma entidade, do mais sustentado para o menos. */
+    function vizinhosDe(n: GNode): RelacaoVizinha[] {
+      const out: RelacaoVizinha[] = [];
+      for (const l of arestasVisiveis) {
+        const outro =
+          l.source === n ? l.target : l.target === n ? l.source : null;
+        if (!outro || !ehEntidade(outro.kind)) continue;
+        out.push({
+          id: outro.id,
+          titulo: outro.titulo,
+          rotulo: outro.rotulo ?? "",
+          peso: l.fontes?.length ?? 1,
+          manual: l.manual,
+        });
+      }
+      return out.sort((a, b) => b.peso - a.peso);
+    }
+
     function acionar(n: GNode) {
       const ids = new Set<string>([n.id]);
-      for (const l of links) {
+      for (const l of arestasVisiveis) {
         if (l.source.id === n.id) ids.add(l.target.id);
         else if (l.target.id === n.id) ids.add(l.source.id);
       }
-      if (n.kind !== "nota" && highlighted.has(n.id) && highlighted.size) {
-        highlighted = new Set();
+      highlighted = ids;
+      arestaSelecionada = null;
+
+      if (ehEntidade(n.kind)) {
+        // Entidade: revela o contexto no painel. Abrir o .md (quando existe,
+        // caso das pessoas) vira ação explícita lá dentro — se o editor
+        // abrisse já no clique, o contexto nunca chegaria a aparecer.
+        onSelecaoRef.current({
+          tipo: "entidade",
+          id: n.id,
+          titulo: n.titulo,
+          rotulo: n.rotulo ?? "",
+          kind: n.kind as EntKind,
+          notaPath: n.notaPath,
+          relacoes: vizinhosDe(n),
+          conteudos: n.conteudos ?? [],
+        });
         return;
       }
-      highlighted = ids;
-      // Nota: além de destacar as conexões, abre o .md para ler/editar.
-      // Hubs (pasta/tag) não têm arquivo — só destacam.
+
+      // Camada de conteúdos: comportamento de sempre — o clique abre o .md.
+      // Hubs de pasta/tag não têm arquivo, então só destacam.
+      onSelecaoRef.current(null);
       if (n.kind === "nota") setNota({ path: n.id, titulo: n.titulo });
     }
+
+    /** Clique numa relação: o contexto entre duas entidades vira a seleção. */
+    function acionarRelacao(l: Aresta) {
+      highlighted = new Set([l.source.id, l.target.id]);
+      arestaSelecionada = l;
+      onSelecaoRef.current({
+        tipo: "relacao",
+        aId: l.source.id,
+        aTitulo: l.source.titulo,
+        bId: l.target.id,
+        bTitulo: l.target.titulo,
+        fontes: l.fontes ?? [],
+      });
+    }
+
+    // Canal painel → canvas: navegar para um vizinho sem sair do grafo.
+    // Canal painel → canvas.
+    //
+    // As arestas manuais entram e saem POR AQUI, não por `setGraph`: tocar no
+    // estado `graph` remontaria este effect e jogaria todos os nós de volta ao
+    // `seed()`, fazendo o grafo saltar a cada relação criada. A fonte de verdade
+    // é o .md — no próximo Sincronizar a relação vem do vault já pronta.
+    comandosRef.current = {
+      selecionar(id: string) {
+        const n = idx.get(id);
+        if (!n || !visiveis.has(n)) return;
+        acionar(n);
+        acordar();
+      },
+      reselecionar(id: string) {
+        const n = idx.get(id);
+        if (n && visiveis.has(n)) acionar(n);
+      },
+      ligar(aId: string, bId: string) {
+        const a = idx.get(aId);
+        const b = idx.get(bId);
+        if (!a || !b || a === b) return;
+        const existe = links.some(
+          (l) =>
+            (l.source === a && l.target === b) ||
+            (l.source === b && l.target === a),
+        );
+        if (existe) return;
+        const nova: Aresta = {
+          source: a,
+          target: b,
+          tipo: "relacao",
+          fontes: [],
+          manual: true,
+        };
+        links.push(nova);
+        a.grau += 1;
+        b.grau += 1;
+        if (visiveis.has(a) && visiveis.has(b)) arestasVisiveis.push(nova);
+        acordar();
+      },
+      desligar(aId: string, bId: string) {
+        const casa = (l: Aresta) =>
+          l.manual &&
+          ((l.source.id === aId && l.target.id === bId) ||
+            (l.source.id === bId && l.target.id === aId));
+        for (const lista of [links, arestasVisiveis]) {
+          for (let i = lista.length - 1; i >= 0; i--) {
+            if (casa(lista[i])) lista.splice(i, 1);
+          }
+        }
+        const a = idx.get(aId);
+        const b = idx.get(bId);
+        if (a) a.grau = Math.max(0, a.grau - 1);
+        if (b) b.grau = Math.max(0, b.grau - 1);
+        if (arestaSelecionada && casa(arestaSelecionada))
+          arestaSelecionada = null;
+        acordar();
+      },
+    };
 
     seed();
     resize();
@@ -974,6 +1206,7 @@ export default function MemoriaGrafo() {
     window.addEventListener("pointercancel", onUp);
 
     return () => {
+      comandosRef.current = null;
       cancelAnimationFrame(raf);
       ro.disconnect();
       canvas.removeEventListener("pointerdown", onDown);
@@ -1020,6 +1253,42 @@ export default function MemoriaGrafo() {
             </Button>
           </div>
 
+          {/* Camadas do grafo. A bolinha usa a mesma cor do nó, então a linha
+              também funciona como legenda. */}
+          {graph.nodes.length > 0 && (
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {CHIPS.filter(({ chave }) => camadas[chave] > 0).map(({ chave, label, cor }) => {
+                const ligado = filtros[chave];
+                return (
+                  <button
+                    key={chave}
+                    type="button"
+                    onClick={() =>
+                      setFiltros((f) => ({ ...f, [chave]: !f[chave] }))
+                    }
+                    aria-pressed={ligado}
+                    className={clsx(
+                      "text-tiny flex items-center gap-1.5 rounded-md border px-2 py-1 shadow-sm transition-colors",
+                      ligado
+                        ? "dark:bg-dark-700 dark:border-dark-500 dark:text-dark-100 border-gray-300 bg-white text-gray-700"
+                        : "dark:bg-dark-800/70 dark:border-dark-600 dark:text-dark-300 border-gray-200 bg-white/70 text-gray-400",
+                    )}
+                  >
+                    <span
+                      className="size-2 rounded-full"
+                      style={{
+                        backgroundColor: cor ?? "transparent",
+                        boxShadow: cor ? undefined : "inset 0 0 0 1.5px currentColor",
+                        opacity: ligado ? 1 : 0.35,
+                      }}
+                    />
+                    {label} <span className="tabular-nums opacity-60">{camadas[chave]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {sync.state !== "idle" && (
             <span
               className={clsx(
@@ -1046,12 +1315,31 @@ export default function MemoriaGrafo() {
           )}
         </div>
 
-        {/* Dica: o clique no nó abre o arquivo .md. */}
+        {/* Dica: entidade e relação são os dois caminhos para o contexto. */}
         {!loading && graph.nodes.length > 0 && (
           <span className="dark:bg-dark-700/70 dark:text-dark-300 text-tiny pointer-events-none absolute start-4 bottom-4 z-10 rounded-md bg-white/70 px-2 py-1 text-gray-500 backdrop-blur-sm">
-            Clique em uma nota para abrir e editar o .md
+            {filtros.pessoa || filtros.projeto || filtros.tag
+              ? "Clique em um nó ou em uma conexão para ver o contexto"
+              : "Clique em uma nota para abrir e editar o .md"}
           </span>
         )}
+
+        {/* Contexto do que está selecionado. Overlay: se encolhesse o canvas, o
+            ResizeObserver reaqueceria a física e o grafo daria um salto. */}
+        <GrafoPainelContexto
+          selecao={selecao}
+          itensPorPath={itensPorPath}
+          onFechar={() => {
+            setSelecao(null);
+            limparRef.current += 1;
+          }}
+          onIrPara={(id) => comandosRef.current?.selecionar(id)}
+          onAbrirNota={(path, titulo) => setNota({ path, titulo })}
+          tagsDisponiveis={tagsDisponiveis}
+          podeEscrever={podeEscrever}
+          onRelacionar={relacionar}
+          onDesrelacionar={desrelacionar}
+        />
 
         {/* Estados: carregando / vazio */}
         {loading && (
@@ -1110,6 +1398,27 @@ export default function MemoriaGrafo() {
               n.id === nota.path ? { ...n, titulo: novo } : n,
             ),
           }));
+          setItens((atual) =>
+            atual.map((i) =>
+              i.path === nota.path ? { ...i, titulo: novo } : i,
+            ),
+          );
+          // O painel pode estar mostrando esta nota (como entidade ou como
+          // vizinha) — sem isto ele ficaria com o nome antigo na tela.
+          setSelecao((s) => {
+            if (!s) return s;
+            if (s.tipo === "relacao") {
+              if (s.aId === nota.path) return { ...s, aTitulo: novo };
+              if (s.bId === nota.path) return { ...s, bTitulo: novo };
+              return s;
+            }
+            const relacoes = s.relacoes.map((r) =>
+              r.id === nota.path ? { ...r, titulo: novo } : r,
+            );
+            return s.id === nota.path
+              ? { ...s, titulo: novo, relacoes }
+              : { ...s, relacoes };
+          });
         }}
       />
 

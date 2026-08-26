@@ -18,6 +18,7 @@ import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
+import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface CarrosselBody {
@@ -52,6 +53,7 @@ export class CarrosselController {
   @Post('carrossel')
   async carrossel(
     @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
     @Body() body: CarrosselBody,
   ): Promise<Carrossel> {
     const tema = (body.tema || '').trim();
@@ -79,6 +81,7 @@ export class CarrosselController {
     try {
       titulosVault = await this.vault.titulos(
         user.empresaId,
+        repositorioId,
         `${tema}\n${(body.contexto || '').trim()}`,
         40,
       );

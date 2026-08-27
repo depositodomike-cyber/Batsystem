@@ -53,7 +53,8 @@ import {
 //   • Aparência — animação de fundo e vinheta (preferências locais).
 //   • Voz — resposta falada (TTS) após comandos de voz (preferência local).
 //   • IA & API — conexões BYOK (Texto/Imagem/Vídeo) via AiConnectionCard +
-//     consumo de tokens do usuário (GET /uso/tokens).
+//     consumo de tokens do usuário (GET /uso/tokens), este último oculto
+//     enquanto `settingsTokenUsage` estiver ligada.
 //   • Regras — orientações persistidas que a IA segue em suas respostas.
 //   • Repositório — pasta de dados que alimenta o grafo. No SaaS web isso é
 //     um diretório escolhido pelo navegador (File System Access API), persistido
@@ -128,15 +129,21 @@ export default function Configuracoes() {
             help={{
               description: (
                 <>
+                  {/*
+                    A menção a "consumo de tokens" saiu daqui junto com o bloco
+                    ocultado por `settingsTokenUsage`. Ao desligar a flag,
+                    voltar o trecho: "(conexão dos provedores de IA da empresa
+                    e consumo de tokens)".
+                  */}
                   <p>
                     <strong>Configurações</strong> reúne as preferências do
                     painel: <strong>Aparência</strong> (animação de fundo e
                     vinheta), <strong>Voz</strong> (resposta falada após
                     comandos de voz), <strong>IA &amp; API</strong> (conexão dos
-                    provedores de IA da empresa e consumo de tokens),{" "}
-                    <strong>Regras</strong> (orientações que a IA segue nas
-                    respostas) e <strong>Repositório</strong> (a pasta de dados
-                    que alimenta o grafo).
+                    provedores de IA da empresa), <strong>Regras</strong>{" "}
+                    (orientações que a IA segue nas respostas) e{" "}
+                    <strong>Repositório</strong> (a pasta de dados que alimenta
+                    o grafo).
                   </p>
                   <p>
                     As preferências de aparência e voz ficam salvas só neste
@@ -357,21 +364,25 @@ const JANELAS: { chave: keyof UsoTokens; label: string }[] = [
 ];
 
 function IaSection() {
+  const consumoOculto = isFeatureTemporarilyDisabled("settingsTokenUsage");
+
   return (
     <div className="space-y-6">
       <SectionCard
-        titulo="IA & Modelos"
+        titulo="IA & API"
         descricao="Conecte os provedores de IA da sua empresa e defina a prioridade dos modelos por modalidade."
       >
         <AiConnectionCard />
       </SectionCard>
 
-      <SectionCard
-        titulo="Consumo de tokens"
-        descricao="Tokens processados pela sua conta nas janelas recentes. Atualiza automaticamente."
-      >
-        <TokenUsagePanel />
-      </SectionCard>
+      {!consumoOculto && (
+        <SectionCard
+          titulo="Consumo de tokens"
+          descricao="Tokens processados pela sua conta nas janelas recentes. Atualiza automaticamente."
+        >
+          <TokenUsagePanel />
+        </SectionCard>
+      )}
     </div>
   );
 }

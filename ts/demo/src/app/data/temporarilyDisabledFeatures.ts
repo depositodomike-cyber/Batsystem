@@ -23,6 +23,7 @@ export type TemporarilyDisabledFeature =
   | "settingsAppearance"
   | "settingsVoice"
   | "settingsMemory"
+  | "settingsTokenUsage"
   | "memoryUploadAudio"
   | "memoryUploadTranscript"
   | "memoryGraph"
@@ -54,6 +55,10 @@ export const TEMPORARILY_DISABLED: Record<
   settingsAppearance: true,
   settingsVoice: true,
   settingsMemory: false,
+  // true = o bloco "Consumo de tokens" some da aba IA & API, e a menção a ele
+  // sai do texto de ajuda de Configurações. O painel e o GET /uso/tokens
+  // seguem intactos no código.
+  settingsTokenUsage: true,
   memoryUploadAudio: true,
   memoryUploadTranscript: true,
   // Grafo REATIVADO. Com a flag ligada o item fica visível mas sem clique,

@@ -60,6 +60,8 @@ export const PROVEDORES_PADRAO: CatalogProvider[] = [
     name: "Anthropic",
     modalities: ["text"],
     models: [
+      { id: "claude-opus-5", name: "Claude Opus 5", modality: "text" },
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", modality: "text" },
       { id: "claude-opus-4-8", name: "Claude Opus 4.8", modality: "text" },
       { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", modality: "text" },
       { id: "claude-haiku-4-5", name: "Claude Haiku 4.5", modality: "text" },

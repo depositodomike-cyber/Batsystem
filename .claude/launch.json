@@ -8,6 +8,13 @@
       "cwd": "ts/demo",
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "beculture-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:dev"],
+      "cwd": "ts/api",
+      "port": 3001
     }
   ]
 }

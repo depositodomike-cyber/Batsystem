@@ -198,6 +198,20 @@ function anthropicUsage(usage?: {
   };
 }
 
+/**
+ * Recusa dos classificadores de segurança (Claude Opus 5 em diante): a chamada
+ * volta 200, com `stop_reason: 'refusal'` e nenhum bloco de texto. Sem isto o
+ * chamador recebe string vazia e a tela mostra uma resposta em branco, sem
+ * explicação. Só entra quando não sobrou texto algum.
+ */
+function textoOuRecusa(
+  text: string,
+  stopReason: Anthropic.StopReason | null,
+): string {
+  if (text.trim() || stopReason !== 'refusal') return text;
+  return 'O provedor de IA recusou esta solicitação por política de conteúdo. Reformule o pedido e tente de novo.';
+}
+
 class AnthropicProvider implements LlmProvider {
   async *streamChat(params: LlmStreamParams) {
     const { apiKey, model, system, messages, onUsage } = sanear(params);
@@ -245,7 +259,7 @@ class AnthropicProvider implements LlmProvider {
       .map((b) => b.text)
       .join('');
     return {
-      text,
+      text: textoOuRecusa(text, msg.stop_reason),
       truncated: msg.stop_reason === 'max_tokens',
       usage: anthropicUsage(msg.usage),
     };
@@ -296,7 +310,7 @@ class AnthropicProvider implements LlmProvider {
     }
     const fontes: WebFonte[] = [...fontesMap].map(([url, titulo]) => ({ titulo, url }));
     return {
-      text,
+      text: textoOuRecusa(text, msg.stop_reason),
       fontes,
       truncated: msg.stop_reason === 'max_tokens',
       usage: anthropicUsage(msg.usage),
@@ -420,7 +434,11 @@ export const PROVIDER_CATALOG: ProviderInfo[] = [
   {
     id: 'anthropic',
     name: 'Claude (Anthropic)',
+    // A lista é aditiva: modelos antigos continuam aqui porque tenants podem
+    // tê-los gravados na fila, e um id fora do catálogo apareceria cru na UI.
     models: [
+      { id: 'claude-opus-5', name: 'Claude Opus 5' },
+      { id: 'claude-sonnet-5', name: 'Claude Sonnet 5' },
       { id: 'claude-opus-4-8', name: 'Claude Opus 4.8' },
       { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6' },
       { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },

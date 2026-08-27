@@ -39,6 +39,7 @@ import { reorderWithEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/r
 import { Button } from "@/components/ui";
 import { DropIndicator } from "@/components/shared/DropIndicator";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
+import { PageTitle, type PageHelp } from "@/components/shared/PageTitle";
 import { useDisclosure } from "@/hooks";
 import {
   createAiCredential,
@@ -176,6 +177,43 @@ function rotuloCredencial(
   return c.nome ? `${provedor} — ${c.nome}` : provedor;
 }
 
+/** "Texto", "Texto e Imagem", "Texto, Imagem e Vídeo" — junta com "e" no fim. */
+function listar(itens: string[]): string {
+  if (itens.length <= 1) return itens[0] ?? "";
+  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+}
+
+/**
+ * Modalidades que o provedor atende, por extenso.
+ *
+ * Uma chave só pode entrar na fila de uma modalidade se o provedor dela
+ * oferecer modelos daquele tipo — a Anthropic, por exemplo, não tem modelo de
+ * geração de imagem nem de vídeo, então uma chave Claude serve só para Texto.
+ * Isso não estava escrito em lugar nenhum da tela; daqui saem os avisos.
+ * Derivado do catálogo em runtime: mexeu no catálogo, o texto acompanha.
+ */
+function rotuloModalidades(
+  providers: CatalogProvider[],
+  providerId: string,
+): string {
+  const servidas = providers.find((p) => p.id === providerId)?.modalities ?? [];
+  return listar(
+    MODALITIES.filter((m) => servidas.includes(m.id)).map((m) => m.label),
+  );
+}
+
+/** Provedores do catálogo que atendem a modalidade, por extenso. */
+function provedoresDaModalidade(
+  providers: CatalogProvider[],
+  modalityId: AiModality,
+): string {
+  return listar(
+    providers
+      .filter((p) => p.modalities.includes(modalityId))
+      .map((p) => p.name),
+  );
+}
+
 /**
  * Configuração de IA do tenant: primeiro as chaves dos provedores, depois a
  * prioridade dos modelos em cada modalidade. A chave nunca volta do servidor.
@@ -226,37 +264,47 @@ export function AiConnectionCard() {
         onCredsChange={onCredsChange}
       />
 
-      <div className="dark:divide-dark-500 mt-12 divide-y divide-gray-200">
-        <p className="dark:text-dark-200 pb-4 text-sm font-semibold text-gray-800">
+      {/* Subseção irmã de "Chaves de API": mesmo título <h4>, mesma ausência de
+          régua abaixo dele. O corte entre as duas é o respiro de mt-12. O
+          `divide-y` envolve SÓ as modalidades — com o título dentro dele, a
+          primeira borda caía entre o título e "Texto" e fazia o título parecer
+          mais um item da lista. */}
+      <div className="mt-12">
+        <h4 className="dark:text-dark-100 text-sm font-semibold text-gray-800">
           Modelos e Prioridades
+        </h4>
+        {/* Descrição fixa, como em "Chaves de API". A linha de "comece por aqui"
+            só entra sem chave cadastrada, quando as modalidades ficam vazias. */}
+        <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
+          Escolha quais modelos atendem cada modalidade e em que ordem devem ser
+          usados.
+          {creds.length === 0 &&
+            " Adicione uma chave de API para começar a configurar seus modelos."}
         </p>
-        {creds.length === 0 && (
-          <p className="dark:text-dark-300 mb-4 text-sm text-gray-500">
-            Adicione uma chave de API para começar a configurar seus modelos.
-          </p>
-        )}
-        {MODALITIES.map((m) => (
-          <section key={m.id} className="py-5 first:pt-0 last:pb-0">
-            <ModalityPanel
-              modality={m}
-              providers={providers}
-              creds={creds}
-              semChaves={creds.length === 0}
-              onModelCount={(credentialId, delta) =>
-                setCreds((prev) =>
-                  prev.map((c) =>
-                    c.id === credentialId
-                      ? {
-                          ...c,
-                          modelCount: Math.max(0, c.modelCount + delta),
-                        }
-                      : c,
-                  ),
-                )
-              }
-            />
-          </section>
-        ))}
+        <div className="dark:divide-dark-500 mt-4 divide-y divide-gray-200">
+          {MODALITIES.map((m) => (
+            <section key={m.id} className="py-5 first:pt-0 last:pb-0">
+              <ModalityPanel
+                modality={m}
+                providers={providers}
+                creds={creds}
+                semChaves={creds.length === 0}
+                onModelCount={(credentialId, delta) =>
+                  setCreds((prev) =>
+                    prev.map((c) =>
+                      c.id === credentialId
+                        ? {
+                            ...c,
+                            modelCount: Math.max(0, c.modelCount + delta),
+                          }
+                        : c,
+                    ),
+                  )
+                }
+              />
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -329,23 +377,17 @@ function KeysSection({
       )}
 
       {creds.length === 0 ? (
-        <div className="dark:border-dark-500 dark:bg-dark-600 mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-5">
-          <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-            Nenhuma chave de API conectada
-          </p>
-          <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
-            Adicione uma chave para conectar os provedores de IA da sua empresa.
-          </p>
-          <Button
-            variant="outlined"
-            color="primary"
-            className="mt-3 gap-1.5"
-            onClick={modal.open}
-          >
-            <PlusIcon className="size-4" />
-            Adicionar chave de API
-          </Button>
-        </div>
+        // Sem chave, só o botão: a descrição da seção logo acima já diz o que
+        // são estas chaves, e a caixa cinza só repetia isso em volta dele.
+        <Button
+          variant="outlined"
+          color="primary"
+          className="mt-4 gap-1.5"
+          onClick={modal.open}
+        >
+          <PlusIcon className="size-4" />
+          Adicionar chave de API
+        </Button>
       ) : (
         <>
           <ul className="dark:divide-dark-500 dark:border-dark-500 dark:bg-dark-600 mt-4 divide-y divide-gray-100 rounded-xl border border-gray-100 bg-gray-50">
@@ -364,6 +406,8 @@ function KeysSection({
                     {c.modelCount === 0
                       ? "nenhum modelo conectado"
                       : `${c.modelCount} ${c.modelCount === 1 ? "modelo conectado" : "modelos conectados"}`}
+                    <span className="mx-1.5">·</span>
+                    {rotuloModalidades(providers, c.provider)}
                   </p>
                 </div>
                 {c.status === "invalida" ? (
@@ -589,6 +633,9 @@ function AddKeyModal({
                     </option>
                   ))}
                 </select>
+                <span className="dark:text-dark-300 mt-1 block text-xs font-normal text-gray-400">
+                  Atende: {rotuloModalidades(providers, providerId)}
+                </span>
               </label>
               <label className="block text-sm">
                 <span className="dark:text-dark-200 mb-1 block font-medium text-gray-600">
@@ -676,6 +723,33 @@ function ModalityPanel({
       ),
     [creds, providers, modality.id],
   );
+
+  /**
+   * Sem chave que atenda a modalidade os botões ficam desabilitados. Dizer só
+   * que nenhuma serve deixa o usuário sem saída, então a ajuda nomeia quem
+   * atende. Fica sob demanda no "?" do estado vazio (mesmo padrão do título da
+   * página); `undefined` quando há chave, e aí o PageTitle não mostra o botão.
+   */
+  const quemAtende = provedoresDaModalidade(providers, modality.id);
+  const ajudaSemChave: PageHelp | undefined =
+    credsDaModalidade.length > 0
+      ? undefined
+      : {
+          title: `Modelos de ${modality.label}`,
+          description: (
+            <>
+              <p>
+                Nenhuma chave cadastrada oferece modelos de{" "}
+                {modality.label.toLowerCase()}.
+                {quemAtende && ` Atendem esta modalidade: ${quemAtende}.`}
+              </p>
+              <p>
+                Cadastre uma chave de um desses provedores em{" "}
+                <strong>Chaves de API</strong>, acima.
+              </p>
+            </>
+          ),
+        };
 
   const connsRef = useRef<QueueItem[]>([]);
   useEffect(() => {
@@ -824,13 +898,21 @@ function ModalityPanel({
           )}
 
           {conns.length === 0 && !formOpen && (
-            <div className="dark:border-dark-500 dark:bg-dark-600 rounded-xl border border-gray-100 bg-gray-50 px-4 py-4">
-              <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                Nenhum modelo configurado
-              </p>
-              <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
-                Adicione um modelo para utilizar esta modalidade.
-              </p>
+            <>
+              <div className="dark:border-dark-500 dark:bg-dark-600 rounded-xl border border-gray-100 bg-gray-50 px-4 py-4">
+                <PageTitle
+                  as="p"
+                  className="dark:text-dark-100 text-sm font-medium text-gray-700"
+                  helpLabel="Por que não há modelos para escolher"
+                  help={ajudaSemChave}
+                >
+                  Nenhum modelo configurado
+                </PageTitle>
+                <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
+                  Adicione um modelo para utilizar esta modalidade.
+                </p>
+              </div>
+              {/* Fora da caixa, como o "Adicionar modelo" do estado com fila. */}
               <Button
                 variant="outlined"
                 color="primary"
@@ -840,13 +922,7 @@ function ModalityPanel({
               >
                 Configurar modelos
               </Button>
-              {credsDaModalidade.length === 0 && (
-                <p className="dark:text-dark-300 mt-2 text-xs text-gray-400">
-                  Nenhuma chave cadastrada oferece modelos de{" "}
-                  {modality.label.toLowerCase()}.
-                </p>
-              )}
-            </div>
+            </>
           )}
 
           {formOpen && (

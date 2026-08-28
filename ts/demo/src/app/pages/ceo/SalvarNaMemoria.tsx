@@ -45,7 +45,12 @@ interface Props {
    * Monta o conteúdo na hora do clique — para ações cujo resultado precisa ser
    * construído (HTML do carrossel) ou baixado (imagem, MP4) antes de gravar.
    */
-  preparar?: () => Promise<{ conteudo: string; anexos?: AnexoMemoria[] }>;
+  preparar?: () => Promise<{
+    conteudo: string;
+    anexos?: AnexoMemoria[];
+    /** Arquivo que o usuário subiu e originou o conteúdo (ver escreverNotaMemoria). */
+    original?: AnexoMemoria;
+  }>;
   /**
    * Assinatura do resultado, para ações em que o conteúdo não chega por prop
    * (`preparar`): quando muda, o botão volta a "Salvar na memória".
@@ -101,12 +106,15 @@ export function SalvarNaMemoriaButton({
         titulo: titulo.trim() || destino,
         conteudo: pronto.conteudo,
         anexos: pronto.anexos,
+        original: pronto.original,
         tags,
       });
       if (r.ok) {
         setSalvoEm(assinatura(destino));
         toast("Salvo na pasta do Repositório", {
-          description: `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
+          description: r.original
+            ? `${r.pasta}/${r.arquivo} — com o arquivo original (${r.original}).`
+            : `${r.pasta}/${r.arquivo} — recarregue o grafo para ver o nó.`,
         });
         // Cria as notas de pessoas citadas que ainda não existem, para que os
         // [[wikilinks]] da ata conectem a nós reais no grafo (pasta "Pessoas").

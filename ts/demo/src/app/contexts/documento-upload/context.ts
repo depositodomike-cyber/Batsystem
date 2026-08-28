@@ -13,8 +13,14 @@ export interface DocumentoUpload {
   id: string;
   /** Produto em que o upload começou, para preservar a rota ao concluir. */
   produtoCode?: string;
-  /** Nome do arquivo enviado, quando houver (só para exibição). */
+  /** Nome do arquivo enviado, quando houver (exibição e nome do download). */
   nomeArquivo?: string;
+  /**
+   * Bytes do arquivo enviado, para gravá-lo junto da nota ao salvar no
+   * Repositório (é o que o modal da nota exporta depois). Vive só nesta sessão;
+   * a cópia durável fica no IndexedDB — ver `lerOriginalGuardado`.
+   */
+  arquivoOriginal?: Blob;
   estado: DocumentoUploadEstado;
   titulo?: string;
   conteudo?: string;

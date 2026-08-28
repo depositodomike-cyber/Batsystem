@@ -16,6 +16,7 @@ import { PageTitle } from "@/components/shared/PageTitle";
 import { Button, Spinner } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useDocumentoUpload } from "@/app/contexts/documento-upload/context";
+import { lerOriginalGuardado } from "@/app/contexts/documento-upload/original";
 import { useMemoryContext } from "@/app/contexts/memory/context";
 import { useIaModals } from "@/app/contexts/ia-modals/context";
 import { MarkdownView } from "./MarkdownView";
@@ -61,6 +62,23 @@ export default function Documento() {
   };
 
   const abrirNovoUpload = () => openIaModal("upload", { aba: "documento" });
+
+  // Grava a nota junto com o arquivo que a originou, para o modal da nota poder
+  // exportar o arquivo-fonte depois. Os bytes vêm do store da sessão e, se a
+  // aba foi recarregada, da cópia no IndexedDB. Upload de texto colado não tem
+  // original — e aí a nota é salva sem ele, como antes.
+  const prepararMemoria = async () => {
+    const nome = upload?.nomeArquivo;
+    const dados = upload?.arquivoOriginal;
+    if (!dados && documentoId) {
+      const guardado = await lerOriginalGuardado(documentoId);
+      if (guardado) return { conteudo: conteudo ?? "", original: guardado };
+    }
+    return {
+      conteudo: conteudo ?? "",
+      original: dados && nome ? { nome, dados } : undefined,
+    };
+  };
 
   const docCompleto = () => `# ${titulo}\n\n${conteudo ?? ""}`;
   const copiar = async () => {
@@ -228,12 +246,14 @@ export default function Documento() {
                     pasta={PASTA_MEMORIA.documento}
                     titulo={titulo}
                     conteudo={conteudo}
+                    preparar={prepararMemoria}
                     tags={["documento"]}
                   />
                   <EnviarParaGrupoButton
                     funcao="documento"
                     titulo={titulo}
                     conteudo={conteudo}
+                    preparar={prepararMemoria}
                   />
                 </div>
               </div>

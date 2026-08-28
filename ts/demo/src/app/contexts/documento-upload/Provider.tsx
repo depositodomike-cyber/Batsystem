@@ -10,6 +10,7 @@ import {
   type IniciarDocumentoInput,
   type NavegadorDocumento,
 } from "./context";
+import { guardarOriginal } from "./original";
 
 // ----------------------------------------------------------------------
 // Dono da requisição de upload de documento. Fica acima do RouterProvider,
@@ -101,12 +102,15 @@ export function DocumentoUploadProvider({ children }: { children: ReactNode }) {
       const produto = getCurrentProduct(window.location.pathname);
       const nomeArquivo = input.arquivo?.name;
 
+      const arquivoOriginal = input.arquivo ?? undefined;
+
       setUploads((prev) => ({
         ...prev,
         [id]: {
           id,
           produtoCode: produto.code,
           nomeArquivo,
+          arquivoOriginal,
           estado: "analisando",
         },
       }));
@@ -117,10 +121,17 @@ export function DocumentoUploadProvider({ children }: { children: ReactNode }) {
           texto: input.texto?.trim() || undefined,
         });
 
+        // Cópia durável antes de expor o resultado: a partir daqui o usuário
+        // pode recarregar a página e ainda salvar a nota com o original.
+        if (arquivoOriginal && nomeArquivo && data.memoriaId) {
+          await guardarOriginal(data.memoriaId, nomeArquivo, arquivoOriginal);
+        }
+
         const pronto: DocumentoUpload = {
           id,
           produtoCode: produto.code,
           nomeArquivo,
+          arquivoOriginal,
           estado: "pronto",
           titulo: data.titulo,
           conteudo: data.conteudo,

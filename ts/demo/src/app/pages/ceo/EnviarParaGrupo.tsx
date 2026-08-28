@@ -57,7 +57,12 @@ interface Props {
    * Monta o conteúdo na hora do clique — para ações cujo resultado precisa ser
    * construído (HTML do carrossel) ou baixado (imagem, MP4) antes de gravar.
    */
-  preparar?: () => Promise<{ conteudo: string; anexos?: AnexoMemoria[] }>;
+  preparar?: () => Promise<{
+    conteudo: string;
+    anexos?: AnexoMemoria[];
+    /** Arquivo que o usuário subiu e originou o conteúdo. */
+    original?: AnexoMemoria;
+  }>;
   /**
    * Assinatura do resultado, para ações em que o conteúdo não chega por prop
    * (`preparar`): quando muda, o botão volta a "Enviar para o grupo".
@@ -103,7 +108,11 @@ export function EnviarParaGrupoButton({
     setEnviando(true);
     try {
       const pronto = preparar ? await preparar() : { conteudo: conteudo ?? "" };
-      const { anexos, ignorados } = await converterAnexos(pronto.anexos);
+      // O original entra junto dos anexos na aba Documentos do grupo, para o
+      // arquivo-fonte ficar disponível também por esse caminho.
+      const { anexos, ignorados } = await converterAnexos(
+        pronto.original ? [...(pronto.anexos ?? []), pronto.original] : pronto.anexos,
+      );
 
       addDocument({
         product,
@@ -129,6 +138,7 @@ export function EnviarParaGrupoButton({
           conteudo: pronto.conteudo,
           origem: `AI Studio · ${aiFunctionLabel(funcao)}`,
           anexos: pronto.anexos,
+          original: pronto.original,
         });
         if (!r.ok) avisarFalhaMemoria(r.reason);
       }

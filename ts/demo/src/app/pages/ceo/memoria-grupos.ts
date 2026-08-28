@@ -178,6 +178,8 @@ export async function salvarDocumentoNoGrupo(opts: {
   /** Origem do documento (squad, agente ou ação do AI Studio), quando houver. */
   origem?: string;
   anexos?: AnexoMemoria[];
+  /** Arquivo que o usuário subiu e originou o documento. */
+  original?: AnexoMemoria;
   tags?: string[];
 }): Promise<WriteResult> {
   const cabecalho = [
@@ -192,6 +194,7 @@ export async function salvarDocumentoNoGrupo(opts: {
     titulo: opts.titulo,
     tags: ["documento", ...(opts.tags ?? [])],
     anexos: opts.anexos,
+    original: opts.original,
     conteudo: `${cabecalho}\n\n${opts.conteudo.trim()}`,
   });
 }

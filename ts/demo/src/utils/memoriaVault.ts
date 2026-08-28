@@ -226,6 +226,91 @@ export async function salvarNotaMemoria(
 }
 
 // ----------------------------------------------------------------------
+// ARQUIVO ORIGINAL de uma nota.
+//
+// Notas geradas a partir de um upload guardam o arquivo-fonte (.docx, .pdf) na
+// mesma subpasta do .md e o declaram no frontmatter como `arquivo-original:`.
+// O ponteiro fica DENTRO da nota (e não numa tabela) para sobreviver ao usuário
+// renomear ou mover a nota na própria pasta — o caminho do irmão é derivado do
+// caminho da nota, então os dois viajam juntos.
+// ----------------------------------------------------------------------
+
+/**
+ * Nome do arquivo original declarado no frontmatter da nota, ou `null` quando a
+ * nota não veio de um upload (a maioria: notas escritas à mão, texto colado, ou
+ * salvas antes desta função existir).
+ *
+ * Puro, sem I/O: é o que decide se o botão de exportar fica habilitado sem
+ * precisar tocar o disco. Recusa valores com separador de caminho — a pasta é o
+ * disco do usuário e `pastaDoCaminho` desceria por eles sem reclamar.
+ */
+export function nomeDoOriginalNaNota(markdown: string): string | null {
+  const fm = (markdown || "").match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!fm) return null;
+  const m = fm[1].match(/^\s*arquivo-original\s*:\s*(.+)$/im);
+  if (!m) return null;
+  const nome = m[1].trim().replace(/^["']|["']$/g, "");
+  if (!nome || /[/\\]/.test(nome) || nome.includes("..")) return null;
+  return nome;
+}
+
+/** Caminho de um arquivo na MESMA pasta de uma nota ("A/B/nota.md" + "x.pdf" → "A/B/x.pdf"). */
+export function caminhoIrmao(notaPath: string, nome: string): string {
+  const i = notaPath.lastIndexOf("/");
+  return i === -1 ? nome : `${notaPath.slice(0, i + 1)}${nome}`;
+}
+
+/**
+ * Lê um arquivo binário da Pasta do Repositório (o anexo/original de uma nota).
+ *
+ * Sem o atalho da cópia somente leitura que `lerNotaMemoria` tem: a cópia
+ * guarda apenas o TEXTO dos .md, então binário não existe lá — e `pastaViva`
+ * já traduz esse cenário para "unsupported", que é a resposta honesta.
+ *
+ * Devolve o `File` (não um Blob solto) para o download herdar o tipo real.
+ */
+export async function lerAnexoMemoria(
+  path: string,
+): Promise<{ ok: true; arquivo: File } | { ok: false; reason: VaultFalha }> {
+  const pasta = await pastaComPermissao("read");
+  if (!pasta.ok) return pasta;
+  try {
+    const fh = await arquivoDoCaminho(pasta.dir, path);
+    if (!fh) return { ok: false, reason: "not-found" };
+    return { ok: true, arquivo: await fh.getFile() };
+  } catch {
+    return { ok: false, reason: "not-found" };
+  }
+}
+
+/**
+ * O anexo existe na pasta? Só CONSULTA a permissão (`requestPermission` exige
+ * gesto do usuário e isto roda ao abrir o modal), e nunca chama `getFile()` —
+ * um PDF de 40 MB não deve ser lido só para acender um botão.
+ *
+ * "indeterminado" = não deu para saber (sem pasta, sem permissão, navegador sem
+ * suporte). Quem chama NÃO deve desabilitar nesse caso: o clique é um gesto e
+ * pode pedir a permissão que falta.
+ */
+export async function existeAnexoMemoria(
+  path: string,
+): Promise<"ok" | "ausente" | "indeterminado"> {
+  const pasta = await pastaViva();
+  if (!pasta.ok) return "indeterminado";
+  const handle = pasta.dir;
+  try {
+    const estado = handle.queryPermission
+      ? await handle.queryPermission({ mode: "read" })
+      : "granted";
+    if (estado !== "granted") return "indeterminado";
+    const fh = await arquivoDoCaminho(handle, path);
+    return fh ? "ok" : "ausente";
+  } catch {
+    return "ausente";
+  }
+}
+
+// ----------------------------------------------------------------------
 // Notas de PESSOAS criadas automaticamente.
 //
 // Uma ata cita participantes como [[Fulano]]. No grafo, um [[wikilink]] só vira
@@ -358,7 +443,14 @@ export async function garantirNotasDePessoas(
 export type WriteResult =
   // `texto` é o arquivo como ficou no disco (frontmatter + corpo) — quem grava
   // pode mandá-lo direto ao índice da IA sem reler a pasta.
-  | { ok: true; pasta: string; arquivo: string; texto: string }
+  | {
+      ok: true;
+      pasta: string;
+      arquivo: string;
+      texto: string;
+      /** Nome com que o arquivo original foi gravado, quando houve um. */
+      original?: string;
+    }
   | { ok: false; reason: "no-folder" | "denied" | "unsupported" | "error" };
 
 /**
@@ -372,6 +464,12 @@ export type WriteResult =
  * `anexos`: ele é gravado na mesma subpasta e embutido na nota como ![[…]] —
  * assim o grafo (que só lê .md) continua mostrando um nó para o conteúdo.
  *
+ * `original` é o arquivo que o usuário SUBIU e que deu origem à nota (o .docx
+ * de que a IA fez este resumo). Vai pelo mesmo caminho dos anexos, mas ganha
+ * também um ponteiro no frontmatter (`arquivo-original:`) — é isso que permite
+ * ao modal da nota exportar o arquivo-fonte depois, sem adivinhar qual dos
+ * irmãos na pasta é o original.
+ *
  * Devolve o resultado sem lançar — o chamador decide o feedback.
  */
 export async function escreverNotaMemoria(opts: {
@@ -380,6 +478,7 @@ export async function escreverNotaMemoria(opts: {
   conteudo: string;
   tags?: string[];
   anexos?: AnexoMemoria[];
+  original?: AnexoMemoria;
 }): Promise<WriteResult> {
   const pasta = await pastaViva();
   if (!pasta.ok) return pasta;
@@ -407,13 +506,22 @@ export async function escreverNotaMemoria(opts: {
 
     // Anexos primeiro: prefixados com a base da nota para não colidirem entre
     // ações diferentes que gerem, por exemplo, "imagem-1.png".
+    // O original entra no MESMO laço dos anexos para herdar o prefixo com a
+    // base da nota (anticolisão) e a limpeza que preserva a extensão.
+    const aGravar: { anexo: AnexoMemoria; ehOriginal: boolean }[] = [
+      ...(opts.anexos ?? []).map((anexo) => ({ anexo, ehOriginal: false })),
+      ...(opts.original ? [{ anexo: opts.original, ehOriginal: true }] : []),
+    ];
+
     const embeds: string[] = [];
-    for (const anexo of opts.anexos ?? []) {
+    let nomeOriginal: string | undefined;
+    for (const { anexo, ehOriginal } of aGravar) {
       const nome = nomeAnexo(`${base}-${anexo.nome}`);
       const fh = await dir.getFileHandle(nome, { create: true });
       const w = await fh.createWritable();
       await w.write(anexo.dados);
       await w.close();
+      if (ehOriginal) nomeOriginal = nome;
       // Mídia é embutida (![[…]]); os demais viram link para não poluir a nota.
       embeds.push(`${/\.(png|jpe?g|webp|gif|svg|mp4|webm|mp3|wav|m4a)$/i.test(nome) ? "!" : ""}[[${nome}]]`);
     }
@@ -425,13 +533,16 @@ export async function escreverNotaMemoria(opts: {
     const frontmatter =
       `---\ntítulo: ${opts.titulo.replace(/\n/g, " ").trim()}\n` +
       (tags.length ? `tags: [${tags.join(", ")}]\n` : "") +
+      // Ponteiro para o arquivo-fonte, lido por nomeDoOriginalNaNota. Chave
+      // ASCII de propósito: o leitor não precisa alternar acento.
+      (nomeOriginal ? `arquivo-original: ${nomeOriginal}\n` : "") +
       `---\n\n`;
     const corpo = [opts.conteudo.trim(), embeds.join("\n")].filter(Boolean).join("\n\n");
 
     const texto = frontmatter + corpo + "\n";
     await writable.write(texto);
     await writable.close();
-    return { ok: true, pasta: opts.subpasta, arquivo, texto };
+    return { ok: true, pasta: opts.subpasta, arquivo, texto, original: nomeOriginal };
   } catch {
     return { ok: false, reason: "error" };
   }

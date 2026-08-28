@@ -8,6 +8,7 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import {
+  ArrowDownTrayIcon,
   XMarkIcon,
   DocumentTextIcon,
   EyeIcon,
@@ -21,7 +22,12 @@ import { Badge, Button, Spinner } from "@/components/ui";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { MarkdownView } from "./MarkdownView";
 import {
+  caminhoIrmao,
+  existeAnexoMemoria,
+  lerAnexoMemoria,
   lerNotaMemoria,
+  memoriaVaultSupported,
+  nomeDoOriginalNaNota,
   salvarNotaMemoria,
   type VaultFalha,
 } from "@/utils/memoriaVault";
@@ -53,6 +59,10 @@ interface Props {
    * Vêm de fora porque a fonte é a camada de ENTIDADES do grafo (`extrairTags`,
    * que precisa do vault inteiro para medir recorrência) — não do frontmatter
    * do arquivo, que na prática só traz o tipo ("documento").
+   *
+   * Opcional: a lista do Repositório não passa. O botão de exportar o arquivo
+   * original NÃO depende disto — resolve tudo a partir de `path` e do
+   * frontmatter da própria nota.
    */
   tags?: string[];
   /** Avisa a tela do grafo que o arquivo mudou (para atualizar o rótulo do nó). */
@@ -69,6 +79,22 @@ const MOTIVO: Record<VaultFalha, string> = {
     "Arquivo não encontrado na pasta. Sincronize o Repositório e tente de novo.",
   error: "Não foi possível gravar o arquivo.",
 };
+
+// Falhas ao LER o arquivo original — o MOTIVO acima é redigido para gravação.
+const MOTIVO_ORIGINAL: Record<VaultFalha, string> = {
+  "no-folder":
+    "Escolha a pasta do Repositório (em “Sincronizar”) para exportar o arquivo original.",
+  denied:
+    "Permissão negada para ler a pasta do Repositório. Autorize o acesso e tente de novo.",
+  unsupported:
+    "Este navegador abre o Repositório como cópia somente leitura, sem os arquivos anexos. Use o Chrome.",
+  "not-found":
+    "O arquivo original não está mais na pasta — ele pode ter sido movido ou renomeado.",
+  error: "Não foi possível ler o arquivo original.",
+};
+
+const SEM_ORIGINAL =
+  "Sem arquivo original guardado — este conteúdo não veio de um upload.";
 
 // Título do frontmatter (mesma leitura do grafo) para atualizar o rótulo do nó.
 function tituloDoMd(texto: string, fallback: string): string {
@@ -111,6 +137,67 @@ export function NotaMemoriaModal({
   const carregando = isOpen && !!path && !pronto && !erro;
   const alterado = pronto && conteudo !== salvo!.texto;
 
+  // Exportar o arquivo original ------------------------------------------
+  // O ponteiro vem do texto EM DISCO (`salvo`), nunca do buffer do editor: se a
+  // edição voltar a ser possível, uma alteração não salva que apague o
+  // frontmatter não pode mudar o que se exporta.
+  const nomeOriginal = pronto ? nomeDoOriginalNaNota(salvo!.texto) : null;
+  const caminhoOriginal =
+    path && nomeOriginal ? caminhoIrmao(path, nomeOriginal) : null;
+
+  const semSuporte = !memoriaVaultSupported();
+  // Guarda o CAMINHO que se confirmou ausente, não um booleano — mesma proteção
+  // que `salvo`/`falha` usam: o modal é reaproveitado entre nós, e assim o
+  // resultado da nota anterior nunca vale para a próxima.
+  // Só "ausente" desabilita; "indeterminado" (sem pasta/permissão) não, porque o
+  // clique é o gesto que pode pedir a permissão que falta.
+  const [ausente, setAusente] = useState<string | null>(null);
+  const [baixando, setBaixando] = useState(false);
+  const anexoAusente = !!caminhoOriginal && ausente === caminhoOriginal;
+
+  useEffect(() => {
+    if (!isOpen || !caminhoOriginal || semSuporte) return;
+    let vivo = true;
+    existeAnexoMemoria(caminhoOriginal).then((r) => {
+      if (vivo && r === "ausente") setAusente(caminhoOriginal);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [isOpen, caminhoOriginal, semSuporte]);
+
+  const motivoBloqueio = !nomeOriginal
+    ? SEM_ORIGINAL
+    : semSuporte
+      ? MOTIVO_ORIGINAL.unsupported
+      : anexoAusente
+        ? MOTIVO_ORIGINAL["not-found"]
+        : "";
+  const podeExportar = !motivoBloqueio;
+
+  const exportarOriginal = async () => {
+    if (!caminhoOriginal || !nomeOriginal) return;
+    setBaixando(true);
+    try {
+      const r = await lerAnexoMemoria(caminhoOriginal);
+      if (!r.ok) {
+        if (r.reason === "not-found") setAusente(caminhoOriginal);
+        toast("Não foi possível exportar", {
+          description: MOTIVO_ORIGINAL[r.reason],
+        });
+        return;
+      }
+      const url = URL.createObjectURL(r.arquivo);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nomeOriginal;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBaixando(false);
+    }
+  };
+
   // Carrega o arquivo toda vez que um nó é aberto.
   useEffect(() => {
     if (!isOpen || !path) return;
@@ -134,6 +221,7 @@ export function NotaMemoriaModal({
     setFalha(null);
     setConteudo("");
     setModo("editar");
+    setAusente(null);
   };
 
   const fechar = useCallback(() => {
@@ -298,6 +386,40 @@ export function NotaMemoriaModal({
                         ))}
                       </div>
                     )}
+
+                    {/* Exportar o arquivo-fonte do upload (não o resumo da IA).
+                        Fica SEMPRE abaixo da faixa de tags: é um irmão depois
+                        dela na coluna, então continua no lugar mesmo quando a
+                        faixa não renderiza (é o caso da lista do Repositório).
+                        Visível mesmo sem original — desabilitado, com o motivo
+                        ao lado, porque tooltip em botão desabilitado não abre
+                        em vários navegadores nem existe no touch. */}
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <Button
+                        onClick={exportarOriginal}
+                        disabled={!podeExportar || baixando}
+                        aria-disabled={!podeExportar || baixando}
+                        variant="outlined"
+                        className="text-xs-plus h-8 gap-1.5 px-2.5"
+                        title={
+                          podeExportar
+                            ? `Exportar ${nomeOriginal}`
+                            : motivoBloqueio
+                        }
+                      >
+                        {baixando ? (
+                          <Spinner className="size-4" />
+                        ) : (
+                          <ArrowDownTrayIcon className="size-4" />
+                        )}
+                        Exportar arquivo original
+                      </Button>
+                      {!podeExportar && (
+                        <span className="dark:text-dark-300 text-tiny text-gray-400">
+                          {motivoBloqueio}
+                        </span>
+                      )}
+                    </div>
 
                     {modoEfetivo === "editar" ? (
                       <MemoriaTextarea

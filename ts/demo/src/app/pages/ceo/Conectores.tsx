@@ -1,5 +1,5 @@
 // Import Dependencies
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
 import {
@@ -36,8 +36,15 @@ import { useConnectorsContext } from "@/app/contexts/connectors/context";
 import {
   checkContaConectorApi,
   getOauthAuthorizeUrlApi,
+  salvarCredenciaisConectorApi,
   suportaTesteDeConexao,
+  type CredenciaisResumo,
 } from "@/services/api/conectores";
+import {
+  credenciaisDoConector,
+  exigeCredenciais,
+  labelDoCampo,
+} from "@/app/data/conector-credenciais";
 
 // ----------------------------------------------------------------------
 
@@ -45,13 +52,22 @@ type StatusFilter = "all" | "connected" | "available";
 
 const ALL = "all";
 
-function oauthErrMessage(err: unknown): string {
+/** Mensagem de erro da API, com um fallback por chamador. */
+function mensagemErro(err: unknown, fallback: string): string {
   if (typeof err === "string") return err;
   if (err && typeof err === "object" && "message" in err) {
     const m = (err as { message: unknown }).message;
+    if (Array.isArray(m) && typeof m[0] === "string") return m[0];
     if (typeof m === "string") return m;
   }
-  return "Não foi possível iniciar a autorização. Tente novamente.";
+  return fallback;
+}
+
+function oauthErrMessage(err: unknown): string {
+  return mensagemErro(
+    err,
+    "Não foi possível iniciar a autorização. Tente novamente.",
+  );
 }
 
 /** Logo do conector como monograma colorido a partir da cor da marca. */
@@ -94,6 +110,10 @@ export default function Conectores() {
   const [activeCategory, setActiveCategory] = useState<string>(ALL);
   const [status, setStatus] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<Connector | null>(null);
+  // Conector cujo formulário de credenciais está aberto (null = fechado).
+  const [credenciaisPara, setCredenciaisPara] = useState<Connector | null>(
+    null,
+  );
 
   // Estado de conexão compartilhado (persistido) — também lido pelo modal de
   // compartilhamento do Feed.
@@ -102,6 +122,8 @@ export default function Conectores() {
     isConnected,
     toggleConnection,
     getWorkspace,
+    getCredenciais,
+    aplicarCredenciais,
   } = useConnectorsContext();
 
   // Retorno do fluxo OAuth — o callback do backend devolve
@@ -140,6 +162,12 @@ export default function Conectores() {
           window.location.href = url;
         })
         .catch((err) => toast.error(oauthErrMessage(err)));
+      return;
+    }
+    // Conectores de credencial não têm consentimento no provedor: quem autoriza
+    // é o app que a empresa criou lá, então conectar é informar os dados dele.
+    if (exigeCredenciais(c.id) && !isConnected(c.id)) {
+      setCredenciaisPara(c);
       return;
     }
     toggleConnection(c.id);
@@ -400,8 +428,22 @@ export default function Conectores() {
         connector={selected}
         connected={selected ? isConnected(selected.id) : false}
         workspace={selected ? getWorkspace(selected.id) : null}
+        credenciais={selected ? getCredenciais(selected.id) : null}
         close={() => setSelected(null)}
         onToggle={() => selected && handleToggle(selected)}
+        onEditarCredenciais={() => selected && setCredenciaisPara(selected)}
+      />
+
+      <CredenciaisModal
+        key={credenciaisPara?.id ?? "nenhum"}
+        connector={credenciaisPara}
+        jaPreenchidos={
+          credenciaisPara
+            ? (getCredenciais(credenciaisPara.id)?.campos ?? [])
+            : []
+        }
+        close={() => setCredenciaisPara(null)}
+        onSaved={aplicarCredenciais}
       />
     </Page>
   );
@@ -605,14 +647,19 @@ function ConnectorDrawer({
   connector,
   connected,
   workspace,
+  credenciais,
   close,
   onToggle,
+  onEditarCredenciais,
 }: {
   connector: Connector | null;
   connected: boolean;
   workspace: string | null;
+  /** Campos de credencial preenchidos no servidor (nomes, nunca valores). */
+  credenciais: CredenciaisResumo | null;
   close: () => void;
   onToggle: () => void;
+  onEditarCredenciais: () => void;
 }) {
   const category = connector ? categoryById[connector.category] : undefined;
 
@@ -712,6 +759,40 @@ function ConnectorDrawer({
                   <TestarConexao conectorId={connector.id} />
                 )}
 
+                {/* Quais credenciais estão guardadas. Os valores não voltam do
+                    servidor, então listamos só os rótulos dos campos. */}
+                {connected && exigeCredenciais(connector.id) && (
+                  <div className="dark:border-dark-600 dark:bg-dark-800 mt-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
+                    <p className="dark:text-dark-200 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+                      Credenciais
+                    </p>
+                    {credenciais && credenciais.campos.length > 0 ? (
+                      <ul className="mt-2 space-y-1">
+                        {credenciais.campos.map((campoId) => (
+                          <li
+                            key={campoId}
+                            className="dark:text-dark-100 text-xs-plus flex items-center gap-2 text-gray-600"
+                          >
+                            <CheckIcon className="size-3.5 shrink-0 text-emerald-500" />
+                            {labelDoCampo(connector.id, campoId)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-500">
+                        Conectado sem credenciais guardadas neste servidor.
+                      </p>
+                    )}
+                    <Button
+                      variant="outlined"
+                      className="text-xs-plus mt-3 h-9 w-full rounded-lg"
+                      onClick={onEditarCredenciais}
+                    >
+                      Atualizar credenciais
+                    </Button>
+                  </div>
+                )}
+
                 <div className="mt-5">
                   <p className="dark:text-dark-200 text-xs font-semibold tracking-wider text-gray-500 uppercase">
                     Ações e permissões
@@ -751,6 +832,201 @@ function ConnectorDrawer({
               </div>
             </>
           )}
+        </TransitionChild>
+      </Dialog>
+    </Transition>
+  );
+}
+
+// ----------------------------------------------------------------------
+
+/**
+ * Formulário de credenciais do conector.
+ *
+ * Os campos vêm de `conector-credenciais.ts` — cada provedor pede o que o
+ * painel dele fornece (Client ID/Secret no Google, Tenant/Client na Microsoft,
+ * Phone Number ID e token na Meta). Só o servidor guarda os valores, e ele
+ * nunca os devolve: reabrir o formulário mostra os campos em branco, com a
+ * lista do que já está preenchido no painel do conector.
+ */
+function CredenciaisModal({
+  connector,
+  jaPreenchidos,
+  close,
+  onSaved,
+}: {
+  connector: Connector | null;
+  /** Ids dos campos já guardados no servidor (para rotular a atualização). */
+  jaPreenchidos: string[];
+  close: () => void;
+  onSaved: (id: string, resumo: CredenciaisResumo | null) => void;
+}) {
+  const spec = connector ? credenciaisDoConector(connector.id) : undefined;
+  // Nasce vazio a cada montagem: o formulário nunca é pré-carregado com os
+  // valores atuais porque o servidor não os devolve — por design. Quem troca a
+  // instância é a `key` no call site, o que dispensa efeito de reset.
+  const [valores, setValores] = useState<Record<string, string>>({});
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  if (!connector || !spec) return null;
+
+  const atualizando = jaPreenchidos.length > 0;
+
+  const salvar = async () => {
+    setErro(null);
+
+    const faltando = spec.campos.filter(
+      (c) => c.obrigatorio && !(valores[c.id] ?? "").trim(),
+    );
+    if (faltando.length > 0) {
+      setErro(
+        `Preencha: ${faltando.map((c) => c.label).join(", ")}.`,
+      );
+      return;
+    }
+
+    // URL é conferida aqui para o erro aparecer no campo certo, em vez de voltar
+    // como 400 genérico do servidor.
+    const urlInvalida = spec.campos.find((c) => {
+      const v = (valores[c.id] ?? "").trim();
+      if (c.tipo !== "url" || !v) return false;
+      try {
+        return !/^https?:$/.test(new URL(v).protocol);
+      } catch {
+        return true;
+      }
+    });
+    if (urlInvalida) {
+      setErro(`${urlInvalida.label}: informe uma URL http(s) válida.`);
+      return;
+    }
+
+    const campos: Record<string, string> = {};
+    for (const c of spec.campos) {
+      const v = (valores[c.id] ?? "").trim();
+      if (v) campos[c.id] = v;
+    }
+
+    setSalvando(true);
+    try {
+      const status = await salvarCredenciaisConectorApi(connector.id, campos);
+      onSaved(connector.id, status.credenciais);
+      toast.success(
+        atualizando
+          ? `Credenciais do ${connector.name} atualizadas.`
+          : `${connector.name} conectado.`,
+      );
+      close();
+    } catch (err) {
+      setErro(
+        mensagemErro(err, "Não foi possível salvar as credenciais."),
+      );
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  return (
+    <Transition appear show={!!connector} as={Fragment}>
+      <Dialog
+        as="div"
+        className="fixed inset-0 z-100 flex flex-col items-center justify-center overflow-hidden px-4 py-6 sm:px-5"
+        onClose={() => {
+          if (!salvando) close();
+        }}
+      >
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="absolute inset-0 bg-gray-900/50 transition-opacity dark:bg-black/40" />
+        </TransitionChild>
+
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <DialogPanel className="scrollbar-sm dark:bg-dark-700 relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white px-5 py-6">
+            <div className="flex items-start gap-3">
+              <ConnectorLogo connector={connector} />
+              <div className="min-w-0">
+                <DialogTitle className="dark:text-dark-100 text-base font-semibold text-gray-800">
+                  {atualizando
+                    ? `Atualizar credenciais · ${connector.name}`
+                    : `Conectar ${connector.name}`}
+                </DialogTitle>
+                <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
+                  {spec.origem}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {spec.campos.map((campo) => (
+                <label key={campo.id} className="block text-sm">
+                  <span className="dark:text-dark-200 mb-1 flex items-center gap-1.5 font-medium text-gray-600">
+                    {campo.label}
+                    {!campo.obrigatorio && (
+                      <span className="dark:text-dark-300 text-tiny font-normal text-gray-400">
+                        (opcional)
+                      </span>
+                    )}
+                  </span>
+                  <input
+                    type={campo.tipo === "senha" ? "password" : "text"}
+                    inputMode={campo.tipo === "url" ? "url" : undefined}
+                    value={valores[campo.id] ?? ""}
+                    onChange={(e) =>
+                      setValores((prev) => ({
+                        ...prev,
+                        [campo.id]: e.target.value,
+                      }))
+                    }
+                    placeholder={campo.placeholder}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="form-input dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 focus:border-primary-500 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  {campo.ajuda && (
+                    <span className="dark:text-dark-300 text-tiny mt-1 block text-gray-400">
+                      {campo.ajuda}
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+
+            {erro && <p className="text-error mt-3 text-sm">{erro}</p>}
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <Button variant="outlined" onClick={close} disabled={salvando}>
+                Cancelar
+              </Button>
+              <Button color="primary" onClick={salvar} disabled={salvando}>
+                {salvando
+                  ? "Salvando…"
+                  : atualizando
+                    ? "Salvar credenciais"
+                    : "Conectar"}
+              </Button>
+            </div>
+
+            <p className="dark:text-dark-300 mt-3 inline-flex items-center gap-1 text-xs text-gray-400">
+              <ShieldCheckIcon className="size-4" />
+              Credenciais criptografadas no servidor e nunca exibidas de volta
+            </p>
+          </DialogPanel>
         </TransitionChild>
       </Dialog>
     </Transition>

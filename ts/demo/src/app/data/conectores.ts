@@ -59,10 +59,10 @@ export interface Connector {
 
 const connectorCatalog: Connector[] = [
   // Comunicação
-  { id: "teams", rank: 1, name: "Microsoft Teams", category: "comunicacao", objective: "Comunicação corporativa", permissions: ["Ler usuários", "Enviar mensagens", "Criar reuniões", "Acessar calendário", "Criar canais", "Ler grupos"], brand: "#4f52b2", initials: "T", connectedByDefault: true },
+  { id: "teams", rank: 1, name: "Microsoft Teams", category: "comunicacao", objective: "Comunicação corporativa", permissions: ["Ler usuários", "Enviar mensagens", "Criar reuniões", "Acessar calendário", "Criar canais", "Ler grupos"], brand: "#4f52b2", initials: "T" },
   { id: "slack", rank: 2, name: "Slack", category: "comunicacao", objective: "Comunicação entre squads", permissions: ["Ler canais", "Enviar mensagens", "Criar bots", "Acessar usuários", "Publicar notificações"], brand: "#611f69", initials: "S", oauth: true },
   { id: "zoom", rank: 4, name: "Zoom", category: "comunicacao", objective: "Reuniões online", permissions: ["Criar reuniões", "Acessar participantes", "Gravar reuniões"], brand: "#2d8cff", initials: "Z" },
-  { id: "whatsapp", rank: 5, name: "WhatsApp Business", category: "comunicacao", objective: "Comunicação e IA", permissions: ["Enviar mensagens", "Receber mensagens", "Criar fluxos IA", "Acessar templates"], brand: "#25d366", initials: "W", connectedByDefault: true },
+  { id: "whatsapp", rank: 5, name: "WhatsApp Business", category: "comunicacao", objective: "Comunicação e IA", permissions: ["Enviar mensagens", "Receber mensagens", "Criar fluxos IA", "Acessar templates"], brand: "#25d366", initials: "W" },
   { id: "linkedin-pages", rank: 51, name: "LinkedIn", category: "comunicacao", objective: "Publicação em redes sociais", permissions: ["Publicar posts", "Agendar publicações", "Compartilhar artigos"], brand: "#0a66c2", initials: "in", isNew: true },
   { id: "facebook", rank: 52, name: "Facebook", category: "comunicacao", objective: "Publicação em páginas", permissions: ["Publicar posts", "Agendar publicações", "Enviar mensagens"], brand: "#1877f2", initials: "f", isNew: true },
   { id: "instagram", rank: 53, name: "Instagram", category: "comunicacao", objective: "Publicação em redes sociais", permissions: ["Publicar posts", "Publicar stories", "Enviar mensagens diretas"], brand: "#e4405f", initials: "Ig", isNew: true },
@@ -101,6 +101,8 @@ const connectorCatalog: Connector[] = [
 
   // Produtividade & Projetos
   { id: "google-workspace", rank: 3, name: "Google Workspace", category: "produtividade", objective: "Produtividade e colaboração", permissions: ["Login SSO", "Acessar agenda", "Criar eventos", "Ler diretório", "Acessar Drive"], brand: "#1a73e8", initials: "G", connectedByDefault: true },
+  { id: "google-drive", rank: 57, name: "Google Drive", category: "produtividade", objective: "Arquivos e documentos", permissions: ["Listar arquivos", "Ler arquivos", "Enviar arquivos", "Acessar pastas compartilhadas"], brand: "#1fa463", initials: "GD", isNew: true },
+  { id: "onedrive", rank: 58, name: "OneDrive", category: "produtividade", objective: "Arquivos corporativos (Microsoft 365)", permissions: ["Listar arquivos", "Ler arquivos", "Enviar arquivos", "Acessar bibliotecas do SharePoint"], brand: "#0078d4", initials: "OD", isNew: true },
   { id: "clickup", rank: 25, name: "ClickUp", category: "produtividade", objective: "Produtividade", permissions: ["Criar tarefas", "Atualizar status", "Ler projetos"], brand: "#7b68ee", initials: "CU" },
   { id: "jira", rank: 26, name: "Jira", category: "produtividade", objective: "Gestão ágil", permissions: ["Criar issues", "Acessar backlog", "Sincronizar sprint"], brand: "#0052cc", initials: "J" },
   { id: "trello", rank: 27, name: "Trello", category: "produtividade", objective: "Gestão visual", permissions: ["Criar cards", "Mover etapas", "Ler boards"], brand: "#0079bf", initials: "Tr" },
@@ -141,6 +143,7 @@ const connectorCatalog: Connector[] = [
 
   // Conteúdo
   { id: "video", rank: 50, name: "Vimeo / YouTube", category: "conteudo", objective: "Conteúdo", permissions: ["Publicar vídeos", "Incorporar treinamentos"], brand: "#ff0000", initials: "▶", isNew: true },
+  { id: "youtube", rank: 59, name: "YouTube", category: "conteudo", objective: "Vídeos e treinamentos", permissions: ["Publicar vídeos", "Ler estatísticas do canal", "Gerenciar playlists"], brand: "#ff0000", initials: "YT", isNew: true },
 ];
 
 // ----------------------------------------------------------------------
@@ -153,6 +156,13 @@ export const VISIBLE_CONNECTOR_IDS: string[] = [
   "gmail",
   "slack",
   "google-calendar",
+  // Conectam por formulário de credenciais (ver conector-credenciais.ts):
+  "teams",
+  "whatsapp",
+  "google-drive",
+  "onedrive",
+  "youtube",
+  "zapier",
 ];
 
 /** Conectores exibidos no produto, na ordem do catálogo. */

@@ -1,4 +1,5 @@
 import { createSafeContext } from "@/utils/createSafeContext";
+import type { CredenciaisResumo } from "@/services/api/conectores";
 
 // ----------------------------------------------------------------------
 
@@ -12,6 +13,16 @@ export interface ConnectorsContextValue {
   toggleConnection: (id: string) => void;
   /** Workspace/conta autorizada via OAuth (ex.: time do Slack), se houver. */
   getWorkspace: (id: string) => string | null;
+  /**
+   * Quais campos de credencial estão preenchidos no servidor (Teams, WhatsApp,
+   * Drive, OneDrive, YouTube, Zapier). Nunca contém valores.
+   */
+  getCredenciais: (id: string) => CredenciaisResumo | null;
+  /**
+   * Registra o resultado de um salvamento de credenciais: marca conectado e
+   * guarda o resumo, sem esperar um novo GET /conectores.
+   */
+  aplicarCredenciais: (id: string, resumo: CredenciaisResumo | null) => void;
 }
 
 export const [ConnectorsContext, useConnectorsContext] =

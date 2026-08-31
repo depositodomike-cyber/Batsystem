@@ -5,6 +5,12 @@ import axios from "@/utils/axios";
 // daqui só consumimos o ESTADO de conexão por empresa — o mesmo lido e
 // alterado pelo servidor MCP (/mcp).
 
+/** Credenciais de formulário: só os NOMES dos campos, nunca os valores. */
+export interface CredenciaisResumo {
+  campos: string[];
+  atualizadoEm: string | null;
+}
+
 export interface ConectorStatus {
   id: string;
   connected: boolean;
@@ -13,11 +19,34 @@ export interface ConectorStatus {
   workspace: string | null;
   /** True quando há credenciais OAuth reais (não só o toggle de estado). */
   hasCredentials: boolean;
+  /**
+   * Credenciais informadas por formulário (Teams, WhatsApp, Drive, OneDrive,
+   * YouTube, Zapier), quando houver. `null` nos demais. O servidor devolve
+   * apenas quais campos estão preenchidos — valor nenhum volta.
+   */
+  credenciais: CredenciaisResumo | null;
 }
 
 /** Estado de conexão de todos os conectores da empresa. */
 export async function fetchConectoresApi(): Promise<ConectorStatus[]> {
   const { data } = await axios.get<ConectorStatus[]>("/conectores");
+  return data;
+}
+
+/**
+ * Grava as credenciais do conector e o ativa.
+ *
+ * Substitui o conjunto inteiro de campos — o formulário sempre envia todos.
+ * O servidor recusa (400) id de campo fora da spec e obrigatório em branco.
+ */
+export async function salvarCredenciaisConectorApi(
+  id: string,
+  campos: Record<string, string>,
+): Promise<ConectorStatus> {
+  const { data } = await axios.put<ConectorStatus>(
+    `/conectores/${encodeURIComponent(id)}/credenciais`,
+    { campos },
+  );
   return data;
 }
 

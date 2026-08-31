@@ -1,13 +1,16 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { ConectoresService } from './conectores.service';
+import { SalvarCredenciaisDto } from './dto/credenciais.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -42,6 +45,23 @@ export class ConectoresController {
   @Post(':id/conectar')
   connect(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.conectores.connect(user.empresaId, id, 'app');
+  }
+
+  /**
+   * PUT /conectores/:id/credenciais → grava as credenciais de formulário e
+   * ativa o conector (Google Drive, Teams, OneDrive, WhatsApp, YouTube,
+   * Zapier). PUT, e não POST, porque substitui o conjunto inteiro de campos.
+   *
+   * A resposta traz apenas os NOMES dos campos preenchidos: valor de credencial
+   * nunca sai da API.
+   */
+  @Put(':id/credenciais')
+  salvarCredenciais(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SalvarCredenciaisDto,
+  ) {
+    return this.conectores.salvarCredenciais(user.empresaId, id, dto.campos);
   }
 
   @Delete(':id')

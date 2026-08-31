@@ -82,6 +82,8 @@ export const connectors: Connector[] = [
 
   // Produtividade & Projetos
   { id: 'google-workspace', rank: 3, name: 'Google Workspace', category: 'produtividade', objective: 'Produtividade e colaboração', permissions: ['Login SSO', 'Acessar agenda', 'Criar eventos', 'Ler diretório', 'Acessar Drive'] },
+  { id: 'google-drive', rank: 57, name: 'Google Drive', category: 'produtividade', objective: 'Arquivos e documentos', permissions: ['Listar arquivos', 'Ler arquivos', 'Enviar arquivos', 'Acessar pastas compartilhadas'] },
+  { id: 'onedrive', rank: 58, name: 'OneDrive', category: 'produtividade', objective: 'Arquivos corporativos (Microsoft 365)', permissions: ['Listar arquivos', 'Ler arquivos', 'Enviar arquivos', 'Acessar bibliotecas do SharePoint'] },
   { id: 'clickup', rank: 25, name: 'ClickUp', category: 'produtividade', objective: 'Produtividade', permissions: ['Criar tarefas', 'Atualizar status', 'Ler projetos'] },
   { id: 'jira', rank: 26, name: 'Jira', category: 'produtividade', objective: 'Gestão ágil', permissions: ['Criar issues', 'Acessar backlog', 'Sincronizar sprint'] },
   { id: 'trello', rank: 27, name: 'Trello', category: 'produtividade', objective: 'Gestão visual', permissions: ['Criar cards', 'Mover etapas', 'Ler boards'] },
@@ -122,6 +124,7 @@ export const connectors: Connector[] = [
 
   // Conteúdo
   { id: 'video', rank: 50, name: 'Vimeo / YouTube', category: 'conteudo', objective: 'Conteúdo', permissions: ['Publicar vídeos', 'Incorporar treinamentos'] },
+  { id: 'youtube', rank: 59, name: 'YouTube', category: 'conteudo', objective: 'Vídeos e treinamentos', permissions: ['Publicar vídeos', 'Ler estatísticas do canal', 'Gerenciar playlists'] },
 ];
 
 const connectorById = new Map(connectors.map((c) => [c.id, c]));

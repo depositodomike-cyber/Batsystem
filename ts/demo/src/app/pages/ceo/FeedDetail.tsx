@@ -1,6 +1,12 @@
 // Import Dependencies
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Link, Navigate, useLocation, useParams } from "react-router";
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router";
 import {
   Dialog,
   DialogPanel,
@@ -47,6 +53,7 @@ import {
   shareableConnectors,
   type Connector,
 } from "@/app/data/conectores";
+import { exigeCredenciais } from "@/app/data/conector-credenciais";
 import { INSIGHT_USUARIOS, type InsightUser } from "@/app/data/insights";
 import { useLikesContext } from "@/app/contexts/likes/context";
 import { useCommentsContext } from "@/app/contexts/comments/context";
@@ -755,6 +762,8 @@ function ShareModal({
 }) {
   const targets = useMemo(shareableConnectors, []);
   const { isConnected, connect } = useConnectorsContext();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [sharedIds, setSharedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   // Sub-tela de seleção de pessoa para o Chat da plataforma.
@@ -942,11 +951,23 @@ function ShareModal({
                     <button
                       key={connector.id}
                       type="button"
-                      onClick={() =>
-                        connected
-                          ? handleShare(connector)
-                          : connect(connector.id)
-                      }
+                      onClick={() => {
+                        if (connected) {
+                          handleShare(connector);
+                          return;
+                        }
+                        // Teams e WhatsApp conectam informando as credenciais do
+                        // app da empresa no provedor — o que só a tela de
+                        // Conectores pede. Ligar aqui marcaria conectado sem
+                        // credencial nenhuma.
+                        if (exigeCredenciais(connector.id)) {
+                          navigate(
+                            `/${getCurrentProduct(pathname).code}/conectores`,
+                          );
+                          return;
+                        }
+                        connect(connector.id);
+                      }}
                       disabled={shared}
                       className="dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 disabled:cursor-default"
                     >
@@ -957,7 +978,9 @@ function ShareModal({
                         </p>
                         <p className="dark:text-dark-300 text-tiny text-gray-400">
                           {!connected
-                            ? "Conecte para compartilhar"
+                            ? exigeCredenciais(connector.id)
+                              ? "Configure as credenciais para compartilhar"
+                              : "Conecte para compartilhar"
                             : kind === "post"
                               ? "Publicar como postagem"
                               : "Enviar como mensagem"}
@@ -966,7 +989,9 @@ function ShareModal({
                       {!connected ? (
                         <span className="border-primary-200 text-primary-600 dark:border-primary-500/40 dark:text-primary-300 inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 text-xs-plus font-semibold">
                           <PlusIcon className="size-3.5" />
-                          Conectar
+                          {exigeCredenciais(connector.id)
+                            ? "Configurar"
+                            : "Conectar"}
                         </span>
                       ) : shared ? (
                         <span className="inline-flex shrink-0 items-center gap-1 text-xs-plus font-medium text-emerald-600 dark:text-emerald-400">

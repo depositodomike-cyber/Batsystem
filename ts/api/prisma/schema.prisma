@@ -584,6 +584,16 @@ model EmpresaConector {
   /// Scopes do token de usuário, separados por vírgula.
   userScopes           String?
 
+  // --- Credenciais informadas por formulário (conectores sem OAuth próprio:
+  // Google Drive, Teams, OneDrive, WhatsApp, YouTube, Zapier) ---
+  /// JSON { campo: valor } criptografado (AES-256-GCM, o mesmo CryptoService
+  /// das chaves de IA). NUNCA exposto: a API devolve apenas os NOMES dos campos
+  /// preenchidos. Os ids válidos por conector estão em
+  /// src/conectores/credenciais-spec.ts.
+  credenciaisEncrypted String?
+  /// Quando as credenciais foram gravadas pela última vez.
+  credenciaisAtualizadoEm DateTime?
+
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@unique([empresaId, connectorId])

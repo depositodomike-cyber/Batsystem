@@ -6,6 +6,7 @@ import {
   connectConectorApi,
   disconnectConectorApi,
   fetchConectoresApi,
+  type CredenciaisResumo,
 } from "@/services/api/conectores";
 import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
 import { ConnectorsContext, type ConnectorsContextValue } from "./context";
@@ -47,6 +48,12 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
   const [connectedIds, setConnectedIds] = useState<Set<string>>(loadConnected);
   // id → nome do workspace autorizado via OAuth (só vem do servidor).
   const [workspaces, setWorkspaces] = useState<Record<string, string>>({});
+  // id → quais campos de credencial estão preenchidos (nomes, nunca valores).
+  // Não vai para o localStorage: é estado do servidor, e cachear "tem
+  // credencial" localmente mostraria conectado o que o servidor não confirma.
+  const [credenciais, setCredenciais] = useState<
+    Record<string, CredenciaisResumo>
+  >({});
 
   // Sincroniza com o servidor após autenticar; servidor ganha do cache.
   useEffect(() => {
@@ -63,6 +70,13 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
             items
               .filter((c) => c.workspace)
               .map((c) => [c.id, c.workspace as string]),
+          ),
+        );
+        setCredenciais(
+          Object.fromEntries(
+            items
+              .filter((c) => c.credenciais)
+              .map((c) => [c.id, c.credenciais as CredenciaisResumo]),
           ),
         );
       })
@@ -103,8 +117,15 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
         return next;
       });
       if (!connect) {
-        // Desconectar também descarta credenciais OAuth no servidor.
+        // Desconectar também descarta credenciais no servidor (a linha de
+        // empresa_conectores é apagada), então o resumo local vai com ela.
         setWorkspaces((prev) => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        setCredenciais((prev) => {
           if (!(id in prev)) return prev;
           const next = { ...prev };
           delete next[id];
@@ -138,6 +159,28 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
     [workspaces],
   );
 
+  const getCredenciais = useCallback(
+    (id: string) => credenciais[id] ?? null,
+    [credenciais],
+  );
+
+  const aplicarCredenciais = useCallback(
+    (id: string, resumo: CredenciaisResumo | null) => {
+      setCredenciais((prev) => {
+        const next = { ...prev };
+        if (resumo) next[id] = resumo;
+        else delete next[id];
+        return next;
+      });
+      // Salvar credenciais é o que conecta estes conectores: o servidor já fez
+      // o upsert, então aqui é só refletir na UI.
+      if (resumo) {
+        setConnectedIds((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+      }
+    },
+    [],
+  );
+
   const value = useMemo<ConnectorsContextValue>(
     () => ({
       connectedIds,
@@ -146,8 +189,19 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
       disconnect,
       toggleConnection,
       getWorkspace,
+      getCredenciais,
+      aplicarCredenciais,
     }),
-    [connectedIds, isConnected, connect, disconnect, toggleConnection, getWorkspace],
+    [
+      connectedIds,
+      isConnected,
+      connect,
+      disconnect,
+      toggleConnection,
+      getWorkspace,
+      getCredenciais,
+      aplicarCredenciais,
+    ],
   );
 
   return (

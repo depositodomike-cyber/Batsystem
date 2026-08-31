@@ -29,6 +29,11 @@ import {
   systemAreaPath,
 } from "@/app/navigation/ceoOs";
 import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
+import {
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+  type TemporarilyDisabledFeature,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -53,6 +58,20 @@ const FEATURES: Feature[] = [
   { slug: "organograma", label: "Organograma", Icon: ShareIcon, tint: "text-indigo-500" },
   { slug: "tour", label: "Tour", Icon: MapIcon, tint: "text-emerald-500" },
 ];
+
+// Funcionalidades cuja tela está temporariamente desligada. O card e o ícone
+// fixado continuam visíveis, opacos e sem clique — mesmo padrão do menu
+// superior (ver SystemAreaLink no Header).
+const FEATURE_FLAG_BY_SLUG: Partial<
+  Record<string, TemporarilyDisabledFeature>
+> = {
+  conectores: "connectors",
+};
+
+function isFeatureOff(slug: string): boolean {
+  const feature = FEATURE_FLAG_BY_SLUG[slug];
+  return feature != null && isFeatureTemporarilyDisabled(feature);
+}
 
 // v3: nenhum item vem fixado por padrão — o usuário fixa clicando no alfinete.
 const STORAGE_BASE = "ceo-pinned-features-v3";
@@ -131,6 +150,7 @@ export function Funcionalidades() {
   const pinnedFeatures = FEATURES.filter((f) => effectivePinned.includes(f.slug));
 
   const goTo = (slug: string) => {
+    if (isFeatureOff(slug)) return;
     navigate(systemAreaPath(productCode, slug));
     close();
   };
@@ -138,24 +158,39 @@ export function Funcionalidades() {
   return (
     <>
       {/* Itens fixados no menu superior */}
-      {pinnedFeatures.map(({ slug, label, Icon }) => (
-        <NavLink
-          key={slug}
-          to={systemAreaPath(productCode, slug)}
-          title={label}
-          aria-label={label}
-          className={({ isActive }) =>
-            clsx(
-              "grid size-9 place-items-center rounded-lg outline-hidden transition-colors",
-              isActive
-                ? "text-primary-600 dark:text-primary-400 bg-primary-600/10 dark:bg-primary-400/10"
-                : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900",
-            )
-          }
-        >
-          <Icon className="size-5 stroke-[1.5]" />
-        </NavLink>
-      ))}
+      {pinnedFeatures.map(({ slug, label, Icon }) =>
+        isFeatureOff(slug) ? (
+          <span
+            key={slug}
+            aria-disabled="true"
+            title={label}
+            aria-label={label}
+            className={clsx(
+              "dark:text-dark-200 grid size-9 place-items-center rounded-lg text-gray-500 outline-hidden",
+              DISABLED_MENU_CLASS,
+            )}
+          >
+            <Icon className="size-5 stroke-[1.5]" />
+          </span>
+        ) : (
+          <NavLink
+            key={slug}
+            to={systemAreaPath(productCode, slug)}
+            title={label}
+            aria-label={label}
+            className={({ isActive }) =>
+              clsx(
+                "grid size-9 place-items-center rounded-lg outline-hidden transition-colors",
+                isActive
+                  ? "text-primary-600 dark:text-primary-400 bg-primary-600/10 dark:bg-primary-400/10"
+                  : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 text-gray-500 hover:bg-gray-100 hover:text-gray-900",
+              )
+            }
+          >
+            <Icon className="size-5 stroke-[1.5]" />
+          </NavLink>
+        ),
+      )}
 
       {/* Gatilho do menu Funcionalidades */}
       <Button
@@ -250,6 +285,9 @@ function FuncionalidadesPanel({
               {FEATURES.map(({ slug, label, Icon, tint }) => {
                 const isPinned = pinned.includes(slug);
                 const isForced = FORCED_PINNED.includes(slug);
+                // O alfinete segue ativo de propósito: dá para desafixar um
+                // item que ficou desligado depois de fixado.
+                const off = isFeatureOff(slug);
                 return (
                   <div
                     key={slug}
@@ -291,7 +329,13 @@ function FuncionalidadesPanel({
                     <button
                       type="button"
                       onClick={() => onOpenFeature(slug)}
-                      className="flex flex-col items-center gap-2 outline-hidden"
+                      disabled={off}
+                      aria-disabled={off}
+                      title={off ? `${label} — em breve` : undefined}
+                      className={clsx(
+                        "flex flex-col items-center gap-2 outline-hidden",
+                        off && DISABLED_MENU_CLASS,
+                      )}
                     >
                       <span
                         className={clsx(

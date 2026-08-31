@@ -50,9 +50,10 @@ export const TEMPORARILY_DISABLED: Record<
   email: true,
   slack: true,
   calendar: true,
-  // Conectores REATIVADO: o ícone de link no header volta a ser clicável e
-  // /:produto/conectores renderiza a tela normalmente.
-  connectors: false,
+  // true = Conectores inacessível pela UI: o ícone de link no header e o card
+  // no menu "Funcionalidades" ficam visíveis, opacos e sem clique. A tela
+  // (Conectores.tsx) e a rota /:produto/conectores seguem intactas.
+  connectors: true,
   notifications: true,
   settingsAppearance: true,
   settingsVoice: true,

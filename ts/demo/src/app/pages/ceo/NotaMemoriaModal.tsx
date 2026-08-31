@@ -174,6 +174,9 @@ export function NotaMemoriaModal({
         ? MOTIVO_ORIGINAL["not-found"]
         : "";
   const podeExportar = !motivoBloqueio;
+  // Enquanto lê (ou se falhou), não há nota da qual exportar: mesma condição do
+  // corpo, que nesses estados mostra o spinner/erro em vez do conteúdo.
+  const mostrarExportar = !carregando && !erro;
 
   const exportarOriginal = async () => {
     if (!caminhoOriginal || !nomeOriginal) return;
@@ -387,40 +390,6 @@ export function NotaMemoriaModal({
                       </div>
                     )}
 
-                    {/* Exportar o arquivo-fonte do upload (não o resumo da IA).
-                        Fica SEMPRE abaixo da faixa de tags: é um irmão depois
-                        dela na coluna, então continua no lugar mesmo quando a
-                        faixa não renderiza (é o caso da lista do Repositório).
-                        Visível mesmo sem original — desabilitado, com o motivo
-                        ao lado, porque tooltip em botão desabilitado não abre
-                        em vários navegadores nem existe no touch. */}
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <Button
-                        onClick={exportarOriginal}
-                        disabled={!podeExportar || baixando}
-                        aria-disabled={!podeExportar || baixando}
-                        variant="outlined"
-                        className="text-xs-plus h-8 gap-1.5 px-2.5"
-                        title={
-                          podeExportar
-                            ? `Exportar ${nomeOriginal}`
-                            : motivoBloqueio
-                        }
-                      >
-                        {baixando ? (
-                          <Spinner className="size-4" />
-                        ) : (
-                          <ArrowDownTrayIcon className="size-4" />
-                        )}
-                        Exportar arquivo original
-                      </Button>
-                      {!podeExportar && (
-                        <span className="dark:text-dark-300 text-tiny text-gray-400">
-                          {motivoBloqueio}
-                        </span>
-                      )}
-                    </div>
-
                     {modoEfetivo === "editar" ? (
                       <MemoriaTextarea
                         autoFocus
@@ -438,21 +407,59 @@ export function NotaMemoriaModal({
                 )}
               </div>
 
-              <div className="dark:border-dark-600 flex shrink-0 items-center justify-end gap-2 border-t border-gray-200 px-5 py-3">
-                <Button variant="outlined" onClick={fechar} disabled={salvando}>
-                  Fechar
-                </Button>
-                {!SEM_EDICAO && (
-                  <Button
-                    color="primary"
-                    onClick={salvar}
-                    disabled={!alterado || salvando || carregando || !!erro}
-                    className="gap-1.5"
-                  >
-                    {salvando && <Spinner className="size-4" />}
-                    {salvando ? "Salvando…" : "Salvar"}
-                  </Button>
+              <div className="dark:border-dark-600 flex shrink-0 items-center gap-3 border-t border-gray-200 px-5 py-3">
+                {/* Motivo do bloqueio à esquerda, na mesma linha do rodapé:
+                    tooltip em botão desabilitado não abre em vários navegadores
+                    nem existe no touch. */}
+                {mostrarExportar && !podeExportar && (
+                  <span className="dark:text-dark-300 text-tiny min-w-0 flex-1 text-gray-400">
+                    {motivoBloqueio}
+                  </span>
                 )}
+                {/* Exportar o arquivo-fonte do upload (não o resumo da IA).
+                    Fica no rodapé, à esquerda de "Fechar" — `ml-auto` mantém o
+                    grupo à direita mesmo quando o motivo acima não renderiza. */}
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  {mostrarExportar && (
+                    <Button
+                      onClick={exportarOriginal}
+                      disabled={!podeExportar || baixando}
+                      aria-disabled={!podeExportar || baixando}
+                      variant="outlined"
+                      className="gap-1.5"
+                      title={
+                        podeExportar
+                          ? `Exportar ${nomeOriginal}`
+                          : motivoBloqueio
+                      }
+                    >
+                      {baixando ? (
+                        <Spinner className="size-4" />
+                      ) : (
+                        <ArrowDownTrayIcon className="size-4" />
+                      )}
+                      Exportar arquivo original
+                    </Button>
+                  )}
+                  <Button
+                    variant="outlined"
+                    onClick={fechar}
+                    disabled={salvando}
+                  >
+                    Fechar
+                  </Button>
+                  {!SEM_EDICAO && (
+                    <Button
+                      color="primary"
+                      onClick={salvar}
+                      disabled={!alterado || salvando || carregando || !!erro}
+                      className="gap-1.5"
+                    >
+                      {salvando && <Spinner className="size-4" />}
+                      {salvando ? "Salvando…" : "Salvar"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </DialogPanel>
           </TransitionChild>

@@ -141,6 +141,33 @@ function ehDragDaModalidade(
   return data.tipo === DRAG_TIPO && data.modalidade === modalidade;
 }
 
+/**
+ * Falha de carga, no lugar de uma lista vazia.
+ *
+ * Antes um erro ao listar caía em `[]` sem aviso, e "não tem nada cadastrado"
+ * ficava indistinguível de "não consegui perguntar" — é o que fazia a chave
+ * parecer que conectava e desconectava sozinha entre um load e outro.
+ */
+function FalhaDeCarga({
+  mensagem,
+  onRetry,
+}: {
+  mensagem: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+      <ExclamationTriangleIcon className="text-warning size-5 shrink-0" />
+      <p className="dark:text-dark-100 min-w-0 flex-1 text-sm text-gray-700">
+        Não foi possível carregar do servidor: {mensagem}
+      </p>
+      <Button variant="outlined" className="h-8 shrink-0 text-xs" onClick={onRetry}>
+        Tentar de novo
+      </Button>
+    </div>
+  );
+}
+
 function errMessage(err: unknown): string {
   if (typeof err === "string") return err;
   if (err && typeof err === "object" && "message" in err) {
@@ -225,13 +252,18 @@ export function AiConnectionCard() {
     useState<CatalogProvider[]>(PROVEDORES_PADRAO);
   const [creds, setCreds] = useState<AiCredential[]>([]);
   const [loading, setLoading] = useState(true);
+  // Erro da listagem de chaves. Sem isto uma falha virava lista vazia — a UI
+  // dizia "nenhuma chave cadastrada" com a chave lá, salva no servidor.
+  const [erroChaves, setErroChaves] = useState<string | null>(null);
+  const [tentativa, setTentativa] = useState(0);
 
   useEffect(() => {
     let alive = true;
     (async () => {
+      if (alive) setErroChaves(null);
       // `allSettled`: uma falha ao listar as chaves não pode descartar o
       // catálogo (nem o contrário, como acontecia com o `Promise.all`).
-      await Promise.allSettled([
+      const [, chaves] = await Promise.allSettled([
         getAiProviders().then((provs) => {
           if (alive) setProviders(provs);
         }),
@@ -239,12 +271,14 @@ export function AiConnectionCard() {
           if (alive) setCreds(lista);
         }),
       ]);
-      if (alive) setLoading(false);
+      if (!alive) return;
+      if (chaves.status === "rejected") setErroChaves(errMessage(chaves.reason));
+      setLoading(false);
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [tentativa]);
 
   const onCredsChange = useCallback((lista: AiCredential[]) => {
     setCreds(lista);
@@ -262,6 +296,8 @@ export function AiConnectionCard() {
         providers={providers}
         creds={creds}
         onCredsChange={onCredsChange}
+        erroCarga={erroChaves}
+        onRetry={() => setTentativa((n) => n + 1)}
       />
 
       {/* Subseção irmã de "Chaves de API": mesmo título <h4>, mesma ausência de
@@ -314,10 +350,15 @@ function KeysSection({
   providers,
   creds,
   onCredsChange,
+  erroCarga,
+  onRetry,
 }: {
   providers: CatalogProvider[];
   creds: AiCredential[];
   onCredsChange: (lista: AiCredential[]) => void;
+  /** Listagem falhou: a seção mostra o motivo em vez do estado vazio. */
+  erroCarga: string | null;
+  onRetry: () => void;
 }) {
   const [modalOpen, modal] = useDisclosure(false);
   const [toDelete, setToDelete] = useState<AiCredential | null>(null);
@@ -376,7 +417,12 @@ function KeysSection({
         </div>
       )}
 
-      {creds.length === 0 ? (
+      {erroCarga ? (
+        // Precedência sobre o estado vazio: com a listagem falhando não se sabe
+        // se há chave, e oferecer "Adicionar chave" convidaria a cadastrar uma
+        // segunda vez a que já está no servidor.
+        <FalhaDeCarga mensagem={erroCarga} onRetry={onRetry} />
+      ) : creds.length === 0 ? (
         // Sem chave, só o botão: a descrição da seção logo acima já diz o que
         // são estas chaves, e a caixa cinza só repetia isso em volta dele.
         <Button
@@ -713,6 +759,10 @@ function ModalityPanel({
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Falha ao listar a fila desta modalidade — antes virava "nenhum modelo
+  // configurado", que é uma afirmação sobre o servidor que não se podia fazer.
+  const [erroCarga, setErroCarga] = useState<string | null>(null);
+  const [tentativa, setTentativa] = useState(0);
 
   const credsDaModalidade = useMemo(
     () =>
@@ -763,9 +813,15 @@ function ModalityPanel({
     (async () => {
       try {
         const lista = await adapter.list();
-        if (alive) setConns(lista);
-      } catch {
-        if (alive) setConns([]);
+        if (alive) {
+          setConns(lista);
+          setErroCarga(null);
+        }
+      } catch (err) {
+        if (alive) {
+          setConns([]);
+          setErroCarga(errMessage(err));
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -773,9 +829,9 @@ function ModalityPanel({
     return () => {
       alive = false;
     };
-    // Recarrega quando uma chave some (cascade no servidor).
+    // Recarrega quando uma chave some (cascade no servidor) e a cada retentativa.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [credIds]);
+  }, [credIds, tentativa]);
 
   const salvarOrdem = useCallback(
     async (nova: QueueItem[]) => {
@@ -897,7 +953,14 @@ function ModalityPanel({
             </>
           )}
 
-          {conns.length === 0 && !formOpen && (
+          {erroCarga && (
+            <FalhaDeCarga
+              mensagem={erroCarga}
+              onRetry={() => setTentativa((n) => n + 1)}
+            />
+          )}
+
+          {conns.length === 0 && !erroCarga && !formOpen && (
             <>
               <div className="dark:border-dark-500 dark:bg-dark-600 rounded-xl border border-gray-100 bg-gray-50 px-4 py-4">
                 <PageTitle

@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ERRO_SEM_RESPOSTA } from "@/utils/axios";
@@ -37,12 +37,41 @@ function apiErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
-function pareceApiIndisponivel(err: unknown): boolean {
+/**
+ * Servidor inalcançável: não houve resposta HTTP nenhuma — fora do ar, DNS ou
+ * preflight de CORS barrado.
+ *
+ * 401 NÃO entra aqui, e é a correção principal deste arquivo: o servidor
+ * respondeu, só recusou a credencial. Enquanto `unauthorized|401|sessão`
+ * estavam nesta regex, o 401 da primeira requisição do boot (disparada antes de
+ * o Authorization existir) ligava o modo local, avisava "Servidor indisponível"
+ * com a API no ar e prendia todo o CRUD no localStorage pelo resto da sessão.
+ */
+function servidorInalcancavel(err: unknown): boolean {
   if (err === ERRO_SEM_RESPOSTA) return true;
-  const msg = apiErrorMessage(err, "");
-  return /network error|econnrefused|failed to fetch|unauthorized|401|sessão/i.test(
-    msg,
+  return /network error|econnrefused|failed to fetch/i.test(
+    apiErrorMessage(err, ""),
   );
+}
+
+/** 401/403 — credencial recusada, não indisponibilidade. */
+function ehNaoAutorizado(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const o = err as { statusCode?: number; status?: number };
+  const status = o.statusCode ?? o.status;
+  return status === 401 || status === 403;
+}
+
+/**
+ * Gravar só no localStorage, sem tentar o servidor.
+ *
+ * Reservado ao token de protótipo: essa sessão nunca existiu no servidor, então
+ * a chamada seria 401 garantido. É uma FUNÇÃO reavaliada a cada operação, e não
+ * mais um ref ligado no primeiro erro: entrar de novo volta a gravar no servidor
+ * sem recarregar a página, e uma falha passageira não condena a sessão inteira.
+ */
+function gravarSoLocal(): boolean {
+  return tokenEhPrototipo();
 }
 
 function idLocal(): string {
@@ -65,15 +94,12 @@ function memoriaLocalDe(input: NewMemoryInput): MemoryItem {
 export function MemoryProvider({ children }: { children: ReactNode }) {
   const [memories, setMemories] = useState<MemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  /** Quando true, CRUD grava só no localStorage. */
-  const modoLocalRef = useRef(tokenEhPrototipo());
 
   useEffect(() => {
     let alive = true;
 
     const bootstrap = async () => {
-      if (tokenEhPrototipo()) {
-        modoLocalRef.current = true;
+      if (gravarSoLocal()) {
         if (alive) {
           setMemories(carregarMemoriasLocal());
           setLoading(false);
@@ -84,20 +110,30 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
       try {
         const items = await fetchMemoriesApi();
         if (!alive) return;
-        modoLocalRef.current = false;
         const mapped = items.map(fromApi);
         setMemories(mapped);
         salvarMemoriasLocal(mapped);
       } catch (err) {
         if (!alive) return;
-        modoLocalRef.current = true;
-        const locais = carregarMemoriasLocal();
-        setMemories(locais);
-        toast.message("Regras em modo local", {
-          description: pareceApiIndisponivel(err)
-            ? "Servidor indisponível — alterações ficam neste navegador."
-            : apiErrorMessage(err, "Não foi possível carregar as memórias."),
-        });
+        // Em qualquer falha a cópia local entra para a tela não ficar vazia,
+        // mas só a indisponibilidade real anuncia "modo local": um 401 é sessão
+        // recusada, e dizer "servidor indisponível" aí mandava o usuário
+        // procurar problema no lugar errado.
+        setMemories(carregarMemoriasLocal());
+        if (servidorInalcancavel(err)) {
+          toast.message("Regras em modo local", {
+            description:
+              "Servidor indisponível — alterações ficam neste navegador.",
+          });
+        } else if (ehNaoAutorizado(err)) {
+          toast.error("Sessão recusada pelo servidor", {
+            description: "Saia e entre novamente para ver o Repositório.",
+          });
+        } else {
+          toast.error(
+            apiErrorMessage(err, "Não foi possível carregar as memórias."),
+          );
+        }
       } finally {
         if (alive) setLoading(false);
       }
@@ -116,7 +152,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
 
   const addMemory = useCallback(
     async (input: NewMemoryInput) => {
-      if (modoLocalRef.current) {
+      if (gravarSoLocal()) {
         const criada = memoriaLocalDe(input);
         persistirLocal([criada, ...carregarMemoriasLocal()]);
         toast.success("Regra salva (local).");
@@ -139,8 +175,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
         });
         toast.success("Repositório salvo.");
       } catch (err) {
-        if (pareceApiIndisponivel(err)) {
-          modoLocalRef.current = true;
+        if (servidorInalcancavel(err)) {
           const criada = memoriaLocalDe(input);
           persistirLocal([criada, ...carregarMemoriasLocal()]);
           toast.message("Regra salva localmente", {
@@ -159,7 +194,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     async (id: string, patch: Partial<MemoryItem>) => {
       if (Object.keys(patch).length === 0) return;
 
-      if (modoLocalRef.current) {
+      if (gravarSoLocal()) {
         const next = carregarMemoriasLocal().map((m) =>
           m.id === id ? { ...m, ...patch } : m,
         );
@@ -182,8 +217,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
           return next;
         });
       } catch (err) {
-        if (pareceApiIndisponivel(err)) {
-          modoLocalRef.current = true;
+        if (servidorInalcancavel(err)) {
           const next = carregarMemoriasLocal().map((m) =>
             m.id === id ? { ...m, ...patch } : m,
           );
@@ -202,7 +236,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
 
   const deleteMemory = useCallback(
     async (id: string) => {
-      if (modoLocalRef.current) {
+      if (gravarSoLocal()) {
         persistirLocal(carregarMemoriasLocal().filter((m) => m.id !== id));
         toast.success("Regra removida (local).");
         return;
@@ -217,8 +251,7 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
         });
         toast.success("Repositório removido.");
       } catch (err) {
-        if (pareceApiIndisponivel(err)) {
-          modoLocalRef.current = true;
+        if (servidorInalcancavel(err)) {
           persistirLocal(carregarMemoriasLocal().filter((m) => m.id !== id));
           toast.message("Regra removida localmente");
           return;
@@ -239,14 +272,13 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
         m.id === id ? { ...m, active: nextActive } : m,
       );
 
-      if (modoLocalRef.current) {
+      if (gravarSoLocal()) {
         salvarMemoriasLocal(next);
         return next;
       }
 
       void updateMemoryApi(id, { active: nextActive }).catch((err) => {
-        if (pareceApiIndisponivel(err)) {
-          modoLocalRef.current = true;
+        if (servidorInalcancavel(err)) {
           salvarMemoriasLocal(next);
           return;
         }

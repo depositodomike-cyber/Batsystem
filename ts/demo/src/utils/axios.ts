@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { JWT_HOST_API } from "@/configs/auth";
 import { repositorioPastaAtivo } from "@/app/pages/ceo/memoria-inventario";
-import { sessaoLocalAtiva } from "@/utils/sessaoLocal";
+import { sessaoLocalAtiva, tokenArmazenado } from "@/utils/sessaoLocal";
 
 const axiosInstance = axios.create({
   baseURL: JWT_HOST_API,
@@ -47,6 +47,18 @@ export const HEADER_REPOSITORIO = "X-Repositorio-Id";
 axiosInstance.interceptors.request.use((config) => {
   const repositorioId = repositorioPastaAtivo();
   if (repositorioId) config.headers.set(HEADER_REPOSITORIO, repositorioId);
+
+  // O token vem do storage a CADA requisição, e não de `axios.defaults`. O
+  // header em defaults só existia depois que `setSession` rodava, no efeito
+  // async do AuthProvider; como efeito de filho roda antes do efeito do pai,
+  // MemoryProvider, ConversasProvider & cia. disparavam a primeira chamada sem
+  // Authorization e levavam 401 — que o produto exibia como "servidor
+  // indisponível". Aqui o storage é a fonte da verdade: sem token, o header sai
+  // fora, para um `defaults` velho não vazar depois do logout.
+  const token = tokenArmazenado();
+  if (token) config.headers.set("Authorization", `Bearer ${token}`);
+  else config.headers.delete("Authorization");
+
   return config;
 });
 

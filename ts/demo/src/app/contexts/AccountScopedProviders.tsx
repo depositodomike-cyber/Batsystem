@@ -21,12 +21,25 @@ import { applyAppearancePrefs } from "@/utils/beculturePrefs";
  * namespaced por `escopoConta()`.
  */
 export function AccountScopedProviders({ children }: { children: ReactNode }) {
-  const { user } = useAuthContext();
+  const { user, isInitialized } = useAuthContext();
   const accountKey = user?.id ?? "anon";
 
   useEffect(() => {
     applyAppearancePrefs();
   }, [accountKey]);
+
+  // Nada monta antes de a sessão estar resolvida.
+  //
+  // Estes providers buscam dados no efeito de mount, e antes do `isInitialized`
+  // eles montavam com `accountKey === "anon"`: uma rodada inteira de
+  // requisições saía, o `user` chegava, a key mudava, tudo remontava e as
+  // mesmas requisições saíam de novo — o dobro de chamadas, e o resultado da
+  // primeira rodada ainda podia vencer a corrida e sobrescrever a segunda.
+  //
+  // Não custa nada visualmente: `Root` (layout raiz do router) já renderiza
+  // null enquanto `!isInitialized`, então nenhum consumidor destes contextos
+  // existe nesta janela.
+  if (!isInitialized) return <>{children}</>;
 
   return (
     <ProjectsProvider key={accountKey}>

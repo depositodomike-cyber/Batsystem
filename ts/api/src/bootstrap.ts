@@ -47,8 +47,31 @@ export function configureApp(app: INestApplication): void {
     .get<string>('CORS_VERCEL_SUFFIX', '-beculture.vercel.app')
     .trim();
 
+  /**
+   * Qualquer porta de localhost, liberada fora da Vercel.
+   *
+   * O Vite migra de porta sozinho quando a 5173 está ocupada (5174, 5175…), e a
+   * lista fixa barrava justamente a instância em uso: o preflight voltava sem
+   * `Access-Control-Allow-Origin`, o axios não recebia resposta e o front dizia
+   * "servidor indisponível" — o mesmo sintoma de API fora do ar, por um motivo
+   * completamente diferente.
+   *
+   * O default vem do ambiente: ligado em dev, DESLIGADO num deploy da Vercel
+   * (`process.env.VERCEL`), para que produção não passe a aceitar página local
+   * mesmo se ninguém configurar a variável. `CORS_ALLOW_LOCALHOST` sobrescreve.
+   */
+  const permitirLocalhost =
+    config
+      .get<string>('CORS_ALLOW_LOCALHOST', process.env.VERCEL ? 'false' : 'true')
+      .trim() === 'true';
+
+  /** Host fechado, porta livre: `localhost.evil.com` não casa. */
+  const ehLocalhost = (origem: string): boolean =>
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origem);
+
   const origemPermitida = (origem: string): boolean => {
     if (origins.includes(origem)) return true;
+    if (permitirLocalhost && ehLocalhost(origem)) return true;
     return (
       sufixoVercel !== '' &&
       origem.startsWith('https://') &&

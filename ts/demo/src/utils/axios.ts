@@ -16,8 +16,15 @@ const axiosInstance = axios.create({
  * modo local. Enquanto isso era a string "Something went wrong" repetida nos
  * dois arquivos, mudar o texto de um lado quebrava a detecção do outro em
  * silêncio.
+ *
+ * O texto muda em dev — a identidade, não. Em produção "servidor indisponível"
+ * é tudo o que se pode dizer, mas em dev a causa quase sempre é a API local que
+ * não subiu, e o erro genérico mandava procurar no lugar errado. Dizer QUAL
+ * servidor não respondeu e QUAL comando o levanta economiza a investigação.
  */
-export const ERRO_SEM_RESPOSTA = "Servidor indisponível. Tente novamente.";
+export const ERRO_SEM_RESPOSTA = import.meta.env.DEV
+  ? `A API não respondeu em ${JWT_HOST_API}. Rode "npm run start:dev" em ts/api (o Postgres sobe com "npm run db:up").`
+  : "Servidor indisponível. Tente novamente.";
 
 /** 401 recebido enquanto a sessão é local — ver utils/sessaoLocal.ts. */
 export const ERRO_SESSAO_LOCAL =

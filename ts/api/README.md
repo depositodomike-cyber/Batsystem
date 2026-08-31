@@ -111,7 +111,29 @@ e `GET /conectores/slack/callback` (público; redireciona ao app com
 
 ## Ligar o frontend
 
-Em `ts/demo/src/configs/auth.ts`, aponte `JWT_HOST_API` para `http://localhost:3001`.
+Dois terminais. Nada a editar no código: o front, em dev, já usa
+`http://localhost:3001` como padrão (`ts/demo/src/configs/auth.ts`), e não precisa
+de `VITE_API_URL` — essa variável só existe para o build de produção
+(`ts/demo/.env.production`).
+
+```bash
+# terminal 1 — banco e API
+cd ts/api
+npm run db:up                 # Postgres via docker compose
+npm run start:dev             # API em http://localhost:3001
+
+# terminal 2 — frontend
+cd ts/demo
+npm run dev                   # Vite; se 5173 estiver ocupada ele usa 5174, 5175…
+```
+
+A API precisa estar de pé **antes** de usar a app: sem ela, toda chamada volta sem
+resposta HTTP e a interface mostra "A API não respondeu em http://localhost:3001".
+Para conferir: `curl http://localhost:3001/health` → `{"status":"ok"}`.
+
+A porta que o Vite escolher não importa para o CORS: fora da Vercel a API aceita
+qualquer porta de `localhost`/`127.0.0.1`. Num deploy isso fica desligado
+automaticamente (`CORS_ALLOW_LOCALHOST`, em `src/bootstrap.ts`).
 
 ## Próximos passos
 

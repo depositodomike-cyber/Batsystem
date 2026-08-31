@@ -8,6 +8,8 @@ import {
   type ConversaListItem,
 } from "@/services/api/conversas";
 
+import { tokenArmazenado } from "@/utils/sessaoLocal";
+
 import { ConversasContext, type ConversasContextValue } from "./context";
 
 export function ConversasProvider({ children }: { children: ReactNode }) {
@@ -16,7 +18,10 @@ export function ConversasProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!repositorioId) {
+    // Deslogado não há o que buscar: este provider monta acima do router, então
+    // ele existe também na tela de login, e sem esta guarda a página de login
+    // disparava GET /conversas e colhia 401 em toda carga.
+    if (!tokenArmazenado() || !repositorioId) {
       setItems([]);
       setLoading(false);
       return;

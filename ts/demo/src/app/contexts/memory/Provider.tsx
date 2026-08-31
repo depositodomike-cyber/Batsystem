@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ERRO_SEM_RESPOSTA } from "@/utils/axios";
+import { tokenArmazenado } from "@/utils/sessaoLocal";
 
 import type { MemoryItem } from "@/app/data/memoria";
 import {
@@ -99,7 +100,9 @@ export function MemoryProvider({ children }: { children: ReactNode }) {
     let alive = true;
 
     const bootstrap = async () => {
-      if (gravarSoLocal()) {
+      // Sem token não se pergunta ao servidor: o provider monta acima do router
+      // e existe na tela de login, onde a chamada só rendia 401.
+      if (!tokenArmazenado() || gravarSoLocal()) {
         if (alive) {
           setMemories(carregarMemoriasLocal());
           setLoading(false);

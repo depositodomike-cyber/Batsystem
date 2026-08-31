@@ -57,7 +57,7 @@ export function ProfileMenu({
 }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user, logout } = useAuthContext();
+  const { user, logout, sessaoLocal } = useAuthContext();
   const { locale, updateLocale } = useLocaleContext();
   const [localeLoading, setLocaleLoading] = useState(false);
   const { estado, despachar } = usePrototipoContas();
@@ -368,6 +368,13 @@ export function ProfileMenu({
               </div>
 
               <div className="dark:border-dark-600 border-t border-gray-150 px-4 py-3">
+                {sessaoLocal && (
+                  <p className="dark:text-warning-light mb-3 text-xs text-warning">
+                    Sessão em modo local: o servidor estava indisponível quando
+                    você entrou. Saia e entre novamente para voltar a salvar no
+                    servidor.
+                  </p>
+                )}
                 <Button className="w-full gap-2" onClick={() => logout()}>
                   <ArrowLeftStartOnRectangleIcon className="size-4.5" />
                   <span>Sair</span>

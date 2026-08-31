@@ -50,7 +50,9 @@ export const TEMPORARILY_DISABLED: Record<
   email: true,
   slack: true,
   calendar: true,
-  connectors: true,
+  // Conectores REATIVADO: o ícone de link no header volta a ser clicável e
+  // /:produto/conectores renderiza a tela normalmente.
+  connectors: false,
   notifications: true,
   settingsAppearance: true,
   settingsVoice: true,

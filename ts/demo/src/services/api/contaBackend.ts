@@ -1,4 +1,4 @@
-import axios from "@/utils/axios";
+import axios, { ERRO_SEM_RESPOSTA } from "@/utils/axios";
 import type { User } from "@/@types/user";
 
 /**
@@ -109,9 +109,9 @@ function excedeuTentativas(err: unknown): boolean {
 
 function motivoLocal(err: unknown): "offline" | "ocupado" | "erro" {
   if (excedeuTentativas(err)) return "ocupado";
-  // O interceptor do axios devolve "Something went wrong" quando não há
-  // resposta HTTP — ou seja, servidor fora do ar.
-  if (err === "Something went wrong") return "offline";
+  // O interceptor do axios rejeita com esta constante quando não há resposta
+  // HTTP — ou seja, servidor fora do ar.
+  if (err === ERRO_SEM_RESPOSTA) return "offline";
   if (/network error|econnrefused|failed to fetch/i.test(mensagemErro(err))) {
     return "offline";
   }

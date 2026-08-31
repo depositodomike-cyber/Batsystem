@@ -5,6 +5,7 @@ import { jwtDecode } from "jwt-decode";
 // Local Imports
 import axios from "@/utils/axios";
 import { isTokenValid, setSession } from "@/utils/jwt";
+import { PROTOTYPE_TOKEN_SUFFIX, isPrototypeToken } from "@/utils/sessaoLocal";
 import { AuthProvider as AuthContext, AuthContextType } from "./context";
 import { SPLASH_AFTER_LOGIN_KEY } from "@/components/template/SplashScreen";
 import { User } from "@/@types/user";
@@ -28,6 +29,7 @@ const initialState: AuthContextType = {
   isInitialized: false,
   errorMessage: null,
   user: null,
+  sessaoLocal: false,
   login: async () => {},
   logout: async () => {},
   refreshSession: async () => {},
@@ -45,6 +47,7 @@ const reducerHandlers: Record<
     isAuthenticated: action.payload?.isAuthenticated ?? false,
     isInitialized: true,
     user: action.payload?.user ?? null,
+    sessaoLocal: action.payload?.sessaoLocal ?? false,
   }),
 
   LOGIN_REQUEST: (state) => ({
@@ -57,6 +60,7 @@ const reducerHandlers: Record<
     isAuthenticated: true,
     isLoading: false,
     user: action.payload?.user ?? null,
+    sessaoLocal: action.payload?.sessaoLocal ?? false,
   }),
 
   LOGIN_ERROR: (state, action) => ({
@@ -71,7 +75,7 @@ const reducerHandlers: Record<
   LOGOUT: (state) =>
     !state.isAuthenticated && state.user === null
       ? state
-      : { ...state, isAuthenticated: false, user: null },
+      : { ...state, isAuthenticated: false, user: null, sessaoLocal: false },
 };
 
 // Reducer function
@@ -82,8 +86,6 @@ const reducer = (
   const handler = reducerHandlers[action.type];
   return handler ? handler(state, action) : state;
 };
-
-const PROTOTYPE_TOKEN_SUFFIX = ".prototype";
 
 /** JWT mínimo com `exp` futuro — só para o AuthGuard/localStorage. */
 function tokenPrototipo(user: User): string {
@@ -101,7 +103,8 @@ function tokenPrototipo(user: User): string {
       name: user.name,
       exp: Math.floor(Date.now() / 1000) + 60 * 60 * 12,
     }),
-    "prototype",
+    // Assinatura falsa — é o sufixo que `isPrototypeToken` reconhece.
+    PROTOTYPE_TOKEN_SUFFIX.slice(1),
   ].join(".");
 }
 
@@ -130,12 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(authToken);
 
           // Token do protótipo de contas: não há perfil na API.
-          if (authToken.endsWith(PROTOTYPE_TOKEN_SUFFIX)) {
+          if (isPrototypeToken(authToken)) {
             dispatch({
               type: "INITIALIZE",
               payload: {
                 isAuthenticated: true,
                 user: userFromPrototypeToken(authToken),
+                sessaoLocal: true,
               },
             });
             return;
@@ -234,10 +238,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     setSession(authToken);
-    if (authToken.endsWith(PROTOTYPE_TOKEN_SUFFIX)) {
+    if (isPrototypeToken(authToken)) {
       dispatch({
         type: "LOGIN_SUCCESS",
-        payload: { user: userFromPrototypeToken(authToken) },
+        payload: { user: userFromPrototypeToken(authToken), sessaoLocal: true },
       });
       return;
     }
@@ -253,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.sessionStorage.setItem(SPLASH_AFTER_LOGIN_KEY, "1");
     dispatch({
       type: "LOGIN_SUCCESS",
-      payload: { user },
+      payload: { user, sessaoLocal: true },
     });
   }, []);
 
@@ -262,7 +266,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.sessionStorage.setItem(SPLASH_AFTER_LOGIN_KEY, "1");
     dispatch({
       type: "LOGIN_SUCCESS",
-      payload: { user },
+      // Deriva do token em vez de assumir: quem adota deveria trazer um JWT
+      // real, mas se vier um de protótipo o estado precisa refletir isso.
+      payload: { user, sessaoLocal: isPrototypeToken(authToken) },
     });
   }, []);
 

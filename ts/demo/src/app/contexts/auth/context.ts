@@ -7,6 +7,12 @@ export interface AuthContextType {
   isInitialized: boolean;
   errorMessage: string | null;
   user: User | null;
+  /**
+   * A sessão vale só neste navegador: o token é o de protótipo, criado quando
+   * o backend estava fora no login. Toda rota autenticada responde 401 até um
+   * novo login. Ver utils/sessaoLocal.ts.
+   */
+  sessaoLocal: boolean;
   login: (credentials: { username: string; password: string }) => Promise<void>;
   logout: () => Promise<void>;
   /**

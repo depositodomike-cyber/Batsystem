@@ -1,6 +1,8 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { ERRO_SEM_RESPOSTA } from "@/utils/axios";
+
 import type { MemoryItem } from "@/app/data/memoria";
 import {
   fetchMemoriesApi,
@@ -36,7 +38,7 @@ function apiErrorMessage(err: unknown, fallback: string): string {
 }
 
 function pareceApiIndisponivel(err: unknown): boolean {
-  if (err === "Something went wrong") return true;
+  if (err === ERRO_SEM_RESPOSTA) return true;
   const msg = apiErrorMessage(err, "");
   return /network error|econnrefused|failed to fetch|unauthorized|401|sessão/i.test(
     msg,

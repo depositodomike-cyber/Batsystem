@@ -28,8 +28,45 @@ export function configureApp(app: INestApplication): void {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
+
+  /**
+   * Sufixo das URLs da Vercel do time, liberado ALÉM da lista fixa.
+   *
+   * Cada deploy ganha uma URL própria e efêmera
+   * (`beculture-<hash>-beculture.vercel.app`), e o projeto ainda tem aliases
+   * como `beculture-web-beculture.vercel.app`. Nenhuma delas cabe numa lista
+   * estática, e abrir a app por qualquer uma derrubava TODAS as chamadas no
+   * preflight: sem `Access-Control-Allow-Origin` o browser bloqueia a resposta,
+   * o axios não recebe resposta nenhuma e o front conclui "servidor
+   * indisponível" — entrando em sessão local, com 401 em tudo depois.
+   *
+   * O sufixo é específico do time (`-<time>.vercel.app`), então não abre a API
+   * para deploys de terceiros. Ponha string vazia para desligar a regra.
+   */
+  const sufixoVercel = config
+    .get<string>('CORS_VERCEL_SUFFIX', '-beculture.vercel.app')
+    .trim();
+
+  const origemPermitida = (origem: string): boolean => {
+    if (origins.includes(origem)) return true;
+    return (
+      sufixoVercel !== '' &&
+      origem.startsWith('https://') &&
+      origem.endsWith(sufixoVercel)
+    );
+  };
+
   app.enableCors({
-    origin: origins,
+    // Callback, e não a lista: `cb(null, false)` só omite os headers (o browser
+    // barra), enquanto lançar viraria 500 no preflight.
+    origin: (
+      origem: string | undefined,
+      cb: (err: Error | null, permitido?: boolean) => void,
+    ) => {
+      // Sem `Origin` não é requisição de browser (curl, health check, SSR).
+      if (!origem) return cb(null, true);
+      cb(null, origemPermitida(origem));
+    },
     credentials: true,
     // `X-Repositorio-Id` é um header custom: sem declará-lo o preflight o
     // bloqueia e o isolamento por repositório cai, em silêncio, para o escopo

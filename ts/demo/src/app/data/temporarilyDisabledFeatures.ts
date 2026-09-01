@@ -83,6 +83,30 @@ export const TEMPORARILY_DISABLED: Record<
 /** Classe Tailwind do estado desabilitado (padrão do produto). */
 export const DISABLED_MENU_CLASS = "cursor-not-allowed opacity-40";
 
+// ----------------------------------------------------------------------
+// Conectores liberados
+//
+// Diferente das flags acima, aqui a lista é de quem ESTÁ habilitado, e não de
+// quem está desabilitado: a decisão do produto é "só estes três por enquanto".
+// Assim, um conector novo no catálogo entra desativado por padrão — o contrário
+// (lista de bloqueados) o liberaria em silêncio, que é o erro mais caro dos
+// dois.
+//
+// Os demais continuam VISÍVEIS na tela de Conectores, opacos e sem clique
+// (mesmo padrão dos itens de menu), em vez de sumirem: a lista mostra o que o
+// produto vai integrar. Para liberar um, basta incluir o id aqui.
+
+export const CONECTORES_HABILITADOS: string[] = [
+  "google-calendar",
+  "google-drive",
+  "slack",
+];
+
+/** True quando o conector está visível mas indisponível para conectar. */
+export function isConnectorTemporarilyDisabled(connectorId: string): boolean {
+  return !CONECTORES_HABILITADOS.includes(connectorId);
+}
+
 export function isFeatureTemporarilyDisabled(
   feature: TemporarilyDisabledFeature,
 ): boolean {

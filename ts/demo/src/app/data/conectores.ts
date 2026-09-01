@@ -190,6 +190,8 @@ export const categoryById: Record<string, ConnectorCategory> = Object.fromEntrie
 // Compartilhamento — conectores de Comunicação que permitem disparo de
 // mensagem ou postagem (usados como destinos do botão "Compartilhar").
 
+import { isConnectorTemporarilyDisabled } from "./temporarilyDisabledFeatures";
+
 const SHARE_PERMISSION_RE = /enviar mensagens|publicar|postar/i;
 const POST_PERMISSION_RE = /publicar post|publicar stories|postar|publicação/i;
 
@@ -202,6 +204,7 @@ export function shareableConnectors(): Connector[] {
   return connectors.filter(
     (c) =>
       c.category === "comunicacao" &&
+      !isConnectorTemporarilyDisabled(c.id) &&
       c.permissions.some((p) => SHARE_PERMISSION_RE.test(p)),
   );
 }

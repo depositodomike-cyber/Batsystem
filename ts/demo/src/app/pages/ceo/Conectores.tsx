@@ -45,6 +45,10 @@ import {
   exigeCredenciais,
   labelDoCampo,
 } from "@/app/data/conector-credenciais";
+import {
+  DISABLED_MENU_CLASS,
+  isConnectorTemporarilyDisabled,
+} from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -156,6 +160,9 @@ export default function Conectores() {
   // para o consentimento do provedor; os demais conectores (e qualquer
   // desconexão) só alternam o estado.
   const handleToggle = (c: Connector) => {
+    // Cinto de segurança: o card já não deixa clicar, mas o drawer pode estar
+    // aberto de antes e o estado do conector pode mudar por outro caminho.
+    if (isConnectorTemporarilyDisabled(c.id)) return;
     if (c.oauth && !isConnected(c.id)) {
       getOauthAuthorizeUrlApi(c.id)
         .then((url) => {
@@ -390,6 +397,7 @@ export default function Conectores() {
                         key={c.id}
                         connector={c}
                         connected={isConnected(c.id)}
+                        disabled={isConnectorTemporarilyDisabled(c.id)}
                         onOpen={() => setSelected(c)}
                         onToggle={() => handleToggle(c)}
                       />
@@ -528,30 +536,48 @@ function CategoryPill({
 function ConnectorCard({
   connector,
   connected,
+  disabled,
   onOpen,
   onToggle,
 }: {
   connector: Connector;
   connected: boolean;
+  /** Integração ainda não liberada: visível, opaca e sem clique. */
+  disabled: boolean;
   onOpen: () => void;
   onToggle: () => void;
 }) {
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-      className="group dark:border-dark-600 dark:bg-dark-700 dark:hover:border-dark-400 flex h-full cursor-pointer flex-col rounded-xl border border-gray-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-none"
+      role={disabled ? undefined : "button"}
+      tabIndex={disabled ? undefined : 0}
+      aria-disabled={disabled || undefined}
+      title={disabled ? "Integração ainda não disponível." : undefined}
+      onClick={disabled ? undefined : onOpen}
+      onKeyDown={
+        disabled
+          ? undefined
+          : (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen();
+              }
+            }
+      }
+      className={clsx(
+        "group dark:border-dark-600 dark:bg-dark-700 flex h-full flex-col rounded-xl border border-gray-200 bg-white p-4",
+        disabled
+          ? DISABLED_MENU_CLASS
+          : "dark:hover:border-dark-400 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-none",
+      )}
     >
       <div className="flex items-start justify-between gap-2">
         <ConnectorLogo connector={connector} />
-        {connected ? (
+        {disabled ? (
+          <Badge color="neutral" variant="soft" className="rounded-full">
+            Em breve
+          </Badge>
+        ) : connected ? (
           <Badge color="success" variant="soft" className="gap-1 rounded-full">
             <CheckCircleIcon className="size-3.5" />
             Conectado
@@ -590,15 +616,19 @@ function ConnectorCard({
 
       <div className="mt-4">
         <Button
-          variant={connected ? "outlined" : "filled"}
-          color={connected ? "neutral" : "primary"}
+          variant={connected && !disabled ? "outlined" : "filled"}
+          color={connected && !disabled ? "neutral" : "primary"}
           className="text-xs-plus h-9 w-full gap-1.5 rounded-lg"
+          disabled={disabled}
+          aria-disabled={disabled}
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
           }}
         >
-          {connected ? (
+          {disabled ? (
+            "Em breve"
+          ) : connected ? (
             "Gerenciar"
           ) : (
             <>

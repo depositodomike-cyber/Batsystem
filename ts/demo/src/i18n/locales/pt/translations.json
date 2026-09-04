@@ -250,6 +250,7 @@
       "orgChart": "Organograma",
       "surveys": "Pesquisas",
       "guidelines": "Regras",
+      "administration": "Administração",
       "connectors": "Conectores",
       "agents": "Agentes",
       "chat": "Chat",
@@ -302,6 +303,7 @@
     "assistantMinimize": "Minimizar",
     "assistantClose": "Fechar",
     "guidelines": "Regras",
+    "administration": "Administração",
     "connectors": "Conectores",
     "settings": "Configurações"
   },

@@ -34,6 +34,17 @@ npm run start:dev             # API em http://localhost:3001
 | `GET`  | `/empresa/convites` | Bearer | Lista convites do tenant |
 | `POST` | `/empresa/convites` | Bearer | `{ emails[], role? }` |
 | `DELETE` | `/empresa/convites/:id` | Bearer | Remove convite |
+| `GET`  | `/empresa/membros` | Bearer | Membros do tenant (`?status=&q=`) |
+| `GET`  | `/empresa/membros/:id` | Bearer | Um membro do tenant |
+| `POST` | `/empresa/membros` | Bearer (permissão `membros.criar`) | `{ nome, email, area?, cargo?, gestorId?, status? }` — default `convite_pendente` |
+| `PATCH` | `/empresa/membros/:id` | Bearer (permissão `membros.editar`) | Edita nome/e-mail/área/cargo/gestor/role/status. `gestorId: ""` limpa o gestor; recusa ciclo, si mesmo e gestor de outro tenant |
+| `DELETE` | `/empresa/membros/:id` | Bearer (permissão `membros.desativar`) | Cancela convite (só membro sem conta) |
+| `GET`  | `/empresa/roles` | Bearer | Roles do tenant, com contagem de membros. Cria Admin/Editor/Viewer na primeira leitura |
+| `GET`  | `/empresa/roles/catalogo` | Bearer | Grupos e permissões disponíveis |
+| `GET`  | `/empresa/roles/minhas-permissoes` | Bearer | O que o usuário logado pode fazer |
+| `POST` | `/empresa/roles` | Bearer (permissão `acesso.gerenciar`) | `{ nome, descricao?, permissoes[] }` — dependências são acrescentadas no servidor |
+| `PATCH` | `/empresa/roles/:id` | Bearer (permissão `acesso.gerenciar`) | Edita role personalizada; roles de sistema são imutáveis |
+| `DELETE` | `/empresa/roles/:id?reatribuirPara=<roleId|nenhuma>` | Bearer (permissão `acesso.gerenciar`) | Recusa com 409 se houver membros e a resolução não vier |
 | `POST` | `/empresa/onboarding/concluir` | Bearer | Marca onboarding concluído |
 | `GET`  | `/health` | — | Health check |
 

@@ -9,6 +9,9 @@ import { CompaniesModule } from './companies/companies.module';
 import { AiModule } from './ai/ai.module';
 import { SquadsModule } from './squads/squads.module';
 import { MemoriasModule } from './memorias/memorias.module';
+import { MembrosModule } from './membros/membros.module';
+import { AcessoModule } from './acesso/acesso.module';
+import { EstruturaModule } from './estrutura/estrutura.module';
 import { ConversasModule } from './conversas/conversas.module';
 import { ConectoresModule } from './conectores/conectores.module';
 import { McpModule } from './mcp/mcp.module';
@@ -28,6 +31,9 @@ import { HealthController } from './health.controller';
     AiModule,
     SquadsModule,
     MemoriasModule,
+    MembrosModule,
+    AcessoModule,
+    EstruturaModule,
     ConversasModule,
     ConectoresModule,
     McpModule,

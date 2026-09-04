@@ -267,6 +267,7 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.memoria": CircleStackIcon,
   "ceo.grafo": ShareIcon,
   "ceo.contexto-lista": ListBulletIcon,
+  "ceo.administracao": UsersIcon,
   "ceo.conectores": LinkIcon,
   "ceo.agentes": CpuChipIcon,
   "ceo.config": Cog6ToothIcon,

@@ -56,6 +56,29 @@ enum ConviteStatus {
   aceito
 }
 
+enum MembroStatus {
+  ativo
+  convite_pendente
+  inativo
+}
+
+enum RoleTipo {
+  sistema
+  personalizada
+}
+
+/// Ciclo de vida de uma entidade de estrutura (Área, Cargo). Compartilhado
+/// pelas duas de propósito: a semântica é idêntica, e um enum por entidade
+/// exigiria dois ALTER TYPE a cada evolução.
+///
+/// `inativo` NÃO remove associações: quem já está na área continua nela. O
+/// status só decide se a entidade aparece como opção NOVA. É o que permite
+/// desativar sem exclusão destrutiva.
+enum EstruturaStatus {
+  ativo
+  inativo
+}
+
 enum StatusAssinatura {
   trial
   ativa
@@ -107,21 +130,25 @@ model Empresa {
   onboardingConcluidoEm DateTime?
   criadoEm              DateTime      @default(now())
 
-  usuarios     Usuario[]
-  convites     Convite[]
-  assinatura   Assinatura?
-  aiCredentials AiCredential[]
-  aiConnections AiConnection[]
-  aiMediaConnections AiMediaConnection[]
-  memorias     Memoria[]
-  insights     Insight[]
-  vaultNotas   VaultNota[]
+  usuarios            Usuario[]
+  convites            Convite[]
+  membros             Membro[]
+  roles               Role[]
+  areas               Area[]
+  cargos              Cargo[]
+  assinatura          Assinatura?
+  aiCredentials       AiCredential[]
+  aiConnections       AiConnection[]
+  aiMediaConnections  AiMediaConnection[]
+  memorias            Memoria[]
+  insights            Insight[]
+  vaultNotas          VaultNota[]
   vaultCategorias     VaultCategoria[]
   vaultNotaCategorias VaultNotaCategoria[]
-  conversas    Conversa[]
-  conectores   EmpresaConector[]
-  mcpApiKeys   McpApiKey[]
-  aiUsage      AiUsage[]
+  conversas           Conversa[]
+  conectores          EmpresaConector[]
+  mcpApiKeys          McpApiKey[]
+  aiUsage             AiUsage[]
 
   @@map("empresas")
 }
@@ -142,6 +169,7 @@ model Usuario {
 
   empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   squadPins SquadPin[]
+  membros   Membro[]
   conversas Conversa[]
   aiUsage   AiUsage[]
 
@@ -163,6 +191,321 @@ model Convite {
   @@unique([empresaId, email])
   @@index([empresaId])
   @@map("convites")
+}
+
+/// Vínculo pessoa <-> organização: quem faz parte do time e com quais dados
+/// organizacionais (área, cargo, status). É a entidade canônica de "Membro".
+///
+/// Separação proposital de `Usuario`:
+///   Usuario = credencial de login (e-mail unique GLOBAL, senhaHash, avatar).
+///   Membro  = pertencimento a UM tenant + dados de estrutura organizacional.
+/// `usuarioId` é nulo enquanto a pessoa ainda não tem conta (convite_pendente),
+/// que é como a V1 cria um membro sem senha e sem tocar em auth.
+///
+/// A V1 não tem papel/permissão/hierarquia de propósito. As evoluções previstas
+/// entram como colunas nuláveis AQUI: areaId/cargoId (V2, Áreas e Cargos como
+/// entidades), gestorId -> membros.id (V3), papel (V4), escopo (V5).
+///
+/// `nome`/`email` são duplicados em relação a `Usuario` por design: `Membro` é
+/// autoritativo para exibição e o MembrosService é o único caminho de escrita.
+/// Se algum dia existir um PATCH /user/profile, ele precisa espelhar para cá.
+model Membro {
+  id        String  @id @default(cuid())
+  empresaId String
+  /// Conta de login vinculada. Nulo = convidado que ainda não tem conta.
+  usuarioId String?
+
+  nome  String
+  /// Normalizado (trim + lowercase) no service: a unique do Postgres é
+  /// case-sensitive, então a normalização é o que a torna efetiva.
+  email String
+  /// LEGADO (pré-V4). Guardam o CÓDIGO do catálogo estático que existia em
+  /// ts/demo/src/app/data/{areas,cargos}.ts. Substituídos por `areaId`/
+  /// `cargoId` e NUNCA MAIS ESCRITOS — ficam congelados como histórico e como
+  /// fallback de exibição de quem ainda não foi reconfigurado. Não houve
+  /// backfill de propósito: nenhum registro existente foi tocado.
+  ///
+  /// Não remover nem renomear: o `forbidNonWhitelisted` do bootstrap faria um
+  /// bundle antigo, que ainda envia estes campos, receber 400 em todo save.
+  area  String?
+  cargo String?
+
+  status MembroStatus @default(convite_pendente)
+
+  /// LEGADO (pré-V6). Guardava a role ÚNICA do membro. Substituída por
+  /// `MembroRole`, que permite até duas, e lida pela última vez no backfill
+  /// da migration `membro_roles_multiplas`. O código novo não a escreve.
+  ///
+  /// Atenção, e é o que a distingue das outras colunas legadas deste model:
+  /// `area`/`cargo` são texto puro e ficaram realmente congelados, mas esta
+  /// tem FK com ON DELETE SET NULL — então o BANCO continua zerando-a quando
+  /// uma role é excluída. Ela não serve de histórico nem de auditoria.
+  ///
+  /// Não remover: o `forbidNonWhitelisted` do bootstrap faria um bundle
+  /// antigo, que ainda envia `roleId`, receber 400 em todo save. O DTO a
+  /// aceita e IGNORA.
+  ///
+  /// NÃO confundir com `Usuario.role` (owner/admin/membro): aquele é o papel
+  /// da CONTA e segue sendo o gate legado da API; este é a camada nova de
+  /// permissões da plataforma. Owner continua protegido por lá.
+  roleId String?
+
+  /// V4 — Estrutura. Área e Cargo como entidades da organização, no lugar dos
+  /// códigos de texto acima. Nulo é estado válido: é como fica todo membro
+  /// cadastrado antes desta versão, até que alguém escolha a entidade.
+  ///
+  /// Uma área e um cargo por membro. Área responde ONDE a pessoa está alocada,
+  /// Cargo QUAL posição profissional ocupa. Nenhuma das duas concede permissão
+  /// (isso é `roleId`) nem define hierarquia (isso é `gestorId`).
+  areaId  String?
+  cargoId String?
+
+  /// V2 — Hierarquia. Gestor direto: a quem este membro responde. Nulo =
+  /// topo da estrutura (ou relação ainda não configurada), estado válido.
+  /// É a ÚNICA relação hierárquica persistida: subordinados, cadeia acima e
+  /// árvore inteira são derivados dela. Deliberadamente não há coluna de
+  /// nível, para não existir dado que possa divergir das relações.
+  ///
+  /// Cargo NÃO define hierarquia: dois gerentes podem estar em cadeias
+  /// diferentes, e Área é só contexto organizacional.
+  gestorId String?
+
+  /// Trilha mínima de auditoria. A V1 não envia e-mail; só registra o momento.
+  convidadoEm  DateTime?
+  desativadoEm DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa         Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  /// SetNull e não Cascade: apagar uma conta não apaga o histórico do vínculo.
+  usuario         Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  /// Auto-relação. SetNull e não Cascade: se o gestor deixar de existir
+  /// (cancelamento de um convite que era gestor), a equipe dele fica sem
+  /// gestor em vez de ser apagada junto.
+  gestor          Membro?      @relation("MembroGestor", fields: [gestorId], references: [id], onDelete: SetNull)
+  subordinados    Membro[]     @relation("MembroGestor")
+  /// LEGADO, junto de `roleId`. SetNull: excluir uma role nunca deixa membro
+  /// apontando para id inexistente — e é justamente esse SetNull que faz a
+  /// coluna continuar mudando depois de "congelada".
+  role            Role?        @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  /// V6 — Acesso. As roles do membro (até duas). Fonte de verdade das
+  /// permissões efetivas, que são a UNIÃO das permissões destas roles.
+  rolesAtribuidas MembroRole[]
+  /// `areaRef`/`cargoRef` e não `area`/`cargo`: os escalares legados acima
+  /// ocupam esses nomes, e nome de campo é único por model no Prisma. A API
+  /// expõe exatamente estes nomes, então front e banco falam a mesma língua.
+  ///
+  /// SetNull, mesma escolha de `role`: o service já recusa excluir uma Área em
+  /// uso (409 com a contagem), e isto é só a rede — nenhum membro fica
+  /// apontando para id inexistente. Restrict quebraria o Cascade de Empresa,
+  /// porque o Postgres o checa na hora e a ordem das deleções filhas não é
+  /// garantida.
+  areaRef         Area?        @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  cargoRef        Cargo?       @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+
+  @@unique([empresaId, email])
+  /// Composta (e não unique em usuarioId sozinho) para não travar a V2+, em que
+  /// um usuário pode pertencer a mais de uma organização. No Postgres NULLs
+  /// múltiplos são permitidos, então N convidados sem conta convivem aqui.
+  @@unique([empresaId, usuarioId])
+  @@index([empresaId])
+  @@index([empresaId, status])
+  /// Serve "quem responde a este gestor?", a consulta base da árvore.
+  @@index([empresaId, gestorId])
+  /// Peso morto desde a V6: nada consulta mais `roleId`. Fica porque removê-lo
+  /// exigiria um DROP INDEX numa migration que se propôs a ser só aditiva.
+  @@index([empresaId, roleId])
+  /// Servem a contagem de membros por área/cargo, que é o número exibido nas
+  /// duas listagens de Estrutura.
+  @@index([empresaId, areaId])
+  @@index([empresaId, cargoId])
+  @@map("membros")
+}
+
+/// V3 — Acesso. Uma Role responde "o que o membro PODE FAZER" na plataforma.
+///
+/// Separação proposital em relação ao resto da estrutura organizacional:
+///   Área    = onde a pessoa trabalha
+///   Cargo   = qual posição profissional ocupa
+///   Gestor  = a quem responde
+///   Role    = o que pode fazer no sistema
+/// Nenhum desses infere o outro. Um analista pode ter role Admin e um diretor
+/// pode ter role Viewer — e isso tem de continuar sendo possível.
+///
+/// `permissoes` é text[] de códigos do catálogo (src/acesso/permissoes.catalog.ts),
+/// e não enum nem tabela de vínculo: o catálogo cresce a cada funcionalidade
+/// nova, e um enum exigiria ALTER TYPE a cada mexida. A validação e a
+/// normalização das dependências ficam no service, então o que é gravado nunca
+/// é incoerente. Mesma escolha já feita em `Empresa.modulos`.
+///
+/// O que a Role NÃO responde nesta versão: sobre QUAIS dados a permissão vale.
+/// Isso é escopo de acesso, e entra na V4 como colunas/tabela própria aqui.
+model Role {
+  id        String @id @default(cuid())
+  empresaId String
+
+  nome      String
+  descricao String?
+  tipo      RoleTipo @default(personalizada)
+  /// Chave estável das roles de sistema (admin | editor | viewer). Nula nas
+  /// personalizadas. É por aqui que o upsert idempotente as reconhece, em vez
+  /// de depender do nome, que é texto livre.
+  codigo    String?
+
+  /// Códigos de permissão do catálogo. Sempre normalizado pelo service.
+  permissoes String[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa           Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  /// LEGADO: o lado inverso de `Membro.roleId`. Não contar membros por aqui —
+  /// a contagem exibida vem de `membrosAtribuidos`.
+  membros           Membro[]
+  /// V6 — Acesso. Os vínculos desta role. `_count.membrosAtribuidos` é a
+  /// contagem de membros que a listagem e o modal de exclusão mostram.
+  membrosAtribuidos MembroRole[]
+
+  /// Nome único no tenant: a listagem identifica role por nome, e dois "Editor"
+  /// na mesma organização seriam indistinguíveis para quem administra.
+  @@unique([empresaId, nome])
+  /// Uma role de sistema por código, por organização.
+  @@unique([empresaId, codigo])
+  @@index([empresaId])
+  @@map("roles")
+}
+
+/// V6 — Acesso. Vínculo membro↔role: é o que permite até DUAS roles por membro.
+///
+/// Tabela de vínculo, e não uma segunda coluna FK em `Membro`: `roleId` +
+/// `roleId2` codificaria ordem, e as roles de um membro NÃO têm prioridade
+/// entre si — o acesso efetivo é a UNIÃO das permissões, que é comutativa.
+/// `Editor + Gestor` e `Gestor + Editor` têm de dar o mesmo resultado.
+///
+/// Deliberadamente SEM coluna de slot/ordem, ao contrário de `SquadPin`, que é
+/// o modelo de junção que este copia em todo o resto. Um `slot Int` com
+/// `@@unique([membroId, slot])` e um CHECK (slot IN (0,1)) daria o teto de duas
+/// no próprio banco — e seria exatamente o conceito de role principal /
+/// secundária que esta versão recusa. O teto vive no service
+/// (`MAX_ROLES_POR_MEMBRO`); não troque um pelo outro depois.
+///
+/// Sem `empresaId`, também como `SquadPin`: os dois lados são FK real, então o
+/// Cascade de `Empresa` alcança esta tabela por Membro E por Role. As outras
+/// junções do schema (VaultNotaCategoria, EmpresaConector) carregam `empresaId`
+/// porque um dos lados delas é texto, não FK. Denormalizá-lo aqui criaria uma
+/// terceira fonte capaz de divergir das duas.
+model MembroRole {
+  id       String   @id @default(cuid())
+  membroId String
+  roleId   String
+  criadoEm DateTime @default(now())
+
+  /// Cascade nos dois lados: o vínculo é a associação viva, não histórico.
+  /// Excluir a role apaga o vínculo, mas o service ainda exige resolução
+  /// explícita antes (ver `RolesService.remover`) — isto é só a rede do banco.
+  membro Membro @relation(fields: [membroId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  /// Impede a mesma role duas vezes no mesmo membro, no próprio banco.
+  @@unique([membroId, roleId])
+  /// Serve "quais membros têm esta role?" — a contagem da aba Acesso e o
+  /// `where` da substituição na exclusão. O prefixo da unique já cobre
+  /// `membroId`, então não há índice para ele.
+  @@index([roleId])
+  @@map("membro_roles")
+}
+
+/// V4 — Estrutura. Área organizacional: ONDE a pessoa está alocada.
+///
+/// Substitui o catálogo estático que vivia em ts/demo/src/app/data/areas.ts,
+/// onde as 11 áreas eram iguais para toda organização. Agora cada empresa
+/// administra as suas.
+///
+/// O que a Área deliberadamente NÃO tem:
+///   • responsável/gestor da área — liderança entre pessoas é só
+///     `Membro.gestorId`, e uma segunda fonte de verdade para isso seria pior
+///     do que a ausência do campo;
+///   • área superior/subáreas — a estrutura é plana nesta versão;
+///   • permissão de qualquer tipo — quem responde "o que pode fazer" é a Role.
+///
+/// A Área é contexto organizacional. Uma regra de acesso pode um dia dizer
+/// "conforme a área do membro" e usar isto para resolver o alcance dos dados,
+/// mas a permissão continua vindo da Role, e o vínculo com repositório terá de
+/// ser estruturado — nunca inferido por semelhança de nome.
+///
+/// Nunca é excluída em silêncio: desativar (`status = inativo`) é o caminho
+/// normal e preserva registro, histórico e as associações existentes. A
+/// exclusão é recusada com 409 enquanto houver membros.
+model Area {
+  id        String @id @default(cuid())
+  empresaId String
+
+  nome      String
+  /// Só informativa: não tem efeito sobre permissão, hierarquia ou acesso.
+  descricao String?
+
+  status EstruturaStatus @default(ativo)
+
+  /// Trilha mínima, mesmo par status/timestamp de `Membro`.
+  desativadoEm DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  membros Membro[]
+
+  /// A quantidade de membros da área é SEMPRE derivada desta relação
+  /// (`_count`), nunca uma coluna: um contador gravado divergiria na primeira
+  /// edição de membro feita por outro caminho.
+  ///
+  /// Nome único no tenant: a listagem e o seletor do membro identificam a área
+  /// pelo nome, e duas "Produto" seriam indistinguíveis para quem administra.
+  /// A unique do Postgres é case-sensitive, então o service ainda faz o
+  /// pré-check case-insensitive — mesma relação entre unique e normalização de
+  /// `Membro.email`.
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+  @@map("areas")
+}
+
+/// V4 — Estrutura. Cargo: QUAL POSIÇÃO profissional a pessoa ocupa.
+///
+/// Modelo gêmeo de `Area` de propósito, e não uma tabela única com um
+/// discriminador `tipo`: são duas telas administradas separadamente, e um
+/// discriminador obrigaria todo `where` a carregá-lo para não misturar as
+/// duas listas.
+///
+/// Cargo NÃO define hierarquia. Dois membros com o mesmo cargo podem ter
+/// relação hierárquica entre si, e alguém com cargo aparentemente superior
+/// pode não ser gestor de ninguém. A fonte de verdade é `Membro.gestorId`.
+/// Também NÃO concede permissão: isso é `Role`.
+///
+/// Senioridade não é campo separado nesta versão — o cargo é completo
+/// ("Product Designer Sênior"). Sem níveis, grades, bands, trilhas de
+/// carreira ou faixa salarial.
+model Cargo {
+  id        String @id @default(cuid())
+  empresaId String
+
+  nome      String
+  /// Só informativa, igual à descrição da Área.
+  descricao String?
+
+  status EstruturaStatus @default(ativo)
+
+  desativadoEm DateTime?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  membros Membro[]
+
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+  @@map("cargos")
 }
 
 /// Assinatura/cobrança da empresa (1:1). Snapshot de preços no momento.
@@ -457,31 +800,31 @@ model Insight {
 
 /// Uma nota .md sincronizada do vault do usuário.
 model VaultNota {
-  id        String   @id @default(cuid())
-  empresaId String
+  id             String   @id @default(cuid())
+  empresaId      String
   /// Repositório (contexto) de onde a nota veio. Isola o índice entre
   /// repositórios: cada um sincroniza a sua pasta sem apagar nem ler o do
   /// outro. Espelha o mesmo isolamento que `Conversa.repositorioId` já faz
   /// para o histórico.
-  repositorioId String
+  repositorioId  String
   /// Caminho relativo dentro da pasta (ex.: "Reuniões/2026-01.md").
   /// Único por empresa + repositório — dois repositórios podem ter um
   /// "README.md" cada, sem se sobrescreverem.
-  path      String
+  path           String
   /// Título derivado (frontmatter `título`/`title` ou nome do arquivo).
-  titulo    String
+  titulo         String
   /// Conteúdo integral do arquivo (texto).
-  conteudo  String
+  conteudo       String
   /// Hash do conteúdo, para pular o reprocessamento de arquivos inalterados.
-  hash      String
+  hash           String
   /// Hash com que esta nota foi classificada em categorias pela última vez.
   /// `null` = nunca classificada; diferente de `hash` = o texto mudou e a
   /// classificação está velha. É o que faz resincronizar um vault intocado
   /// custar zero token — e o que evita reprocessar para sempre uma nota que a
   /// IA classificou em NENHUMA categoria (ela fica com o hash gravado igual).
   categoriasHash String?
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
 
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
@@ -561,28 +904,28 @@ model EmpresaConector {
 
   // --- Credenciais OAuth (conectores com integração real: Slack, e-mail) ---
   /// Token de acesso do provedor, criptografado (AES-256-GCM). NUNCA exposto.
-  accessTokenEncrypted String?
+  accessTokenEncrypted  String?
   /// Refresh token criptografado, nos provedores cujo acesso expira
   /// (Gmail/Outlook). O Slack usa token de bot sem validade.
   refreshTokenEncrypted String?
   /// Quando o access token expira — antes disso renovamos pelo refresh.
-  tokenExpiresAt       DateTime?
+  tokenExpiresAt        DateTime?
   /// Workspace/conta autorizada no provedor (ex.: nome do time Slack ou
   /// e-mail da caixa autorizada).
-  teamId               String?
-  teamName             String?
+  teamId                String?
+  teamName              String?
   /// Scopes concedidos na autorização, separados por vírgula.
-  scopes               String?
+  scopes                String?
 
   // --- Token da pessoa que autorizou (Slack: OAuth v2 `authed_user`) ---
   /// Criptografado. É o único que lê as conversas da pessoa — DMs e canais em
   /// que ela está. O token de bot só enxerga onde o app foi adicionado, e as
   /// DMs que ele vê são as do próprio app, quase sempre vazias.
-  userTokenEncrypted   String?
+  userTokenEncrypted String?
   /// Id da pessoa que autorizou, no provedor.
-  userId               String?
+  userId             String?
   /// Scopes do token de usuário, separados por vírgula.
-  userScopes           String?
+  userScopes         String?
 
   // --- Credenciais informadas por formulário (conectores sem OAuth próprio:
   // Google Drive, Teams, OneDrive, WhatsApp, YouTube, Zapier) ---
@@ -590,7 +933,7 @@ model EmpresaConector {
   /// das chaves de IA). NUNCA exposto: a API devolve apenas os NOMES dos campos
   /// preenchidos. Os ids válidos por conector estão em
   /// src/conectores/credenciais-spec.ts.
-  credenciaisEncrypted String?
+  credenciaisEncrypted    String?
   /// Quando as credenciais foram gravadas pela última vez.
   credenciaisAtualizadoEm DateTime?
 
@@ -646,23 +989,23 @@ enum ConversaOrigem {
 
 /// Uma conversa: prompt da Topbar (`origem = prompt`) ou chat de squad.
 model Conversa {
-  id           String         @id @default(cuid())
-  empresaId    String
-  usuarioId    String
-  origem       ConversaOrigem @default(squad)
+  id            String         @id @default(cuid())
+  empresaId     String
+  usuarioId     String
+  origem        ConversaOrigem @default(squad)
   /// Código do squad (Squad.id). Nulo nas conversas do Prompt.
-  squadId      String?
+  squadId       String?
   /// Agente específico (SquadAgent.id), quando a conversa é com um único agente.
-  agentId      String?
+  agentId       String?
   /// Modo do Prompt (`vault` | `web` | `auto`). Nulo nos chats de squad.
-  modo         String?
+  modo          String?
   /// Repositório (contexto) em que a conversa foi gerada. Isola o histórico
   /// entre repositórios e, por consequência, entre organizações.
   repositorioId String?
   /// Título exibido no histórico (derivado da 1ª mensagem do usuário).
-  titulo       String
-  criadoEm     DateTime       @default(now())
-  atualizadoEm DateTime       @updatedAt
+  titulo        String
+  criadoEm      DateTime       @default(now())
+  atualizadoEm  DateTime       @updatedAt
 
   empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)

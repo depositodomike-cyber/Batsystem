@@ -45,10 +45,7 @@ import {
   exigeCredenciais,
   labelDoCampo,
 } from "@/app/data/conector-credenciais";
-import {
-  DISABLED_MENU_CLASS,
-  isConnectorTemporarilyDisabled,
-} from "@/app/data/temporarilyDisabledFeatures";
+import { isConnectorTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
 
@@ -374,24 +371,32 @@ export default function Conectores() {
 
         {/* Resultado */}
         {hasResults ? (
-          <div className="mt-5 flex flex-col gap-8">
+          <div className="mt-5 flex flex-col gap-10">
             {visibleCategories.map((cat) => {
-              const items = filtered.filter((c) => c.category === cat.id);
+              // Disponíveis primeiro, "Em breve" no fim: o sort é estável,
+              // então a ordem do catálogo se mantém dentro de cada grupo.
+              const items = filtered
+                .filter((c) => c.category === cat.id)
+                .sort(
+                  (a, b) =>
+                    Number(isConnectorTemporarilyDisabled(a.id)) -
+                    Number(isConnectorTemporarilyDisabled(b.id)),
+                );
               return (
                 <section key={cat.id} className="scroll-mt-32">
                   <div className="flex items-baseline gap-2">
-                    <h3 className="dark:text-dark-100 text-base font-semibold text-gray-800">
+                    <h3 className="dark:text-dark-100 text-sm font-semibold text-gray-800">
                       {cat.label}
                     </h3>
-                    <span className="dark:text-dark-300 text-xs font-medium text-gray-400">
+                    <span className="dark:text-dark-300 text-tiny font-medium text-gray-400">
                       {items.length}
                     </span>
                   </div>
-                  <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-400">
+                  <p className="dark:text-dark-300 text-xs mt-0.5 text-gray-400">
                     {cat.description}
                   </p>
 
-                  <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {items.map((c) => (
                       <ConnectorCard
                         key={c.id}
@@ -547,6 +552,11 @@ function ConnectorCard({
   onOpen: () => void;
   onToggle: () => void;
 }) {
+  const totalPermissoes = connector.permissions.length;
+  const rotuloPermissoes = `${totalPermissoes} ${
+    totalPermissoes === 1 ? "permissão" : "permissões"
+  }`;
+
   return (
     <div
       role={disabled ? undefined : "button"}
@@ -565,79 +575,76 @@ function ConnectorCard({
             }
       }
       className={clsx(
-        "group dark:border-dark-600 dark:bg-dark-700 flex h-full flex-col rounded-xl border border-gray-200 bg-white p-4",
+        "dark:border-dark-600 dark:bg-dark-700 flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3",
         disabled
-          ? DISABLED_MENU_CLASS
-          : "dark:hover:border-dark-400 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-none",
+          ? // Não reusa DISABLED_MENU_CLASS: opacity-40 deixa o tile compacto
+            // ilegível — aqui 60 é o mínimo que ainda lê.
+            "cursor-not-allowed opacity-60"
+          : "dark:hover:border-dark-400 focus-visible:ring-primary-500/50 cursor-pointer outline-hidden transition-colors hover:border-gray-300 focus-visible:ring-2",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <ConnectorLogo connector={connector} />
-        {disabled ? (
-          <Badge color="neutral" variant="soft" className="rounded-full">
-            Em breve
-          </Badge>
-        ) : connected ? (
-          <Badge color="success" variant="soft" className="gap-1 rounded-full">
-            <CheckCircleIcon className="size-3.5" />
-            Conectado
-          </Badge>
-        ) : connector.isNew ? (
-          <Badge color="info" variant="soft" className="rounded-full">
-            Novo
-          </Badge>
-        ) : null}
-      </div>
+      <ConnectorLogo connector={connector} size="sm" />
 
-      <div className="mt-3 grow">
-        <h4 className="dark:text-dark-50 line-clamp-1 font-semibold text-gray-800">
-          {connector.name}
-        </h4>
-        <p className="dark:text-dark-300 text-xs-plus mt-0.5 line-clamp-1 text-gray-500">
-          {connector.objective}
-        </p>
-
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {connector.permissions.slice(0, 2).map((p) => (
-            <span
-              key={p}
-              className="dark:bg-dark-600 dark:text-dark-200 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500"
+      {/* Zona central: a única que encolhe (logo e rail são shrink-0). */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <h4
+            className="dark:text-dark-100 text-xs-plus truncate font-semibold text-gray-800"
+            title={connector.name}
+          >
+            {connector.name}
+          </h4>
+          {!disabled && !connected && connector.isNew && (
+            <Badge
+              color="info"
+              variant="soft"
+              className="text-tiny shrink-0 rounded-full"
             >
-              {p}
-            </span>
-          ))}
-          {connector.permissions.length > 2 && (
-            <span className="dark:text-dark-300 px-1 py-0.5 text-[11px] font-medium text-gray-400">
-              +{connector.permissions.length - 2}
-            </span>
+              Novo
+            </Badge>
           )}
         </div>
+        {/* Spans separados de propósito: o objetivo trunca, a contagem de
+            permissões nunca desaparece. */}
+        <p className="dark:text-dark-300 text-tiny mt-0.5 flex items-center gap-1 text-gray-400">
+          <span className="truncate">{connector.objective}</span>
+          <span className="dark:text-dark-400 shrink-0 text-gray-300">·</span>
+          <span className="shrink-0">{rotuloPermissoes}</span>
+        </p>
       </div>
 
-      <div className="mt-4">
+      {/* Rail direito: sempre exatamente um elemento, para manter uma linha.
+          Conectado não tem botão — gerenciar e desconectar ficam no drawer. */}
+      {disabled ? (
+        <Badge
+          color="neutral"
+          variant="soft"
+          className="text-tiny shrink-0 rounded-full"
+        >
+          Em breve
+        </Badge>
+      ) : connected ? (
+        <Badge
+          color="success"
+          variant="soft"
+          className="text-tiny shrink-0 gap-1 rounded-full"
+        >
+          <CheckCircleIcon className="size-3.5" />
+          Conectado
+        </Badge>
+      ) : (
         <Button
-          variant={connected && !disabled ? "outlined" : "filled"}
-          color={connected && !disabled ? "neutral" : "primary"}
-          className="text-xs-plus h-9 w-full gap-1.5 rounded-lg"
-          disabled={disabled}
-          aria-disabled={disabled}
+          color="primary"
+          className="text-tiny h-7 shrink-0 gap-1 rounded-lg px-2.5"
           onClick={(e) => {
             e.stopPropagation();
             onToggle();
           }}
         >
-          {disabled ? (
-            "Em breve"
-          ) : connected ? (
-            "Gerenciar"
-          ) : (
-            <>
-              <PlusIcon className="size-4" />
-              Conectar
-            </>
-          )}
+          <PlusIcon className="size-3.5" />
+          Conectar
         </Button>
-      </div>
+      )}
     </div>
   );
 }

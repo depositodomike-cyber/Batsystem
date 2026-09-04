@@ -5,6 +5,7 @@ import ProjectDetail from "@/app/pages/ceo/ProjectDetail";
 import ChatDetail from "@/app/pages/ceo/ChatDetail";
 import SquadDetail from "@/app/pages/ceo/SquadDetail";
 import Conectores from "@/app/pages/ceo/Conectores";
+import Administracao from "@/app/pages/ceo/Administracao";
 import Documentos from "@/app/pages/ceo/Documentos";
 import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
@@ -51,6 +52,7 @@ const relatoriosPages: Record<string, RouteObject["Component"]> = {
 const pageBySlug: Record<string, RouteObject["Component"]> = {
   configuracoes: Configuracoes,
   conectores: Conectores,
+  administracao: Administracao,
   documentos: Documentos,
   email: Email,
   slack: Slack,
@@ -126,6 +128,23 @@ const conversasDetailRoutes: RouteObject[] = products.map((p) => ({
   Component: ConversaPrompt,
 }));
 
+// A área virou Administração, com Membros / Estrutura / Acesso como abas. Os
+// dois redirects mantêm os caminhos das versões anteriores funcionando — o de
+// `/membros` era a tela da V1, o de `/estrutura` foi o nome da V2 — já
+// apontando para a aba certa.
+const administracaoRedirects: RouteObject[] = products.flatMap((p) => [
+  {
+    path: `${p.code}/membros`,
+    element: <Navigate to={`/${p.code}/administracao?secao=membros`} replace />,
+  },
+  {
+    path: `${p.code}/estrutura`,
+    element: (
+      <Navigate to={`/${p.code}/administracao?secao=estrutura`} replace />
+    ),
+  },
+]);
+
 // Regras agora vive dentro de Configurações. Mantém links e favoritos antigos
 // funcionando sem expor uma segunda entrada independente no sistema.
 const memoriaRedirects: RouteObject[] = products.map((p) => ({
@@ -186,6 +205,7 @@ export const ceoRoutes: RouteObject[] = [
   ...conversasHistoricoRoutes,
   ...conversasRoutes,
   ...conversasDetailRoutes,
+  ...administracaoRedirects,
   ...memoriaRedirects,
   ...documentoRoutes,
   ...projectRoutes,

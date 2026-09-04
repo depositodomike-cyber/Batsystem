@@ -104,7 +104,13 @@ export const PASTA_COR: Record<string, string> = {
   Áudios: "#38BDF8",
   Estratégico: "#FB923C",
 };
-const PALETA = [
+/**
+ * Tons categóricos para legendas. Exportada porque o organograma colore os
+ * cargos com as MESMAS cores (ver organograma-cargos.ts): a paleta de
+ * `ColorType` tem 7 tokens e três deles já significam status no card, então
+ * reusar estes tons evita inventar uma segunda paleta na plataforma.
+ */
+export const PALETA = [
   "#A3E635",
   "#FACC15",
   "#818CF8",

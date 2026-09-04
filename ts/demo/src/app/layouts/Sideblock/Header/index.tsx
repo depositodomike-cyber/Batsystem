@@ -6,6 +6,7 @@ import {
   Cog6ToothIcon,
   LinkIcon,
   MagnifyingGlassIcon,
+  UsersIcon,
 } from "@heroicons/react/24/outline";
 
 // Local Imports
@@ -93,6 +94,12 @@ export function Header() {
           <TokenUsage />
         </div>
         <div className="hidden items-center gap-1 md:flex">
+          <SystemAreaLink
+            productCode={productCode}
+            slug="administracao"
+            label={t("chrome.administration")}
+            icon={UsersIcon}
+          />
           <SystemAreaLink
             productCode={productCode}
             slug="conectores"

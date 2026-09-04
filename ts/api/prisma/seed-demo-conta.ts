@@ -48,8 +48,18 @@ function carregarEnvArquivo(nome: string, sobrescrever = false): void {
 }
 
 // Base local, depois Neon (.env.local) sobrescreve — é o banco do deploy.
+// A exceção: se quem chamou já exportou DATABASE_URL, esse valor ganha, para
+// dar como rodar contra o Postgres local sem editar arquivo nenhum:
+//   DATABASE_URL=postgresql://... npm run db:seed:demo
+// Mesma precedência de `seed-demo-membros.ts` — sem isto, exportar a URL não
+// tem efeito e o seed escreve no banco do DEPLOY sem avisar.
+const urlDoChamador = process.env.DATABASE_URL;
 carregarEnvArquivo(".env");
 carregarEnvArquivo(".env.local", true);
+if (urlDoChamador) {
+  process.env.DATABASE_URL = urlDoChamador;
+  process.env.DATABASE_URL_UNPOOLED = urlDoChamador;
+}
 
 const prisma = new PrismaClient();
 

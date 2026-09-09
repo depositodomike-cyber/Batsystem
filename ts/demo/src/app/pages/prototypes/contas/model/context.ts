@@ -25,8 +25,11 @@ import {
   papelReal,
   repositorioAtivo,
   repositoriosDoEscopoAtivo,
+  rotuloOrganizacaoAtiva,
   usuarioDaSessao,
 } from "./selectors";
+
+export { ROTULO_ESCOPO_PESSOAL } from "./selectors";
 import type { EstadoPrototipo } from "./types";
 
 export interface ValorContextoPrototipo {
@@ -64,6 +67,18 @@ export function useRepositorioAtivo() {
 export function useOrganizacaoAtiva() {
   const { estado } = usePrototipoContas();
   return organizacaoAtiva(estado);
+}
+
+/**
+ * O nome da organização ativa, como o menu de perfil o mostra.
+ *
+ * Um hook próprio em vez de `useOrganizacaoAtiva()?.nome` no consumidor: o
+ * escopo pessoal não tem `Organizacao` nenhuma, e é o selector que sabe como
+ * chamá-lo.
+ */
+export function useRotuloOrganizacaoAtiva() {
+  const { estado } = usePrototipoContas();
+  return rotuloOrganizacaoAtiva(estado);
 }
 
 export function usePagadorAtivo() {

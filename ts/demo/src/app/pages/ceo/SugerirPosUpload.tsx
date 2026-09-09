@@ -74,7 +74,12 @@ const META: Record<
   },
 };
 
-export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props) {
+export function SugerirPosUploadModal({
+  isOpen,
+  close,
+  titulo,
+  conteudo,
+}: Props) {
   const repositorioId = useRepositorioAtivo()?.id ?? undefined;
   const [etapa, setEtapa] = useState<Etapa>("escolha");
   const [kind, setKind] = useState<Kind | null>(null);
@@ -107,7 +112,11 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
         : "\n\nUse como base o material recém-adicionado ao Repositório e as regras já existentes.";
     const texto = `${meta.instrucao} Responda em português do Brasil, em Markdown.${base}`;
     try {
-      const data = await perguntarPromptApi({ texto, modo: "vault", repositorioId });
+      const data = await perguntarPromptApi({
+        texto,
+        modo: "vault",
+        repositorioId,
+      });
       setResultado(data.resposta);
       setEtapa("resultado");
     } catch (err) {
@@ -153,7 +162,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
             <DialogPanel className="dark:bg-dark-700 my-4 flex w-full max-w-xl flex-col rounded-xl bg-white shadow-xl">
               <div className="dark:border-dark-600 flex shrink-0 items-center justify-between border-b border-gray-200 px-5 py-3.5">
                 <DialogTitle className="dark:text-dark-50 flex items-center gap-2 text-base font-semibold text-gray-800">
-                  <SparklesIcon className="size-5 text-primary-500" />
+                  <SparklesIcon className="text-primary-500 size-5" />
                   Gerar a partir do Repositório
                 </DialogTitle>
                 <Button
@@ -190,18 +199,20 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                             key={k}
                             type="button"
                             onClick={() => gerar(k)}
-                            className="dark:border-dark-600 dark:hover:border-dark-400 dark:bg-dark-800 group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition-colors hover:border-primary-300"
+                            className="dark:border-dark-600 dark:hover:border-dark-400 dark:bg-dark-800 group hover:border-primary-300 flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-left transition-colors"
                           >
                             <span
                               className={`grid size-10 shrink-0 place-items-center rounded-lg bg-current/10 ${tint}`}
                             >
-                              <Icon className={`size-5.5 stroke-[1.5] ${tint}`} />
+                              <Icon
+                                className={`size-5.5 stroke-[1.5] ${tint}`}
+                              />
                             </span>
                             <span className="min-w-0">
                               <span className="dark:text-dark-100 block text-sm font-semibold text-gray-800">
                                 Criar {label.toLowerCase()}
                               </span>
-                              <span className="dark:text-dark-300 mt-0.5 block text-xs-plus text-gray-500">
+                              <span className="dark:text-dark-300 text-xs-plus mt-0.5 block text-gray-500">
                                 {k === "atividades"
                                   ? "Tarefas acionáveis a partir do conteúdo."
                                   : "Sinais estratégicos e implicações."}
@@ -213,7 +224,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                     </div>
 
                     {erro && (
-                      <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs-plus text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
+                      <div className="text-xs-plus rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
                         {erro}
                       </div>
                     )}
@@ -231,7 +242,8 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                     <div className="flex flex-col items-center gap-3 text-center">
                       <Spinner className="size-6" />
                       <p className="dark:text-dark-200 text-sm text-gray-600">
-                        Gerando {kind ? META[kind].label.toLowerCase() : "sugestões"} a
+                        Gerando{" "}
+                        {kind ? META[kind].label.toLowerCase() : "sugestões"} a
                         partir do Repositório…
                       </p>
                     </div>
@@ -256,14 +268,14 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                         <Button
                           onClick={() => setEtapa("escolha")}
                           variant="outlined"
-                          className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                          className="text-xs-plus h-8 gap-1.5 px-2.5"
                         >
                           <ArrowLeftIcon className="size-4" /> Voltar
                         </Button>
                         <Button
                           onClick={copiar}
                           variant="outlined"
-                          className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                          className="text-xs-plus h-8 gap-1.5 px-2.5"
                         >
                           {copiado ? (
                             <ClipboardDocumentCheckIcon className="size-4 text-emerald-500" />
@@ -276,7 +288,7 @@ export function SugerirPosUploadModal({ isOpen, close, titulo, conteudo }: Props
                           <Button
                             onClick={() => gerar(kind)}
                             variant="outlined"
-                            className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                            className="text-xs-plus h-8 gap-1.5 px-2.5"
                           >
                             <ArrowPathIcon className="size-4" /> Regerar
                           </Button>

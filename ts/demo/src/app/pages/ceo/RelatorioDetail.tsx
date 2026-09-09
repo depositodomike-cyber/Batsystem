@@ -102,7 +102,7 @@ export default function RelatorioDetail() {
             <Button
               color="primary"
               variant="outlined"
-              className="h-9 shrink-0 gap-1.5 rounded-lg px-3 text-xs-plus"
+              className="text-xs-plus h-9 shrink-0 gap-1.5 rounded-lg px-3"
             >
               <ArrowDownTrayIcon className="size-4" />
               Exportar
@@ -134,7 +134,7 @@ export default function RelatorioDetail() {
               <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
                 Dashboard em construção
               </p>
-              <p className="dark:text-dark-300 mt-1 max-w-md text-xs-plus text-gray-400">
+              <p className="dark:text-dark-300 text-xs-plus mt-1 max-w-md text-gray-400">
                 {relatorio.objetivo}. O painel deste relatório estará disponível
                 em breve.
               </p>
@@ -174,7 +174,7 @@ function MetaItem({
   label: string;
 }) {
   return (
-    <span className="dark:text-dark-300 flex items-center gap-1.5 text-xs-plus text-gray-500">
+    <span className="dark:text-dark-300 text-xs-plus flex items-center gap-1.5 text-gray-500">
       <Icon className="dark:text-dark-400 size-4 text-gray-400" />
       {label}
     </span>
@@ -198,7 +198,7 @@ function KpiCardView({ kpi }: { kpi: KpiCard }) {
         {kpi.delta && (
           <span
             className={clsx(
-              "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-tiny font-semibold",
+              "text-tiny flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-semibold",
               down
                 ? "bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400"
                 : "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400",
@@ -214,7 +214,7 @@ function KpiCardView({ kpi }: { kpi: KpiCard }) {
         )}
       </div>
       {kpi.hint && (
-        <p className="dark:text-dark-400 mt-1 text-tiny text-gray-400">
+        <p className="dark:text-dark-400 text-tiny mt-1 text-gray-400">
           {kpi.hint}
         </p>
       )}
@@ -392,7 +392,10 @@ function TableCard({
           </thead>
           <tbody className="dark:divide-dark-500 divide-y divide-gray-100">
             {tabela.rows.map((row, ri) => (
-              <tr key={ri} className="dark:hover:bg-dark-700/50 hover:bg-gray-50">
+              <tr
+                key={ri}
+                className="dark:hover:bg-dark-700/50 hover:bg-gray-50"
+              >
                 {row.map((cell, ci) => (
                   <td
                     key={ci}

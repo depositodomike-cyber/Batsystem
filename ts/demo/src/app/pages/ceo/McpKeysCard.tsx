@@ -152,7 +152,8 @@ export function McpKeysCard() {
             </h3>
             {keys.length > 0 && (
               <Badge color="success" variant="soft" className="rounded-full">
-                {keys.length} {keys.length === 1 ? "chave ativa" : "chaves ativas"}
+                {keys.length}{" "}
+                {keys.length === 1 ? "chave ativa" : "chaves ativas"}
               </Badge>
             )}
             <ChevronDownIcon
@@ -165,119 +166,120 @@ export function McpKeysCard() {
 
           {!open ? null : (
             <>
-          <p className="dark:text-dark-300 mt-2 text-sm text-gray-500">
-            Conecte agentes externos (Claude, Cursor, VS Code…) aos conectores
-            da sua empresa via MCP. Endpoint:{" "}
-            <code className="dark:bg-dark-600 dark:text-dark-100 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
-              {mcpUrl}
-            </code>
-          </p>
-
-          {/* Chave recém-criada — única exibição da chave crua */}
-          {created && (
-            <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
-              <div className="flex items-center gap-2">
-                <ExclamationTriangleIcon className="size-4.5 shrink-0 text-amber-500" />
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                  Copie agora — esta chave não será exibida novamente.
-                </p>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <code className="dark:bg-dark-800 dark:text-dark-50 min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-800">
-                  {created.key}
+              <p className="dark:text-dark-300 mt-2 text-sm text-gray-500">
+                Conecte agentes externos (Claude, Cursor, VS Code…) aos
+                conectores da sua empresa via MCP. Endpoint:{" "}
+                <code className="dark:bg-dark-600 dark:text-dark-100 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
+                  {mcpUrl}
                 </code>
-                <Button
-                  onClick={onCopy}
-                  className="h-9 shrink-0 gap-1.5 rounded-lg text-xs"
-                  color={copied ? "success" : "primary"}
-                >
-                  {copied ? (
-                    <>
-                      <CheckIcon className="size-4" /> Copiado
-                    </>
-                  ) : (
-                    <>
-                      <ClipboardDocumentIcon className="size-4" /> Copiar
-                    </>
-                  )}
-                </Button>
-              </div>
-              <Button
-                variant="flat"
-                className="mt-2 h-7 rounded-lg px-2 text-xs"
-                onClick={() => setCreated(null)}
-              >
-                Já copiei, ocultar
-              </Button>
-            </div>
-          )}
+              </p>
 
-          {/* Lista de chaves */}
-          {loading ? (
-            <p className="dark:text-dark-300 mt-4 text-sm text-gray-400">
-              Carregando…
-            </p>
-          ) : keys.length > 0 ? (
-            <ul className="dark:divide-dark-500 dark:border-dark-500 mt-4 divide-y divide-gray-100 rounded-xl border border-gray-100">
-              {keys.map((k) => (
-                <li
-                  key={k.id}
-                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
-                >
-                  <div className="min-w-0 text-sm">
-                    <span className="dark:text-dark-100 font-medium text-gray-700">
-                      {k.nome}
-                    </span>
-                    <span className="dark:text-dark-300 ml-2 font-mono text-xs text-gray-400">
-                      bcl_mcp_…{k.last4}
-                    </span>
+              {/* Chave recém-criada — única exibição da chave crua */}
+              {created && (
+                <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                  <div className="flex items-center gap-2">
+                    <ExclamationTriangleIcon className="size-4.5 shrink-0 text-amber-500" />
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      Copie agora — esta chave não será exibida novamente.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="dark:text-dark-300 text-xs text-gray-400">
-                      criada em {formatDate(k.criadoEm)}
-                      {k.lastUsedAt
-                        ? ` · usada em ${formatDate(k.lastUsedAt)}`
-                        : " · nunca usada"}
-                    </span>
+                  <div className="mt-2 flex items-center gap-2">
+                    <code className="dark:bg-dark-800 dark:text-dark-50 min-w-0 flex-1 truncate rounded-lg bg-white px-3 py-2 font-mono text-xs text-gray-800">
+                      {created.key}
+                    </code>
                     <Button
-                      variant="flat"
-                      color="error"
-                      isIcon
-                      className="size-7 rounded-lg"
-                      aria-label={`Revogar chave ${k.nome}`}
-                      onClick={() => onRevoke(k)}
+                      onClick={onCopy}
+                      className="h-9 shrink-0 gap-1.5 rounded-lg text-xs"
+                      color={copied ? "success" : "primary"}
                     >
-                      <TrashIcon className="size-4" />
+                      {copied ? (
+                        <>
+                          <CheckIcon className="size-4" /> Copiado
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardDocumentIcon className="size-4" /> Copiar
+                        </>
+                      )}
                     </Button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="dark:text-dark-300 mt-4 text-sm text-gray-400">
-              Nenhuma chave ativa. Gere uma chave para conectar um cliente MCP.
-            </p>
-          )}
+                  <Button
+                    variant="flat"
+                    className="mt-2 h-7 rounded-lg px-2 text-xs"
+                    onClick={() => setCreated(null)}
+                  >
+                    Já copiei, ocultar
+                  </Button>
+                </div>
+              )}
 
-          {error && <p className="mt-3 text-sm text-error">{error}</p>}
+              {/* Lista de chaves */}
+              {loading ? (
+                <p className="dark:text-dark-300 mt-4 text-sm text-gray-400">
+                  Carregando…
+                </p>
+              ) : keys.length > 0 ? (
+                <ul className="dark:divide-dark-500 dark:border-dark-500 mt-4 divide-y divide-gray-100 rounded-xl border border-gray-100">
+                  {keys.map((k) => (
+                    <li
+                      key={k.id}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
+                    >
+                      <div className="min-w-0 text-sm">
+                        <span className="dark:text-dark-100 font-medium text-gray-700">
+                          {k.nome}
+                        </span>
+                        <span className="dark:text-dark-300 ml-2 font-mono text-xs text-gray-400">
+                          bcl_mcp_…{k.last4}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="dark:text-dark-300 text-xs text-gray-400">
+                          criada em {formatDate(k.criadoEm)}
+                          {k.lastUsedAt
+                            ? ` · usada em ${formatDate(k.lastUsedAt)}`
+                            : " · nunca usada"}
+                        </span>
+                        <Button
+                          variant="flat"
+                          color="error"
+                          isIcon
+                          className="size-7 rounded-lg"
+                          aria-label={`Revogar chave ${k.nome}`}
+                          onClick={() => onRevoke(k)}
+                        >
+                          <TrashIcon className="size-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="dark:text-dark-300 mt-4 text-sm text-gray-400">
+                  Nenhuma chave ativa. Gere uma chave para conectar um cliente
+                  MCP.
+                </p>
+              )}
 
-          {/* Criar nova chave */}
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <input
-              type="text"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void onCreate();
-              }}
-              placeholder="Nome da chave (ex.: Claude do CEO)"
-              maxLength={80}
-              className="form-input dark:border-dark-450 dark:bg-dark-700 w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-            <Button color="primary" onClick={onCreate} disabled={saving}>
-              {saving ? "Gerando…" : "Gerar chave"}
-            </Button>
-          </div>
+              {error && <p className="text-error mt-3 text-sm">{error}</p>}
+
+              {/* Criar nova chave */}
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void onCreate();
+                  }}
+                  placeholder="Nome da chave (ex.: Claude do CEO)"
+                  maxLength={80}
+                  className="form-input dark:border-dark-450 dark:bg-dark-700 w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+                <Button color="primary" onClick={onCreate} disabled={saving}>
+                  {saving ? "Gerando…" : "Gerar chave"}
+                </Button>
+              </div>
             </>
           )}
         </div>

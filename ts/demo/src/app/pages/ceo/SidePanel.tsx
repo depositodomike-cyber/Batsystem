@@ -78,7 +78,7 @@ export function SidePanel(props: SidePanelProps) {
       >
         <ClockIcon className="size-4 stroke-[1.75]" />
         {total > 0 && (
-          <span className="dark:bg-dark-500 dark:text-dark-200 rounded bg-gray-100 px-1 text-tiny text-gray-600">
+          <span className="dark:bg-dark-500 dark:text-dark-200 text-tiny rounded bg-gray-100 px-1 text-gray-600">
             {total > 99 ? "99+" : total}
           </span>
         )}
@@ -194,7 +194,7 @@ function PanelBody({
                       {c.title}
                     </span>
                     {(c.agentReference ?? c.squadName) && (
-                      <span className="dark:text-dark-300 mt-0.5 text-tiny-plus text-gray-500">
+                      <span className="dark:text-dark-300 text-tiny-plus mt-0.5 text-gray-500">
                         {c.agentReference ?? c.squadName}
                       </span>
                     )}
@@ -222,7 +222,7 @@ function PanelBody({
                     <span className="dark:text-dark-50 line-clamp-2 text-xs font-medium text-gray-800">
                       {d.title}
                     </span>
-                    <span className="dark:text-dark-300 mt-0.5 block text-tiny-plus text-gray-500">
+                    <span className="dark:text-dark-300 text-tiny-plus mt-0.5 block text-gray-500">
                       {d.agentReference ?? d.squadName}
                       {" · "}
                       {new Date(d.createdAt).toLocaleString("pt-BR", {
@@ -272,7 +272,7 @@ function TabButton({
       {count > 0 && (
         <span
           className={clsx(
-            "rounded-lg px-1.5 text-tiny-plus",
+            "text-tiny-plus rounded-lg px-1.5",
             active
               ? "bg-primary-500/10 text-primary-700 dark:text-primary-300"
               : "dark:bg-dark-500 dark:text-dark-200 bg-gray-200 text-gray-600",
@@ -333,7 +333,7 @@ export function DocumentPreviewModal({
       >
         {doc && (
           <>
-            <div className="flex items-start gap-3 border-b border-gray-200 px-6 py-5 dark:border-dark-500">
+            <div className="dark:border-dark-500 flex items-start gap-3 border-b border-gray-200 px-6 py-5">
               <div className="bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300 grid size-10 shrink-0 place-items-center rounded-lg">
                 <DocumentTextIcon className="size-5 stroke-[1.5]" />
               </div>
@@ -355,7 +355,7 @@ export function DocumentPreviewModal({
               <button
                 onClick={close}
                 aria-label="Fechar"
-                className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 -mt-1 -mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
               >
                 <XMarkIcon className="size-5" />
               </button>
@@ -364,7 +364,7 @@ export function DocumentPreviewModal({
               {doc.source === "ai-studio" ? (
                 <MarkdownView>{doc.content}</MarkdownView>
               ) : (
-                <pre className="dark:text-dark-100 whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-800">
+                <pre className="dark:text-dark-100 font-sans text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
                   {doc.content}
                 </pre>
               )}
@@ -377,7 +377,7 @@ export function DocumentPreviewModal({
                 </div>
               ) : null}
             </div>
-            <div className="flex items-center justify-end border-t border-gray-200 px-6 py-4 dark:border-dark-500">
+            <div className="dark:border-dark-500 flex items-center justify-end border-t border-gray-200 px-6 py-4">
               <Button variant="flat" onClick={close}>
                 Fechar
               </Button>
@@ -421,9 +421,13 @@ function AttachmentView({ attachment: a }: { attachment: DocumentAttachment }) {
           alt={a.name}
           className="dark:border-dark-600 w-full rounded-lg border border-gray-200"
         />
-        <figcaption className="dark:text-dark-400 mt-1 flex items-center justify-between text-tiny-plus text-gray-400">
+        <figcaption className="dark:text-dark-400 text-tiny-plus mt-1 flex items-center justify-between text-gray-400">
           <span className="truncate">{a.name}</span>
-          <AttachmentAction icon={ArrowDownTrayIcon} label="Baixar" onClick={baixar} />
+          <AttachmentAction
+            icon={ArrowDownTrayIcon}
+            label="Baixar"
+            onClick={baixar}
+          />
         </figcaption>
       </figure>
     );
@@ -437,9 +441,13 @@ function AttachmentView({ attachment: a }: { attachment: DocumentAttachment }) {
           controls
           className="dark:border-dark-600 w-full rounded-lg border border-gray-200"
         />
-        <figcaption className="dark:text-dark-400 mt-1 flex items-center justify-between text-tiny-plus text-gray-400">
+        <figcaption className="dark:text-dark-400 text-tiny-plus mt-1 flex items-center justify-between text-gray-400">
           <span className="truncate">{a.name}</span>
-          <AttachmentAction icon={ArrowDownTrayIcon} label="Baixar" onClick={baixar} />
+          <AttachmentAction
+            icon={ArrowDownTrayIcon}
+            label="Baixar"
+            onClick={baixar}
+          />
         </figcaption>
       </figure>
     );
@@ -460,7 +468,11 @@ function AttachmentView({ attachment: a }: { attachment: DocumentAttachment }) {
           onClick={abrir}
         />
       )}
-      <AttachmentAction icon={ArrowDownTrayIcon} label="Baixar" onClick={baixar} />
+      <AttachmentAction
+        icon={ArrowDownTrayIcon}
+        label="Baixar"
+        onClick={baixar}
+      />
     </div>
   );
 }
@@ -478,7 +490,7 @@ function AttachmentAction({
     <button
       type="button"
       onClick={onClick}
-      className="text-primary-600 dark:text-primary-400 flex shrink-0 items-center gap-1 text-tiny-plus hover:underline"
+      className="text-primary-600 dark:text-primary-400 text-tiny-plus flex shrink-0 items-center gap-1 hover:underline"
     >
       <Icon className="size-3.5" />
       {label}

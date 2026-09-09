@@ -1,11 +1,15 @@
-import { Navigate, useParams, type RouteObject } from "react-router";
+import {
+  Navigate,
+  useParams,
+  useSearchParams,
+  type RouteObject,
+} from "react-router";
 
 import Placeholder from "@/app/pages/ceo/Placeholder";
 import ProjectDetail from "@/app/pages/ceo/ProjectDetail";
 import ChatDetail from "@/app/pages/ceo/ChatDetail";
 import SquadDetail from "@/app/pages/ceo/SquadDetail";
 import Conectores from "@/app/pages/ceo/Conectores";
-import Administracao from "@/app/pages/ceo/Administracao";
 import Documentos from "@/app/pages/ceo/Documentos";
 import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
@@ -29,6 +33,7 @@ import {
   SQUADS_PRODUCT_CODE,
 } from "@/app/navigation/ceoOs";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import { type SecaoAdministracao } from "@/app/pages/ceo/configuracoes-secoes";
 
 const GRAFO_DESABILITADO = isFeatureTemporarilyDisabled("memoryGraph");
 const REPOSITORIO_HOME = GRAFO_DESABILITADO ? "memoria-lista" : "memoria-grafo";
@@ -52,7 +57,6 @@ const relatoriosPages: Record<string, RouteObject["Component"]> = {
 const pageBySlug: Record<string, RouteObject["Component"]> = {
   configuracoes: Configuracoes,
   conectores: Conectores,
-  administracao: Administracao,
   documentos: Documentos,
   email: Email,
   slack: Slack,
@@ -128,20 +132,64 @@ const conversasDetailRoutes: RouteObject[] = products.map((p) => ({
   Component: ConversaPrompt,
 }));
 
-// A área virou Administração, com Membros / Estrutura / Acesso como abas. Os
-// dois redirects mantêm os caminhos das versões anteriores funcionando — o de
-// `/membros` era a tela da V1, o de `/estrutura` foi o nome da V2 — já
-// apontando para a aba certa.
+// Administração deixou de ser uma área: Membros, Áreas, Cargos, Hierarquia e
+// Roles são seções de Configurações. Estes redirects cobrem TODA a história de
+// nomes da área — `/membros` (V1), `/estrutura` (V2) e `/administracao` — e
+// ficam para sempre: é o destino que está nos favoritos de quem usa.
+//
+// Este componente é o único lugar do app que ainda precisa saber que `?aba=`
+// existiu.
+//
+// Um componente, e não `<Navigate to="…?secao=x">` com URL literal: `Navigate`
+// para um destino literal DESCARTA a query de entrada, e é justamente `?secao=`
+// e `?aba=` que os links salvos carregam. Mesmo motivo de
+// `LegacyProductRedirect`, abaixo.
+function secaoDestino(
+  secao: string | null,
+  aba: string | null,
+  padrao: SecaoAdministracao,
+): SecaoAdministracao {
+  if (secao === "membros" || secao === "acesso") return secao;
+  // `estrutura` era a seção que continha as sub-abas; a sub-aba virou a seção.
+  if (secao === "estrutura") {
+    return aba === "cargos" || aba === "hierarquia" ? aba : "areas";
+  }
+  // Sem `?secao=` — ou com um valor que nunca existiu — quem responde é o
+  // caminho: `/membros` e `/administracao` caem em Membros, `/estrutura` em
+  // Áreas.
+  return padrao;
+}
+
+function AdministracaoRedirect({
+  produto,
+  padrao,
+}: {
+  produto: string;
+  padrao: SecaoAdministracao;
+}) {
+  const [searchParams] = useSearchParams();
+  const secao = secaoDestino(
+    searchParams.get("secao"),
+    searchParams.get("aba"),
+    padrao,
+  );
+  return (
+    <Navigate to={`/${produto}/configuracoes?secao=${secao}`} replace />
+  );
+}
+
 const administracaoRedirects: RouteObject[] = products.flatMap((p) => [
   {
+    path: `${p.code}/administracao`,
+    element: <AdministracaoRedirect produto={p.code} padrao="membros" />,
+  },
+  {
     path: `${p.code}/membros`,
-    element: <Navigate to={`/${p.code}/administracao?secao=membros`} replace />,
+    element: <AdministracaoRedirect produto={p.code} padrao="membros" />,
   },
   {
     path: `${p.code}/estrutura`,
-    element: (
-      <Navigate to={`/${p.code}/administracao?secao=estrutura`} replace />
-    ),
+    element: <AdministracaoRedirect produto={p.code} padrao="areas" />,
   },
 ]);
 

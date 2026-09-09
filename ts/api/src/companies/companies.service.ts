@@ -1,10 +1,15 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { RoleTipo } from '@prisma/client';
 import type { Assinatura, Convite, Empresa, UserRole, Usuario } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { BillingService } from '@/billing/billing.service';
 import { AuthService } from '@/auth/auth.service';
 import { TRIAL_DIAS } from '@/billing/pricing';
+import {
+  CODIGOS_DE_ROLE_PROTEGIDA,
+  ROLES_DE_SISTEMA,
+} from '@/acesso/permissoes.catalog';
 import { CadastroDto } from './dto/cadastro.dto';
 import { RegistrarDto } from './dto/registrar.dto';
 
@@ -88,6 +93,35 @@ export class CompaniesService {
           },
           tx,
         );
+
+        // Roles administráveis iniciais. A Owner NÃO entra aqui: ela é
+        // garantida sob demanda por `RolesService.garantirRolesDeSistema`,
+        // que é imutável e não pode divergir do catálogo.
+        //
+        // Admin, Editor e Viewer: desde que passaram a ser editáveis e
+        // excluíveis, nascem uma vez e depois pertencem a quem administra — se
+        // fossem regarantidas na leitura, toda edição seria desfeita e toda
+        // exclusão revertida no próximo carregamento da aba Acesso.
+        //
+        // As PROTEGIDAS (Owner e Convidado) ficam de fora daqui e nascem em
+        // `garantirRolesDeSistema`, que é chamado logo depois: elas são
+        // imutáveis, então regarantir é o comportamento certo para elas — e
+        // criá-las nos dois lugares daria duas fontes para o mesmo registro.
+        await tx.role.createMany({
+          data: ROLES_DE_SISTEMA.filter(
+            (r) => !CODIGOS_DE_ROLE_PROTEGIDA.has(r.codigo),
+          ).map(
+            (r) => ({
+              empresaId: empresa.id,
+              codigo: r.codigo,
+              nome: r.nome,
+              descricao: r.descricao,
+              tipo: RoleTipo.sistema,
+              permissoes: r.permissoes,
+            }),
+          ),
+          skipDuplicates: true,
+        });
 
         return { empresa, usuario, assinatura };
       },

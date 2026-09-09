@@ -14,8 +14,8 @@ import { CadastroDto } from './dto/cadastro.dto';
 import { ConvidarDto } from './dto/convidar.dto';
 import { RegistrarDto } from './dto/registrar.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
-import { Roles, RolesGuard } from '@/common/roles.guard';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 @Controller()
@@ -63,18 +63,30 @@ export class CompaniesController {
     return this.companies.convitesDaEmpresa(user.empresaId);
   }
 
-  /** POST /empresa/convites → cria convites no tenant. Só admin/owner. */
+  /**
+   * POST /empresa/convites → cria convites no tenant.
+   *
+   * Passou de `@Roles('admin','owner')` para a camada de permissões: convidar
+   * é criar membro, então `membros.criar` é o código do catálogo que descreve
+   * a ação. Aditivo — o `PermissoesGuard` mantém o bypass de owner/admin,
+   * então quem passava continua passando, e agora uma role com `membros.criar`
+   * também passa.
+   *
+   * Antes, este gate lia só `Usuario.role` e nenhuma role de plataforma o
+   * alcançava: quem deixasse de ser owner ou admin perdia convites para
+   * sempre, mesmo com uma role de acesso total.
+   */
   @Post('empresa/convites')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'owner')
+  @UseGuards(JwtAuthGuard, PermissoesGuard)
+  @RequerPermissao('membros.criar')
   convidar(@CurrentUser() user: AuthenticatedUser, @Body() dto: ConvidarDto) {
     return this.companies.convidar(user.empresaId, dto.emails, dto.role);
   }
 
-  /** DELETE /empresa/convites/:id → remove um convite do tenant. Só admin/owner. */
+  /** DELETE /empresa/convites/:id → remove um convite. Ver o POST acima. */
   @Delete('empresa/convites/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'owner')
+  @UseGuards(JwtAuthGuard, PermissoesGuard)
+  @RequerPermissao('membros.criar')
   removerConvite(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,

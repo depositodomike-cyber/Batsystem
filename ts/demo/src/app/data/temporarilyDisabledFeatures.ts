@@ -23,6 +23,7 @@ export type TemporarilyDisabledFeature =
   | "settingsAppearance"
   | "settingsVoice"
   | "settingsMemory"
+  | "settingsHierarchy"
   | "settingsTokenUsage"
   | "memoryUploadAudio"
   | "memoryUploadTranscript"
@@ -34,51 +35,63 @@ export type TemporarilyDisabledFeature =
   | "legacyOnboarding"
   | "legacyPriceCalculator";
 
-export const TEMPORARILY_DISABLED: Record<
-  TemporarilyDisabledFeature,
-  boolean
-> = {
-  // true = AI Studio inteiro inacessível (grade opaca + modal "Em breve"),
-  // incluindo "Criar Dashboard". A saída do modal leva ao Repositório.
-  aiStudio: true,
-  squads: true,
-  groups: true,
-  history: false,
+export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
+  {
+    // true = AI Studio inteiro inacessível (grade opaca + modal "Em breve"),
+    // incluindo "Criar Dashboard". A saída do modal leva ao Repositório.
+    aiStudio: true,
+    squads: true,
+    groups: true,
+    history: false,
 
-  insights: true,
-  notes: true,
-  email: true,
-  slack: true,
-  calendar: true,
-  // Conectores REATIVADO: o ícone de link no header e o card no menu
-  // "Funcionalidades" voltam a ser clicáveis, e /:produto/conectores renderiza a
-  // tela normalmente. Com a flag em true os dois pontos de entrada ficam
-  // visíveis, opacos e sem clique — ver SYSTEM_AREA_FEATURE (Header) e
-  // FEATURE_FLAG_BY_SLUG (Funcionalidades).
-  connectors: false,
-  notifications: true,
-  settingsAppearance: true,
-  settingsVoice: true,
-  settingsMemory: false,
-  // true = o bloco "Consumo de tokens" some da aba IA & API, e a menção a ele
-  // sai do texto de ajuda de Configurações. O painel e o GET /uso/tokens
-  // seguem intactos no código.
-  settingsTokenUsage: true,
-  memoryUploadAudio: true,
-  memoryUploadTranscript: true,
-  // Grafo REATIVADO. Com a flag ligada o item fica visível mas sem clique,
-  // a rota /memoria-grafo redireciona para /memoria-lista e o modal do AI
-  // Studio aponta para a LISTA do Repositório — ver `grafoPath` em Ia.tsx.
-  memoryGraph: false,
-  // true = NotaMemoriaModal só-leitura: sem o seletor "Editar / Ler", sem a
-  // caixa de edição e sem "Salvar", só a nota renderizada. Vale para os dois
-  // caminhos que abrem o modal (grafo e lista do Repositório).
-  memoryNoteEditing: true,
-  rulesCorporatePin: true,
-  legacySignup: true,
-  legacyOnboarding: true,
-  legacyPriceCalculator: true,
-};
+    insights: true,
+    notes: true,
+    email: true,
+    slack: true,
+    calendar: true,
+    // Conectores REATIVADO: o ícone de link no header e o card no menu
+    // "Funcionalidades" voltam a ser clicáveis, e /:produto/conectores renderiza a
+    // tela normalmente. Com a flag em true os dois pontos de entrada ficam
+    // visíveis, opacos e sem clique — ver SYSTEM_AREA_FEATURE (Header) e
+    // FEATURE_FLAG_BY_SLUG (Funcionalidades).
+    connectors: false,
+    notifications: true,
+    settingsAppearance: true,
+    settingsVoice: true,
+    settingsMemory: false,
+    // true = a seção Hierarquia de Configurações fica OCULTA — não renderizada.
+    //
+    // Atenção: esta flag se comporta diferente das outras três de Configurações.
+    // Aparência, Voz e Repositório seguem o padrão da casa (visíveis, opacas, sem
+    // clique); Hierarquia SOME do menu, e `?secao=hierarquia` passa a cair na
+    // seção padrão como qualquer valor desconhecido. O padrão de "opaco" existe
+    // para anunciar o que vem; esta seção já existiu e funciona, então anunciá-la
+    // como novidade indisponível seria mentira — o precedente de ocultar em vez
+    // de opacar é o funil legado, no fim deste arquivo.
+    //
+    // Nada foi removido: o painel, o organograma, a árvore e a rota continuam
+    // intactos, e voltar a flag para `false` traz a seção de volta ao mesmo
+    // lugar, com o mesmo id.
+    settingsHierarchy: true,
+    // true = o bloco "Consumo de tokens" some da aba IA & API, e a menção a ele
+    // sai do texto de ajuda de Configurações. O painel e o GET /uso/tokens
+    // seguem intactos no código.
+    settingsTokenUsage: true,
+    memoryUploadAudio: true,
+    memoryUploadTranscript: true,
+    // Grafo REATIVADO. Com a flag ligada o item fica visível mas sem clique,
+    // a rota /memoria-grafo redireciona para /memoria-lista e o modal do AI
+    // Studio aponta para a LISTA do Repositório — ver `grafoPath` em Ia.tsx.
+    memoryGraph: false,
+    // true = NotaMemoriaModal só-leitura: sem o seletor "Editar / Ler", sem a
+    // caixa de edição e sem "Salvar", só a nota renderizada. Vale para os dois
+    // caminhos que abrem o modal (grafo e lista do Repositório).
+    memoryNoteEditing: true,
+    rulesCorporatePin: true,
+    legacySignup: true,
+    legacyOnboarding: true,
+    legacyPriceCalculator: true,
+  };
 
 /** Classe Tailwind do estado desabilitado (padrão do produto). */
 export const DISABLED_MENU_CLASS = "cursor-not-allowed opacity-40";

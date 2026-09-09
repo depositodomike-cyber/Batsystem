@@ -8,11 +8,18 @@ import {
 import {
   EstruturaStatus,
   MembroStatus,
+  MembroTipo,
   Prisma,
   type Membro,
 } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
-import { ROLE_OWNER } from '@/acesso/permissoes.catalog';
+import {
+  MAX_ROLES_POR_MEMBRO,
+  ROLE_CONVIDADO,
+  ROLE_OWNER,
+} from '@/acesso/permissoes.catalog';
+import { RolesService } from '@/acesso/roles.service';
+import { MAX_GESTORES_INDIRETOS } from './membros.constants';
 import { CriarMembroDto } from './dto/criar-membro.dto';
 import { AtualizarMembroDto } from './dto/atualizar-membro.dto';
 import { ExcluirMembroQuery } from './dto/excluir-membro.query';
@@ -22,6 +29,21 @@ import {
   type MembroComGestor,
   type MembroPublico,
 } from './membro.mapper';
+
+/**
+ * O tipo do membro DEPOIS da operação, mais a role Convidado da organização
+ * quando ela é necessária.
+ *
+ * `tipoMudou` é o que separa "o cliente acabou de reclassificar esta pessoa"
+ * de "o cliente está afirmando algo sobre quem já era convidado" — e é essa
+ * distinção que decide entre ignorar em silêncio e recusar com 409.
+ */
+interface ContextoDeTipo {
+  tipo: MembroTipo;
+  tipoMudou: boolean;
+  /** Obrigatório quando `tipo === convidado`; irrelevante no outro caso. */
+  roleConvidadoId: string | null;
+}
 
 /** Área/Cargo embutidos nas respostas. `status` atravessa porque a UI precisa
  *  distinguir associação a algo inativo (válida) de opção nova. */
@@ -63,19 +85,21 @@ const INCLUDE_MEMBRO = {
   /// vive no mapper, que é o funil único das quatro respostas — assim um call
   /// site que esqueça o orderBy não consegue vazar a ordem física do Postgres.
   rolesAtribuidas: { select: { role: SELECT_ROLE } },
+  /// Gestores indiretos. Reusa `SELECT_GESTOR` de propósito: a UI já sabe
+  /// renderizar esse resumo, e é o `status` dele que faz o selo "inativo"
+  /// valer aqui sem uma linha nova. Sem `orderBy`, mesmo motivo das roles —
+  /// e aqui o argumento é mais forte, porque `sincronizarGestoresIndiretos`
+  /// reescreve linhas e a ordem física muda de verdade.
+  ///
+  /// NÃO filtre por status. `exigirGestoresDoTenant` não checa status (gestor
+  /// inativo continua gestor, a UI só sinaliza), e um `where` aqui faria
+  /// desativar alguém encolher a lista de TERCEIROS em silêncio — e então um
+  /// sincronizar calculado sobre a lista truncada apagaria de verdade as
+  /// linhas que a leitura escondeu.
+  gestoresIndiretos: { select: { gestorIndireto: SELECT_GESTOR } },
   areaRef: SELECT_ESTRUTURA,
   cargoRef: SELECT_ESTRUTURA,
 } as const;
-
-/**
- * Teto de roles por membro.
- *
- * Vive aqui, e não como constraint no banco, de propósito: a única forma
- * declarativa seria uma coluna de slot com `@@unique([membroId, slot])`, que é
- * exatamente o conceito de role principal/secundária que esta versão recusa.
- * Ver o comentário de `model MembroRole` no schema.
- */
-const MAX_ROLES_POR_MEMBRO = 2;
 
 /**
  * Membros da organização e a hierarquia entre eles.
@@ -117,7 +141,12 @@ const MAX_ROLES_POR_MEMBRO = 2;
  */
 @Injectable()
 export class MembrosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // Só para `idDaRoleConvidado`: a conversão precisa da role Convidado da
+    // organização, e garanti-la é responsabilidade de quem é dono do catálogo.
+    private readonly roles: RolesService,
+  ) {}
 
   async listar(
     empresaId: string,
@@ -189,10 +218,56 @@ export class MembrosService {
       ? MembroStatus.ativo
       : (dto.status ?? MembroStatus.convite_pendente);
 
+    const tipo = dto.tipo ?? MembroTipo.membro;
+    const ehConvidado = tipo === MembroTipo.convidado;
+
+    // Na CRIAÇÃO, campo estrutural junto de `convidado` é recusado — e a
+    // assimetria com `atualizar` (que zera em silêncio) é deliberada: lá o
+    // payload pode ser eco do estado anterior, aqui o cliente está afirmando
+    // tudo do zero, então não há o que reinterpretar. Aceitar e descartar
+    // esconderia um cliente que não entendeu o conceito.
+    if (ehConvidado) {
+      const estruturais =
+        vazioParaNulo(dto.areaId) ??
+        vazioParaNulo(dto.cargoId) ??
+        vazioParaNulo(dto.gestorId) ??
+        // Os textos legados entram na checagem, mas NUNCA são gravados (o
+        // create abaixo não os escreve para ninguém). Estão aqui porque um
+        // bundle antigo que os enviasse estaria afirmando uma estrutura que
+        // este membro não pode ter — e o silêncio pareceria aceitação.
+        vazioParaNulo(dto.area) ??
+        vazioParaNulo(dto.cargo) ??
+        (dto.gestorIndiretoIds?.length ? 'indiretos' : null) ??
+        (dto.roleIds?.length ? 'roles' : null);
+      if (estruturais != null) {
+        throw new ConflictException(
+          'Um membro convidado não tem área, cargo, gestores nem roles próprias: ele recebe a role Convidado automaticamente.',
+        );
+      }
+    }
+
+    // Fora de qualquer transação, como `transferirPropriedade` faz: o upsert
+    // da role é escrita própria e não pertence ao lock da criação.
+    const roleConvidadoId = ehConvidado
+      ? await this.roles.idDaRoleConvidado(empresaId)
+      : null;
+
     // Na criação não há como formar ciclo (o membro ainda não existe, logo não
     // tem ninguém abaixo dele); basta o gestor existir no mesmo tenant.
-    const gestorId = vazioParaNulo(dto.gestorId) ?? null;
+    const gestorId = ehConvidado ? null : (vazioParaNulo(dto.gestorId) ?? null);
     if (gestorId) await this.exigirGestorDoTenant(empresaId, gestorId);
+
+    // Logo depois do gestor direto, porque depende dele: é ele que o item da
+    // regra "o direto não pode ser também indireto" compara. Na criação isso é
+    // trivial — os dois valores vêm no mesmo payload —, e `membroId: null`
+    // porque o membro ainda não tem id, logo não há como auto-associar.
+    const gestoresIndiretos = await this.resolverGestoresIndiretos(
+      empresaId,
+      null,
+      gestorId,
+      true,
+      dto.gestorIndiretoIds ?? [],
+    );
 
     // `conta` é a conta já existente com este e-mail, quando houver — é ela que
     // decide se a role Owner é aceitável para este membro.
@@ -200,7 +275,25 @@ export class MembrosService {
       empresaId,
       dto.roleIds ?? [],
       conta?.id ?? null,
+      // `tipoMudou: true` na criação: não existe estado anterior, então o tipo
+      // é sempre uma afirmação nova — e é ele que decide a lista.
+      { tipo, tipoMudou: true, roleConvidadoId },
     );
+
+    // Todo membro nasce com ao menos uma role: é regra da plataforma, não do
+    // formulário. Sem role a pessoa entra no cadastro sem poder fazer nada, e
+    // nada na tela diz isso — o mesmo motivo que já exigia a escolha na
+    // conversão de convidado para membro, agora valendo desde a criação.
+    //
+    // A guarda de tipo é pela MENSAGEM, não pela regra: para um convidado a
+    // lista nunca é vazia (`resolverRoles` devolve a role Convidado, ou falha
+    // antes), e mandar "escolha uma role" a quem não escolhe role nenhuma
+    // seria uma instrução impossível de cumprir.
+    if (!ehConvidado && roleIds.length === 0) {
+      throw new BadRequestException(
+        'Escolha ao menos uma role para o membro: ela é o que define o que a pessoa pode fazer na plataforma.',
+      );
+    }
 
     const areaId = vazioParaNulo(dto.areaId) ?? null;
     if (areaId) await this.exigirAreaDoTenant(empresaId, areaId);
@@ -222,10 +315,20 @@ export class MembrosService {
           areaId,
           cargoId,
           gestorId,
+          tipo,
           // `roleId` (a coluna legada) NÃO é escrita. Os vínculos entram como
           // create aninhado: o Prisma resolve numa transação só, então não há
           // instante com o membro criado e sem as roles dele.
           rolesAtribuidas: { create: roleIds.map((roleId) => ({ roleId })) },
+          // Mesmo create aninhado das roles, e pelo mesmo motivo: o Prisma
+          // resolve numa transação só, então não há instante com o membro
+          // criado e a lista de indiretos faltando. Nenhuma `$transaction`
+          // explícita é necessária aqui.
+          gestoresIndiretos: {
+            create: gestoresIndiretos.map((gestorIndiretoId) => ({
+              gestorIndiretoId,
+            })),
+          },
           status,
           convidadoEm:
             status === MembroStatus.convite_pendente ? new Date() : null,
@@ -260,27 +363,112 @@ export class MembrosService {
     // caminho de código, sem ramificar em connect/disconnect.
     const data: Prisma.MembroUncheckedUpdateInput = {};
 
+    // O tipo ALVO, derivado do DTO e nunca de `data`: o padrão
+    // skip-if-unchanged só preenche `data` quando o campo muda, então ler dali
+    // faria um PATCH de outro campo qualquer calcular "membro" e a regra sumir
+    // sem erro nenhum. Mesmo argumento de `gestorDiretoFinal`.
+    const tipoFinal = dto.tipo ?? atual.tipo;
+    const tipoMudou = dto.tipo !== undefined && dto.tipo !== atual.tipo;
+    const ehConvidado = tipoFinal === MembroTipo.convidado;
+    const viraConvidado = tipoMudou && ehConvidado;
+    if (tipoMudou) data.tipo = tipoFinal;
+
+    // O responsável pela conta não vira convidado. A checagem vem ANTES de
+    // tudo — se a conversão é impossível, o erro tem de falar de propriedade e
+    // não pedir uma realocação de liderados que não resolveria nada. É o mesmo
+    // ordenamento que `remover` usa para as guardas de conta.
+    //
+    // E é sobre `Usuario.role`, não sobre o vínculo com a role Owner: um
+    // proprietário sem o vínculo (estado alcançável — `cadastrar()` cria a
+    // conta e não cria o membro) escaparia da guarda de `resolverRoles` e
+    // viraria convidado com a conta ainda proprietária.
+    if (viraConvidado && atual.usuarioId) {
+      const conta = await this.prisma.usuario.findUnique({
+        where: { id: atual.usuarioId },
+        select: { role: true },
+      });
+      if (conta?.role === 'owner') {
+        throw new ForbiddenException(
+          'O responsável pela conta não pode ser convertido em convidado. Use "Transferir propriedade" na aba Acesso antes.',
+        );
+      }
+    }
+
+    const roleConvidadoId = ehConvidado
+      ? await this.roles.idDaRoleConvidado(empresaId)
+      : null;
+
+    /**
+     * Um campo estrutural (área, cargo, gestor) para quem termina convidado.
+     *
+     * Dois ramos, e são a mesma distinção de `resolverGestoresIndiretos`:
+     * quando o TIPO mudou nesta requisição, o campo alterado é a afirmação e o
+     * valor no payload é eco do formulário — zera em silêncio, inclusive
+     * quando o payload NÃO o mandou, quebrando o skip-if-unchanged de
+     * propósito (senão um PATCH que só manda `{tipo:'convidado'}` deixaria
+     * área, cargo e gestor intactos e a regra seria violada por omissão).
+     * Quando já era convidado, não há campo alterado para reinterpretar: o
+     * cliente afirmou algo que contradiz o estado, e leva 409.
+     */
+    const zerarEstrutural = (
+      enviado: string | undefined,
+      atualValor: string | null,
+      rotulo: string,
+    ): { limpar: boolean } => {
+      if (!viraConvidado && vazioParaNulo(enviado) != null) {
+        throw new ConflictException(
+          `Um membro convidado não tem ${rotulo}. Converta-o em membro antes de definir este campo.`,
+        );
+      }
+      return { limpar: atualValor != null };
+    };
+
     if (dto.nome !== undefined) data.nome = dto.nome.trim();
 
     // `dto.area`/`dto.cargo` são aceitos e IGNORADOS: as colunas de texto são
     // histórico congelado, e um bundle antigo que ainda os envie não pode
     // sobrescrever a entidade escolhida.
-    if (dto.areaId !== undefined) {
-      const areaId = vazioParaNulo(dto.areaId) ?? null;
-      // Só valida quando MUDA. É o que preserva a associação de quem está numa
-      // área desativada: um PATCH de outro campo não tropeça na regra, e a
-      // recusa de área inativa só vale para escolha nova.
-      if (areaId !== atual.areaId) {
-        if (areaId) await this.exigirAreaDoTenant(empresaId, areaId);
-        data.areaId = areaId;
+    if (ehConvidado) {
+      // `exigirAreaDoTenant` NÃO roda aqui: validar se uma área está ativa
+      // para alguém que vai ficar sem área é trabalho jogado fora — e pior, uma
+      // área inativa daria 409 numa operação que ia justamente removê-la.
+      if (zerarEstrutural(dto.areaId, atual.areaId, 'área').limpar) {
+        data.areaId = null;
       }
-    }
+      if (zerarEstrutural(dto.cargoId, atual.cargoId, 'cargo').limpar) {
+        data.cargoId = null;
+      }
 
-    if (dto.cargoId !== undefined) {
-      const cargoId = vazioParaNulo(dto.cargoId) ?? null;
-      if (cargoId !== atual.cargoId) {
-        if (cargoId) await this.exigirCargoDoTenant(empresaId, cargoId);
-        data.cargoId = cargoId;
+      // As colunas de TEXTO legadas também. É a única escrita que o código
+      // novo faz nelas, e ela é necessária: quem exibe resolve o rótulo com
+      // precedência `areaRef` → texto legado, então um convidado com `areaId`
+      // nulo e `area: "marketing"` continuaria mostrando "Marketing" na coluna
+      // Área — e alimentando o filtro por área com uma opção que ele não tem.
+      //
+      // Não contradiz o "histórico congelado" daqueles campos: o congelamento
+      // impede que um bundle antigo sobrescreva a ENTIDADE escolhida. Aqui a
+      // entidade está sendo removida de propósito, e deixar o texto para trás
+      // manteria na tela exatamente o que a conversão foi feita para desfazer.
+      if (atual.area != null) data.area = null;
+      if (atual.cargo != null) data.cargo = null;
+    } else {
+      if (dto.areaId !== undefined) {
+        const areaId = vazioParaNulo(dto.areaId) ?? null;
+        // Só valida quando MUDA. É o que preserva a associação de quem está
+        // numa área desativada: um PATCH de outro campo não tropeça na regra, e
+        // a recusa de área inativa só vale para escolha nova.
+        if (areaId !== atual.areaId) {
+          if (areaId) await this.exigirAreaDoTenant(empresaId, areaId);
+          data.areaId = areaId;
+        }
+      }
+
+      if (dto.cargoId !== undefined) {
+        const cargoId = vazioParaNulo(dto.cargoId) ?? null;
+        if (cargoId !== atual.cargoId) {
+          if (cargoId) await this.exigirCargoDoTenant(empresaId, cargoId);
+          data.cargoId = cargoId;
+        }
       }
     }
 
@@ -310,17 +498,68 @@ export class MembrosService {
     // save, então um bundle antigo leria `roleId: null` na resposta, mandaria
     // `roleId: ""` e APAGARIA as duas roles numa edição de qualquer outro
     // campo — e o backend não recusaria, porque limpar é legal.
+    // `|| tipoMudou` NÃO é redundante — é a linha que faz a conversão
+    // funcionar. A transação só é acionada quando algum destes três é não
+    // nulo; se `dto.roleIds` viesse `undefined` num PATCH que só flipa o
+    // tipo, `rolesDesejadas` ficaria nulo, `sincronizarRoles` não rodaria, e
+    // o membro viraria convidado CARREGANDO a role Admin — com HTTP 200 e
+    // nenhum log.
     let rolesDesejadas: string[] | null = null;
-    if (dto.roleIds !== undefined) {
+    if (dto.roleIds !== undefined || tipoMudou) {
       rolesDesejadas = await this.resolverRoles(
         empresaId,
-        dto.roleIds,
+        dto.roleIds ?? [],
         atual.usuarioId,
+        { tipo: tipoFinal, tipoMudou, roleConvidadoId },
         atual.rolesAtribuidas.map((v) => v.role.id),
       );
     }
 
-    if (dto.gestorId !== undefined) {
+    // "Ao menos uma role" na edição, em duas mensagens porque são duas
+    // situações diferentes para quem está na tela.
+    //
+    // A conversão vem primeiro: quem deixa de ser convidado não está removendo
+    // role nenhuma, está escolhendo a primeira, e a instrução tem de dizer
+    // isso.
+    if (tipoMudou && !ehConvidado && (rolesDesejadas?.length ?? 0) === 0) {
+      throw new ConflictException(
+        'Escolha a role que este membro terá ao deixar de ser convidado.',
+      );
+    }
+
+    // E aqui a remoção da ÚLTIMA role de um membro comum.
+    //
+    // `atual.rolesAtribuidas.length > 0` está na condição de propósito, e é o
+    // mesmo *skip-if-unchanged* que já vale para área, cargo, gestor e para as
+    // adições de role: quem JÁ está sem nenhuma (cadastro anterior a esta
+    // regra, ou linha mexida à mão) continua editável nos outros campos.
+    // Recusar ali daria 409 numa edição de nome, num estado que o operador não
+    // criou — e o formulário dele nem oferece o que consertar se a organização
+    // não tiver role atribuível. Na primeira role que ele receber, esta guarda
+    // passa a valer para ele também: o dado converge sem migration.
+    //
+    // Quem impede o estado de nascer é `criar`; quem impede de acontecer pela
+    // tela é o formulário, que exige a role antes de enviar. Esta linha é a
+    // que fecha o caminho da API.
+    if (
+      !ehConvidado &&
+      rolesDesejadas != null &&
+      rolesDesejadas.length === 0 &&
+      atual.rolesAtribuidas.length > 0
+    ) {
+      throw new ConflictException(
+        'Um membro precisa de ao menos uma role. Escolha a nova antes de remover a atual.',
+      );
+    }
+
+    if (ehConvidado) {
+      // `validarGestor` NÃO roda: checar ciclo para quem vai ficar sem gestor
+      // é trabalho jogado fora, e um ciclo pré-existente daria 409 numa
+      // operação que ia justamente desfazê-lo.
+      if (zerarEstrutural(dto.gestorId, atual.gestorId, 'gestor direto').limpar) {
+        data.gestorId = null;
+      }
+    } else if (dto.gestorId !== undefined) {
       const gestorId = vazioParaNulo(dto.gestorId) ?? null;
       if (gestorId !== atual.gestorId) {
         if (gestorId) await this.validarGestor(empresaId, atual.id, gestorId);
@@ -328,14 +567,97 @@ export class MembrosService {
       }
     }
 
+    // Gestores indiretos — DEPOIS do bloco acima, para que uma troca de gestor
+    // recusada por ciclo nunca chegue a validar indiretos contra um gestor
+    // direto que não vai valer.
+    //
+    // Os dois valores saem do DTO, NUNCA de `data.gestorId`: o padrão
+    // skip-if-unchanged só preenche `data` quando o campo MUDA, então
+    // `undefined` ali significa "não mudou" e não "sem gestor". Ler `data`
+    // faria um PATCH que só troca o nome calcular `gestorDiretoFinal = null`,
+    // e a regra do gestor direto sumiria sem erro nenhum.
+    const gestorDiretoFinal =
+      dto.gestorId !== undefined
+        ? (vazioParaNulo(dto.gestorId) ?? null)
+        : atual.gestorId;
+    const gestorDiretoMudou =
+      dto.gestorId !== undefined && gestorDiretoFinal !== atual.gestorId;
+
+    const indiretosAtuais = atual.gestoresIndiretos.map(
+      (v) => v.gestorIndireto.id,
+    );
+    let indiretosDesejados: string[] | null = null;
+
+    if (ehConvidado) {
+      // Convidado não tem gestores indiretos, e a lista dele é esvaziada pelo
+      // mesmo par de ramos dos outros campos estruturais.
+      if (
+        !viraConvidado &&
+        dto.gestorIndiretoIds != null &&
+        dto.gestorIndiretoIds.length > 0
+      ) {
+        throw new ConflictException(
+          'Um membro convidado não tem gestores indiretos. Converta-o em membro antes de definir este campo.',
+        );
+      }
+      if (indiretosAtuais.length > 0) indiretosDesejados = [];
+    } else if (dto.gestorIndiretoIds != null) {
+      indiretosDesejados = await this.resolverGestoresIndiretos(
+        empresaId,
+        atual.id,
+        gestorDiretoFinal,
+        gestorDiretoMudou,
+        dto.gestorIndiretoIds,
+        indiretosAtuais,
+      );
+    } else if (
+      gestorDiretoFinal != null &&
+      indiretosAtuais.includes(gestorDiretoFinal)
+    ) {
+      // Promover alguém que já era indireto, SEM a lista no payload. O PATCH
+      // pode trazer só `gestorId`, e aí o skip-if-unchanged deixaria o vínculo
+      // indireto intacto — a regra seria violada por omissão, em silêncio.
+      //
+      // A condição é o ESTADO FINAL, não "mudou": assim um registro que já
+      // estivesse inconsistente (SQL manual, seed, versão anterior) se repara
+      // no próximo save, em vez de carregar a violação para sempre.
+      //
+      // E a subtração é do conjunto PERSISTIDO, sem passar por
+      // `resolverGestoresIndiretos`: revalidar aqui faria um registro que já
+      // estoura o teto recusar PATCHes de campos sem relação com hierarquia.
+      indiretosDesejados = indiretosAtuais.filter(
+        (id) => id !== gestorDiretoFinal,
+      );
+    }
+
     // Desativar também é sair da estrutura: os liderados não podem ficar sem
     // gestor. `dto.reatribuirLiderados` só é considerado nesta transição —
     // fora dela é aceito e ignorado, como os campos legados area/cargo.
     let novoGestorDosLiderados: string | null = null;
 
+    // Converter em convidado é sair da estrutura, exatamente como desativar —
+    // então tem a MESMA exigência: quem lidera alguém não sai sem que a equipe
+    // receba uma nova liderança. Sem isto, o organograma perderia o nó e os
+    // liderados virariam raízes em silêncio, porque a árvore trata "gestor
+    // ausente da lista" como topo.
+    //
+    // Antes do bloco de status de propósito: as duas transições podem vir no
+    // mesmo PATCH, e a realocação é uma só — resolver aqui deixa o bloco
+    // abaixo encontrar o valor já definido em vez de recalculá-lo.
+    if (viraConvidado) {
+      novoGestorDosLiderados = await this.resolverNovaLideranca(
+        empresaId,
+        atual,
+        dto.reatribuirLiderados,
+      );
+    }
+
     if (dto.status !== undefined && dto.status !== atual.status) {
       await this.validarTransicaoDeStatus(atual, dto.status, usuarioLogadoId);
-      if (dto.status === MembroStatus.inativo) {
+      if (
+        dto.status === MembroStatus.inativo &&
+        novoGestorDosLiderados == null
+      ) {
         novoGestorDosLiderados = await this.resolverNovaLideranca(
           empresaId,
           atual,
@@ -361,15 +683,43 @@ export class MembrosService {
       // update do membro. Nunca existe um instante em que o gestor já esteja
       // inativo e os liderados ainda apontem para ele, nem em que o membro
       // esteja salvo com o conjunto de roles antigo.
-      if (novoGestorDosLiderados != null || rolesDesejadas != null) {
+      if (
+        novoGestorDosLiderados != null ||
+        rolesDesejadas != null ||
+        indiretosDesejados != null ||
+        viraConvidado
+      ) {
         const novoGestorId = novoGestorDosLiderados;
         const roles = rolesDesejadas;
+        const indiretos = indiretosDesejados;
+        const converteuParaConvidado = viraConvidado;
         return await this.prisma.$transaction(async (tx) => {
           if (novoGestorId != null) {
             await this.aplicarRealocacao(tx, empresaId, atual.id, novoGestorId);
           }
           if (roles != null) {
             await this.sincronizarRoles(tx, atual.id, roles);
+          }
+          // Antes do update: primeiro solta o vínculo que virou redundante,
+          // depois promove. Nenhuma constraint do banco liga as duas tabelas,
+          // então a ordem não é exigida por integridade — mas quem acrescentar
+          // um trigger amanhã não descobre a ordem errada em produção.
+          if (indiretos != null) {
+            await this.sincronizarGestoresIndiretos(tx, atual.id, indiretos);
+          }
+          // A direção INVERSA: as linhas em que ELE é o gestor indireto de
+          // terceiros. `sincronizarGestoresIndiretos` não alcança essas — ele
+          // só apaga `WHERE membroId = M`, que é a lista dele. Sem este
+          // deleteMany, um convidado continuaria acompanhando gente na
+          // hierarquia de quem ele saiu.
+          //
+          // Escopo por relação, e não por `empresaId`: a tabela de vínculo não
+          // tem essa coluna (o Cascade de Empresa a alcança por Membro dos dois
+          // lados), então o tenant se prova pelo membro.
+          if (converteuParaConvidado) {
+            await tx.membroGestorIndireto.deleteMany({
+              where: { gestorIndiretoId: atual.id, membro: { empresaId } },
+            });
           }
           const membro = await tx.membro.update({
             where: { id: atual.id },
@@ -568,6 +918,25 @@ export class MembrosService {
       where: { empresaId, gestorId, id: { not: novoGestorId } },
       data: { gestorId: novoGestorId },
     });
+
+    // Quem acabou de ser movido pode já ter `novoGestorId` como gestor
+    // INDIRETO — e a realocação nunca olhou essa lista. Sem isto, sair da
+    // estrutura seria um caminho para gravar a mesma pessoa nas duas relações,
+    // violando a regra por uma porta que nenhuma validação cobre: nem
+    // `remover` nem a desativação passam por `resolverGestoresIndiretos`.
+    //
+    // Fica AQUI e não em `remover` porque os dois call sites (exclusão e
+    // desativação) precisam da mesma limpeza.
+    //
+    // O `where` navega pelo estado JÁ atualizado acima, então também repara
+    // pares pré-existentes do mesmo novo gestor. Idempotente, escopado ao
+    // tenant, e sem precisar dos ids — que o `updateMany` não devolve.
+    await db.membroGestorIndireto.deleteMany({
+      where: {
+        gestorIndiretoId: novoGestorId,
+        membro: { empresaId, gestorId: novoGestorId },
+      },
+    });
   }
 
   // --------------------------------------------------------------------
@@ -596,6 +965,12 @@ export class MembrosService {
    * gravaria um só. O `@ArrayMaxSize(2)` do DTO é a primeira barreira, mas não
    * deduplica — então o teto real é verificado aqui.
    *
+   * NÃO é aqui que "ao menos uma role" é exigido: esta função normaliza e
+   * valida o CONTEÚDO da lista, e a aritmética de quantas roles a lista pode
+   * ter depende de qual operação está em curso — criar, converter de convidado
+   * ou editar têm mensagens diferentes e, no caso da edição, uma exceção para
+   * quem já estava sem nenhuma. Os três ficam nos call sites.
+   *
    * Valida apenas as ADIÇÕES, mesmo *skip-if-unchanged* já usado para área,
    * cargo e gestor: uma role que ficou inválida depois (a Owner de alguém que
    * deixou de ser o responsável, por exemplo) não pode derrubar um PATCH de
@@ -608,11 +983,44 @@ export class MembrosService {
     empresaId: string,
     roleIdsBrutos: string[],
     usuarioIdDoMembro: string | null,
+    contexto: ContextoDeTipo,
     jaAtribuidas: readonly string[] = [],
   ): Promise<string[]> {
     const roleIds = [
       ...new Set(roleIdsBrutos.map((r) => r.trim()).filter(Boolean)),
     ];
+
+    // Convidado tem EXCLUSIVAMENTE a role Convidado, e o motivo é a aritmética
+    // das roles: as permissões são a UNIÃO das roles atribuídas, então
+    // "Convidado + Admin" resultaria em Admin. Somar qualquer coisa dissolveria
+    // o conceito de convidado.
+    if (contexto.tipo === MembroTipo.convidado) {
+      const alvo = contexto.roleConvidadoId;
+      if (alvo == null) {
+        // Falha de programação: quem chama com tipo convidado tem de resolver a
+        // role antes. Explícito para não gravar um convidado sem role nenhuma.
+        throw new ConflictException(
+          'A role Convidado não foi resolvida para esta organização. Recarregue e tente de novo.',
+        );
+      }
+      if (contexto.tipoMudou) {
+        // O formulário manda o payload inteiro em todo save, então uma
+        // conversão ecoa as roles antigas. O campo que o cliente MUDOU é o
+        // tipo; a lista é contexto. Mesma distinção de
+        // `resolverGestoresIndiretos`, e pelo mesmo motivo: recusar aqui
+        // transformaria toda conversão feita pela tela num 409 em que o
+        // operador não errou nada.
+        return [alvo];
+      }
+      // Já era convidado e o cliente afirmou outra lista: são duas afirmações
+      // contraditórias na mesma requisição, e nenhuma delas é eco.
+      if (roleIds.length > 0 && (roleIds.length !== 1 || roleIds[0] !== alvo)) {
+        throw new ConflictException(
+          'Um membro convidado tem exclusivamente a role Convidado. Converta-o em membro para atribuir outras roles.',
+        );
+      }
+      return [alvo];
+    }
 
     if (roleIds.length > MAX_ROLES_POR_MEMBRO) {
       throw new BadRequestException(
@@ -624,6 +1032,51 @@ export class MembrosService {
     for (const roleId of roleIds) {
       if (atuais.has(roleId)) continue;
       await this.exigirRoleDoTenant(empresaId, roleId, usuarioIdDoMembro);
+    }
+
+    // Daqui para baixo, as duas regras que dependem das roles PROTEGIDAS da
+    // organização. Uma consulta só, com no máximo duas linhas, porque as duas
+    // perguntas caem no mesmo lugar:
+    //
+    //   - alguma role PERDIDA é a Owner?      → recusa
+    //   - alguma role MANTIDA é a Convidado?  → subtrai (auto-reparo)
+    //
+    // Só roda quando há o que perguntar: numa criação, ou num save que apenas
+    // acrescenta roles, não há consulta nenhuma.
+    const perdidas = [...atuais].filter((r) => !roleIds.includes(r));
+    const mantidas = roleIds.filter((r) => atuais.has(r));
+    if (perdidas.length === 0 && mantidas.length === 0) return roleIds;
+
+    const protegidas = await this.prisma.role.findMany({
+      where: { empresaId, codigo: { in: [ROLE_OWNER, ROLE_CONVIDADO] } },
+      select: { id: true, codigo: true },
+    });
+    const idOwner = protegidas.find((r) => r.codigo === ROLE_OWNER)?.id;
+    const idConvidado = protegidas.find(
+      (r) => r.codigo === ROLE_CONVIDADO,
+    )?.id;
+
+    // A REMOÇÃO do vínculo Owner é recusada, não só a atribuição.
+    //
+    // Sem isto o proprietário abre o próprio cadastro, troca de role, e a
+    // sincronização apaga o vínculo Owner: a conta continua sendo a owner e a
+    // aba Acesso passa a mostrar a role Owner com zero membros — os dois eixos
+    // de propriedade discordando, em silêncio. Quem quer mudar de dono usa
+    // "Transferir propriedade".
+    if (idOwner != null && perdidas.includes(idOwner)) {
+      throw new ConflictException(
+        'A role Owner não pode ser removida no cadastro do membro. Use "Transferir propriedade" na aba Acesso.',
+      );
+    }
+
+    // Auto-reparo: um membro COMUM não carrega a role Convidado. Ela não
+    // chegaria por `exigirRoleDoTenant` — aquele método recusa —, mas ele só
+    // valida ADIÇÕES, então um vínculo que já existisse (SQL manual, ou uma
+    // conversão que correu com uma atribuição) atravessaria todo save em
+    // silêncio. Subtrair aqui faz o dado convergir no próximo save, no mesmo
+    // espírito do "a condição é o ESTADO FINAL, não mudou" dos indiretos.
+    if (idConvidado != null && roleIds.includes(idConvidado)) {
+      return roleIds.filter((r) => r !== idConvidado);
     }
 
     return roleIds;
@@ -741,6 +1194,16 @@ export class MembrosService {
       );
     }
 
+    // A role Convidado é consequência do TIPO do membro, nunca uma escolha do
+    // cadastro. Recusar aqui cobre criação e edição de uma vez, porque este é o
+    // único caminho por onde toda atribuição passa — mesmo argumento que pôs a
+    // exclusividade da Owner neste método.
+    if (role.codigo === ROLE_CONVIDADO) {
+      throw new ForbiddenException(
+        'A role Convidado é atribuída automaticamente aos membros do tipo convidado e não pode ser escolhida no cadastro.',
+      );
+    }
+
     if (role.codigo !== ROLE_OWNER) return;
 
     // Compara pela conta, e não pelo e-mail do membro: o vínculo real é
@@ -768,14 +1231,171 @@ export class MembrosService {
     empresaId: string,
     gestorId: string,
   ): Promise<void> {
-    const gestor = await this.prisma.membro.findFirst({
-      where: { id: gestorId, empresaId },
-      select: { id: true },
+    await this.exigirGestoresDoTenant(empresaId, [gestorId], {
+      foraDoTenant: 'O gestor escolhido não faz parte desta organização.',
+      convidado:
+        'Um membro convidado não pode ser gestor: convidados não participam da estrutura da organização.',
     });
-    if (!gestor) {
-      throw new NotFoundException(
-        'O gestor escolhido não faz parte desta organização.',
+  }
+
+  /**
+   * Versão em lote, com o MESMO `where` da singular — que agora delega para
+   * ela, para a cláusula de tenant não existir em dois lugares.
+   *
+   * Uma query em vez de N. `resolverRoles` valida num laço `for` porque
+   * `exigirRoleDoTenant` carrega também a regra Owner e o teto é 2; aqui o
+   * único critério é o tenant, então batchar não perde regra nenhuma e evita
+   * cinco round-trips por save.
+   *
+   * Deliberadamente NÃO checa status: gestor inativo continua gestor, e é a UI
+   * que sinaliza. Vale igual para direto e indireto — preservar esse critério
+   * é o que mantém as duas relações com as mesmas regras de elegibilidade.
+   */
+  private async exigirGestoresDoTenant(
+    empresaId: string,
+    ids: readonly string[],
+    copy: { foraDoTenant: string; convidado: string },
+  ): Promise<void> {
+    if (ids.length === 0) return;
+    // `findMany` e não `count`: a contagem respondia "todos são desta
+    // organização?" — que continua sendo verdade —, mas não responde "algum é
+    // convidado?". Como `ids` já vem deduplicado de quem chama e a unique de
+    // `id` garante um registro por id, "achou menos do que pedi" continua
+    // sendo exatamente "algum não é desta organização".
+    const encontrados = await this.prisma.membro.findMany({
+      where: { id: { in: [...ids] }, empresaId },
+      select: { id: true, tipo: true },
+    });
+    if (encontrados.length !== ids.length) {
+      throw new NotFoundException(copy.foraDoTenant);
+    }
+
+    // Convidado não é gestor de ninguém, nem direto nem indireto nem como
+    // destino de realocação. A regra vive AQUI, e não em cada chamador, porque
+    // este é o funil único das três — é o que mantém os critérios de
+    // elegibilidade idênticos entre elas, como a ausência de checagem de status
+    // logo abaixo também exige.
+    if (encontrados.some((m) => m.tipo === MembroTipo.convidado)) {
+      throw new ConflictException(copy.convidado);
+    }
+  }
+
+  /**
+   * Normaliza e valida a lista de gestores indiretos, devolvendo o conjunto a
+   * gravar. Espelha `resolverRoles`: dedupe antes de contar, teto real aqui, e
+   * validação só das ADIÇÕES.
+   *
+   * `membroId` é null na criação — o membro ainda não tem id, logo não há como
+   * auto-associar (mesmo argumento que dispensa a checagem de ciclo do gestor
+   * direto em `criar`).
+   *
+   * `gestorDiretoFinal` é o gestor direto DEPOIS desta operação, nunca
+   * `atual.gestorId`: é ele que decide a regra do gestor direto.
+   *
+   * `gestorDiretoMudou` decide entre recusar e subtrair, e a distinção é
+   * necessária porque o formulário manda o payload INTEIRO em todo save:
+   *
+   *   - o gestor direto NÃO mudou e a lista o contém → o cliente afirmou os
+   *     dois valores na mesma requisição e eles se contradizem. 409.
+   *   - o gestor direto MUDOU → o campo alterado é a afirmação, a lista é
+   *     contexto que o cliente apenas ecoou. Subtrai em silêncio, que é a
+   *     única resolução correta: o vínculo indireto virou redundante.
+   *
+   * Sem essa distinção, trocar o gestor direto na tela viraria 409 num fluxo
+   * em que o operador não errou nada — e a API passaria a depender de o
+   * cliente filtrar a lista para funcionar.
+   *
+   * Ciclo NÃO é validado, de propósito: um par A→B e B→A é permitido e inerte,
+   * porque nada caminha por esta tabela. A árvore é montada só por `gestorId`
+   * (ver `estaAbaixoDe`), e é essa separação que torna a relação indireta
+   * incapaz de mudar posição hierárquica. Quem "melhorar" `estaAbaixoDe` para
+   * incluir indiretos torna esta decisão letra morta.
+   */
+  private async resolverGestoresIndiretos(
+    empresaId: string,
+    membroId: string | null,
+    gestorDiretoFinal: string | null,
+    gestorDiretoMudou: boolean,
+    idsBrutos: string[],
+    jaAtribuidos: readonly string[] = [],
+  ): Promise<string[]> {
+    let ids = [...new Set(idsBrutos.map((g) => g.trim()).filter(Boolean))];
+
+    if (membroId != null && ids.includes(membroId)) {
+      throw new ConflictException(
+        'Um membro não pode ser gestor indireto de si mesmo.',
       );
+    }
+
+    if (gestorDiretoFinal != null && ids.includes(gestorDiretoFinal)) {
+      if (gestorDiretoMudou) {
+        ids = ids.filter((id) => id !== gestorDiretoFinal);
+      } else {
+        throw new ConflictException(
+          'O gestor direto não pode ser também um gestor indireto. Escolha outra pessoa ou troque o gestor direto.',
+        );
+      }
+    }
+
+    // Depois do dedupe e da subtração: é este o teto real. O
+    // `@ArrayMaxSize` do DTO é a primeira barreira e conta ids repetidos.
+    if (ids.length > MAX_GESTORES_INDIRETOS) {
+      throw new BadRequestException(
+        `Um membro pode ter no máximo ${MAX_GESTORES_INDIRETOS} gestores indiretos.`,
+      );
+    }
+
+    // Só as adições, como em `resolverRoles` — mas por um motivo mais modesto:
+    // aqui a única forma de um indireto ficar inválido é sair da organização, e
+    // nesse caso o Cascade já apagou a linha. O ganho é não gastar query quando
+    // a lista não mudou.
+    const atuais = new Set(jaAtribuidos);
+    const adicionados = ids.filter((id) => !atuais.has(id));
+    await this.exigirGestoresDoTenant(empresaId, adicionados, {
+      foraDoTenant:
+        'Um dos gestores indiretos escolhidos não faz parte desta organização.',
+      convidado:
+        'Um dos gestores indiretos escolhidos é um membro convidado: convidados não participam da estrutura da organização.',
+    });
+
+    return ids;
+  }
+
+  /**
+   * Aplica o conjunto de gestores indiretos dentro de uma transação.
+   *
+   * Cópia estrutural de `sincronizarRoles`: remove quem saiu e cria quem
+   * entrou, em vez de apagar tudo e recriar — preserva o `criadoEm` de quem
+   * continua e não gera escrita para uma edição que não mexeu na lista.
+   */
+  private async sincronizarGestoresIndiretos(
+    db: Prisma.TransactionClient,
+    membroId: string,
+    gestorIndiretoIds: readonly string[],
+  ): Promise<void> {
+    const atuais = await db.membroGestorIndireto.findMany({
+      where: { membroId },
+      select: { gestorIndiretoId: true },
+    });
+    const atual = new Set(atuais.map((v) => v.gestorIndiretoId));
+    const desejado = new Set(gestorIndiretoIds);
+
+    const remover = [...atual].filter((g) => !desejado.has(g));
+    const adicionar = [...desejado].filter((g) => !atual.has(g));
+
+    if (remover.length > 0) {
+      await db.membroGestorIndireto.deleteMany({
+        where: { membroId, gestorIndiretoId: { in: remover } },
+      });
+    }
+    if (adicionar.length > 0) {
+      await db.membroGestorIndireto.createMany({
+        data: adicionar.map((gestorIndiretoId) => ({
+          membroId,
+          gestorIndiretoId,
+        })),
+        skipDuplicates: true,
+      });
     }
   }
 

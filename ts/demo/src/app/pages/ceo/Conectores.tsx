@@ -392,7 +392,7 @@ export default function Conectores() {
                       {items.length}
                     </span>
                   </div>
-                  <p className="dark:text-dark-300 text-xs mt-0.5 text-gray-400">
+                  <p className="dark:text-dark-300 mt-0.5 text-xs text-gray-400">
                     {cat.description}
                   </p>
 
@@ -917,9 +917,7 @@ function CredenciaisModal({
       (c) => c.obrigatorio && !(valores[c.id] ?? "").trim(),
     );
     if (faltando.length > 0) {
-      setErro(
-        `Preencha: ${faltando.map((c) => c.label).join(", ")}.`,
-      );
+      setErro(`Preencha: ${faltando.map((c) => c.label).join(", ")}.`);
       return;
     }
 
@@ -956,9 +954,7 @@ function CredenciaisModal({
       );
       close();
     } catch (err) {
-      setErro(
-        mensagemErro(err, "Não foi possível salvar as credenciais."),
-      );
+      setErro(mensagemErro(err, "Não foi possível salvar as credenciais."));
     } finally {
       setSalvando(false);
     }

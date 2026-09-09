@@ -17,7 +17,12 @@ import {
   type Membro,
 } from "@/services/api/membros";
 import { mensagemErroMembro, rotuloCargo } from "./membros-status";
-import { equipeDireta, gestoresElegiveis, montarHierarquia } from "./hierarquia-membros";
+import { RotuloCampo } from "./RotuloCampo";
+import {
+  equipeDireta,
+  gestoresElegiveis,
+  montarHierarquia,
+} from "./hierarquia-membros";
 
 // ----------------------------------------------------------------------
 // Realocação de liderados antes de um gestor sair da estrutura.
@@ -37,7 +42,15 @@ import { equipeDireta, gestoresElegiveis, montarHierarquia } from "./hierarquia-
 /** Quantos liderados são listados por nome antes de virar "+N". */
 const MAX_NOMES = 6;
 
-export type ModoSaida = "excluir" | "desativar";
+/**
+ * As três formas de sair da estrutura sem que a equipe fique sem gestor.
+ *
+ * `converter` é o membro que vira CONVIDADO: ele continua existindo e com
+ * acesso, mas deixa o organograma — então tem exatamente a mesma exigência de
+ * realocação das outras duas. O nome do tipo continua correto: sair da
+ * estrutura é o que as três têm em comum.
+ */
+export type ModoSaida = "excluir" | "desativar" | "converter";
 
 export function MembroRealocacaoModal({
   membro,
@@ -52,11 +65,21 @@ export function MembroRealocacaoModal({
   /** Lista completa da organização, para os liderados e os candidatos. */
   membros: Membro[];
   onClose: () => void;
+  /**
+   * `atualizado` é o membro DEPOIS da operação, ou nulo quando ele deixou de
+   * existir (modo "excluir").
+   *
+   * Sem ele, o detalhe aberto sobre a mesma pessoa continuaria mostrando área,
+   * cargo e gestor de quem acabou de virar convidado — `carregar()` troca a
+   * lista, mas o membro selecionado é estado separado e só é re-sincronizado à
+   * mão. O modo "desativar" tinha a mesma obsolescência latente.
+   */
   onConcluido: (
     membro: Membro,
     modo: ModoSaida,
     liderados: number,
     novaLideranca: Membro,
+    atualizado: Membro | null,
   ) => void;
 }) {
   const [novoGestorId, setNovoGestorId] = useState("");
@@ -86,9 +109,14 @@ export function MembroRealocacaoModal({
     if (!membro) return [];
     const { foraDaArvore } = montarHierarquia(membros);
     const soltos = new Set(foraDaArvore.map((m) => m.id));
-    return gestoresElegiveis(membros, membro.id)
-      .filter((m) => !soltos.has(m.id))
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    return (
+      gestoresElegiveis(membros, membro.id)
+        // Convidado não recebe liderados: a API recusa, e oferecer seria um 409
+        // depois de o operador escolher.
+        .filter((m) => m.tipo !== "convidado")
+        .filter((m) => !soltos.has(m.id))
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+    );
   }, [membros, membro]);
 
   const semAlternativa = candidatos.length === 0;
@@ -99,15 +127,29 @@ export function MembroRealocacaoModal({
     setErro(null);
     setSalvando(true);
     try {
+      let atualizado: Membro | null = null;
       if (modo === "excluir") {
         await removerMembroApi(membro.id, novaLideranca.id);
+      } else if (modo === "converter") {
+        // Os campos estruturais como string vazia, e não omitidos: num PATCH,
+        // omitir significa "não mexe". O backend também os zera por conta
+        // própria numa conversão, mas mandá-los explicitamente deixa a
+        // intenção legível e não depende dessa garantia.
+        atualizado = await atualizarMembroApi(membro.id, {
+          tipo: "convidado",
+          areaId: "",
+          cargoId: "",
+          gestorId: "",
+          gestorIndiretoIds: [],
+          reatribuirLiderados: novaLideranca.id,
+        });
       } else {
-        await atualizarMembroApi(membro.id, {
+        atualizado = await atualizarMembroApi(membro.id, {
           status: "inativo",
           reatribuirLiderados: novaLideranca.id,
         });
       }
-      onConcluido(membro, modo, liderados.length, novaLideranca);
+      onConcluido(membro, modo, liderados.length, novaLideranca, atualizado);
     } catch (err) {
       // Modal fica aberto: a operação não foi concluída e a estrutura está
       // intacta, então uma nova tentativa é o caminho natural.
@@ -161,7 +203,11 @@ export function MembroRealocacaoModal({
             </DialogTitle>
             <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
               {membro?.nome} é gestor direto de outros membros. Para{" "}
-              {modo === "excluir" ? "excluir o cadastro" : "desativar o acesso"}
+              {modo === "excluir"
+                ? "excluir o cadastro"
+                : modo === "converter"
+                  ? "converter em convidado"
+                  : "desativar o acesso"}
               , escolha quem passa a liderar essas pessoas — a nova liderança é
               aplicada antes de concluir.
             </p>
@@ -196,7 +242,11 @@ export function MembroRealocacaoModal({
                   )}
                 </span>
                 {l.status === "inativo" && (
-                  <Badge color="neutral" variant="soft" className="rounded-full">
+                  <Badge
+                    color="neutral"
+                    variant="soft"
+                    className="rounded-full"
+                  >
                     Inativo
                   </Badge>
                 )}
@@ -227,9 +277,10 @@ export function MembroRealocacaoModal({
           </div>
         ) : (
           <label className="mt-4 block text-sm">
-            <span className="dark:text-dark-200 mb-1 block font-medium text-gray-600">
-              Nova liderança
-            </span>
+            <RotuloCampo
+              rotulo="Nova liderança"
+              ajuda="Quem já responde a esta pessoa não aparece na lista, para não criar um ciclo na hierarquia."
+            />
             <select
               value={novoGestorId}
               onChange={(e) => setNovoGestorId(e.target.value)}
@@ -243,10 +294,6 @@ export function MembroRealocacaoModal({
                 </option>
               ))}
             </select>
-            <span className="dark:text-dark-300 mt-1 block text-xs font-normal text-gray-400">
-              Quem já responde a esta pessoa não aparece na lista, para não
-              criar um ciclo na hierarquia.
-            </span>
           </label>
         )}
 
@@ -257,6 +304,15 @@ export function MembroRealocacaoModal({
           </p>
         )}
 
+        {modo === "converter" && (
+          <p className="dark:text-dark-300 mt-3 text-xs text-gray-400">
+            Como convidado, {membro?.nome} deixa de fazer parte da estrutura:
+            área, cargo e relações de gestão são removidas, sai do organograma e
+            passa a ter apenas a role Convidado. O acesso à plataforma continua.
+            Converter de volta é possível, mas não devolve nada disso.
+          </p>
+        )}
+
         {erro && <p className="text-error mt-3 text-sm">{erro}</p>}
 
         <div className="mt-5 flex items-center justify-end gap-2">
@@ -264,7 +320,9 @@ export function MembroRealocacaoModal({
             Cancelar
           </Button>
           <Button
-            color="error"
+            // Converter é reclassificação, não destruição: o cadastro e o
+            // acesso continuam. `primary` em vez de `error` nesse caso.
+            color={modo === "converter" ? "primary" : "error"}
             onClick={confirmar}
             disabled={salvando || novaLideranca == null}
           >
@@ -272,7 +330,9 @@ export function MembroRealocacaoModal({
               ? "Concluindo…"
               : modo === "excluir"
                 ? "Realocar e excluir"
-                : "Realocar e desativar"}
+                : modo === "converter"
+                  ? "Realocar e converter"
+                  : "Realocar e desativar"}
           </Button>
         </div>
       </TransitionChild>

@@ -18,6 +18,7 @@ import type {
   EstruturaStatus,
 } from "@/services/api/estrutura";
 import { mensagemErroMembro } from "./membros-status";
+import { RotuloCampo } from "./RotuloCampo";
 
 // ----------------------------------------------------------------------
 // Criar / editar uma Área ou um Cargo. `item` nulo é criação.
@@ -74,7 +75,9 @@ export function EstruturaFormModal({
 
   const [nome, setNome] = useState(item?.nome ?? "");
   const [descricao, setDescricao] = useState(item?.descricao ?? "");
-  const [status, setStatus] = useState<EstruturaStatus>(item?.status ?? "ativo");
+  const [status, setStatus] = useState<EstruturaStatus>(
+    item?.status ?? "ativo",
+  );
 
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -170,10 +173,11 @@ export function EstruturaFormModal({
           </label>
 
           <label className="block text-sm">
-            <span className="dark:text-dark-200 mb-1 block font-medium text-gray-600">
-              Descrição
-              <span className="ml-1 font-normal text-gray-400">(opcional)</span>
-            </span>
+            <RotuloCampo
+              rotulo="Descrição"
+              opcional
+              ajuda="Apenas informativa: não afeta permissões, hierarquia nem acesso a dados."
+            />
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
@@ -182,10 +186,6 @@ export function EstruturaFormModal({
               rows={2}
               className="form-textarea dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
-            <span className="dark:text-dark-300 mt-1 block text-xs font-normal text-gray-400">
-              Apenas informativa: não afeta permissões, hierarquia nem acesso a
-              dados.
-            </span>
           </label>
 
           {/* Status só na edição: tudo nasce ativo, como o membro nasce sempre

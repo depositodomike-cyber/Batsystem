@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Bars2Icon,
   CpuChipIcon,
@@ -156,12 +163,16 @@ function FalhaDeCarga({
   onRetry: () => void;
 }) {
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
+    <div className="border-warning/30 bg-warning/10 mt-4 flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3">
       <ExclamationTriangleIcon className="text-warning size-5 shrink-0" />
       <p className="dark:text-dark-100 min-w-0 flex-1 text-sm text-gray-700">
         Não foi possível carregar do servidor: {mensagem}
       </p>
-      <Button variant="outlined" className="h-8 shrink-0 text-xs" onClick={onRetry}>
+      <Button
+        variant="outlined"
+        className="h-8 shrink-0 text-xs"
+        onClick={onRetry}
+      >
         Tentar de novo
       </Button>
     </div>
@@ -272,7 +283,8 @@ export function AiConnectionCard() {
         }),
       ]);
       if (!alive) return;
-      if (chaves.status === "rejected") setErroChaves(errMessage(chaves.reason));
+      if (chaves.status === "rejected")
+        setErroChaves(errMessage(chaves.reason));
       setLoading(false);
     })();
     return () => {
@@ -363,9 +375,9 @@ function KeysSection({
   const [modalOpen, modal] = useDisclosure(false);
   const [toDelete, setToDelete] = useState<AiCredential | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [deleteState, setDeleteState] = useState<"pending" | "success" | "error">(
-    "pending",
-  );
+  const [deleteState, setDeleteState] = useState<
+    "pending" | "success" | "error"
+  >("pending");
   // Chave salva sem o provedor confirmar: o cadastro deu certo, então o modal
   // fecha, mas o motivo não pode sumir junto com ele.
   const [aviso, setAviso] = useState<string | null>(null);
@@ -457,7 +469,7 @@ function KeysSection({
                   </p>
                 </div>
                 {c.status === "invalida" ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+                  <span className="bg-warning/10 text-warning inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
                     <ExclamationTriangleIcon className="size-3.5" />
                     chave recusada
                   </span>
@@ -471,10 +483,12 @@ function KeysSection({
                     </span>
                   )
                 )}
-                <KeyMenu onRemove={() => {
-                  setDeleteState("pending");
-                  setToDelete(c);
-                }} />
+                <KeyMenu
+                  onRemove={() => {
+                    setDeleteState("pending");
+                    setToDelete(c);
+                  }}
+                />
               </li>
             ))}
           </ul>
@@ -654,7 +668,7 @@ function AddKeyModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <DialogPanel className="scrollbar-sm relative w-full max-w-md overflow-y-auto rounded-lg bg-white px-5 py-6 dark:bg-dark-700">
+          <DialogPanel className="scrollbar-sm dark:bg-dark-700 relative w-full max-w-md overflow-y-auto rounded-lg bg-white px-5 py-6">
             <DialogTitle className="dark:text-dark-100 text-base font-semibold text-gray-800">
               Adicionar chave de API
             </DialogTitle>
@@ -714,7 +728,7 @@ function AddKeyModal({
               </label>
             </div>
 
-            {error && <p className="mt-3 text-sm text-error">{error}</p>}
+            {error && <p className="text-error mt-3 text-sm">{error}</p>}
 
             <div className="mt-5 flex items-center justify-end gap-2">
               <Button variant="outlined" onClick={onClose} disabled={saving}>
@@ -915,7 +929,7 @@ function ModalityPanel({
           {modality.label}
         </h4>
         {conns.length > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+          <span className="bg-success/10 text-success inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
             <CheckCircleIcon className="size-3.5" />
             Conectado
             {conns.length > 1 && ` · ${conns.length} modelos`}
@@ -1012,7 +1026,7 @@ function ModalityPanel({
             </Button>
           )}
 
-          {error && <p className="mt-3 text-sm text-error">{error}</p>}
+          {error && <p className="text-error mt-3 text-sm">{error}</p>}
         </div>
       )}
     </>
@@ -1049,9 +1063,7 @@ function AddModelPanel({
         ?.models.filter((m) => m.modality === modality.id) ?? [];
     return cat.filter(
       (m) =>
-        !jaNaFila.some(
-          (c) => c.credentialId === cred.id && c.model === m.id,
-        ),
+        !jaNaFila.some((c) => c.credentialId === cred.id && c.model === m.id),
     );
   }, [cred, providers, modality.id, jaNaFila]);
 
@@ -1115,7 +1127,7 @@ function AddModelPanel({
           </select>
         </label>
       </div>
-      {error && <p className="mt-3 text-sm text-error">{error}</p>}
+      {error && <p className="text-error mt-3 text-sm">{error}</p>}
       <div className="mt-3 flex items-center gap-2">
         <Button
           color="primary"

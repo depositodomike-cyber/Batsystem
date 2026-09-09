@@ -10,6 +10,7 @@ import {
   LockClosedIcon,
   PencilSquareIcon,
   XMarkIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 
 // Local Imports
@@ -24,9 +25,12 @@ import { MatrizPermissoes } from "./MatrizPermissoes";
 // Detalhe da role, no drawer lateral direito (mesma casca do MembroDrawer).
 //
 // As permissões aparecem em leitura, incluindo as NÃO concedidas — é o que
-// deixa claro o alcance da role. Editar é pelo botão do rodapé, e só existe
-// para role personalizada: as de sistema são imutáveis, e é isso que garante
-// que a organização nunca perca uma role com acesso administrativo completo.
+// deixa claro o alcance da role.
+//
+// O rodapé muda conforme a role: a Owner só admite transferir a propriedade, e
+// as demais — incluindo Admin, Editor e Viewer — abrem o formulário de edição.
+// A Owner é imutável porque é ela que garante que a organização nunca perca a
+// titularidade; o alcance dela nunca é configurável por aqui.
 // ----------------------------------------------------------------------
 
 export function RoleDrawer({
@@ -34,6 +38,7 @@ export function RoleDrawer({
   membros,
   close,
   onEditar,
+  onTransferirPropriedade,
   onAbrirMembro,
 }: {
   /** Nulo = fechado. */
@@ -42,6 +47,8 @@ export function RoleDrawer({
   membros: Membro[];
   close: () => void;
   onEditar: () => void;
+  /** Única ação da role Owner. */
+  onTransferirPropriedade: () => void;
   onAbrirMembro: (membro: Membro) => void;
 }) {
   // Derivado da lista, não de um segundo cadastro.
@@ -86,16 +93,16 @@ export function RoleDrawer({
                   </DialogTitle>
                   <div className="mt-1 flex items-center gap-2">
                     <Badge
-                      color={role.tipo === "sistema" ? "info" : "neutral"}
+                      color={role.editavel ? "neutral" : "info"}
                       variant="soft"
                       className="gap-1 rounded-full"
                     >
-                      {role.tipo === "sistema" && (
-                        <LockClosedIcon className="size-3" />
-                      )}
-                      {role.tipo === "sistema"
+                      {!role.editavel && <LockClosedIcon className="size-3" />}
+                      {!role.editavel
                         ? "Role do sistema"
-                        : "Personalizada"}
+                        : role.tipo === "sistema"
+                          ? "Padrão da plataforma"
+                          : "Personalizada"}
                     </Badge>
                     <span className="dark:text-dark-300 text-xs text-gray-400">
                       {role.permissoes.length} de {TOTAL_PERMISSOES} permissões
@@ -126,11 +133,25 @@ export function RoleDrawer({
                     </section>
                   )}
 
-                  {role.tipo === "sistema" && (
+                  {!role.editavel && (
                     <p className="dark:border-dark-600 dark:text-dark-200 text-xs-plus rounded-xl border border-gray-200 px-3.5 py-2.5 text-gray-600">
-                      Roles do sistema não podem ser editadas nem excluídas.
-                      Para um conjunto diferente de permissões, crie uma role
-                      personalizada.
+                      {role.proprietaria ? (
+                        <>
+                          Este é o acesso do proprietário da organização: não
+                          pode ser editado, desativado nem excluído, e pertence
+                          a um único membro. Para mudar de proprietário, use
+                          &ldquo;Transferir propriedade&rdquo;.
+                        </>
+                      ) : (
+                        // Sem a frase "pertence a um único membro", que é
+                        // verdade só da Owner: a Convidado pertence a TODOS os
+                        // membros do tipo convidado.
+                        <>
+                          Este é o acesso dos membros convidados: não pode ser
+                          editado nem excluído, e é atribuído automaticamente
+                          quando alguém é cadastrado ou convertido em convidado.
+                        </>
+                      )}
                     </p>
                   )}
 
@@ -176,17 +197,31 @@ export function RoleDrawer({
                 </div>
               </ScrollShadow>
 
-              {/* Rodapé — só role personalizada é editável. */}
-              {role.editavel && (
+              {/* Rodapé — a Owner troca "Editar" por "Transferir": é a única
+                  operação que ela admite. A Convidado não tem ação nenhuma, e
+                  aí some a FAIXA inteira, não só o botão: uma borda superior
+                  com nada dentro é artefato visual. */}
+              {(role.editavel || role.proprietaria) && (
                 <div className="dark:border-dark-600 shrink-0 border-t border-gray-200 px-5 py-4">
-                  <Button
-                    color="primary"
-                    className="w-full gap-2"
-                    onClick={onEditar}
-                  >
-                    <PencilSquareIcon className="size-4.5 stroke-[1.5]" />
-                    Editar role
-                  </Button>
+                  {role.proprietaria ? (
+                    <Button
+                      color="primary"
+                      className="w-full gap-2"
+                      onClick={onTransferirPropriedade}
+                    >
+                      <ArrowsRightLeftIcon className="size-4.5 stroke-[1.5]" />
+                      Transferir propriedade
+                    </Button>
+                  ) : (
+                    <Button
+                      color="primary"
+                      className="w-full gap-2"
+                      onClick={onEditar}
+                    >
+                      <PencilSquareIcon className="size-4.5 stroke-[1.5]" />
+                      Editar acesso
+                    </Button>
+                  )}
                 </div>
               )}
             </>

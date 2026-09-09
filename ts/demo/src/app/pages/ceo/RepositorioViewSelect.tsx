@@ -71,7 +71,10 @@ export function salvarViewRepositorio(view: RepositorioView): void {
   }
 }
 
-export function caminhoRepositorio(product: string, view?: RepositorioView): string {
+export function caminhoRepositorio(
+  product: string,
+  view?: RepositorioView,
+): string {
   const escolhida = view ?? lerViewRepositorio();
   const efetiva =
     escolhida === "grafo" && isFeatureTemporarilyDisabled("memoryGraph")
@@ -80,7 +83,11 @@ export function caminhoRepositorio(product: string, view?: RepositorioView): str
   return `/${product}/${SLUG[efetiva]}`;
 }
 
-export function RepositorioViewSelect({ compact = false }: { compact?: boolean }) {
+export function RepositorioViewSelect({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const product = getCurrentProduct(pathname);
@@ -110,7 +117,7 @@ export function RepositorioViewSelect({ compact = false }: { compact?: boolean }
           "inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white text-start outline-hidden transition-colors",
           "dark:border-dark-450 dark:bg-dark-700 dark:hover:bg-dark-600 hover:bg-gray-50",
           "focus-visible:ring-primary-500/50 focus-visible:ring-2",
-          compact ? "h-8 px-2.5 text-xs" : "h-8 px-3 text-xs-plus",
+          compact ? "h-8 px-2.5 text-xs" : "text-xs-plus h-8 px-3",
         )}
       >
         {Icon && (
@@ -134,7 +141,7 @@ export function RepositorioViewSelect({ compact = false }: { compact?: boolean }
           anchor={{ to: "bottom end", gap: 6 }}
           className="border-gray-150 shadow-soft dark:border-dark-600 dark:bg-dark-700 z-70 w-48 rounded-lg border bg-white p-1 outline-hidden dark:shadow-none"
         >
-          <p className="dark:text-dark-300 px-2.5 py-1 text-tiny-plus font-semibold tracking-wider text-gray-400 uppercase">
+          <p className="dark:text-dark-300 text-tiny-plus px-2.5 py-1 font-semibold tracking-wider text-gray-400 uppercase">
             Visualização
           </p>
           {VIEWS.map((view) => {
@@ -149,7 +156,7 @@ export function RepositorioViewSelect({ compact = false }: { compact?: boolean }
                     disabled={desabilitada}
                     onClick={() => escolher(view.id)}
                     className={clsx(
-                      "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-start text-xs-plus outline-hidden transition-colors",
+                      "text-xs-plus flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-start outline-hidden transition-colors",
                       focus && !desabilitada && "dark:bg-dark-600 bg-gray-100",
                       desabilitada && DISABLED_MENU_CLASS,
                       active
@@ -160,7 +167,9 @@ export function RepositorioViewSelect({ compact = false }: { compact?: boolean }
                     {ViewIcon && (
                       <ViewIcon className="size-4 shrink-0 stroke-[1.5]" />
                     )}
-                    <span className="min-w-0 flex-1 truncate">{view.label}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {view.label}
+                    </span>
                     {active && <CheckIcon className="size-4 shrink-0" />}
                   </button>
                 )}

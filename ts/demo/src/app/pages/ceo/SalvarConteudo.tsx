@@ -197,7 +197,11 @@ export function SalvarNoGrupoModal({
             Cancelar
           </Button>
           {semGrupos ? (
-            <Button color="primary" className="rounded-lg" onClick={onCriarGrupo}>
+            <Button
+              color="primary"
+              className="rounded-lg"
+              onClick={onCriarGrupo}
+            >
               Criar grupo
             </Button>
           ) : (
@@ -218,7 +222,7 @@ export function SalvarNoGrupoModal({
           <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
             {item?.titulo}
           </p>
-          <p className="dark:text-dark-300 mt-1 line-clamp-3 text-xs-plus whitespace-pre-line text-gray-500">
+          <p className="dark:text-dark-300 text-xs-plus mt-1 line-clamp-3 whitespace-pre-line text-gray-500">
             {item?.conteudo}
           </p>
         </div>
@@ -277,7 +281,7 @@ function ModalShell({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="dark:bg-black/40 fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" />
+          <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity dark:bg-black/40" />
         </TransitionChild>
 
         <div className="fixed inset-0 flex items-center justify-center overflow-y-auto p-4">

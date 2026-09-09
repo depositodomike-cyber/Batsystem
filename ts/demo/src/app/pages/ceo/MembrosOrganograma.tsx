@@ -1,5 +1,5 @@
 // Import Dependencies
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
@@ -17,6 +17,8 @@ import {
   type GrupoCargo,
 } from "./organograma-cargos";
 import { useCameraOrganograma } from "./useCameraOrganograma";
+import { conexoesIndiretas } from "./membros-indiretos";
+import { useConexoesMedidas } from "./useConexoesMedidas";
 
 // ----------------------------------------------------------------------
 // Organograma: desenho de cima para baixo derivado de `gestorId`.
@@ -28,10 +30,20 @@ import { useCameraOrganograma } from "./useCameraOrganograma";
 // é alguém ainda desconectado —, e quem está nessa situação fica fora do
 // desenho; a tela informa quantos são em vez de silenciá-los.
 //
-// As linhas são CSS puro: nenhuma coordenada é calculada e não há SVG. Além de
-// seguir a preferência já registrada nesta tela por marcação simples, recolher
-// um nó é só deixar de renderizar os filhos — sem recalcular layout, sem
-// medir, sem ressincronizar caminhos.
+// A ÁRVORE é CSS puro: os conectores pai→filho são pseudo-elementos, nenhuma
+// coordenada é calculada, e recolher um nó é só deixar de renderizar os filhos
+// — sem recalcular layout e sem ressincronizar caminhos. Não mexa nisso.
+//
+// Sobre ela há uma SEGUNDA camada, um `<svg>`, com as conexões de gestor
+// indireto. Ela precisa medir, e a razão é estrutural: pseudo-elemento só
+// alcança quem é adjacente no DOM, e um gestor indireto não é adjacente a quem
+// ele acompanha. Sem medida, a única alternativa seria mover o card para
+// debaixo dele — duplicando a pessoa no desenho, que é exatamente o que a
+// separação entre as duas relações existe para evitar.
+//
+// As duas camadas compartilham o mesmo espaço de coordenadas e a mesma escala
+// (o `<svg>` mora dentro da árvore), então o traço secundário escala junto com
+// o principal e nunca fica mais pesado que ele. Ver `useConexoesMedidas`.
 // ----------------------------------------------------------------------
 
 /**
@@ -51,15 +63,15 @@ const COTOVELO = clsx(
   "relative flex flex-col items-center px-4 pt-12",
   // Barra horizontal. Nos extremos ela começa/termina no próprio centro, o que
   // impede a linha de passar do primeiro e do último card.
-  "before:absolute before:top-6 before:start-0 before:end-0 before:h-px",
-  "before:bg-gray-200 before:content-[''] dark:before:bg-dark-500",
+  "before:absolute before:start-0 before:end-0 before:top-6 before:h-px",
+  "dark:before:bg-dark-500 before:bg-gray-200 before:content-['']",
   "first:before:start-1/2 last:before:end-1/2",
   // Filho único: a barra teria largura zero — escondida para não deixar
   // resíduo de subpixel. Tronco e queda formam uma única reta.
   "only:before:hidden",
   // Queda vertical, da barra até a borda de cima do card.
   "after:absolute after:top-6 after:left-1/2 after:h-6 after:w-px after:-translate-x-1/2",
-  "after:bg-gray-200 after:content-[''] dark:after:bg-dark-500",
+  "dark:after:bg-dark-500 after:bg-gray-200 after:content-['']",
 );
 
 /**
@@ -72,17 +84,31 @@ const FILHOS = clsx(
   // O `<ul>` não tem padding-top, então o seu topo coincide com o dos `<li>` e
   // estes 24px casam exatamente com o `top-6` do cotovelo.
   "before:absolute before:top-0 before:left-1/2 before:h-6 before:w-px",
-  "before:-translate-x-1/2 before:bg-gray-200 before:content-[''] dark:before:bg-dark-500",
+  "dark:before:bg-dark-500 before:-translate-x-1/2 before:bg-gray-200 before:content-['']",
 );
 
 export function MembrosOrganograma({
   membros,
   raizes,
+  membroSelecionadoId,
   onAbrirMembro,
 }: {
   membros: Membro[];
   /** Floresta já montada pelo contêiner, para não remontar a cada render. */
   raizes: NoHierarquia[];
+  /**
+   * Membro aberto no detalhe, para dar ênfase às conexões dele.
+   *
+   * Id e não o objeto: a identidade do `Membro` troca a cada refetch, o que
+   * invalidaria memos sem nada ter mudado — e o id impede alguém de ler daqui
+   * campos que podem estar velhos.
+   *
+   * A seleção é a da PÁGINA, a mesma que abre o drawer; o organograma não tem
+   * um conceito próprio. Ela é zerada ao fechar o drawer, então a ênfase vale
+   * enquanto o detalhe está aberto — que é justamente quando alguém está
+   * lendo a lista de gestores indiretos e quer achá-los no desenho.
+   */
+  membroSelecionadoId: string | null;
   onAbrirMembro: (membro: Membro) => void;
 }) {
   const topos = useMemo(() => raizesComEquipe(raizes), [raizes]);
@@ -116,8 +142,37 @@ export function MembrosOrganograma({
       return proximo;
     });
 
+  // Estado PRÓPRIO, fora de `cargosAtivos`: pôr o id do chip de conexões
+  // naquele conjunto faria `temFiltro` ligar sozinho, e ligar as linhas
+  // esmaeceria todos os cards. São dois eixos diferentes.
+  const [mostrarIndiretas, setMostrarIndiretas] = useState(true);
+
   const camera = useCameraOrganograma();
   const temFiltro = cargosAtivos.size > 0;
+
+  const conexoes = useMemo(() => conexoesIndiretas(membros), [membros]);
+  const { arestas, ocultas } = useConexoesMedidas(
+    camera.arvoreRef,
+    membros,
+    conexoes,
+    mostrarIndiretas,
+  );
+
+  // Id único do marcador de seta. Um id fixo colidiria se dois organogramas
+  // montassem na mesma página, e o navegador resolve `url(#id)` pelo primeiro
+  // do documento — as setas de um deles sumiriam sem erro nenhum.
+  const idSeta = useId().replace(/:/g, "");
+
+  const porId = useMemo(
+    () => new Map(membros.map((m) => [m.id, m])),
+    [membros],
+  );
+
+  /** A ponta de uma aresta está sob o filtro de cargo ligado na legenda? */
+  const pontaDestacada = (id: string) => {
+    const m = porId.get(id);
+    return m != null && cargosAtivos.has(grupoNaLegenda(m, grupos));
+  };
 
   return (
     <div className="space-y-2">
@@ -158,6 +213,94 @@ export function MembrosOrganograma({
                 transform: `scale(${camera.escala})`,
               }}
             >
+              {/* CONEXÕES INDIRETAS — primeiro filho de propósito.
+                  Posicionado e sem `z-index`, o empate é resolvido por ordem
+                  de documento: o traço pinta ATRÁS dos cards e dos conectores
+                  principais, então passa por trás dos cards opacos nos
+                  cruzamentos e por baixo das linhas sólidas. Introduzir um
+                  `z-index` criaria um contexto de empilhamento e quebraria
+                  esse equilíbrio de graça.
+
+                  `absolute inset-0` é obrigatório: se o svg entrasse no fluxo,
+                  mudaria o `offsetWidth` da árvore, o observer da câmera
+                  dispararia, o render seguinte remediria — e o loop não teria
+                  fim.
+
+                  `aria-hidden`: caminho geométrico não é seguível por leitor
+                  de tela. A informação chega pelo detalhe do membro, que lista
+                  os gestores indiretos como campo próprio. */}
+              {arestas.length > 0 && (
+                <svg
+                  aria-hidden
+                  className="dark:text-dark-500 pointer-events-none absolute inset-0 overflow-visible text-gray-300"
+                >
+                  <defs>
+                    <marker
+                      id={`seta-${idSeta}`}
+                      viewBox="0 0 8 8"
+                      refX="7"
+                      refY="4"
+                      markerWidth="5"
+                      markerHeight="5"
+                      // Em unidade de traço, para acompanhar a espessura.
+                      markerUnits="strokeWidth"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M0,1 L7,4 L0,7 z" fill="currentColor" />
+                    </marker>
+                  </defs>
+                  {arestas.map((a) => {
+                    const incide =
+                      membroSelecionadoId != null &&
+                      (a.deId === membroSelecionadoId ||
+                        a.paraId === membroSelecionadoId);
+                    // Duas ênfases, dois donos, e `min` para não existir "qual
+                    // roda primeiro": a seleção manda na aresta, o filtro de
+                    // cargo manda no card. A regra do filtro é necessária
+                    // porque com ele os cards não destacados caem para 35% —
+                    // sem ela, as tracejadas seriam o elemento MAIS opaco.
+                    const porSelecao =
+                      membroSelecionadoId == null ? 0.45 : incide ? 0.9 : 0.12;
+                    const porFiltro = !temFiltro
+                      ? 1
+                      : pontaDestacada(a.deId) || pontaDestacada(a.paraId)
+                        ? 1
+                        : 0.15;
+                    const de = porId.get(a.deId)?.nome ?? "";
+                    const para = porId.get(a.paraId)?.nome ?? "";
+                    return (
+                      <path
+                        key={a.chave}
+                        d={`M ${a.x1},${a.y1} C ${a.cx1},${a.y1 + a.cy} ${a.cx2},${a.y2 + a.cy} ${a.x2},${a.y2}`}
+                        fill="none"
+                        stroke="currentColor"
+                        // Sem `vector-effect="non-scaling-stroke"`: as linhas
+                        // principais são `h-px`/`w-px` dentro desta mesma
+                        // árvore, então escalam. Com o traço fixo em px de
+                        // tela, em zoom 30% a tracejada teria 1px contra 0,3px
+                        // da sólida — a secundária ficaria MAIS pesada que a
+                        // principal, invertendo a hierarquia visual.
+                        strokeWidth={incide ? 1.6 : 1}
+                        strokeDasharray="6 4"
+                        strokeLinecap="round"
+                        opacity={Math.min(porSelecao, porFiltro)}
+                        // Direção só na aresta em ênfase: em repouso, uma seta
+                        // por linha somaria peso exatamente onde a relação
+                        // secundária pede menos.
+                        markerEnd={incide ? `url(#seta-${idSeta})` : undefined}
+                        // O tooltip é nativo, via `<title>`, e o traço é a
+                        // única coisa que recebe ponteiro. O `pointerdown`
+                        // continua borbulhando até o viewport, então o arraste
+                        // não quebra.
+                        style={{ pointerEvents: "stroke" }}
+                      >
+                        <title>{`Gestor indireto — ${de} → ${para}`}</title>
+                      </path>
+                    );
+                  })}
+                </svg>
+              )}
+
               {/* Só a linha dos topos pode envolver: topos não têm cotovelo. */}
               <ul className="flex flex-wrap items-start justify-center gap-x-4 gap-y-12">
                 {topos.map((no) => (
@@ -214,6 +357,54 @@ export function MembrosOrganograma({
           </div>
         )}
 
+        {/* Legenda das conexões, e ao mesmo tempo o liga/desliga delas — um
+            controle só, no idioma dos chips de cargo. Só existe quando há
+            conexão: sem elas não há dúvida a esclarecer.
+
+            A amostra é a própria linha tracejada, e não um ponto colorido: o
+            que a legenda precisa nomear é o traço. */}
+        {conexoes.length > 0 && (
+          // Canto inferior ESQUERDO: o direito é onde o botão flutuante de
+          // chat da aplicação pousa, e ali o chip fica parcialmente coberto.
+          // Os outros três cantos já estão ocupados — legenda de cargos em
+          // cima à esquerda, zoom em cima à direita.
+          <div className="absolute start-2 bottom-2 z-10 sm:start-4 sm:bottom-4">
+            <button
+              type="button"
+              onClick={() => setMostrarIndiretas((v) => !v)}
+              aria-pressed={mostrarIndiretas}
+              title={
+                mostrarIndiretas
+                  ? "Ocultar as conexões de gestor indireto"
+                  : "Mostrar as conexões de gestor indireto"
+              }
+              className={clsx(
+                "text-tiny flex items-center gap-1.5 rounded-md border px-2 py-1 shadow-sm transition-colors",
+                mostrarIndiretas
+                  ? "dark:bg-dark-700 dark:border-dark-500 dark:text-dark-100 border-gray-300 bg-white text-gray-700"
+                  : "dark:bg-dark-800/70 dark:border-dark-600 dark:text-dark-300 border-gray-200 bg-white/70 text-gray-400",
+              )}
+            >
+              <svg
+                aria-hidden
+                width="16"
+                height="8"
+                className="shrink-0 overflow-visible"
+                style={{ opacity: mostrarIndiretas ? 1 : 0.35 }}
+              >
+                <path
+                  d="M0,4 L16,4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                />
+              </svg>
+              Gestor indireto
+              <span className="tabular-nums opacity-60">{conexoes.length}</span>
+            </button>
+          </div>
+        )}
+
         {/* Zoom (canto superior direito). */}
         <div className="dark:border-dark-500 dark:bg-dark-700/90 absolute end-2 top-2 z-10 flex items-center gap-0.5 rounded-lg border border-gray-200 bg-white/90 p-0.5 shadow-sm backdrop-blur-sm sm:end-4 sm:top-4">
           <BotaoZoom
@@ -245,6 +436,20 @@ export function MembrosOrganograma({
         Arraste para navegar · Ctrl + roda para dar zoom · Clique num card para
         ver o detalhe
       </p>
+
+      {/* Contar em vez de silenciar, como esta tela já faz com quem fica fora
+          da árvore e com os isolados. Acontece quando as duas pontas de uma
+          conexão estão fora do desenho — alguém em ciclo, ou sem vínculo
+          nenhum, que o organograma nunca mostra. */}
+      {mostrarIndiretas && ocultas > 0 && (
+        <p className="dark:text-dark-400 text-tiny-plus text-gray-400">
+          {ocultas}{" "}
+          {ocultas === 1
+            ? "conexão indireta não aparece"
+            : "conexões indiretas não aparecem"}{" "}
+          porque as pessoas envolvidas estão fora do desenho.
+        </p>
+      )}
     </div>
   );
 }
@@ -298,11 +503,7 @@ function NoOrganograma({
   const destacado = temFiltro && cargosAtivos.has(idGrupo);
 
   return (
-    <li
-      className={
-        ehTopo ? "flex flex-col items-center px-4" : COTOVELO
-      }
-    >
+    <li className={ehTopo ? "flex flex-col items-center px-4" : COTOVELO}>
       <OrganogramaCard
         membro={no.membro}
         ehTopo={ehTopo}

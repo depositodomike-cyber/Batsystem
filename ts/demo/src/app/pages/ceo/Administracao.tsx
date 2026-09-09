@@ -1,19 +1,13 @@
 // Import Dependencies
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useSearchParams } from "react-router";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { KeyIcon, ShareIcon, UsersIcon } from "@heroicons/react/24/outline";
-import clsx from "clsx";
 
 // Local Imports
-import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import {
   ConfirmModal,
   type ModalState,
 } from "@/components/shared/ConfirmModal";
-import { ScrollShadow } from "@/components/ui";
-import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import {
   atualizarMembroApi,
   fetchMembrosApi,
@@ -34,10 +28,8 @@ import {
 } from "@/services/api/estrutura";
 import { mensagemErroMembro } from "./membros-status";
 import { equipeDireta } from "./hierarquia-membros";
-import {
-  MembroRealocacaoModal,
-  type ModoSaida,
-} from "./MembroRealocacaoModal";
+import { MembroRealocacaoModal, type ModoSaida } from "./MembroRealocacaoModal";
+import { ConvidadoParaMembroModal } from "./ConvidadoParaMembroModal";
 import { EstruturaLista } from "./EstruturaLista";
 import { EstruturaFormModal } from "./EstruturaFormModal";
 import {
@@ -54,49 +46,157 @@ import { AcessoRoles } from "./AcessoRoles";
 import { RoleDrawer } from "./RoleDrawer";
 import { RoleFormModal } from "./RoleFormModal";
 import { RoleExclusaoModal } from "./RoleExclusaoModal";
+import { OwnerTransferenciaModal } from "./OwnerTransferenciaModal";
+import { type SecaoAdministracao } from "./configuracoes-secoes";
 
 // ----------------------------------------------------------------------
-// Administração da organização — três seções:
-//   • Membros   — listagem e cadastro (V1).
-//   • Estrutura — Áreas, Cargos e a árvore derivada de Gestor direto (V2/V4).
-//   • Acesso    — roles e permissões (V3).
+// Painel das cinco seções de organização de Configurações: Membros, Áreas,
+// Cargos, Hierarquia e Roles.
 //
-// As quatro dimensões ficam deliberadamente separadas: área diz onde a pessoa
-// está, cargo qual posição ocupa, gestor a quem responde, e role o que ela pode
-// fazer. Nenhuma infere a outra.
+// Isto era a tela "Administração", com Membros / Estrutura / Acesso na
+// navegação lateral e Áreas, Cargos e Hierarquia como sub-abas de Estrutura.
+// Administração deixou de ser uma área da plataforma: as cinco viraram itens de
+// primeiro nível do menu de Configurações, e o rótulo do grupo ESTRUTURA passou
+// a carregar o nível que a sub-aba `?aba=` carregava. (O comentário anterior
+// argumentava contra essa promoção justamente porque não havia grupo para
+// segurá-la; agora há.)
 //
-// O layout de seções (navegação lateral que vira strip horizontal abaixo de lg,
-// seção na URL via ?secao=) é o mesmo de Configuracoes.tsx, de propósito: são
-// as duas telas administrativas da plataforma.
+// O que NÃO mudou, e é a razão de este arquivo continuar sendo um só: ele é o
+// dono dos dados e de TODOS os modais. As cinco seções leem a mesma lista de
+// membros e abrem o mesmo drawer, então um estado por seção faria elas
+// divergirem depois de qualquer edição.
 //
-// Esta página é a dona dos dados e de todos os modais. As abas são
-// apresentação: as duas leem a mesma lista e abrem o mesmo drawer, então um
-// estado por aba faria as duas divergirem depois de qualquer edição.
+// Por isso quem renderiza este painel tem de fazê-lo numa expressão JSX única,
+// com a seção vindo por prop — nunca um branch por seção. Um branch por seção
+// desmontaria e remontaria o painel a cada clique do menu: quatro chamadas de
+// API, drawer fechado, filtros e busca da lista zerados.
+//
+// As quatro dimensões de um membro ficam deliberadamente separadas: área diz
+// onde a pessoa está, cargo qual posição ocupa, gestor a quem responde, e role
+// o que ela pode fazer. Nenhuma infere a outra.
 // ----------------------------------------------------------------------
-
-const SECOES = [
-  { id: "membros", titulo: "Membros", icon: UsersIcon },
-  { id: "estrutura", titulo: "Estrutura", icon: ShareIcon },
-  { id: "acesso", titulo: "Acesso", icon: KeyIcon },
-] as const;
-
-type SecaoId = (typeof SECOES)[number]["id"];
 
 /**
- * Sub-abas da seção Estrutura, em `?aba=`.
+ * Cabeçalho de cada seção.
  *
- * Ficam AQUI, dentro da seção que já existia, em vez de virarem itens da
- * navegação lateral: Áreas, Cargos e Hierarquia respondem à mesma pergunta —
- * como a organização se organiza —, e promovê-las a seções empurraria Membros
- * e Acesso para o mesmo nível de granularidade.
+ * A ajuda da antiga página de Administração era um bloco só com quatro
+ * parágrafos, e cada um falava de uma seção diferente — que agora são itens
+ * distintos do menu. Dividida, cada pedaço chega junto do assunto dele.
+ *
+ * Mora aqui, e não dentro de `MembrosLista`/`EstruturaLista`/`AcessoRoles`/
+ * `MembrosHierarquia`: aqueles quatro são componentes de apresentação e
+ * continuam intocados. É o mesmo arranjo que `RegrasSection` já usa — a seção
+ * traz o próprio título.
  */
-const ABAS_ESTRUTURA = [
-  { id: "areas", titulo: "Áreas" },
-  { id: "cargos", titulo: "Cargos" },
-  { id: "hierarquia", titulo: "Hierarquia" },
-] as const;
-
-type AbaEstruturaId = (typeof ABAS_ESTRUTURA)[number]["id"];
+const CABECALHOS: Record<
+  SecaoAdministracao,
+  { titulo: string; subtitulo: string; ajuda: ReactNode }
+> = {
+  membros: {
+    titulo: "Membros",
+    subtitulo:
+      "Membros da organização, a hierarquia entre eles e o que cada um pode fazer",
+    ajuda: (
+      <>
+        <p>
+          Aqui você cadastra e mantém os dados de cada pessoa da organização.
+          Quatro informações respondem por tudo: <strong>Área</strong> diz onde
+          a pessoa está, <strong>Cargo</strong> qual posição ela ocupa,{" "}
+          <strong>Gestor direto</strong> a quem ela responde, e as{" "}
+          <strong>Roles</strong> o que ela pode fazer na plataforma.
+        </p>
+        <p>
+          Nenhuma determina a outra: um analista pode ter role Admin, e uma
+          mesma área pode ter várias cadeias de gestores.
+        </p>
+        <p>
+          Um membro pode ter até duas roles, e o acesso é a soma das duas: se
+          qualquer uma concede, ele pode. As permissões vêm sempre das roles —
+          não há permissão individual por membro, então para mudar o que alguém
+          pode fazer, altera-se a role.
+        </p>
+      </>
+    ),
+  },
+  areas: {
+    // Título e subtítulo vêm de `estrutura-copy.ts`, que é a casa de todo o
+    // texto de Áreas e Cargos — o mesmo par que `EstruturaLista` renderizava
+    // antes de Áreas e Cargos virarem seções.
+    titulo: COPY_AREAS_LISTA.titulo,
+    subtitulo: COPY_AREAS_LISTA.subtitulo,
+    ajuda: (
+      <>
+        <p>
+          As áreas cadastradas aqui são as opções que aparecem no formulário de
+          membro. Área diz <strong>onde</strong> a pessoa está — não define
+          hierarquia nem concede permissão.
+        </p>
+        <p>
+          Desativar uma área apenas a tira das escolhas novas: quem já estava
+          nela continua, e a associação segue aparecendo no cadastro.
+        </p>
+      </>
+    ),
+  },
+  cargos: {
+    titulo: COPY_CARGOS_LISTA.titulo,
+    subtitulo: COPY_CARGOS_LISTA.subtitulo,
+    ajuda: (
+      <>
+        <p>
+          Os cargos cadastrados aqui são as opções que aparecem no formulário de
+          membro. Cargo diz <strong>qual posição</strong> a pessoa ocupa — e não
+          define hierarquia: dois gerentes podem estar em cadeias diferentes.
+        </p>
+        <p>
+          Desativar um cargo apenas o tira das escolhas novas: quem já estava
+          nele continua.
+        </p>
+      </>
+    ),
+  },
+  hierarquia: {
+    titulo: "Hierarquia",
+    subtitulo: "A estrutura montada a partir do gestor direto de cada membro",
+    ajuda: (
+      <>
+        <p>
+          Esta é a única seção que você não preenche: ela é{" "}
+          <strong>derivada</strong> do <strong>Gestor direto</strong> de cada
+          membro, editado no cadastro dele. Não existe cadastro de subordinados.
+        </p>
+        <p>
+          Os <strong>gestores indiretos</strong> aparecem como conexões
+          secundárias sobre os mesmos cards — eles acompanham a pessoa sem
+          definir a posição dela na estrutura.
+        </p>
+        <p>
+          Convidados não participam do organograma: eles têm acesso à plataforma
+          sem fazer parte da estrutura da organização.
+        </p>
+      </>
+    ),
+  },
+  acesso: {
+    titulo: "Roles",
+    subtitulo: "O que cada pessoa pode fazer na plataforma",
+    ajuda: (
+      <>
+        <p>
+          Uma <strong>role</strong> responde o que o membro pode fazer. Não há
+          permissão individual: para mudar o que alguém pode fazer, altera-se a
+          role — ou atribui-se outra.
+        </p>
+        <p>
+          Duas são protegidas e só admitem visualizar: a <strong>Owner</strong>,
+          do responsável pela conta, que muda de mãos por &ldquo;Transferir
+          propriedade&rdquo;; e a <strong>Convidado</strong>, atribuída
+          automaticamente a quem é do tipo convidado.
+        </p>
+      </>
+    ),
+  },
+};
 
 const ERRO_CARGA = "Não foi possível carregar os dados da organização.";
 
@@ -106,37 +206,27 @@ type Recurso = "area" | "cargo";
 /** Ação destrutiva em confirmação. */
 type Acao =
   | { tipo: "desativar"; membro: Membro }
+  | { tipo: "converterConvidado"; membro: Membro }
   | { tipo: "cancelar"; membro: Membro }
   | { tipo: "excluirEstrutura"; recurso: Recurso; item: EstruturaItem };
 
-export default function Administracao() {
-  const { pathname } = useLocation();
-  const product = getCurrentProduct(pathname);
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const secaoSolicitada = searchParams.get("secao");
-  const active: SecaoId =
-    SECOES.find((s) => s.id === secaoSolicitada)?.id ?? "membros";
-
-  const abaSolicitada = searchParams.get("aba");
-  const abaEstrutura: AbaEstruturaId =
-    ABAS_ESTRUTURA.find((a) => a.id === abaSolicitada)?.id ?? "areas";
-
-  const selecionarSecao = (secao: SecaoId) => {
-    const proximos = new URLSearchParams(searchParams);
-    proximos.set("secao", secao);
-    // A sub-aba só existe dentro de Estrutura: carregá-la para Membros ou
-    // Acesso deixaria um parâmetro morto na URL compartilhada.
-    if (secao !== "estrutura") proximos.delete("aba");
-    setSearchParams(proximos);
-  };
-
-  const selecionarAba = (aba: AbaEstruturaId) => {
-    const proximos = new URLSearchParams(searchParams);
-    proximos.set("secao", "estrutura");
-    proximos.set("aba", aba);
-    setSearchParams(proximos);
-  };
+export function PainelAdministracao({
+  secao,
+  onIrPara,
+}: {
+  secao: SecaoAdministracao;
+  /**
+   * Navegar para outra seção do menu.
+   *
+   * Uma prop, e não um `useSearchParams` aqui dentro: quem é dono da URL é a
+   * página de Configurações, e duplicar o contrato de `?secao=` nos dois
+   * lugares faria os ids divergirem em silêncio. Existe por causa de um único
+   * call site — o botão "Ver membros" do estado vazio da Hierarquia.
+   */
+  onIrPara: (secao: SecaoAdministracao) => void;
+}) {
+  const active = secao;
+  const cabecalho = CABECALHOS[secao];
 
   const [membros, setMembros] = useState<Membro[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -147,14 +237,14 @@ export default function Administracao() {
 
   const [estruturaEditando, setEstruturaEditando] =
     useState<EstruturaItem | null>(null);
-  const [estruturaFormAberto, setEstruturaFormAberto] = useState<Recurso | null>(
-    null,
-  );
+  const [estruturaFormAberto, setEstruturaFormAberto] =
+    useState<Recurso | null>(null);
 
   const [roleSelecionada, setRoleSelecionada] = useState<Role | null>(null);
   const [roleEditando, setRoleEditando] = useState<Role | null>(null);
   const [roleFormAberto, setRoleFormAberto] = useState(false);
   const [roleExcluindo, setRoleExcluindo] = useState<Role | null>(null);
+  const [transferindoPropriedade, setTransferindoPropriedade] = useState(false);
 
   const [selecionado, setSelecionado] = useState<Membro | null>(null);
   const [editando, setEditando] = useState<Membro | null>(null);
@@ -170,6 +260,13 @@ export default function Administracao() {
   // A ação em confirmação e o "aberto" são estados separados de propósito: o
   // ConfirmModal segue montado durante o fade-out, e se o texto viesse de um
   // estado zerado no fechamento ele piscaria para a mensagem genérica.
+  // Convidado voltando a ser membro: modal próprio, porque a decisão é qual
+  // role ele passa a ter — um campo, não um sim/não. Simétrico ao de
+  // realocação, que resolve a direção oposta.
+  const [convertendoEmMembro, setConvertendoEmMembro] = useState<Membro | null>(
+    null,
+  );
+
   const [acao, setAcao] = useState<Acao | null>(null);
   const [confirmAberto, setConfirmAberto] = useState(false);
   const [estadoConfirm, setEstadoConfirm] = useState<ModalState>("pending");
@@ -301,6 +398,17 @@ export default function Administracao() {
     void carregar();
   };
 
+  const aoTransferirPropriedade = (nomeDoNovoOwner: string) => {
+    setTransferindoPropriedade(false);
+    setRoleSelecionada(null);
+    toast.success(
+      `${nomeDoNovoOwner} é o novo proprietário da organização. Você deixou de ser o proprietário.`,
+    );
+    // Recarrega tudo: a contagem da role Owner, as roles dos dois membros
+    // envolvidos e o papel da conta mudaram juntos.
+    void carregar();
+  };
+
   const aoExcluirRole = (role: Role) => {
     setRoleExcluindo(null);
     setRoleSelecionada((atual) => (atual?.id === role.id ? null : atual));
@@ -399,14 +507,56 @@ export default function Administracao() {
     modo: ModoSaida,
     liderados: number,
     novaLideranca: Membro,
+    atualizado: Membro | null,
   ) => {
     setRealocando(null);
-    // O drawer pode estar aberto sobre quem acabou de sair da estrutura.
+    // O drawer pode estar aberto sobre quem acabou de sair da estrutura. Quem
+    // deixou de existir sai do drawer; quem continua tem de ser RE-SINCRONIZADO
+    // — `carregar()` troca a lista, mas o selecionado é estado separado, e sem
+    // isto o detalhe seguiria mostrando área, cargo e gestor de quem acabou de
+    // virar convidado.
+    setSelecionado((atual) => {
+      if (atual?.id !== membro.id) return atual;
+      return modo === "excluir" ? null : (atualizado ?? atual);
+    });
+    const desfecho =
+      modo === "excluir"
+        ? "foi excluído"
+        : modo === "converter"
+          ? "agora é convidado"
+          : "ficou inativo";
+    toast.success(
+      `${membro.nome} ${desfecho}. ${liderados} ${liderados === 1 ? "liderado agora responde" : "liderados agora respondem"} a ${novaLideranca.nome}.`,
+    );
+    void carregar();
+  };
+
+  /**
+   * Converter entre os dois tipos, nas duas direções.
+   *
+   * Membro → convidado espelha `pedirSaida`: é saída da estrutura, então com
+   * liderados passa pelo modal de realocação e sem liderados pela confirmação.
+   * Convidado → membro tem modal próprio, porque o que ela precisa é uma role.
+   */
+  const pedirConversao = (membro: Membro) => {
+    if (membro.tipo === "convidado") {
+      setConvertendoEmMembro(membro);
+      return;
+    }
+    if (lideradosDiretos(membro) > 0) {
+      setRealocando({ modo: "converter", membro });
+      return;
+    }
+    pedirConfirmacao({ tipo: "converterConvidado", membro });
+  };
+
+  const aoConverterEmMembro = (atualizado: Membro) => {
+    setConvertendoEmMembro(null);
     setSelecionado((atual) =>
-      atual?.id === membro.id && modo === "excluir" ? null : atual,
+      atual?.id === atualizado.id ? atualizado : atual,
     );
     toast.success(
-      `${membro.nome} ${modo === "excluir" ? "foi excluído" : "ficou inativo"}. ${liderados} ${liderados === 1 ? "liderado agora responde" : "liderados agora respondem"} a ${novaLideranca.nome}.`,
+      `${atualizado.nome} agora faz parte da organização. Defina área, cargo e gestor em Editar membro.`,
     );
     void carregar();
   };
@@ -427,12 +577,32 @@ export default function Administracao() {
         await remover(acao.item.id);
       } else if (acao.tipo === "desativar") {
         await atualizarMembroApi(acao.membro.id, { status: "inativo" });
+      } else if (acao.tipo === "converterConvidado") {
+        // Só chega aqui com zero liderados: com equipe, a conversão passa pelo
+        // modal de realocação. Os campos estruturais explícitos pelo mesmo
+        // motivo do modal: num PATCH, omitir significa "não mexe".
+        await atualizarMembroApi(acao.membro.id, {
+          tipo: "convidado",
+          areaId: "",
+          cargoId: "",
+          gestorId: "",
+          gestorIndiretoIds: [],
+        });
       } else {
         await removerMembroApi(acao.membro.id);
       }
       setEstadoConfirm("success");
-      if (acao.tipo !== "excluirEstrutura") {
-        setSelecionado((atual) => (atual?.id === acao.membro.id ? null : atual));
+      // Converter NÃO fecha o detalhe: a pessoa continua existindo, e fechar
+      // esconderia justamente o resultado da operação. `carregar()` abaixo
+      // atualiza a lista, e o efeito que sincroniza o selecionado cuida do
+      // resto.
+      if (
+        acao.tipo !== "excluirEstrutura" &&
+        acao.tipo !== "converterConvidado"
+      ) {
+        setSelecionado((atual) =>
+          atual?.id === acao.membro.id ? null : atual,
+        );
       }
       void carregar();
     } catch (err) {
@@ -449,193 +619,109 @@ export default function Administracao() {
   };
 
   return (
-    <Page title={`Administração · ${product.name}`}>
-      <div className="transition-content w-full px-(--margin-x) py-6">
-        {/* Cabeçalho */}
-        <div className="flex flex-col gap-1">
-          <PageTitle
-            help={{
-              description: (
-                <>
-                  <p>
-                    <strong>Estrutura</strong> reúne quem faz parte da
-                    organização e como essas pessoas se organizam. Em{" "}
-                    <strong>Membros</strong> você cadastra e mantém os dados de
-                    cada pessoa; em <strong>Hierarquia</strong> vê a estrutura
-                    montada a partir dessas informações.
-                  </p>
-                  <p>
-                    Quatro informações respondem por tudo: <strong>Área</strong>{" "}
-                    diz onde a pessoa está, <strong>Cargo</strong> qual posição
-                    ela ocupa, <strong>Gestor direto</strong> a quem ela
-                    responde, e as <strong>Roles</strong> o que ela pode fazer
-                    na plataforma. Nenhuma determina a outra: um analista pode
-                    ter role Admin, e uma mesma área pode ter várias cadeias de
-                    gestores.
-                  </p>
-                  <p>
-                    As áreas e os cargos disponíveis são cadastrados em{" "}
-                    <strong>Estrutura</strong>, e é de lá que saem as opções do
-                    formulário de membro. Desativar uma área ou um cargo apenas
-                    o tira das escolhas novas: quem já estava nele continua.
-                  </p>
-                  <p>
-                    A hierarquia e as roles são editadas no cadastro do membro.
-                    Um membro pode ter até duas roles, e o acesso é a soma das
-                    duas: se qualquer uma concede, ele pode. As permissões vêm
-                    sempre das roles — não há permissão individual por membro,
-                    então para mudar o que alguém pode fazer, altera-se a role.
-                  </p>
-                </>
-              ),
-            }}
-          >
-            Administração
-          </PageTitle>
-          <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-            Membros da organização, a hierarquia entre eles e o que cada um pode
-            fazer
-          </p>
-        </div>
+    <>
+      {/* Cabeçalho da seção. A ajuda vem de `CABECALHOS`, dividida por seção:
+          antes era um bloco único de quatro parágrafos numa página chamada
+          Administração, e cada parágrafo falava de uma seção diferente.
 
-        <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          {/* Navegação lateral — abaixo de lg vira uma strip horizontal, mesmo
-              tratamento de Configuracoes.tsx. */}
-          <nav className="min-w-0 lg:w-56 lg:shrink-0">
-            <ScrollShadow
-              orientation="horizontal"
-              size={24}
-              className="dark:border-dark-600 dark:bg-dark-700 hide-scrollbar flex gap-1.5 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5 lg:overflow-visible"
-            >
-              <ul className="flex gap-1.5 lg:w-full lg:flex-col lg:gap-1">
-                {SECOES.map((s) => (
-                  <li key={s.id} className="shrink-0 lg:shrink">
-                    <button
-                      type="button"
-                      onClick={() => selecionarSecao(s.id)}
-                      className={clsx(
-                        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                        active === s.id
-                          ? "bg-primary-600 dark:bg-primary-500 text-white"
-                          : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
-                      )}
-                    >
-                      <s.icon className="size-4.5 shrink-0" />
-                      {s.titulo}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </ScrollShadow>
-          </nav>
-
-          {/* Painel da seção ativa */}
-          <div className="min-w-0 flex-1">
-            {active === "membros" ? (
-              <MembrosLista
-                membros={membros}
-                carregando={carregando}
-                erroCarga={erroCarga}
-                onRecarregar={() => void carregar()}
-                onAdicionar={abrirCriacao}
-                onAbrirMembro={setSelecionado}
-                onEditar={abrirEdicao}
-                onDesativar={(m) => pedirSaida("desativar", m)}
-                onReativar={(m) => void reativar(m)}
-                onCancelarConvite={(m) => pedirSaida("excluir", m)}
-              />
-            ) : active === "estrutura" ? (
-              <div>
-                {/* Sub-abas — mesma pílula da navegação lateral, em escala
-                    menor, para ler como um nível abaixo e não como um segundo
-                    menu. */}
-                <ScrollShadow
-                  orientation="horizontal"
-                  size={24}
-                  className="hide-scrollbar mb-5 flex gap-1 overflow-x-auto"
-                >
-                  {ABAS_ESTRUTURA.map((aba) => (
-                    <button
-                      key={aba.id}
-                      type="button"
-                      onClick={() => selecionarAba(aba.id)}
-                      className={clsx(
-                        "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                        abaEstrutura === aba.id
-                          ? "dark:bg-dark-600 dark:text-dark-100 bg-gray-150 text-gray-800"
-                          : "dark:text-dark-300 dark:hover:bg-dark-700 text-gray-500 hover:bg-gray-100",
-                      )}
-                    >
-                      {aba.titulo}
-                    </button>
-                  ))}
-                </ScrollShadow>
-
-                {abaEstrutura === "areas" ? (
-                  <EstruturaLista
-                    itens={areas}
-                    copy={COPY_AREAS_LISTA}
-                    carregando={carregando}
-                    erroCarga={erroCarga}
-                    onRecarregar={() => void carregar()}
-                    onCriar={() => abrirEstruturaNova("area")}
-                    onEditar={(item) => editarEstrutura("area", item)}
-                    onAlternarStatus={(item) =>
-                      void alternarStatusEstrutura("area", item)
-                    }
-                    onExcluir={(item) =>
-                      pedirConfirmacao({
-                        tipo: "excluirEstrutura",
-                        recurso: "area",
-                        item,
-                      })
-                    }
-                  />
-                ) : abaEstrutura === "cargos" ? (
-                  <EstruturaLista
-                    itens={cargos}
-                    copy={COPY_CARGOS_LISTA}
-                    carregando={carregando}
-                    erroCarga={erroCarga}
-                    onRecarregar={() => void carregar()}
-                    onCriar={() => abrirEstruturaNova("cargo")}
-                    onEditar={(item) => editarEstrutura("cargo", item)}
-                    onAlternarStatus={(item) =>
-                      void alternarStatusEstrutura("cargo", item)
-                    }
-                    onExcluir={(item) =>
-                      pedirConfirmacao({
-                        tipo: "excluirEstrutura",
-                        recurso: "cargo",
-                        item,
-                      })
-                    }
-                  />
-                ) : (
-                  <MembrosHierarquia
-                    membros={membros}
-                    onAbrirMembro={setSelecionado}
-                    onIrParaLista={() => selecionarSecao("membros")}
-                  />
-                )}
-              </div>
-            ) : (
-              <AcessoRoles
-                roles={roles}
-                carregando={carregando}
-                erroCarga={erroCarga}
-                onRecarregar={() => void carregar()}
-                onNova={abrirNovaRole}
-                onAbrirRole={setRoleSelecionada}
-                onEditar={editarRole}
-                onExcluir={setRoleExcluindo}
-              />
-            )}
-          </div>
-        </div>
+          Um `PageTitle` aqui, com "Configurações" acima, é o arranjo que
+          `RegrasSection` já usa — a seção traz o próprio título. */}
+      <div className="mb-6 flex flex-col gap-1">
+        <PageTitle help={{ description: cabecalho.ajuda }}>
+          {cabecalho.titulo}
+        </PageTitle>
+        <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
+          {cabecalho.subtitulo}
+        </p>
       </div>
 
-      {/* Detalhe do membro — compartilhado pelas duas abas. */}
+      {active === "membros" ? (
+        <MembrosLista
+          membros={membros}
+          carregando={carregando}
+          erroCarga={erroCarga}
+          onRecarregar={() => void carregar()}
+          onAdicionar={abrirCriacao}
+          onAbrirMembro={setSelecionado}
+          onEditar={abrirEdicao}
+          onDesativar={(m) => pedirSaida("desativar", m)}
+          onReativar={(m) => void reativar(m)}
+          onCancelarConvite={(m) => pedirSaida("excluir", m)}
+          onConverter={pedirConversao}
+          // A mesma derivação da transferência de propriedade, logo
+          // abaixo: o proprietário não pode virar convidado sem antes
+          // transferir, então o item nem aparece para ele.
+          ownerMembroId={
+            membros.find((m) =>
+              m.roleIds.includes(roles.find((r) => r.proprietaria)?.id ?? ""),
+            )?.id ?? null
+          }
+        />
+      ) : active === "areas" ? (
+        <EstruturaLista
+          itens={areas}
+          copy={COPY_AREAS_LISTA}
+          carregando={carregando}
+          erroCarga={erroCarga}
+          onRecarregar={() => void carregar()}
+          onCriar={() => abrirEstruturaNova("area")}
+          onEditar={(item) => editarEstrutura("area", item)}
+          onAlternarStatus={(item) =>
+            void alternarStatusEstrutura("area", item)
+          }
+          onExcluir={(item) =>
+            pedirConfirmacao({
+              tipo: "excluirEstrutura",
+              recurso: "area",
+              item,
+            })
+          }
+        />
+      ) : active === "cargos" ? (
+        <EstruturaLista
+          itens={cargos}
+          copy={COPY_CARGOS_LISTA}
+          carregando={carregando}
+          erroCarga={erroCarga}
+          onRecarregar={() => void carregar()}
+          onCriar={() => abrirEstruturaNova("cargo")}
+          onEditar={(item) => editarEstrutura("cargo", item)}
+          onAlternarStatus={(item) =>
+            void alternarStatusEstrutura("cargo", item)
+          }
+          onExcluir={(item) =>
+            pedirConfirmacao({
+              tipo: "excluirEstrutura",
+              recurso: "cargo",
+              item,
+            })
+          }
+        />
+      ) : active === "hierarquia" ? (
+        <MembrosHierarquia
+          membros={membros}
+          // A seleção da PÁGINA, a mesma do drawer: o organograma não tem
+          // um conceito próprio, e criar um segundo faria os dois
+          // divergirem no primeiro bug.
+          membroSelecionadoId={selecionado?.id ?? null}
+          onAbrirMembro={setSelecionado}
+          onIrParaLista={() => onIrPara("membros")}
+        />
+      ) : (
+        <AcessoRoles
+          roles={roles}
+          carregando={carregando}
+          erroCarga={erroCarga}
+          onRecarregar={() => void carregar()}
+          onNova={abrirNovaRole}
+          onAbrirRole={setRoleSelecionada}
+          onEditar={editarRole}
+          onExcluir={setRoleExcluindo}
+          onTransferirPropriedade={() => setTransferindoPropriedade(true)}
+        />
+      )}
+
+      {/* Detalhe do membro — compartilhado por todas as seções. */}
       <MembroDrawer
         membro={selecionado}
         membros={membros}
@@ -669,6 +755,7 @@ export default function Administracao() {
         membros={membros}
         close={() => setRoleSelecionada(null)}
         onEditar={() => roleSelecionada && editarRole(roleSelecionada)}
+        onTransferirPropriedade={() => setTransferindoPropriedade(true)}
         onAbrirMembro={(m) => {
           setRoleSelecionada(null);
           setSelecionado(m);
@@ -686,10 +773,33 @@ export default function Administracao() {
         onSalvo={aoSalvarRole}
       />
 
+      {/* Transferência de propriedade — a única ação da role Owner. `key`
+          remonta o modal limpo a cada abertura, dispensando um reset. */}
+      <OwnerTransferenciaModal
+        key={transferindoPropriedade ? "aberto" : "fechado"}
+        aberto={transferindoPropriedade}
+        roleOwner={roles.find((r) => r.proprietaria) ?? null}
+        roles={roles}
+        membros={membros}
+        onClose={() => setTransferindoPropriedade(false)}
+        onTransferido={aoTransferirPropriedade}
+      />
+
       <RoleExclusaoModal
         key={roleExcluindo?.id ?? "nenhuma"}
         role={roleExcluindo}
         roles={roles}
+        // Quantos perderiam a única role que têm. Calculado aqui porque é aqui
+        // que a lista de membros vive: a `Role` traz só o total de portadores,
+        // e dele não se deduz quantos deles têm uma segunda.
+        membrosQueFicariamSemRole={
+          roleExcluindo == null
+            ? 0
+            : membros.filter(
+                (m) =>
+                  m.roleIds.length === 1 && m.roleIds[0] === roleExcluindo.id,
+              ).length
+        }
         onClose={() => setRoleExcluindo(null)}
         onExcluida={aoExcluirRole}
       />
@@ -697,6 +807,16 @@ export default function Administracao() {
       {/* Saída de um gestor com equipe. `key` remonta o form limpo a cada
           abertura, para o select de nova liderança não vir preenchido do
           membro anterior. */}
+      {/* Convidado → membro. `key` remonta limpo a cada abertura, dispensando
+          um reset — convenção de todos os modais desta página. */}
+      <ConvidadoParaMembroModal
+        key={convertendoEmMembro?.id ?? "nenhum"}
+        membro={convertendoEmMembro}
+        roles={roles}
+        onClose={() => setConvertendoEmMembro(null)}
+        onConcluido={aoConverterEmMembro}
+      />
+
       <MembroRealocacaoModal
         key={`${realocando?.modo ?? "nenhum"}-${realocando?.membro.id ?? "nenhum"}`}
         membro={realocando?.membro ?? null}
@@ -717,9 +837,7 @@ export default function Administracao() {
           estruturaFormAberto === "cargo" ? COPY_CARGOS_FORM : COPY_AREAS_FORM
         }
         onClose={fecharEstruturaForm}
-        onCriar={
-          estruturaFormAberto === "cargo" ? criarCargoApi : criarAreaApi
-        }
+        onCriar={estruturaFormAberto === "cargo" ? criarCargoApi : criarAreaApi}
         onAtualizar={
           estruturaFormAberto === "cargo" ? atualizarCargoApi : atualizarAreaApi
         }
@@ -759,47 +877,71 @@ export default function Administracao() {
                   actionText: "Tentar de novo",
                 },
               }
-            : acao?.tipo === "cancelar"
-            ? {
-                pending: {
-                  title: "Cancelar este convite?",
-                  // Este branch só roda com zero liderados: quem lidera
-                  // alguém passa pelo modal de realocação, não por aqui.
-                  description: `O convite de ${acao.membro.nome} será removido da organização. Ninguém responde a essa pessoa, e você pode enviar um novo convite depois.`,
-                  actionText: "Cancelar convite",
-                },
-                success: {
-                  title: "Convite cancelado",
-                  description: "A pessoa não aparece mais na lista de membros.",
-                  actionText: "Ok",
-                },
-                error: {
-                  title: "Não foi possível cancelar",
-                  description: "Tente novamente em instantes.",
-                  actionText: "Tentar de novo",
-                },
-              }
-            : {
-                pending: {
-                  title: "Desativar este membro?",
-                  description: acao
-                    ? `${acao.membro.nome} deixa de ter acesso ativo à organização. A posição na hierarquia é preservada e você pode reativar depois.`
-                    : "",
-                  actionText: "Desativar",
-                },
-                success: {
-                  title: "Membro desativado",
-                  description: "O acesso à organização ficou inativo.",
-                  actionText: "Ok",
-                },
-                error: {
-                  title: "Não foi possível desativar",
-                  description: "Tente novamente em instantes.",
-                  actionText: "Tentar de novo",
-                },
-              }
+            : acao?.tipo === "converterConvidado"
+              ? {
+                  pending: {
+                    title: "Converter em convidado?",
+                    // Este branch só roda com zero liderados: quem lidera
+                    // alguém passa pelo modal de realocação, não por aqui.
+                    description: acao
+                      ? `${acao.membro.nome} deixa de fazer parte da estrutura da organização: área, cargo e relações de gestão são removidas, a pessoa sai do organograma e passa a ter apenas a role Convidado. O acesso à plataforma continua.`
+                      : "",
+                    actionText: "Converter em convidado",
+                  },
+                  success: {
+                    title: "Convertido em convidado",
+                    description:
+                      "A pessoa continua na lista, agora como convidado.",
+                    actionText: "Ok",
+                  },
+                  error: {
+                    title: "Não foi possível converter",
+                    description: "Tente novamente em instantes.",
+                    actionText: "Tentar de novo",
+                  },
+                }
+              : acao?.tipo === "cancelar"
+                ? {
+                    pending: {
+                      title: "Cancelar este convite?",
+                      // Este branch só roda com zero liderados: quem lidera
+                      // alguém passa pelo modal de realocação, não por aqui.
+                      description: `O convite de ${acao.membro.nome} será removido da organização. Ninguém responde a essa pessoa, e você pode enviar um novo convite depois.`,
+                      actionText: "Cancelar convite",
+                    },
+                    success: {
+                      title: "Convite cancelado",
+                      description:
+                        "A pessoa não aparece mais na lista de membros.",
+                      actionText: "Ok",
+                    },
+                    error: {
+                      title: "Não foi possível cancelar",
+                      description: "Tente novamente em instantes.",
+                      actionText: "Tentar de novo",
+                    },
+                  }
+                : {
+                    pending: {
+                      title: "Desativar este membro?",
+                      description: acao
+                        ? `${acao.membro.nome} deixa de ter acesso ativo à organização. A posição na hierarquia é preservada e você pode reativar depois.`
+                        : "",
+                      actionText: "Desativar",
+                    },
+                    success: {
+                      title: "Membro desativado",
+                      description: "O acesso à organização ficou inativo.",
+                      actionText: "Ok",
+                    },
+                    error: {
+                      title: "Não foi possível desativar",
+                      description: "Tente novamente em instantes.",
+                      actionText: "Tentar de novo",
+                    },
+                  }
         }
       />
-    </Page>
+    </>
   );
 }

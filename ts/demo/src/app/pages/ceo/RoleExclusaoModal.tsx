@@ -27,14 +27,26 @@ import { mensagemErroMembro } from "./membros-status";
 // Com até duas roles por membro, a resolução SUBSTITUI a role excluída: quem
 // tinha [A] fica [X], quem tinha [A, B] fica [B, X], e quem já tinha X só perde
 // o vínculo com A. Nunca passa de duas.
+//
+// "Não substituir por nenhuma" só é oferecido quando ninguém ficaria sem role:
+// todo membro precisa de ao menos uma, então a opção vale para quem tem uma
+// segunda role e desaparece quando alguém depende só desta. A API recusa do
+// mesmo jeito, dentro da transação da exclusão — aqui a opção sai de vista para
+// a recusa não chegar como surpresa depois do clique.
 // ----------------------------------------------------------------------
 
-/** Valor do select que deixa os membros sem role nenhuma. */
+/**
+ * Valor do select que tira esta role sem pôr outra no lugar.
+ *
+ * Só aparece quando todo mundo que a perde continua com outra role — ver
+ * `membrosQueFicariamSemRole`.
+ */
 const SEM_ROLE = "nenhuma";
 
 export function RoleExclusaoModal({
   role,
   roles,
+  membrosQueFicariamSemRole,
   onClose,
   onExcluida,
 }: {
@@ -42,10 +54,26 @@ export function RoleExclusaoModal({
   role: Role | null;
   /** Todas as roles, para montar os destinos possíveis. */
   roles: Role[];
+  /**
+   * Quantos membros têm ESTA como única role.
+   *
+   * Vem calculado de fora porque quem tem a lista de membros é a página; a
+   * `Role` só carrega a contagem total de portadores, e daquela contagem não
+   * se deduz quantos deles têm uma segunda role.
+   */
+  membrosQueFicariamSemRole: number;
   onClose: () => void;
   onExcluida: (role: Role) => void;
 }) {
-  const [destino, setDestino] = useState(SEM_ROLE);
+  const podeDeixarSemRole = membrosQueFicariamSemRole === 0;
+  // Sem "Nenhuma role" na lista, o estado inicial não pode ser `SEM_ROLE`: um
+  // select cujo `value` não casa com nenhuma `<option>` exibe a primeira, e a
+  // tela mostraria uma substituição que o clique não faria. A string vazia é o
+  // "ainda não escolhi", e trava o botão.
+  //
+  // Um `useState` com valor inicial basta porque a página remonta este modal a
+  // cada role (`key={roleExcluindo?.id}`).
+  const [destino, setDestino] = useState(podeDeixarSemRole ? SEM_ROLE : "");
   const [excluindo, setExcluindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -55,8 +83,14 @@ export function RoleExclusaoModal({
   // recusa fica mais importante — sem ela, a substituição ACRESCENTARIA Owner a
   // todo mundo que usava a role excluída.
   const destinos = role
-    ? roles.filter((r) => r.id !== role.id && r.codigo !== "owner")
+    ? roles.filter((r) => r.id !== role.id && r.editavel)
     : [];
+
+  // Sem destino possível e com alguém dependendo só desta role, não há
+  // exclusão que respeite a regra: o caminho é criar ou atribuir outra role
+  // antes. O botão trava em vez de mandar uma requisição que a API recusaria.
+  const semSaida = emUso > 0 && !podeDeixarSemRole && destinos.length === 0;
+  const faltaEscolher = emUso > 0 && destino === "";
 
   const excluir = async () => {
     if (!role) return;
@@ -131,7 +165,14 @@ export function RoleExclusaoModal({
               onChange={(e) => setDestino(e.target.value)}
               className="form-select dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
             >
-              <option value={SEM_ROLE}>Nenhuma role</option>
+              {/* Visível para escolher, e não desabilitada: sem ela o
+                  operador ficaria com um select em que a única saída é uma role
+                  qualquer, sem entender por que "nenhuma" não está lá. O
+                  parágrafo abaixo do campo é quem explica. */}
+              {faltaEscolher && <option value="">Selecione uma role</option>}
+              {podeDeixarSemRole && (
+                <option value={SEM_ROLE}>Nenhuma role</option>
+              )}
               {/* Quem tinha esta role e mais uma continua com a outra: a
                   substituição troca só a role excluída. */}
               {destinos.map((r) => (
@@ -143,13 +184,32 @@ export function RoleExclusaoModal({
           </label>
         )}
 
+        {/* A explicação de por que "Nenhuma role" não está no select. Fica
+            VISÍVEL, e não num ícone de ajuda: não descreve o campo, destrava o
+            fluxo — é a regra que restringe as opções que sobraram. */}
+        {emUso > 0 && !podeDeixarSemRole && (
+          <p className="dark:text-dark-300 text-xs-plus mt-2 text-gray-500">
+            {membrosQueFicariamSemRole === 1
+              ? "1 membro tem esta como única role"
+              : `${membrosQueFicariamSemRole} membros têm esta como única role`}
+            , e todo membro precisa de ao menos uma
+            {semSaida
+              ? ". Crie ou atribua outra role antes de excluir esta."
+              : " — por isso não há a opção de deixar sem role."}
+          </p>
+        )}
+
         {erro && <p className="text-error mt-3 text-sm">{erro}</p>}
 
         <div className="mt-5 flex items-center justify-end gap-2">
           <Button variant="outlined" onClick={onClose} disabled={excluindo}>
             Cancelar
           </Button>
-          <Button color="error" onClick={excluir} disabled={excluindo}>
+          <Button
+            color="error"
+            onClick={excluir}
+            disabled={excluindo || semSaida || faltaEscolher}
+          >
             {excluindo ? "Excluindo…" : "Excluir role"}
           </Button>
         </div>

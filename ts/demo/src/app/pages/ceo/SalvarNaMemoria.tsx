@@ -1,7 +1,13 @@
 // Import Dependencies
 import { useState } from "react";
 import { toast } from "sonner";
-import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
+import {
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuItems,
+  Transition,
+} from "@headlessui/react";
 import {
   CheckCircleIcon,
   CheckIcon,
@@ -121,20 +127,27 @@ export function SalvarNaMemoriaButton({
         if (pessoas?.length) void criarNotasDePessoas(pessoas);
       } else if (r.reason === "no-folder") {
         toast("Nenhuma pasta do Repositório definida", {
-          description: "Defina a pasta em Repositório (ou Configurações) e tente de novo.",
+          description:
+            "Defina a pasta em Repositório (ou Configurações) e tente de novo.",
         });
       } else if (r.reason === "denied") {
-        toast("Permissão negada", { description: "É preciso autorizar a escrita na pasta." });
+        toast("Permissão negada", {
+          description: "É preciso autorizar a escrita na pasta.",
+        });
       } else if (r.reason === "unsupported") {
         toast("Gravação indisponível neste navegador", {
           description:
             "O Repositório está como cópia somente leitura. Ative o acesso a pastas (no Brave: brave://flags/#file-system-access-api) ou use o Chrome.",
         });
       } else {
-        toast("Não foi possível gravar o arquivo", { description: "Tente novamente." });
+        toast("Não foi possível gravar o arquivo", {
+          description: "Tente novamente.",
+        });
       }
     } catch {
-      toast("Não foi possível gravar o arquivo", { description: "Tente novamente." });
+      toast("Não foi possível gravar o arquivo", {
+        description: "Tente novamente.",
+      });
     } finally {
       setGravando(false);
     }
@@ -148,14 +161,19 @@ export function SalvarNaMemoriaButton({
     if (!r.ok) {
       if (r.reason === "denied") {
         toast("Notas de pessoas não criadas", {
-          description: "Autorize a escrita na pasta do Repositório para criá-las.",
+          description:
+            "Autorize a escrita na pasta do Repositório para criá-las.",
         });
       }
       return;
     }
     if (!r.criadas.length) return;
     void syncVaultBatch(
-      r.criadas.map((n) => ({ path: n.path, titulo: n.titulo, conteudo: n.texto })),
+      r.criadas.map((n) => ({
+        path: n.path,
+        titulo: n.titulo,
+        conteudo: n.texto,
+      })),
     ).catch(() => undefined);
     toast(
       r.criadas.length === 1
@@ -177,7 +195,10 @@ export function SalvarNaMemoriaButton({
         onClick={() => salvar(pasta)}
         disabled={bloqueado || salvo}
         color="primary"
-        className={clsx("h-8 gap-1.5 rounded-r-none px-2.5 text-xs-plus", className)}
+        className={clsx(
+          "text-xs-plus h-8 gap-1.5 rounded-r-none px-2.5",
+          className,
+        )}
       >
         {gravando ? (
           <Spinner className="size-4" />

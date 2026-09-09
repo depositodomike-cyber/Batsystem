@@ -1,5 +1,11 @@
 // Import Dependencies
-import { useCallback, useEffect, useMemo, useState, type ElementType } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ElementType,
+} from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
 import {
@@ -97,7 +103,9 @@ export default function MemoriaLista() {
   const [lendo, setLendo] = useState(false);
   const [sincronizando, setSincronizando] = useState(false);
   const [busca, setBusca] = useState("");
-  const [nota, setNota] = useState<{ path: string; titulo: string } | null>(null);
+  const [nota, setNota] = useState<{ path: string; titulo: string } | null>(
+    null,
+  );
 
   // Indexa as notas na IA (mesmo /ai/vault do grafo). Só roda quando o usuário
   // escolhe a pasta ou clica em Sincronizar: abrir a lista para consultar não
@@ -111,7 +119,8 @@ export default function MemoriaLista() {
       });
     } catch {
       toast.error("Falha ao sincronizar o Repositório com a IA.", {
-        description: "A lista está atualizada, mas as notas não chegaram ao servidor.",
+        description:
+          "A lista está atualizada, mas as notas não chegaram ao servidor.",
       });
     } finally {
       setSincronizando(false);
@@ -213,8 +222,8 @@ export default function MemoriaLista() {
                 description: (
                   <p>
                     Esta é a lista do Repositório: todos os arquivos da sua
-                    pasta — uploads, transcrições, atas, documentos gerados
-                    pela IA e notas dos agrupamentos.
+                    pasta — uploads, transcrições, atas, documentos gerados pela
+                    IA e notas dos agrupamentos.
                   </p>
                 ),
               }}
@@ -249,13 +258,13 @@ export default function MemoriaLista() {
         {semPasta && !lendo && (
           <div className="dark:border-dark-600 mt-6 grid place-items-center rounded-2xl border-2 border-dashed border-gray-200 px-6 py-16 text-center">
             <div className="flex max-w-sm flex-col items-center gap-4">
-              <span className="dark:bg-white/5 dark:text-dark-200 grid size-14 place-items-center rounded-2xl bg-gray-900/5 text-gray-500">
+              <span className="dark:text-dark-200 grid size-14 place-items-center rounded-2xl bg-gray-900/5 text-gray-500 dark:bg-white/5">
                 <FolderIcon className="size-7 stroke-[1.5]" />
               </span>
               <p className="dark:text-dark-300 text-sm text-gray-500">
                 Escolha a pasta onde ficam as notas{" "}
-                <span className="font-mono">.md</span> do seu Repositório. A lista mostra
-                cada arquivo com pasta, tipo e tags.
+                <span className="font-mono">.md</span> do seu Repositório. A
+                lista mostra cada arquivo com pasta, tipo e tags.
               </p>
               <Button onClick={escolherPasta} color="primary" className="gap-2">
                 <FolderIcon className="size-5" />
@@ -298,7 +307,6 @@ export default function MemoriaLista() {
                   </button>
                 )}
               </div>
-
             </div>
 
             {/* Itens */}
@@ -309,7 +317,9 @@ export default function MemoriaLista() {
                     <LinhaNota
                       key={item.path}
                       item={item}
-                      onAbrir={() => setNota({ path: item.path, titulo: item.titulo })}
+                      onAbrir={() =>
+                        setNota({ path: item.path, titulo: item.titulo })
+                      }
                     />
                   ))}
                 </ul>
@@ -318,7 +328,9 @@ export default function MemoriaLista() {
               <div className="dark:border-dark-600 mt-4 grid place-items-center rounded-xl border border-gray-200 px-6 py-14 text-center">
                 <div className="max-w-sm">
                   <h3 className="dark:text-dark-50 text-base font-semibold text-gray-800">
-                    {total === 0 ? "Nenhuma nota nesta pasta" : "Nenhuma nota encontrada"}
+                    {total === 0
+                      ? "Nenhuma nota nesta pasta"
+                      : "Nenhuma nota encontrada"}
                   </h3>
                   <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
                     {total === 0
@@ -343,7 +355,8 @@ export default function MemoriaLista() {
           // O título pode ter mudado no frontmatter — atualiza a linha sem reler
           // a pasta inteira.
           const novo =
-            parseNotaMd(conteudo).titulo || tituloPadrao(nota.path.split("/").pop()!);
+            parseNotaMd(conteudo).titulo ||
+            tituloPadrao(nota.path.split("/").pop()!);
           if (novo === nota.titulo) return;
           setNota({ ...nota, titulo: novo });
           setItens((atuais) =>
@@ -359,8 +372,13 @@ export default function MemoriaLista() {
 
 // ----------------------------------------------------------------------
 
-
-function LinhaNota({ item, onAbrir }: { item: ItemContexto; onAbrir: () => void }) {
+function LinhaNota({
+  item,
+  onAbrir,
+}: {
+  item: ItemContexto;
+  onAbrir: () => void;
+}) {
   const Icone = ICONE_POR_TIPO[item.tipo] ?? DocumentTextIcon;
 
   return (
@@ -382,12 +400,16 @@ function LinhaNota({ item, onAbrir }: { item: ItemContexto; onAbrir: () => void 
             >
               {item.titulo}
             </span>
-            <Badge variant="soft" color="neutral" className="shrink-0 text-tiny">
+            <Badge
+              variant="soft"
+              color="neutral"
+              className="text-tiny shrink-0"
+            >
               {item.tipo}
             </Badge>
           </span>
           <span
-            className="dark:text-dark-300 mt-0.5 block truncate font-mono text-tiny text-gray-400"
+            className="dark:text-dark-300 text-tiny mt-0.5 block truncate font-mono text-gray-400"
             title={item.path}
           >
             {item.path}
@@ -400,7 +422,7 @@ function LinhaNota({ item, onAbrir }: { item: ItemContexto; onAbrir: () => void 
             {item.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="dark:bg-dark-600 dark:text-dark-200 rounded-md bg-gray-100 px-1.5 py-0.5 text-tiny text-gray-500"
+                className="dark:bg-dark-600 dark:text-dark-200 text-tiny rounded-md bg-gray-100 px-1.5 py-0.5 text-gray-500"
               >
                 #{tag}
               </span>
@@ -408,7 +430,7 @@ function LinhaNota({ item, onAbrir }: { item: ItemContexto; onAbrir: () => void 
           </span>
         )}
 
-        <span className="dark:text-dark-300 hidden w-24 shrink-0 text-end text-tiny text-gray-400 sm:block">
+        <span className="dark:text-dark-300 text-tiny hidden w-24 shrink-0 text-end text-gray-400 sm:block">
           {formatarData(item.modificadoEm)}
         </span>
       </button>

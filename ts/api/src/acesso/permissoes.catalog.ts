@@ -218,6 +218,16 @@ const SOMENTE_VISUALIZAR = PERMISSOES_VALIDAS.filter((c) =>
  */
 export const ROLE_OWNER = 'owner';
 
+/**
+ * Código da role do membro CONVIDADO. Exportado pelo mesmo motivo de
+ * `ROLE_OWNER`: a exclusividade é verificada fora daqui — um membro de tipo
+ * `convidado` tem esta role e só ela, e um membro comum não pode recebê-la.
+ *
+ * As duas são as roles protegidas do sistema, e a checagem é sempre por
+ * CÓDIGO, nunca por nome: um rename ou um dado legado não dissolve a regra.
+ */
+export const ROLE_CONVIDADO = 'convidado';
+
 export const ROLES_DE_SISTEMA: RoleDeSistema[] = [
   {
     // Primeira da lista de propósito: é o topo do acesso e é assim que aparece
@@ -265,4 +275,88 @@ export const ROLES_DE_SISTEMA: RoleDeSistema[] = [
       'Consulta o que já existe na organização e conversa com a IA, sem alterar nada.',
     permissoes: normalizarPermissoes([...SOMENTE_VISUALIZAR, 'ia.usar']),
   },
+  {
+    // Última da lista: é o menor acesso, e a tela de Acesso preserva esta
+    // ordem. Atribuída AUTOMATICAMENTE quando o membro é do tipo convidado, e
+    // recusada para qualquer outro (ver `exigirRoleDoTenant`).
+    //
+    // UMA permissão, e a escolha exige honestidade sobre o que ela protege:
+    //
+    // Não existe escopo de dados nesta versão — a Role não tem coluna de
+    // escopo, não há model de Repositório, e o repositório ativo vem de um
+    // header que o cliente envia e que ninguém confere. Além disso, só 6 dos
+    // 35 controllers passam pelo `PermissoesGuard`: os de `ai/` e o do vault
+    // NÃO passam.
+    //
+    // Consequência: enquanto isso for verdade, `ia.usar` alcança o mesmo
+    // conteúdo que `repositorio.visualizar` alcançaria, porque os endpoints de
+    // IA leem o vault sem checar permissão nenhuma. A ausência de
+    // `repositorio.visualizar`, `documentos.visualizar` e `grafo.visualizar`
+    // aqui é uma DECLARAÇÃO DE INTENÇÃO, não um controle em vigor — no dia em
+    // que `ai/*` for guardado, esta é a permissão que o convidado precisa ter,
+    // e aquelas são as que ele precisa NÃO ter.
+    //
+    // O que a role entrega de verdade hoje: nenhuma escrita administrativa nas
+    // 16 rotas guardadas (membros, áreas, cargos, roles, convites, chaves MCP).
+    // O que ela NÃO entrega: confinamento de leitura.
+    codigo: ROLE_CONVIDADO,
+    nome: 'Convidado',
+    descricao:
+      'Acesso pontual à plataforma, sem participação na organização: sem área, sem cargo, sem posição na hierarquia e sem qualquer permissão de administração.',
+    permissoes: normalizarPermissoes(['ia.usar']),
+  },
 ];
+
+/** As roles de sistema que nenhum administrador pode editar ou excluir. */
+export const CODIGOS_DE_ROLE_PROTEGIDA: ReadonlySet<string> = new Set([
+  ROLE_OWNER,
+  ROLE_CONVIDADO,
+]);
+
+/**
+ * Teto de roles por membro.
+ *
+ * Vive neste módulo, e não num service, porque `MembrosService` (que valida a
+ * atribuição), `RolesService` (que valida a transferência de propriedade) e os
+ * seeds precisam do MESMO número. É o único arquivo desta área sem imports,
+ * então nenhum deles cria dependência ao usá-lo.
+ *
+ * Não é constraint de banco de propósito: a única forma declarativa seria uma
+ * coluna de slot com `@@unique([membroId, slot])`, que é exatamente o conceito
+ * de role principal/secundária que o modelo recusa. Ver o comentário de
+ * `model MembroRole` no schema.
+ */
+export const MAX_ROLES_POR_MEMBRO = 2;
+
+/**
+ * Chave de comparação de nome de role: `trim` + caixa baixa.
+ *
+ * A unique `@@unique([empresaId, nome])` é case-sensitive no Postgres, então
+ * sem normalizar "Suporte" e "suporte" convivem na mesma organização — e a
+ * listagem, que ordena por nome, mostra duas roles que quem administra não
+ * distingue. Mesma relação entre unique e normalização já documentada em
+ * `Membro.email`.
+ */
+export function chaveDeNomeDeRole(nome: string): string {
+  return nome.trim().toLowerCase();
+}
+
+/**
+ * Nomes que uma role personalizada NÃO pode usar.
+ *
+ * Só a Owner: Admin, Editor e Viewer passaram a ser administráveis como
+ * qualquer outra role, e reservar os nomes delas contradiria isso.
+ *
+ * Entram o NOME e o CÓDIGO, os dois. `garantirRolesDeSistema` resolve o upsert
+ * por (empresaId, codigo) mas colide em (empresaId, nome): uma personalizada
+ * chamada "owner" não colide com "Owner" (a unique é case-sensitive), mas uma
+ * chamada "Owner" derruba o upsert com P2002 — e como a Owner é o primeiro item
+ * do catálogo, o throw acontece antes de qualquer outra coisa ser criada.
+ *
+ * Derivado de `ROLES_DE_SISTEMA`, nunca escrito à mão.
+ */
+export const NOMES_DE_ROLE_RESERVADOS: ReadonlySet<string> = new Set(
+  ROLES_DE_SISTEMA.filter((r) => CODIGOS_DE_ROLE_PROTEGIDA.has(r.codigo))
+    .flatMap((r) => [r.nome, r.codigo])
+    .map(chaveDeNomeDeRole),
+);

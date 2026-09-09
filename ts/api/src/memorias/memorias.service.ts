@@ -96,8 +96,19 @@ export class MemoriasService {
     dto: CreateMemoriaDto,
     isAdmin: boolean,
   ): Promise<MemoryItemDto> {
-    // "Fixar" (corporativa) só vale se solicitado E o usuário for admin/owner.
-    const corporativa = isAdmin && dto.corporate === true;
+    // Pedir "fixar" (corporativa) sem poder é RECUSADO, não ignorado.
+    //
+    // Antes era `isAdmin && dto.corporate`: quem não podia recebia 201 e uma
+    // nota PESSOAL, achando que havia fixado uma definição da organização. A
+    // falha era silenciosa e só aparecia quando alguém notava que a IA não
+    // usava a definição. O PATCH e o DELETE já recusavam explicitamente — só o
+    // POST engolia.
+    if (dto.corporate === true && !isAdmin) {
+      throw new ForbiddenException(
+        'A sua role não permite fixar uma definição da organização.',
+      );
+    }
+    const corporativa = dto.corporate === true;
     const row = await this.prisma.memoria.create({
       data: {
         empresaId,

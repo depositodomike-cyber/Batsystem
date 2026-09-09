@@ -37,10 +37,11 @@ export const RequerPermissao = (permissao: string) =>
  * podendo, e um membro comum passa a poder quando a role dele concede. Nenhum
  * comportamento existente é retirado.
  *
- * Nota de escopo: só as rotas de Membros e Roles usam este guard. Aplicar as
- * demais permissões do catálogo aos outros controllers seria refatorar
- * autorização em toda a plataforma, o que está fora desta versão — o catálogo
- * já existe e o ponto de aplicação é este arquivo.
+ * Nota de escopo: usam este guard as rotas de Membros, Roles, Áreas, Cargos,
+ * Convites e chaves MCP. Os demais controllers ainda não passam por aqui —
+ * aplicar o catálogo inteiro seria refatorar autorização em toda a plataforma,
+ * o que segue fora de escopo; o catálogo já existe e o ponto de aplicação é
+ * este arquivo.
  */
 @Injectable()
 export class PermissoesGuard implements CanActivate {
@@ -62,13 +63,28 @@ export class PermissoesGuard implements CanActivate {
       throw new ForbiddenException('Sessão inválida.');
     }
 
-    if (user.role === 'owner' || user.role === 'admin') return true;
-
-    const concedidas = await this.roles.permissoesDoUsuario(
+    const contexto = await this.roles.contextoDeAutorizacao(
       user.empresaId,
       user.id,
     );
-    if (concedidas.includes(permissao)) return true;
+
+    // O bypass legado deixa de ser incondicional. Um membro CONVIDADO nunca
+    // administra a organização, qualquer que seja `Usuario.role` — sem esta
+    // condição, um convidado cuja conta seja proprietária ou administradora
+    // (estado alcançável por SQL, e por qualquer fluxo de aceite de convite que
+    // venha a existir) teria acesso total, e o tipo seria só um rótulo.
+    //
+    // Derivar do `tipo` em vez de gravar um rebaixamento em `Usuario.role` é o
+    // que mantém a regra reversível: quem volta a ser membro recupera o bypass
+    // no request seguinte, sem nada para desfazer.
+    if (
+      !contexto.convidado &&
+      (user.role === 'owner' || user.role === 'admin')
+    ) {
+      return true;
+    }
+
+    if (contexto.permissoes.includes(permissao)) return true;
 
     throw new ForbiddenException(
       'A sua role não permite esta ação. Fale com um administrador da organização.',

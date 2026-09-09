@@ -18,9 +18,7 @@ import {
   fetchConversaApi,
   type ConversaMessage,
 } from "@/services/api/conversas";
-import {
-  coletarReferencia,
-} from "@/services/referencia";
+import { coletarReferencia } from "@/services/referencia";
 import {
   perguntarPromptApi,
   fonteLabel,
@@ -259,7 +257,8 @@ export default function ConversaPrompt() {
                   <div
                     key={m.id}
                     className={clsx(
-                      i > 0 && "dark:border-dark-600 mt-4 border-t border-gray-100 pt-4",
+                      i > 0 &&
+                        "dark:border-dark-600 mt-4 border-t border-gray-100 pt-4",
                     )}
                   >
                     <p className="text-primary-600 dark:text-primary-400 text-sm font-semibold">
@@ -286,9 +285,7 @@ export default function ConversaPrompt() {
 
         <PromptBar
           placeholder={
-            messages.length
-              ? `Continuar “${titulo}”…`
-              : "Digite sua mensagem…"
+            messages.length ? `Continuar “${titulo}”…` : "Digite sua mensagem…"
           }
           hint={
             modo === "web" ? "Web" : modo === "auto" ? "Auto" : "Repositório"

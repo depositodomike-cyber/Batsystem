@@ -19,7 +19,7 @@
     "db:seed:demo:membros": "ts-node prisma/seed-demo-membros.ts",
     "db:seed:demo:estrutura": "ts-node prisma/seed-demo-estrutura.ts",
     "db:diretrizes:limpar": "ts-node prisma/limpar-diretrizes.ts",
-    "vercel-build": "prisma generate && prisma migrate deploy && (npm run db:seed || echo 'seed do catalogo falhou, seguindo') && (npm run db:seed:demo || echo 'seed da conta demo falhou, seguindo') && nest build"
+    "vercel-build": "prisma generate && prisma migrate deploy && (npm run db:seed || echo 'seed do catalogo falhou, seguindo') && (npm run db:seed:demo || echo 'seed da conta demo falhou, seguindo') && (npm run db:seed:demo:membros || echo 'seed dos membros demo falhou, seguindo') && (npm run db:seed:demo:estrutura || echo 'seed da estrutura demo falhou, seguindo') && nest build"
   },
 
   "prisma": {

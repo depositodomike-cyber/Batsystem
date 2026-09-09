@@ -71,13 +71,15 @@ const SIDEBAR_BORDER: Record<InsightCor, string> = {
 };
 
 // Cor do Badge (DS do Tailux) por severidade.
-const BADGE_COLOR: Record<InsightCor, "error" | "warning" | "success" | "neutral"> =
-  {
-    secondary: "error",
-    warning: "warning",
-    success: "success",
-    light: "neutral",
-  };
+const BADGE_COLOR: Record<
+  InsightCor,
+  "error" | "warning" | "success" | "neutral"
+> = {
+  secondary: "error",
+  warning: "warning",
+  success: "success",
+  light: "neutral",
+};
 
 // ----------------------------------------------------------------------
 
@@ -210,8 +212,7 @@ function InsightsBoard({ items }: { items: Insight[] }) {
       return next;
     });
   };
-  const ocultar = (id: string) =>
-    setOcultos((prev) => new Set(prev).add(id));
+  const ocultar = (id: string) => setOcultos((prev) => new Set(prev).add(id));
 
   return (
     <div className="flex flex-col gap-5">
@@ -226,7 +227,7 @@ function InsightsBoard({ items }: { items: Insight[] }) {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar por título ou descrição…"
-            className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+            className="form-input dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white pr-9 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
           />
           {busca && (
             <button
@@ -267,18 +268,18 @@ function InsightsBoard({ items }: { items: Insight[] }) {
               onDislike: () => descurtir(item.id),
               onHide: () => ocultar(item.id),
             };
-            return (
-              <InsightCard key={item.id} {...shared} item={item} />
-            );
+            return <InsightCard key={item.id} {...shared} item={item} />;
           })}
         </div>
       ) : items.length === 0 ? (
         <NoInsightsState />
       ) : (
-        <EmptyState onReset={() => {
-          setBusca("");
-          setFiltro("todos");
-        }} />
+        <EmptyState
+          onReset={() => {
+            setBusca("");
+            setFiltro("todos");
+          }}
+        />
       )}
     </div>
   );
@@ -323,14 +324,14 @@ function InsightCard({
           >
             {item.tipo}
           </Badge>
-          <p className="dark:text-dark-100 mt-1.5 text-sm-plus font-semibold text-gray-800">
+          <p className="dark:text-dark-100 text-sm-plus mt-1.5 font-semibold text-gray-800">
             {item.titulo}
           </p>
-          <p className="dark:text-dark-300 mt-1 line-clamp-3 text-xs-plus text-gray-500">
+          <p className="dark:text-dark-300 text-xs-plus mt-1 line-clamp-3 text-gray-500">
             {item.descricao}
           </p>
           {pessoa && (
-            <p className="dark:text-dark-400 mt-1 text-tiny font-medium text-gray-400">
+            <p className="dark:text-dark-400 text-tiny mt-1 font-medium text-gray-400">
               {pessoa}
             </p>
           )}
@@ -374,7 +375,7 @@ function CardFooter({
   const iconBtn = clsx(
     "grid size-7 place-items-center rounded-lg transition-colors",
     onLight
-      ? "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-dark-300 dark:hover:bg-dark-500"
+      ? "dark:text-dark-300 dark:hover:bg-dark-500 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
       : "text-white/75 hover:bg-white/15 hover:text-white",
   );
 
@@ -447,7 +448,7 @@ function ActionsMenu({ onLight = true }: { onLight?: boolean }) {
         className={clsx(
           "grid size-7 place-items-center rounded-lg transition-colors",
           onLight
-            ? "text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-dark-300 dark:hover:bg-dark-500"
+            ? "dark:text-dark-300 dark:hover:bg-dark-500 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
             : "text-white/80 hover:bg-white/15 hover:text-white",
         )}
       >
@@ -467,23 +468,23 @@ function ActionsMenu({ onLight = true }: { onLight?: boolean }) {
         {[...INSIGHT_ACOES]
           .sort((a, b) => a.localeCompare(b, "pt-BR"))
           .map((acao) => (
-          <MenuItem key={acao}>
-            {({ focus }) => (
-              <button
-                type="button"
-                onClick={() => handleAcao(acao)}
-                className={clsx(
-                  "block w-full px-3.5 py-2 text-left text-sm transition-colors",
-                  focus
-                    ? "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800"
-                    : "dark:text-dark-200 text-gray-600",
-                )}
-              >
-                {acao}
-              </button>
-            )}
-          </MenuItem>
-        ))}
+            <MenuItem key={acao}>
+              {({ focus }) => (
+                <button
+                  type="button"
+                  onClick={() => handleAcao(acao)}
+                  className={clsx(
+                    "block w-full px-3.5 py-2 text-left text-sm transition-colors",
+                    focus
+                      ? "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800"
+                      : "dark:text-dark-200 text-gray-600",
+                  )}
+                >
+                  {acao}
+                </button>
+              )}
+            </MenuItem>
+          ))}
       </Transition>
 
       <ActionDialog acao={acaoAberta} onClose={() => setAcaoAberta(null)} />
@@ -579,7 +580,7 @@ function ActionDialog({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="dark:bg-black/50 fixed inset-0 bg-gray-900/40 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm dark:bg-black/50" />
         </TransitionChild>
 
         <div className="fixed inset-0 flex items-center justify-center p-4">
@@ -604,7 +605,7 @@ function ActionDialog({
               {sucessoMsg ? (
                 /* Etapa final — sucesso */
                 <div className="px-6 py-7 text-center">
-                  <span className="dark:bg-emerald-500/15 mx-auto grid size-14 place-items-center rounded-full bg-emerald-50">
+                  <span className="mx-auto grid size-14 place-items-center rounded-full bg-emerald-50 dark:bg-emerald-500/15">
                     <CheckCircleSolidIcon className="size-9 text-emerald-500" />
                   </span>
                   <DialogTitle className="dark:text-dark-50 mt-4 text-lg font-semibold text-gray-800">
@@ -613,7 +614,11 @@ function ActionDialog({
                   <p className="dark:text-dark-200 mt-1.5 text-sm text-gray-500">
                     {sucessoMsg}
                   </p>
-                  <Button color="primary" onClick={close} className="mt-6 w-full">
+                  <Button
+                    color="primary"
+                    onClick={close}
+                    className="mt-6 w-full"
+                  >
                     Concluir
                   </Button>
                 </div>
@@ -641,7 +646,7 @@ function ActionDialog({
                       <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
                         {acao}
                       </DialogTitle>
-                      <p className="dark:text-dark-300 mt-0.5 text-xs-plus text-gray-500">
+                      <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-500">
                         Selecione a pessoa para esta ação.
                       </p>
                     </div>
@@ -667,7 +672,7 @@ function ActionDialog({
                         onChange={(e) => setBusca(e.target.value)}
                         placeholder="Buscar pessoa…"
                         autoFocus
-                        className="form-input dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+                        className="form-input dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white pr-3 pl-10 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
                       />
                     </div>
                   </div>
@@ -697,13 +702,16 @@ function ActionDialog({
                                 size={10}
                                 src={u.face}
                                 name={u.nome}
-                                classNames={{ root: "shrink-0", display: "rounded-full" }}
+                                classNames={{
+                                  root: "shrink-0",
+                                  display: "rounded-full",
+                                }}
                               />
                               <span className="min-w-0 flex-1">
                                 <span className="dark:text-dark-100 block truncate text-sm font-medium text-gray-800">
                                   {u.nome}
                                 </span>
-                                <span className="dark:text-dark-300 block truncate text-tiny text-gray-400">
+                                <span className="dark:text-dark-300 text-tiny block truncate text-gray-400">
                                   {u.cargo}
                                 </span>
                               </span>
@@ -727,7 +735,9 @@ function ActionDialog({
                       disabled={!selecionado}
                       onClick={() => {
                         if (selecionado && acao)
-                          setSucessoMsg(SUCESSO_MENSAGEM[acao](selecionado.nome));
+                          setSucessoMsg(
+                            SUCESSO_MENSAGEM[acao](selecionado.nome),
+                          );
                       }}
                     >
                       Confirmar
@@ -782,7 +792,7 @@ function MeetingForm({
           <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
             Agendar Reunião
           </DialogTitle>
-          <p className="dark:text-dark-300 mt-0.5 text-xs-plus text-gray-500">
+          <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-500">
             O evento será criado na sua agenda conectada.
           </p>
         </div>
@@ -813,11 +823,15 @@ function MeetingForm({
             <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
               {conn.nome}
             </p>
-            <p className="dark:text-dark-300 truncate text-tiny text-gray-400">
+            <p className="dark:text-dark-300 text-tiny truncate text-gray-400">
               {conn.conta}
             </p>
           </div>
-          <Badge color="success" variant="soft" className="shrink-0 gap-1 rounded-full">
+          <Badge
+            color="success"
+            variant="soft"
+            className="shrink-0 gap-1 rounded-full"
+          >
             <CheckCircleIcon className="size-3.5" />
             Conectado
           </Badge>
@@ -830,7 +844,7 @@ function MeetingForm({
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             placeholder="Ex.: Alinhamento sobre rotatividade"
-            className="form-input dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+            className="form-input dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
           />
         </Field>
 
@@ -841,7 +855,7 @@ function MeetingForm({
             onChange={(e) => setComentario(e.target.value)}
             rows={3}
             placeholder="Pauta, contexto ou observações…"
-            className="form-textarea dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary-500 focus:ring-0"
+            className="form-textarea dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 dark:placeholder:text-dark-300 focus:border-primary-500 w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-0"
           />
         </Field>
 
@@ -851,7 +865,7 @@ function MeetingForm({
             type="datetime-local"
             value={dataReuniao}
             onChange={(e) => setDataReuniao(e.target.value)}
-            className="form-input dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-primary-500 focus:ring-0"
+            className="form-input dark:bg-dark-800 dark:border-dark-450 dark:text-dark-100 focus:border-primary-500 h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:ring-0"
           />
         </Field>
 
@@ -884,7 +898,7 @@ function MeetingForm({
                     <span className="dark:text-dark-100 block truncate text-sm font-medium text-gray-800">
                       {u.nome}
                     </span>
-                    <span className="dark:text-dark-300 block truncate text-tiny text-gray-400">
+                    <span className="dark:text-dark-300 text-tiny block truncate text-gray-400">
                       {u.cargo}
                     </span>
                   </span>
@@ -892,7 +906,7 @@ function MeetingForm({
                     className={clsx(
                       "grid size-5 shrink-0 place-items-center rounded-lg border transition-colors",
                       marcado
-                        ? "border-primary-600 bg-primary-600 text-white dark:border-primary-500 dark:bg-primary-500"
+                        ? "border-primary-600 bg-primary-600 dark:border-primary-500 dark:bg-primary-500 text-white"
                         : "dark:border-dark-400 border-gray-300",
                     )}
                   >
@@ -932,7 +946,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="dark:text-dark-200 mb-1.5 block text-xs-plus font-medium text-gray-600">
+      <span className="dark:text-dark-200 text-xs-plus mb-1.5 block font-medium text-gray-600">
         {label}
         {required && <span className="text-error ml-0.5">*</span>}
       </span>
@@ -963,7 +977,7 @@ function SelectField({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="form-select dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 h-9 rounded-lg border border-gray-300 bg-white pl-3 pr-8 text-xs-plus text-gray-700 focus:border-primary-500 focus:ring-0"
+        className="form-select dark:bg-dark-700 dark:border-dark-450 dark:text-dark-100 text-xs-plus focus:border-primary-500 h-9 rounded-lg border border-gray-300 bg-white pr-8 pl-3 text-gray-700 focus:ring-0"
       >
         {options.map((opt) => (
           <option key={opt.value || "vazio"} value={opt.value}>
@@ -981,7 +995,7 @@ function SelectField({
 function LoadingState() {
   return (
     <div className="dark:border-dark-600 grid place-items-center rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center">
-      <Spinner className="size-7 text-primary-500" />
+      <Spinner className="text-primary-500 size-7" />
       <p className="dark:text-dark-200 mt-3 text-sm text-gray-500">
         Carregando insights…
       </p>
@@ -1022,7 +1036,7 @@ function NoInsightsState() {
       <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
         Nenhum insight ainda
       </p>
-      <p className="dark:text-dark-300 mt-1 max-w-sm text-xs-plus text-gray-400">
+      <p className="dark:text-dark-300 text-xs-plus mt-1 max-w-sm text-gray-400">
         Os insights aparecem aqui quando a IA os gera a partir dos dados das
         suas áreas.
       </p>
@@ -1039,7 +1053,7 @@ function EmptyState({ onReset }: { onReset: () => void }) {
       <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
         Nenhum insight encontrado
       </p>
-      <p className="dark:text-dark-300 mt-1 text-xs-plus text-gray-400">
+      <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-400">
         Ajuste a busca ou os filtros para ver mais resultados.
       </p>
       <button

@@ -104,14 +104,20 @@ export function EnviarParaGrupoButton({
     return pa - pb || a.title.localeCompare(b.title, "pt-BR");
   });
 
-  const enviar = async (projectId: string, projectTitle: string, product: string) => {
+  const enviar = async (
+    projectId: string,
+    projectTitle: string,
+    product: string,
+  ) => {
     setEnviando(true);
     try {
       const pronto = preparar ? await preparar() : { conteudo: conteudo ?? "" };
       // O original entra junto dos anexos na aba Documentos do grupo, para o
       // arquivo-fonte ficar disponível também por esse caminho.
       const { anexos, ignorados } = await converterAnexos(
-        pronto.original ? [...(pronto.anexos ?? []), pronto.original] : pronto.anexos,
+        pronto.original
+          ? [...(pronto.anexos ?? []), pronto.original]
+          : pronto.anexos,
       );
 
       addDocument({
@@ -186,7 +192,7 @@ export function EnviarParaGrupoButton({
         onClick={() => setAberto(true)}
         disabled={disabled || enviando || enviado}
         variant="outlined"
-        className={clsx("h-8 gap-1.5 px-2.5 text-xs-plus", className)}
+        className={clsx("text-xs-plus h-8 gap-1.5 px-2.5", className)}
       >
         {enviando ? (
           <Spinner className="size-4" />
@@ -265,7 +271,7 @@ export function EnviarParaGrupoButton({
                               {g.title}
                             </span>
                             {g.product !== produtoAtual.code && (
-                              <span className="dark:bg-dark-500 dark:text-dark-200 shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-tiny-plus text-gray-500">
+                              <span className="dark:bg-dark-500 dark:text-dark-200 text-tiny-plus shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">
                                 {nomeProduto(g.product)}
                               </span>
                             )}
@@ -293,7 +299,7 @@ export function EnviarParaGrupoButton({
                     color="primary"
                     onClick={() => void criarEEnviar()}
                     disabled={!novoGrupo.trim() || enviando}
-                    className="h-9 shrink-0 gap-1.5 px-3 text-xs-plus"
+                    className="text-xs-plus h-9 shrink-0 gap-1.5 px-3"
                   >
                     {enviando ? (
                       <Spinner className="size-4" />

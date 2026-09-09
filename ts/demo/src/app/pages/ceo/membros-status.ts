@@ -1,7 +1,11 @@
 import type { ColorType } from "@/constants/app";
 import { nomeArea } from "@/app/data/areas";
 import { nomeCargo } from "@/app/data/cargos";
-import type { EstruturaRef, MembroStatus } from "@/services/api/membros";
+import type {
+  EstruturaRef,
+  MembroStatus,
+  MembroTipo,
+} from "@/services/api/membros";
 
 // ----------------------------------------------------------------------
 // Metadados de status de membro, compartilhados pela listagem, pelo drawer e
@@ -31,6 +35,30 @@ export const STATUS_MEMBRO: Record<MembroStatus, StatusMembroMeta> = {
     rotulo: "Inativo",
     cor: "neutral",
     descricao: "Não possui acesso ativo à organização.",
+  },
+};
+
+/**
+ * Metadados do TIPO de membro, no mesmo molde de `STATUS_MEMBRO` e pelo mesmo
+ * motivo: o rótulo e a cor do convidado aparecem na listagem, no detalhe, nas
+ * opções do filtro e no array da busca. Quatro call sites, uma fonte.
+ *
+ * `info` para o convidado, e não `warning`: naquela mesma linha da tabela,
+ * `warning` já significa "gestor inativo". E o membro comum não tem badge —
+ * marcar os dois transformaria a informação numa coluna disfarçada.
+ */
+export const TIPO_MEMBRO: Record<MembroTipo, StatusMembroMeta> = {
+  membro: {
+    rotulo: "Membro",
+    cor: "neutral",
+    descricao:
+      "Faz parte da estrutura da organização e pode receber área, cargo, gestores e roles.",
+  },
+  convidado: {
+    rotulo: "Convidado",
+    cor: "info",
+    descricao:
+      "Acesso limitado e sem participação na estrutura: não entra no organograma e não pode ser gestor.",
   },
 };
 

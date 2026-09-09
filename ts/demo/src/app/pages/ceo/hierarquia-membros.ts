@@ -107,6 +107,35 @@ export function descendentes(membros: Membro[], raizId: string): Set<string> {
 }
 
 /**
+ * Cadeia acima de um membro, do gestor direto até a raiz.
+ *
+ * A subida é linear porque `gestorId` é único por membro — "ter X acima" e
+ * "estar abaixo de X" são a mesma pergunta, e é a mesma travessia que o
+ * backend faz em `estaAbaixoDe`.
+ *
+ * O membro pedido NÃO entra no resultado. O `Set` de visitados encerra a
+ * subida num ciclo legado em vez de rodar para sempre, e uma aresta que aponta
+ * para fora da lista recebida simplesmente termina a cadeia.
+ *
+ * Existe para o organograma resolver uma conexão indireta cuja ponta está
+ * dentro de uma subárvore recolhida: o primeiro ancestral ainda visível é o
+ * card que representa aquela subárvore na tela.
+ */
+export function ancestrais(membros: Membro[], membroId: string): string[] {
+  const gestorDe = new Map(membros.map((m) => [m.id, m.gestorId]));
+  const cadeia: string[] = [];
+  const visitados = new Set<string>([membroId]);
+
+  let atual = gestorDe.get(membroId) ?? null;
+  while (atual != null && !visitados.has(atual)) {
+    visitados.add(atual);
+    cadeia.push(atual);
+    atual = gestorDe.get(atual) ?? null;
+  }
+  return cadeia;
+}
+
+/**
  * Topos do ORGANOGRAMA: raízes que têm gente abaixo.
  *
  * O desenho de cima para baixo trata "topo" como quem lidera alguém, e não

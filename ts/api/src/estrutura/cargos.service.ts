@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { MembroTipo, Prisma } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ListarEstruturaQuery } from './dto/listar-estrutura.query';
 import type { EstruturaComContagem } from './estrutura.mapper';
@@ -80,14 +80,30 @@ export class CargosService extends EstruturaService {
       },
 
       contarMembros: (empresaId, cargoId): Promise<number> =>
-        prismaService.membro.count({ where: { empresaId, cargoId } }),
+        prismaService.membro.count({
+          // `tipo` aqui pelo mesmo motivo do `INCLUDE_CONTAGEM`: é esta
+          // contagem que vira a mensagem do 409, e ela tem de bater com o
+          // número que a tela mostrou.
+          where: { empresaId, cargoId, tipo: MembroTipo.membro },
+        }),
     };
   }
 }
 
-/** Contagem sempre derivada — não existe coluna de contador. */
+/**
+ * Contagem sempre derivada — não existe coluna de contador.
+ *
+ * CONVIDADOS ficam de fora. Em regime normal o filtro é inócuo (um convidado
+ * nunca tem cargo — o service zera na conversão e recusa na criação), mas ele
+ * existe para o dado inconsistente: sem ele, uma linha gravada por SQL
+ * inflaria o número da tela.
+ *
+ * O MESMO filtro tem de valer nos dois lugares que contam: aqui, que alimenta a
+ * listagem, e `contarMembros`, que alimenta a guarda de exclusão. Filtrar só um
+ * faz o número exibido divergir do número que aparece no 409.
+ */
 const INCLUDE_CONTAGEM = {
-  _count: { select: { membros: true } },
+  _count: { select: { membros: { where: { tipo: MembroTipo.membro } } } },
 } satisfies Prisma.CargoInclude;
 
 /** Ativos primeiro (a ordem do enum garante), alfabético dentro de cada grupo. */

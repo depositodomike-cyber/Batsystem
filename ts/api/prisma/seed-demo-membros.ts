@@ -41,9 +41,15 @@ interface MembroDemo {
    */
   gestorEmail?: string;
   /**
-   * Código da role de sistema (admin | editor | viewer). Ausente = sem role.
-   * Referência por código porque as roles são criadas sob demanda pela API e
-   * o id é cuid(). Note que role NÃO acompanha cargo de propósito: o exemplo
+   * Código da role de sistema (admin | editor | viewer).
+   *
+   * PREENCHA SEMPRE: todo membro precisa de ao menos uma role, e este seed
+   * escreve direto no banco — ele não passa pelo `MembrosService`, que é quem
+   * recusa a criação sem role. Continua opcional no tipo porque a interface é
+   * compartilhada com o convidado, que não escolhe role (recebe a Convidado).
+   *
+   * Referência por código porque as roles são criadas sob demanda pela API e o
+   * id é cuid(). Note que role NÃO acompanha cargo de propósito: o exemplo
    * abaixo tem analista com role mais alta que designer.
    */
   roleCodigo?: string;
@@ -272,6 +278,11 @@ async function main(): Promise<void> {
   if (roleOwnerId) {
     const contaOwner = await prisma.usuario.findFirst({
       where: { empresaId: owner.empresaId, role: "owner" },
+      // `orderBy` para a escolha não depender da ordem física do Postgres. O
+      // índice único parcial já impede duas contas owner na mesma empresa, mas
+      // um banco anterior a ele pode ter o estado — e aí o vínculo Owner iria
+      // para uma ou outra conta a cada execução.
+      orderBy: { criadoEm: "asc" },
       select: { id: true },
     });
     if (contaOwner) {

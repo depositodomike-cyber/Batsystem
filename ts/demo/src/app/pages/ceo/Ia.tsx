@@ -74,7 +74,7 @@ function AiCard({
         <span className="dark:text-dark-100 block truncate text-sm font-medium text-gray-700">
           {label}
         </span>
-        <span className="dark:text-dark-300 mt-0.5 block text-xs-plus text-gray-400">
+        <span className="dark:text-dark-300 text-xs-plus mt-0.5 block text-gray-400">
           {desc}
         </span>
       </span>
@@ -143,21 +143,22 @@ function AiStudioComingSoonModal({
           >
             <DialogPanel className="dark:bg-dark-700 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
               <DialogTitle className="dark:text-dark-50 flex items-center gap-2.5 text-base font-semibold text-gray-800">
-                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400">
+                <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-9 shrink-0 place-items-center rounded-lg">
                   <SparklesIcon className="size-5 stroke-[1.5]" />
                 </span>
                 {t("ai.comingSoonTitle")}
               </DialogTitle>
               <p className="dark:text-dark-300 mt-3 text-sm text-gray-500">
-                {t(destinoLista ? "ai.comingSoonBodyRepo" : "ai.comingSoonBody")}
+                {t(
+                  destinoLista ? "ai.comingSoonBodyRepo" : "ai.comingSoonBody",
+                )}
               </p>
 
               <div className="mt-6 flex justify-end">
-                <Button
-                  color="primary"
-                  onClick={() => navigate(grafoPath)}
-                >
-                  {t(destinoLista ? "ai.comingSoonCtaRepo" : "ai.comingSoonCta")}
+                <Button color="primary" onClick={() => navigate(grafoPath)}>
+                  {t(
+                    destinoLista ? "ai.comingSoonCtaRepo" : "ai.comingSoonCta",
+                  )}
                 </Button>
               </div>
             </DialogPanel>
@@ -235,7 +236,7 @@ export default function Ia() {
     <Page title={`${t("ai.title")} · ${product.name}`}>
       <div className="transition-content w-full px-(--margin-x) py-6">
         <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-xl bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400">
+          <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-11 place-items-center rounded-xl">
             <SparklesIcon className="size-6 stroke-[1.5]" />
           </span>
           <div className="flex flex-col gap-0.5">
@@ -258,7 +259,7 @@ export default function Ia() {
         </div>
 
         <section className="mt-6">
-          <h3 className="dark:text-dark-200 mb-3 text-tiny-plus font-semibold uppercase tracking-wider text-gray-500">
+          <h3 className="dark:text-dark-200 text-tiny-plus mb-3 font-semibold tracking-wider text-gray-500 uppercase">
             {t("ai.functions")}
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

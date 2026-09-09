@@ -221,8 +221,8 @@ export function AudioUploadPanel({
         >
           <p className="dark:border-primary-500/20 dark:bg-primary-500/10 border-primary-200 bg-primary-50 text-xs-plus dark:text-dark-200 rounded-lg border px-3 py-2 text-gray-600">
             A IA <b>transcreve o áudio</b> (OpenAI Whisper) e gera um{" "}
-            <b>resumo</b> (com as conexões Obsidian ao final), salvo no Repositório
-            (Reuniões).
+            <b>resumo</b> (com as conexões Obsidian ao final), salvo no
+            Repositório (Reuniões).
           </p>
 
           <div>

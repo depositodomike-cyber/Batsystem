@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AcessoModule } from '@/acesso/acesso.module';
+import { AuthModule } from '@/auth/auth.module';
 import { ConectoresModule } from '@/conectores/conectores.module';
 import { McpController } from './mcp.controller';
 import { McpKeysController } from './mcp-keys.controller';
@@ -10,7 +12,8 @@ import { McpServerFactory } from './mcp-server.factory';
  * que os clientes externos usam para se conectar (/mcp/keys).
  */
 @Module({
-  imports: [ConectoresModule],
+  // `AcessoModule`/`AuthModule` pelo `PermissoesGuard` das rotas de chave.
+  imports: [ConectoresModule, AuthModule, AcessoModule],
   controllers: [McpKeysController, McpController],
   providers: [McpKeysService, McpServerFactory],
 })

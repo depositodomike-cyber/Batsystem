@@ -3,9 +3,11 @@ import { CompaniesController } from './companies.controller';
 import { CompaniesService } from './companies.service';
 import { BillingModule } from '@/billing/billing.module';
 import { AuthModule } from '@/auth/auth.module';
+import { AcessoModule } from '@/acesso/acesso.module';
 
 @Module({
-  imports: [BillingModule, AuthModule],
+  // `AcessoModule` pelo `PermissoesGuard` das rotas de convite.
+  imports: [BillingModule, AuthModule, AcessoModule],
   controllers: [CompaniesController],
   providers: [CompaniesService],
 })

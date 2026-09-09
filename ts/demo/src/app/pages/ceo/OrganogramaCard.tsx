@@ -55,6 +55,13 @@ export function OrganogramaCard({
 
   return (
     <div
+      // Âncora das conexões indiretas: é por este atributo que a camada
+      // secundária encontra os cards para medir (ver useConexoesMedidas). Um
+      // atributo no DOM, e não um `ref` por card, porque assim "está visível"
+      // é exatamente "está no DOM" — automaticamente correto para subárvore
+      // recolhida, para quem ficou fora da árvore e para os isolados, sem
+      // nenhum estado espelhado que possa divergir.
+      data-org-membro={membro.id}
       // Duas variáveis porque estilo inline não expressa `dark:`.
       style={
         grupo
@@ -71,7 +78,7 @@ export function OrganogramaCard({
         // mesma regra da árvore: desativar alguém não desfaz a hierarquia.
         membro.status === "inativo" && "opacity-60",
         destacado &&
-          "ring-2 ring-[var(--cargo)] ring-offset-2 ring-offset-white dark:ring-[var(--cargo-dark)] dark:ring-offset-dark-700",
+          "dark:ring-offset-dark-700 ring-2 ring-[var(--cargo)] ring-offset-2 ring-offset-white dark:ring-[var(--cargo-dark)]",
         esmaecido && "opacity-35",
       )}
     >
@@ -110,11 +117,23 @@ export function OrganogramaCard({
         </span>
 
         {ehTopo && (
-          <Badge color="info" variant="soft" className="text-tiny shrink-0 rounded-full">
+          <Badge
+            color="info"
+            variant="soft"
+            className="text-tiny shrink-0 rounded-full"
+          >
             Topo
           </Badge>
         )}
-        {membro.status !== "ativo" && (
+        {/* Só INATIVO, e não todo status diferente de ativo.
+            "Convite pendente" saiu daqui: é o estado de boa parte de uma
+            organização em formação, e um selo repetido em metade dos cards
+            vira ruído sem responder a pergunta que o organograma faz, que é
+            quem responde a quem. Inativo fica porque diz que a pessoa NÃO tem
+            acesso — informação que a posição na árvore não dá.
+            A listagem de Membros continua mostrando os três status, com filtro
+            próprio; é lá que se pergunta "quem ainda não entrou?". */}
+        {membro.status === "inativo" && (
           <Badge
             color={status.cor}
             variant="soft"

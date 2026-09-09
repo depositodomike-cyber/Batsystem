@@ -120,8 +120,9 @@ export default function Documento() {
                   <>
                     <p>
                       Documento organizado pela IA a partir de um upload. O
-                      conteúdo fica salvo no <strong>Repositório · Documentos</strong>{" "}
-                      e pode ser enviado para um agrupamento ou gravado como{" "}
+                      conteúdo fica salvo no{" "}
+                      <strong>Repositório · Documentos</strong> e pode ser
+                      enviado para um agrupamento ou gravado como{" "}
                       <span className="font-mono">.md</span> na pasta local.
                     </p>
                   </>
@@ -145,7 +146,7 @@ export default function Documento() {
                   <CheckCircleIcon className="size-5" />
                   Arquivo recebido
                 </p>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-dark-200">
+                <div className="dark:text-dark-200 flex items-center gap-2 text-sm text-gray-600">
                   <Spinner className="size-5" />
                   Analisando conteúdo
                 </div>
@@ -157,7 +158,8 @@ export default function Documento() {
           {comErro && (
             <div className="flex flex-col items-center gap-4 py-10 text-center">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
-                {upload?.erro ?? "Falha ao organizar o documento. Tente novamente."}
+                {upload?.erro ??
+                  "Falha ao organizar o documento. Tente novamente."}
               </div>
               <Button
                 onClick={abrirNovoUpload}
@@ -224,21 +226,21 @@ export default function Documento() {
                   <Button
                     onClick={abrirNovoUpload}
                     variant="outlined"
-                    className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                    className="text-xs-plus h-8 gap-1.5 px-2.5"
                   >
                     <ArrowPathIcon className="size-4" /> Novo upload
                   </Button>
                   <Button
                     onClick={copiar}
                     variant="outlined"
-                    className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                    className="text-xs-plus h-8 gap-1.5 px-2.5"
                   >
                     <ClipboardDocumentIcon className="size-4" /> Copiar
                   </Button>
                   <Button
                     onClick={baixar}
                     variant="outlined"
-                    className="h-8 gap-1.5 px-2.5 text-xs-plus"
+                    className="text-xs-plus h-8 gap-1.5 px-2.5"
                   >
                     <ArrowDownTrayIcon className="size-4" /> .md
                   </Button>

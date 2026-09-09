@@ -3,21 +3,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import {
-  SwatchIcon,
-  SpeakerWaveIcon,
-  CpuChipIcon,
-  BookOpenIcon,
   CircleStackIcon,
   FolderIcon,
   ChartBarIcon,
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
-import clsx from "clsx";
 
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
-import { Button, Switch, Spinner, ScrollShadow } from "@/components/ui";
+import { Button, Switch, Spinner } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import {
   getGrafoAtivo,
@@ -30,6 +25,13 @@ import {
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
 import { RegrasSection } from "./Memoria";
+import { PainelAdministracao } from "./Administracao";
+import { NavegacaoSecoes } from "./NavegacaoSecoes";
+import {
+  ehSecaoAdministracao,
+  resolverSecao,
+  type SecaoId,
+} from "./configuracoes-secoes";
 import {
   escolherPastaContexto,
   pastaContextoNativa,
@@ -38,18 +40,26 @@ import {
   pastaEhCopia,
 } from "./memoria-inventario";
 import {
+  ROTULO_ESCOPO_PESSOAL,
   useRepositorioAtivo,
   useRepositoriosDoEscopoAtivo,
+  useRotuloOrganizacaoAtiva,
 } from "@/app/pages/prototypes/contas/model/context";
-import {
-  DISABLED_MENU_CLASS,
-  isFeatureTemporarilyDisabled,
-  type TemporarilyDisabledFeature,
-} from "@/app/data/temporarilyDisabledFeatures";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
-// Configurações — porta o painel ⚙ do beculture/Confi (app antigo) para o SaaS.
-// Reúne cinco grupos:
+// Configurações — o contexto ÚNICO de configuração da plataforma.
+//
+// Até esta versão havia duas telas: esta e "Administração", com a navegação
+// lateral copiada literalmente entre as duas. Do ponto de vista de quem
+// administra, as duas respondiam a mesma pergunta — como a plataforma e a
+// organização se configuram —, então Administração deixou de ser uma área e os
+// itens dela passaram a viver aqui, sob rótulos de grupo.
+//
+// A lista de seções e os grupos moram em `configuracoes-secoes.ts`, porque a
+// MESMA lista alimenta o menu (`NavegacaoSecoes`) e o despacho do corpo.
+//
+// As seções renderizadas por ESTE arquivo:
 //   • Aparência — animação de fundo e vinheta (preferências locais).
 //   • Voz — resposta falada (TTS) após comandos de voz (preferência local).
 //   • IA & API — conexões BYOK (Texto/Imagem/Vídeo) via AiConnectionCard +
@@ -59,64 +69,48 @@ import {
 //   • Repositório — pasta de dados que alimenta o grafo. No SaaS web isso é
 //     um diretório escolhido pelo navegador (File System Access API), persistido
 //     no MESMO IndexedDB usado pela tela Repositório, então a escolha vale nas duas.
+//
+// As outras cinco (Membros, Áreas, Cargos, Hierarquia, Roles) vêm de um painel
+// só, `PainelAdministracao`: elas compartilham dados e modais. Ver ali por que
+// ele é despachado numa expressão JSX única, e não num branch por seção.
 // ----------------------------------------------------------------------
-
-const SECOES = [
-  {
-    id: "aparencia",
-    titulo: "Aparência",
-    icon: SwatchIcon,
-    feature: "settingsAppearance" as TemporarilyDisabledFeature,
-  },
-  {
-    id: "voz",
-    titulo: "Voz",
-    icon: SpeakerWaveIcon,
-    feature: "settingsVoice" as TemporarilyDisabledFeature,
-  },
-  {
-    id: "ia",
-    titulo: "IA & API",
-    icon: CpuChipIcon,
-    feature: null,
-  },
-  {
-    id: "regras",
-    titulo: "Regras",
-    icon: BookOpenIcon,
-    feature: null,
-  },
-  {
-    id: "memoria",
-    titulo: "Repositório",
-    icon: CircleStackIcon,
-    feature: "settingsMemory" as TemporarilyDisabledFeature,
-  },
-] as const;
-
-type SecaoId = (typeof SECOES)[number]["id"];
-
-function secaoEstaDesabilitada(secao: (typeof SECOES)[number]): boolean {
-  return secao.feature != null && isFeatureTemporarilyDisabled(secao.feature);
-}
-
-function primeiraSecaoAtiva(): SecaoId {
-  return SECOES.find((s) => !secaoEstaDesabilitada(s))?.id ?? "ia";
-}
 
 export default function Configuracoes() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
   const [searchParams, setSearchParams] = useSearchParams();
-  const secaoSolicitada = searchParams.get("secao");
-  const active =
-    SECOES.find(
-      (secao) => secao.id === secaoSolicitada && !secaoEstaDesabilitada(secao),
-    )?.id ?? primeiraSecaoAtiva();
+  // Seção desconhecida cai no padrão em silêncio, sem reescrever a URL — é o
+  // comportamento de sempre, e corrigir a URL de um link velho tiraria de quem
+  // compartilhou a chance de ver o que tinha mandado.
+  const active: SecaoId = resolverSecao(searchParams.get("secao"));
+
+  /**
+   * O título nomeia a organização selecionada no menu de perfil, e troca junto
+   * com ela — é estado de contexto React, então não há efeito nem requisição
+   * aqui: a re-renderização é a própria atualização.
+   *
+   * O nome sai do MESMO selector que monta a lista do menu, de propósito: é o
+   * nome que a pessoa acabou de clicar que tem de aparecer aqui.
+   */
+  const organizacao = useRotuloOrganizacaoAtiva();
+  const titulo =
+    organizacao == null
+      ? // Nenhum repositório aberto: não há organização a nomear, e inventar um
+        // nome ou deixar um ":" pendurado seria pior que o título curto.
+        "Configurações da organização"
+      : organizacao === ROTULO_ESCOPO_PESSOAL
+        ? // "Configurações da organização: Organização pessoal" repetiria a
+          // palavra duas vezes. Aqui o rótulo entra na própria frase.
+          "Configurações da organização pessoal"
+        : `Configurações da organização: ${organizacao}`;
 
   const selecionarSecao = (secao: SecaoId) => {
     const proximosParametros = new URLSearchParams(searchParams);
     proximosParametros.set("secao", secao);
+    // `aba` era a sub-aba de Estrutura na antiga tela de Administração. Sem
+    // este delete, um `?aba=cargos` vindo de um link antigo grudaria na URL em
+    // todas as trocas seguintes.
+    proximosParametros.delete("aba");
     setSearchParams(proximosParametros);
   };
 
@@ -136,14 +130,15 @@ export default function Configuracoes() {
                     e consumo de tokens)".
                   */}
                   <p>
-                    <strong>Configurações</strong> reúne as preferências do
-                    painel: <strong>Aparência</strong> (animação de fundo e
-                    vinheta), <strong>Voz</strong> (resposta falada após
-                    comandos de voz), <strong>IA &amp; API</strong> (conexão dos
-                    provedores de IA da empresa), <strong>Regras</strong>{" "}
-                    (orientações que a IA segue nas respostas) e{" "}
-                    <strong>Repositório</strong> (a pasta de dados que alimenta
-                    o grafo).
+                    <strong>Configurações</strong> é onde a plataforma e a
+                    organização se configuram, em quatro grupos:{" "}
+                    <strong>Geral</strong> (aparência, voz e a pasta de dados
+                    que alimenta o grafo), <strong>IA</strong> (as orientações
+                    que a IA segue nas respostas e a conexão dos provedores de
+                    IA da empresa), <strong>Estrutura</strong> (as pessoas da
+                    organização, as áreas e cargos que ocupam e a hierarquia
+                    entre elas) e <strong>Acesso</strong> (as roles, que dizem o
+                    que cada pessoa pode fazer).
                   </p>
                   <p>
                     As preferências de aparência e voz ficam salvas só neste
@@ -152,64 +147,22 @@ export default function Configuracoes() {
                   </p>
                 </>
               ),
+              // O cabeçalho do modal de ajuda, explícito porque `PageHelp`
+              // cai no título da página quando omitido — e ali o nome da
+              // organização não tem função: o texto explica a TELA.
+              title: "Configurações",
             }}
           >
-            Configurações
+            {titulo}
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-            Configurações gerais da plataforma
+            Preferências do painel e da organização
           </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
-          {/* Navegação lateral */}
-          {/* Abaixo de lg a lista de seções vira uma strip horizontal: em 375px
-              cabem ~2,5 de 5 abas, e sem o ScrollShadow nada sinalizava que
-              havia mais. Mesmo componente já usado nas pílulas de Conectores. */}
-          <nav className="min-w-0 lg:w-56 lg:shrink-0">
-            <ScrollShadow
-              orientation="horizontal"
-              size={24}
-              className="dark:border-dark-600 dark:bg-dark-700 hide-scrollbar flex gap-1.5 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5 lg:overflow-visible"
-            >
-              <ul className="flex gap-1.5 lg:w-full lg:flex-col lg:gap-1">
-                {SECOES.map((s) => {
-                  const disabled = secaoEstaDesabilitada(s);
-                  const isActive = !disabled && active === s.id;
-                  return (
-                    <li key={s.id} className="shrink-0 lg:shrink">
-                      {disabled ? (
-                        <div
-                          aria-disabled="true"
-                          className={clsx(
-                            "dark:text-dark-200 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-600",
-                            DISABLED_MENU_CLASS,
-                          )}
-                        >
-                          <s.icon className="size-4.5 shrink-0" />
-                          {s.titulo}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => selecionarSecao(s.id)}
-                          className={clsx(
-                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                            isActive
-                              ? "bg-primary-600 dark:bg-primary-500 text-white"
-                              : "dark:text-dark-200 dark:hover:bg-dark-600 text-gray-600 hover:bg-gray-100",
-                          )}
-                        >
-                          <s.icon className="size-4.5 shrink-0" />
-                          {s.titulo}
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </ScrollShadow>
-          </nav>
+          {/* Navegação lateral, agrupada por rótulos de seção. */}
+          <NavegacaoSecoes ativo={active} onSelecionar={selecionarSecao} />
 
           {/* Painel da seção ativa */}
           <div className="min-w-0 flex-1">
@@ -218,6 +171,19 @@ export default function Configuracoes() {
             {active === "ia" && <IaSection />}
             {active === "regras" && <RegrasSection />}
             {active === "memoria" && <MemoriaSection />}
+
+            {/*
+              UMA expressão para as cinco seções de organização, e não um
+              branch por seção. O painel é dono da lista de membros, do drawer
+              e de dez modais; com um branch por seção, o mesmo componente
+              apareceria em posições diferentes da árvore a cada clique e o
+              React desmontaria e remontaria tudo — quatro chamadas de API,
+              drawer fechado, filtros e busca zerados. Não aparece em code
+              review, só na aba Network.
+            */}
+            {ehSecaoAdministracao(active) && (
+              <PainelAdministracao secao={active} onIrPara={selecionarSecao} />
+            )}
           </div>
         </div>
       </div>

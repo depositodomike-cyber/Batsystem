@@ -237,10 +237,11 @@ export default function MemoriaGrafo() {
     if (files.length === 0) return;
     // Remonta só o grafo: filtros e seleção ficam como o usuário deixou (a
     // seleção é dado plano por id, e os ids não mudam).
-    const { entidades, conteudos, itens: inv } = construirGrafoDoVault(
-      files,
-      categorias,
-    );
+    const {
+      entidades,
+      conteudos,
+      itens: inv,
+    } = construirGrafoDoVault(files, categorias);
     setItens(inv);
     setGraph(unirCamadas(entidades, conteudos));
   }, [categorias]);
@@ -395,8 +396,12 @@ export default function MemoriaGrafo() {
         if (opts?.obsoleto?.()) return;
         setCategorias(cats);
         categoriasAplicadasRef.current = cats;
-        const { entidades, conteudos, itens: inv, temEntidades } =
-          construirGrafoDoVault(files, cats);
+        const {
+          entidades,
+          conteudos,
+          itens: inv,
+          temEntidades,
+        } = construirGrafoDoVault(files, cats);
         setItens(inv);
         setSelecao(null);
         // Vault sem entidades reconhecíveis (sem grupos, sem pasta Pessoas, sem
@@ -1388,43 +1393,46 @@ export default function MemoriaGrafo() {
               })
                 .filter(({ total }) => total > 0)
                 .map(({ chip, total }) => {
-                const { id, label, cor, camadas: doChip } = chip;
-                // Ligado enquanto QUALQUER camada do chip estiver ligada; o
-                // clique alinha todas no estado oposto.
-                const ligado = doChip.some((k) => filtros[k]);
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() =>
-                      setFiltros((f) => {
-                        const proximo = !ligado;
-                        const patch = Object.fromEntries(
-                          doChip.map((k) => [k, proximo]),
-                        ) as Partial<Filtros>;
-                        return { ...f, ...patch };
-                      })
-                    }
-                    aria-pressed={ligado}
-                    className={clsx(
-                      "text-tiny flex items-center gap-1.5 rounded-md border px-2 py-1 shadow-sm transition-colors",
-                      ligado
-                        ? "dark:bg-dark-700 dark:border-dark-500 dark:text-dark-100 border-gray-300 bg-white text-gray-700"
-                        : "dark:bg-dark-800/70 dark:border-dark-600 dark:text-dark-300 border-gray-200 bg-white/70 text-gray-400",
-                    )}
-                  >
-                    <span
-                      className="size-2 rounded-full"
-                      style={{
-                        backgroundColor: cor ?? "transparent",
-                        boxShadow: cor ? undefined : "inset 0 0 0 1.5px currentColor",
-                        opacity: ligado ? 1 : 0.35,
-                      }}
-                    />
-                    {label} <span className="tabular-nums opacity-60">{total}</span>
-                  </button>
-                );
-              })}
+                  const { id, label, cor, camadas: doChip } = chip;
+                  // Ligado enquanto QUALQUER camada do chip estiver ligada; o
+                  // clique alinha todas no estado oposto.
+                  const ligado = doChip.some((k) => filtros[k]);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() =>
+                        setFiltros((f) => {
+                          const proximo = !ligado;
+                          const patch = Object.fromEntries(
+                            doChip.map((k) => [k, proximo]),
+                          ) as Partial<Filtros>;
+                          return { ...f, ...patch };
+                        })
+                      }
+                      aria-pressed={ligado}
+                      className={clsx(
+                        "text-tiny flex items-center gap-1.5 rounded-md border px-2 py-1 shadow-sm transition-colors",
+                        ligado
+                          ? "dark:bg-dark-700 dark:border-dark-500 dark:text-dark-100 border-gray-300 bg-white text-gray-700"
+                          : "dark:bg-dark-800/70 dark:border-dark-600 dark:text-dark-300 border-gray-200 bg-white/70 text-gray-400",
+                      )}
+                    >
+                      <span
+                        className="size-2 rounded-full"
+                        style={{
+                          backgroundColor: cor ?? "transparent",
+                          boxShadow: cor
+                            ? undefined
+                            : "inset 0 0 0 1.5px currentColor",
+                          opacity: ligado ? 1 : 0.35,
+                        }}
+                      />
+                      {label}{" "}
+                      <span className="tabular-nums opacity-60">{total}</span>
+                    </button>
+                  );
+                })}
             </div>
           )}
 
@@ -1457,7 +1465,10 @@ export default function MemoriaGrafo() {
         {/* Dica: entidade e relação são os dois caminhos para o contexto. */}
         {!loading && graph.nodes.length > 0 && (
           <span className="dark:bg-dark-700/70 dark:text-dark-300 text-tiny pointer-events-none absolute start-4 bottom-4 z-10 rounded-md bg-white/70 px-2 py-1 text-gray-500 backdrop-blur-sm">
-            {filtros.categoria || filtros.pessoa || filtros.projeto || filtros.tag
+            {filtros.categoria ||
+            filtros.pessoa ||
+            filtros.projeto ||
+            filtros.tag
               ? "Clique em um nó ou em uma conexão para ver o contexto"
               : "Clique em uma nota para abrir e editar o .md"}
           </span>

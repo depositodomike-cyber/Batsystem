@@ -84,7 +84,11 @@ async function main(): Promise<void> {
         senhaHash,
         trialStartsAt: now,
         trialEndsAt: trialEnds,
-        role: "owner",
+        // `role` NÃO entra aqui de propósito. O `create` abaixo continua com
+        // ela; reafirmá-la na atualização devolveria a propriedade ao e-mail
+        // demo depois de uma transferência — e o `vercel-build` roda este seed
+        // em TODO deploy. Com o índice único parcial de um-owner-por-empresa
+        // isso passaria a estourar, e o `|| echo` do script engoliria o erro.
       },
     });
     console.log(`Conta atualizada: ${email}`);

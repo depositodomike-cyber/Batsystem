@@ -38,17 +38,39 @@ import { MembrosOrganograma } from "./MembrosOrganograma";
 
 export function MembrosHierarquia({
   membros,
+  membroSelecionadoId,
   onAbrirMembro,
   onIrParaLista,
 }: {
   membros: Membro[];
+  /** Só atravessa até o organograma, que dá ênfase às conexões desse membro. */
+  membroSelecionadoId: string | null;
   onAbrirMembro: (membro: Membro) => void;
   /** Para o estado vazio levar de volta à aba de Membros. */
   onIrParaLista: () => void;
 }) {
-  const { raizes, foraDaArvore } = useMemo(
-    () => montarHierarquia(membros),
+  /**
+   * A estrutura da organização, SEM os convidados. Este é o ponto único de
+   * filtragem da aba inteira.
+   *
+   * Convidado não tem posição hierárquica: sem gestor e sem liderados, ele
+   * cairia em `isolados` e a tela o listaria com a instrução "defina o Gestor
+   * direto para incluí-lo" — que a regra de convidado torna impossível de
+   * cumprir.
+   *
+   * Filtrar AQUI, e não dentro de `hierarquia-membros.ts`: aquele módulo
+   * deriva de `gestorId` e só disso, e um teste de tipo lá faria a lista, o
+   * drawer e esta aba discordarem sobre o que é uma equipe. E não em
+   * `Administracao`, que precisa da lista inteira para a tabela e o detalhe.
+   */
+  const estruturais = useMemo(
+    () => membros.filter((m) => m.tipo !== "convidado"),
     [membros],
+  );
+
+  const { raizes, foraDaArvore } = useMemo(
+    () => montarHierarquia(estruturais),
+    [estruturais],
   );
 
   // Inicializador lazy: o localStorage é lido uma vez, não a cada render.
@@ -58,8 +80,34 @@ export function MembrosHierarquia({
     salvarHierarquiaView(proxima);
   };
 
-  const comGestor = membros.filter((m) => m.gestorId != null).length;
+  const comGestor = estruturais.filter((m) => m.gestorId != null).length;
   const semVinculo = useMemo(() => isolados(raizes), [raizes]);
+  const convidados = membros.length - estruturais.length;
+
+  // Organização só de convidados: sem este ramo a tela diria "Nenhum membro
+  // ainda / Cadastre as pessoas" ao lado de uma aba Membros com linhas.
+  if (membros.length > 0 && estruturais.length === 0) {
+    return (
+      <div className="dark:border-dark-600 grid place-items-center rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center">
+        <ShareIcon className="dark:text-dark-400 size-10 text-gray-300" />
+        <p className="dark:text-dark-100 mt-3 font-medium text-gray-800">
+          Nenhum membro na estrutura
+        </p>
+        <p className="dark:text-dark-300 text-xs-plus mt-1 max-w-sm text-gray-500">
+          {convidados === 1
+            ? "A única pessoa cadastrada é um convidado, e convidados não participam do organograma."
+            : `As ${convidados} pessoas cadastradas são convidados, e convidados não participam do organograma.`}
+        </p>
+        <Button
+          onClick={onIrParaLista}
+          color="primary"
+          className="mt-4 h-9 gap-1.5 rounded-lg px-3"
+        >
+          Ver membros
+        </Button>
+      </div>
+    );
+  }
 
   if (membros.length === 0) {
     return (
@@ -89,8 +137,14 @@ export function MembrosHierarquia({
           {raizes.length} no topo
           {" · "}
           {comGestor} com gestor definido
-          {comGestor < membros.length &&
-            ` · ${membros.length - comGestor} sem gestor`}
+          {/* `estruturais` nos DOIS lados. Este contador e o "no topo" acima
+              ficam a uma linha de distância e derivam de fontes diferentes;
+              deixar `membros.length` aqui faria todo convidado inflar "sem
+              gestor" — sendo que convidado nem aparece no desenho. */}
+          {comGestor < estruturais.length &&
+            ` · ${estruturais.length - comGestor} sem gestor`}
+          {convidados > 0 &&
+            ` · ${convidados} ${convidados === 1 ? "convidado" : "convidados"} fora da estrutura`}
         </p>
         <HierarquiaViewSelect value={view} onChange={trocarView} />
       </div>
@@ -110,8 +164,15 @@ export function MembrosHierarquia({
           responde melhor do que um quadro vazio. */}
       {view === "organograma" && comGestor > 0 ? (
         <MembrosOrganograma
-          membros={membros}
+          // `estruturais`, e é a passagem mais fácil de esquecer: o
+          // organograma usa a lista para agrupar cargos na legenda, montar as
+          // conexões indiretas e indexar por id. Com a lista cheia, uma aresta
+          // tracejada de um convidado sobreviveria (`conexoesIndiretas` só
+          // descarta a ponta que não está na lista recebida) e a medição
+          // procuraria um card que nunca foi desenhado.
+          membros={estruturais}
           raizes={raizes}
+          membroSelecionadoId={membroSelecionadoId}
           onAbrirMembro={onAbrirMembro}
         />
       ) : (

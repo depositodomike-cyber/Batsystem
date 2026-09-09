@@ -109,17 +109,15 @@ export function EstruturaLista({
 
   return (
     <div>
-      <div className="flex flex-col gap-1">
-        <h2 className="dark:text-dark-100 text-base font-medium text-gray-800">
-          {copy.titulo}
-        </h2>
-        <p className="dark:text-dark-300 text-xs-plus text-gray-500">
-          {copy.subtitulo}
-        </p>
-      </div>
+      {/* Sem bloco de título aqui: `copy.titulo` e `copy.subtitulo` são
+          renderizados pelo cabeçalho da seção, em Administracao.tsx. Enquanto
+          Áreas e Cargos eram sub-abas de "Estrutura", o título da página não
+          dizia qual das duas estava aberta e este bloco respondia isso; como
+          seções próprias, o cabeçalho já responde, e os dois juntos davam dois
+          <h2> idênticos. A cópia continua em `estrutura-copy.ts`. */}
 
       {/* Busca + resumo + ação primária, mesma composição de MembrosLista. */}
-      <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full lg:max-w-xs">
           <MagnifyingGlassIcon className="dark:text-dark-300 pointer-events-none absolute top-1/2 left-3 size-4.5 -translate-y-1/2 text-gray-400" />
           <input
@@ -316,7 +314,11 @@ function ItemMenu({
             Reativar {copy.singular}
           </ItemAcao>
         ) : (
-          <ItemAcao icon={MinusCircleIcon} onClick={onAlternarStatus} destrutivo>
+          <ItemAcao
+            icon={MinusCircleIcon}
+            onClick={onAlternarStatus}
+            destrutivo
+          >
             Desativar {copy.singular}
           </ItemAcao>
         )}

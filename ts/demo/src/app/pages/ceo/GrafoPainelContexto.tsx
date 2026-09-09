@@ -268,12 +268,12 @@ function LinhaConteudo({
         </span>
         <span className="min-w-0 flex-1">
           <span
-            className="dark:text-dark-100 block truncate text-xs-plus font-medium text-gray-800"
+            className="dark:text-dark-100 text-xs-plus block truncate font-medium text-gray-800"
             title={item.titulo}
           >
             {item.titulo}
           </span>
-          <span className="dark:text-dark-300 block truncate text-tiny text-gray-400">
+          <span className="dark:text-dark-300 text-tiny block truncate text-gray-400">
             {item.tipo}
             {item.origem && ` · ${item.origem}`}
           </span>
@@ -328,7 +328,8 @@ export function GrafoPainelContexto({
     return tagsDisponiveis.filter((t) => t.id !== idAtual && !fora.has(t.id));
   }, [tagsDisponiveis, idAtual, jaRelacionados]);
 
-  const relacionando = relacionandoPara !== null && relacionandoPara === idAtual;
+  const relacionando =
+    relacionandoPara !== null && relacionandoPara === idAtual;
 
   /** Motivo de o "+" estar bloqueado, ou null quando a ação está liberada. */
   const bloqueioRelacionar = !podeEscrever
@@ -348,7 +349,8 @@ export function GrafoPainelContexto({
 
   if (!selecao) return null;
 
-  const paths = selecao.tipo === "entidade" ? selecao.conteudos : selecao.fontes;
+  const paths =
+    selecao.tipo === "entidade" ? selecao.conteudos : selecao.fontes;
   const conteudos = paths
     .map((p) => itensPorPath.get(p))
     .filter((i): i is ItemContexto => !!i);
@@ -377,17 +379,25 @@ export function GrafoPainelContexto({
               {titulo}
             </h3>
             {selecao.tipo === "entidade" ? (
-              <Badge variant="soft" color="neutral" className="shrink-0 text-tiny">
+              <Badge
+                variant="soft"
+                color="neutral"
+                className="text-tiny shrink-0"
+              >
                 {selecao.rotulo}
               </Badge>
             ) : (
-              <Badge variant="soft" color="neutral" className="shrink-0 text-tiny">
+              <Badge
+                variant="soft"
+                color="neutral"
+                className="text-tiny shrink-0"
+              >
                 Relação
               </Badge>
             )}
           </div>
           {conteudos.length > 0 && (
-            <p className="dark:text-dark-300 mt-1 text-tiny text-gray-400">
+            <p className="dark:text-dark-300 text-tiny mt-1 text-gray-400">
               {resumirPorTipo(conteudos)}
             </p>
           )}
@@ -456,7 +466,7 @@ export function GrafoPainelContexto({
               // ler "Tags: A, B, C" diz mais do que uma lista achatada.
               agruparPorRotulo(selecao.relacoes).map(([rotulo, itens]) => (
                 <div key={rotulo} className="mb-2 last:mb-0">
-                  <p className="dark:text-dark-300 mb-0.5 text-tiny text-gray-400">
+                  <p className="dark:text-dark-300 text-tiny mb-0.5 text-gray-400">
                     {rotulo}
                   </p>
                   {/* `-mx-2` cancela o `px-2` das linhas: o texto fica nos 16px
@@ -471,17 +481,19 @@ export function GrafoPainelContexto({
                           className="dark:hover:bg-dark-600 flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start transition-colors hover:bg-gray-50"
                         >
                           <span
-                            className="dark:text-dark-100 min-w-0 flex-1 truncate text-xs-plus text-gray-700"
+                            className="dark:text-dark-100 text-xs-plus min-w-0 flex-1 truncate text-gray-700"
                             title={r.titulo}
                           >
                             {r.titulo}
                           </span>
                           <span
                             className={clsx(
-                              "dark:text-dark-300 shrink-0 text-tiny text-gray-400",
+                              "dark:text-dark-300 text-tiny shrink-0 text-gray-400",
                               // Some no hover para dar lugar ao × sem empurrar
                               // o título.
-                              r.manual && podeEscrever && "group-hover/rel:invisible",
+                              r.manual &&
+                                podeEscrever &&
+                                "group-hover/rel:invisible",
                             )}
                             title={`${r.peso} ${r.peso === 1 ? "conteúdo em comum" : "conteúdos em comum"}`}
                           >
@@ -502,7 +514,7 @@ export function GrafoPainelContexto({
                                 setOcupado(false);
                               }
                             }}
-                            className="dark:text-dark-300 dark:hover:text-dark-50 absolute end-1.5 top-1/2 hidden -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-700 group-hover/rel:block"
+                            className="dark:text-dark-300 dark:hover:text-dark-50 absolute end-1.5 top-1/2 hidden -translate-y-1/2 rounded p-0.5 text-gray-400 group-hover/rel:block hover:text-gray-700"
                           >
                             <XMarkIcon className="size-3.5" />
                           </button>
@@ -531,7 +543,7 @@ export function GrafoPainelContexto({
                 ))}
               </ul>
               {conteudos.length > TETO_LISTA && (
-                <p className="dark:text-dark-300 mt-2 text-tiny text-gray-400">
+                <p className="dark:text-dark-300 text-tiny mt-2 text-gray-400">
                   + {conteudos.length - TETO_LISTA} outros
                 </p>
               )}

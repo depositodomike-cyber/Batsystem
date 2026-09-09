@@ -104,10 +104,10 @@ export default function FeedDetail() {
 
           {/* Cabeçalho da notícia */}
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300 rounded-full px-2.5 py-1 text-tiny font-semibold tracking-wide uppercase">
+            <span className="bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300 text-tiny rounded-full px-2.5 py-1 font-semibold tracking-wide uppercase">
               {item.category}
             </span>
-            <span className="dark:text-dark-300 inline-flex items-center gap-1 text-tiny text-gray-400">
+            <span className="dark:text-dark-300 text-tiny inline-flex items-center gap-1 text-gray-400">
               <ClockIcon className="size-3.5" />
               {item.readMinutes} min de leitura
             </span>
@@ -310,7 +310,11 @@ function CommentsSection({
       {threads.length > 0 && (
         <div className="mt-6 space-y-5">
           {threads.map((comment) => (
-            <CommentThread key={comment.id} comment={comment} feedId={item.id} />
+            <CommentThread
+              key={comment.id}
+              comment={comment}
+              feedId={item.id}
+            />
           ))}
         </div>
       )}
@@ -346,9 +350,10 @@ function CommentComposer({
   const people = useMemo(getMentionablePeople, []);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [text, setText] = useState(initialText);
-  const [mention, setMention] = useState<{ start: number; query: string } | null>(
-    null,
-  );
+  const [mention, setMention] = useState<{
+    start: number;
+    query: string;
+  } | null>(null);
 
   const authorName = user?.name?.trim() || "Você";
   const authorAvatar = user?.avatarUrl || "/images/avatar/avatar-12.jpg";
@@ -375,7 +380,11 @@ function CommentComposer({
       return;
     }
     const between = upto.slice(at + 1);
-    if (between.length > 25 || between.includes("\n") || between.includes("@")) {
+    if (
+      between.length > 25 ||
+      between.includes("\n") ||
+      between.includes("@")
+    ) {
       setMention(null);
       return;
     }
@@ -504,7 +513,7 @@ function CommentComposer({
         )}
 
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="dark:text-dark-300 inline-flex items-center gap-1 text-tiny text-gray-400">
+          <span className="dark:text-dark-300 text-tiny inline-flex items-center gap-1 text-gray-400">
             <AtSymbolIcon className="size-3.5" />
             use @ para marcar alguém
           </span>
@@ -540,7 +549,7 @@ function CommentThread({
     <div>
       <CommentRow comment={comment} feedId={feedId} rootId={comment.id} />
       {replies.length > 0 && (
-        <div className="dark:border-dark-500 mt-3 ml-12 space-y-3 border-l border-gray-150 pl-3">
+        <div className="dark:border-dark-500 border-gray-150 mt-3 ml-12 space-y-3 border-l pl-3">
           {replies.map((reply) => (
             <CommentRow
               key={reply.id}
@@ -582,7 +591,7 @@ function CommentRow({
         )}
       />
       <div className="min-w-0 flex-1">
-        <div className="dark:bg-dark-700 dark:border-dark-500 rounded-lg border border-gray-150 bg-gray-50 px-3 py-2">
+        <div className="dark:bg-dark-700 dark:border-dark-500 border-gray-150 rounded-lg border bg-gray-50 px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <p className="dark:text-dark-100 text-sm font-semibold text-gray-800">
               {comment.author}
@@ -614,7 +623,7 @@ function CommentRow({
             aria-label={comment.likedByMe ? "Remover curtida" : "Curtir"}
             onClick={() => toggleCommentLike(comment.id)}
             className={clsx(
-              "inline-flex items-center gap-1 text-tiny font-semibold transition-colors",
+              "text-tiny inline-flex items-center gap-1 font-semibold transition-colors",
               comment.likedByMe
                 ? "text-primary-600 dark:text-primary-400"
                 : "dark:text-dark-300 text-gray-400 hover:text-gray-600",
@@ -630,7 +639,7 @@ function CommentRow({
           <button
             type="button"
             onClick={() => setReplyOpen((o) => !o)}
-            className="dark:text-dark-300 inline-flex items-center gap-1 text-tiny font-semibold text-gray-400 transition-colors hover:text-gray-600"
+            className="dark:text-dark-300 text-tiny inline-flex items-center gap-1 font-semibold text-gray-400 transition-colors hover:text-gray-600"
           >
             <ArrowUturnLeftIcon className="size-3.5" />
             Responder
@@ -716,7 +725,7 @@ function RelatedCard({ item, base }: { item: FeedItem; base: string }) {
         </p>
         <Link
           to={to}
-          className="dark:text-dark-100 hover:text-primary-600 dark:hover:text-primary-400 mt-1 line-clamp-2 text-sm-plus font-semibold text-gray-800"
+          className="dark:text-dark-100 hover:text-primary-600 dark:hover:text-primary-400 text-sm-plus mt-1 line-clamp-2 font-semibold text-gray-800"
         >
           {item.title}
         </Link>
@@ -782,8 +791,7 @@ function ShareModal({
     }
   }, [open]);
 
-  const url =
-    typeof window !== "undefined" ? window.location.href : "";
+  const url = typeof window !== "undefined" ? window.location.href : "";
 
   const handleShare = (connector: Connector) => {
     // Sem backend: simula o disparo/postagem e dá feedback visual.
@@ -811,7 +819,7 @@ function ShareModal({
           leave="ease-in duration-150"
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
-          className="dark:bg-black/50 fixed inset-0 bg-gray-900/50 backdrop-blur-sm"
+          className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm dark:bg-black/50"
         />
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <TransitionChild
@@ -832,7 +840,7 @@ function ShareModal({
                     type="button"
                     onClick={() => setView("targets")}
                     aria-label="Voltar"
-                    className="dark:text-dark-300 dark:hover:bg-dark-600 -ml-1 mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
+                    className="dark:text-dark-300 dark:hover:bg-dark-600 mt-0.5 -ml-1 grid size-7 shrink-0 place-items-center rounded-lg text-gray-400 hover:bg-gray-100"
                   >
                     <ArrowLeftIcon className="size-4.5" />
                   </button>
@@ -841,7 +849,7 @@ function ShareModal({
                   <DialogTitle className="dark:text-dark-50 text-base font-semibold text-gray-800">
                     {view === "people" ? "Chat da plataforma" : "Compartilhar"}
                   </DialogTitle>
-                  <p className="dark:text-dark-300 mt-0.5 truncate text-xs-plus text-gray-500">
+                  <p className="dark:text-dark-300 text-xs-plus mt-0.5 truncate text-gray-500">
                     {view === "people"
                       ? "Selecione a pessoa ou conversa"
                       : item.title}
@@ -869,145 +877,145 @@ function ShareModal({
                 }}
               />
             ) : (
-            <div className="px-5 py-4">
-              {/* Copiar link */}
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="dark:border-dark-500 dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
-              >
-                <span className="dark:bg-dark-600 dark:text-dark-200 grid size-9 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-500">
-                  {copied ? (
-                    <CheckIcon className="size-5 text-emerald-500" />
-                  ) : (
-                    <LinkIcon className="size-5" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="dark:text-dark-100 block text-sm font-medium text-gray-800">
-                    {copied ? "Link copiado!" : "Copiar link"}
+              <div className="px-5 py-4">
+                {/* Copiar link */}
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="dark:border-dark-500 dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg border border-gray-200 px-3 py-2.5 text-left transition-colors hover:bg-gray-50"
+                >
+                  <span className="dark:bg-dark-600 dark:text-dark-200 grid size-9 shrink-0 place-items-center rounded-lg bg-gray-100 text-gray-500">
+                    {copied ? (
+                      <CheckIcon className="size-5 text-emerald-500" />
+                    ) : (
+                      <LinkIcon className="size-5" />
+                    )}
                   </span>
-                  <span className="dark:text-dark-300 block truncate text-tiny text-gray-400">
-                    {url}
+                  <span className="min-w-0 flex-1">
+                    <span className="dark:text-dark-100 block text-sm font-medium text-gray-800">
+                      {copied ? "Link copiado!" : "Copiar link"}
+                    </span>
+                    <span className="dark:text-dark-300 text-tiny block truncate text-gray-400">
+                      {url}
+                    </span>
                   </span>
-                </span>
-              </button>
+                </button>
 
-              {/* Destinos de compartilhamento */}
-              <p className="dark:text-dark-300 mt-4 mb-2 text-tiny font-semibold tracking-wider text-gray-400 uppercase">
-                Compartilhar via
-              </p>
-              <div className="-mx-1 max-h-72 space-y-0.5 overflow-y-auto px-1">
-                {/* Chat da plataforma (beculture) — abre o seletor de pessoa/conversa. */}
-                {(() => {
-                  const platformShared = sharedIds.has("platform-chat");
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => setView("people")}
-                      className="dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50"
-                    >
-                      <span className="dark:bg-dark-600 grid size-9 shrink-0 place-items-center rounded-lg bg-gray-100">
-                        <img
-                          src={becultureLogo}
-                          alt="beculture"
-                          className="size-6 dark:hidden"
-                        />
-                        <img
-                          src={becultureLogoDark}
-                          alt="beculture"
-                          className="hidden size-6 dark:block"
-                        />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
-                          Chat da plataforma
-                        </p>
-                        <p className="dark:text-dark-300 truncate text-tiny text-gray-400">
-                          {platformSentTo
-                            ? `Enviado para ${platformSentTo}`
-                            : "Selecionar pessoa ou conversa"}
-                        </p>
-                      </div>
-                      {platformShared ? (
-                        <span className="inline-flex shrink-0 items-center gap-1 text-xs-plus font-medium text-emerald-600 dark:text-emerald-400">
-                          <CheckIcon className="size-4" />
-                          Enviado
+                {/* Destinos de compartilhamento */}
+                <p className="dark:text-dark-300 text-tiny mt-4 mb-2 font-semibold tracking-wider text-gray-400 uppercase">
+                  Compartilhar via
+                </p>
+                <div className="-mx-1 max-h-72 space-y-0.5 overflow-y-auto px-1">
+                  {/* Chat da plataforma (beculture) — abre o seletor de pessoa/conversa. */}
+                  {(() => {
+                    const platformShared = sharedIds.has("platform-chat");
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setView("people")}
+                        className="dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50"
+                      >
+                        <span className="dark:bg-dark-600 grid size-9 shrink-0 place-items-center rounded-lg bg-gray-100">
+                          <img
+                            src={becultureLogo}
+                            alt="beculture"
+                            className="size-6 dark:hidden"
+                          />
+                          <img
+                            src={becultureLogoDark}
+                            alt="beculture"
+                            className="hidden size-6 dark:block"
+                          />
                         </span>
-                      ) : (
-                        <span className="text-primary-600 dark:text-primary-400 shrink-0 text-xs-plus font-semibold">
-                          Enviar
-                        </span>
-                      )}
-                    </button>
-                  );
-                })()}
+                        <div className="min-w-0 flex-1">
+                          <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
+                            Chat da plataforma
+                          </p>
+                          <p className="dark:text-dark-300 text-tiny truncate text-gray-400">
+                            {platformSentTo
+                              ? `Enviado para ${platformSentTo}`
+                              : "Selecionar pessoa ou conversa"}
+                          </p>
+                        </div>
+                        {platformShared ? (
+                          <span className="text-xs-plus inline-flex shrink-0 items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckIcon className="size-4" />
+                            Enviado
+                          </span>
+                        ) : (
+                          <span className="text-primary-600 dark:text-primary-400 text-xs-plus shrink-0 font-semibold">
+                            Enviar
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })()}
 
-                {targets.map((connector) => {
-                  const connected = isConnected(connector.id);
-                  const shared = sharedIds.has(connector.id);
-                  const kind = connectorShareKind(connector);
-                  return (
-                    <button
-                      key={connector.id}
-                      type="button"
-                      onClick={() => {
-                        if (connected) {
-                          handleShare(connector);
-                          return;
-                        }
-                        // Teams e WhatsApp conectam informando as credenciais do
-                        // app da empresa no provedor — o que só a tela de
-                        // Conectores pede. Ligar aqui marcaria conectado sem
-                        // credencial nenhuma.
-                        if (exigeCredenciais(connector.id)) {
-                          navigate(
-                            `/${getCurrentProduct(pathname).code}/conectores`,
-                          );
-                          return;
-                        }
-                        connect(connector.id);
-                      }}
-                      disabled={shared}
-                      className="dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 disabled:cursor-default"
-                    >
-                      <ShareTargetLogo connector={connector} />
-                      <div className="min-w-0 flex-1">
-                        <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
-                          {connector.name}
-                        </p>
-                        <p className="dark:text-dark-300 text-tiny text-gray-400">
-                          {!connected
-                            ? exigeCredenciais(connector.id)
-                              ? "Configure as credenciais para compartilhar"
-                              : "Conecte para compartilhar"
-                            : kind === "post"
-                              ? "Publicar como postagem"
-                              : "Enviar como mensagem"}
-                        </p>
-                      </div>
-                      {!connected ? (
-                        <span className="border-primary-200 text-primary-600 dark:border-primary-500/40 dark:text-primary-300 inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 text-xs-plus font-semibold">
-                          <PlusIcon className="size-3.5" />
-                          {exigeCredenciais(connector.id)
-                            ? "Configurar"
-                            : "Conectar"}
-                        </span>
-                      ) : shared ? (
-                        <span className="inline-flex shrink-0 items-center gap-1 text-xs-plus font-medium text-emerald-600 dark:text-emerald-400">
-                          <CheckIcon className="size-4" />
-                          {kind === "post" ? "Publicado" : "Enviado"}
-                        </span>
-                      ) : (
-                        <span className="text-primary-600 dark:text-primary-400 shrink-0 text-xs-plus font-semibold">
-                          {kind === "post" ? "Publicar" : "Enviar"}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+                  {targets.map((connector) => {
+                    const connected = isConnected(connector.id);
+                    const shared = sharedIds.has(connector.id);
+                    const kind = connectorShareKind(connector);
+                    return (
+                      <button
+                        key={connector.id}
+                        type="button"
+                        onClick={() => {
+                          if (connected) {
+                            handleShare(connector);
+                            return;
+                          }
+                          // Teams e WhatsApp conectam informando as credenciais do
+                          // app da empresa no provedor — o que só a tela de
+                          // Conectores pede. Ligar aqui marcaria conectado sem
+                          // credencial nenhuma.
+                          if (exigeCredenciais(connector.id)) {
+                            navigate(
+                              `/${getCurrentProduct(pathname).code}/conectores`,
+                            );
+                            return;
+                          }
+                          connect(connector.id);
+                        }}
+                        disabled={shared}
+                        className="dark:hover:bg-dark-600 flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 disabled:cursor-default"
+                      >
+                        <ShareTargetLogo connector={connector} />
+                        <div className="min-w-0 flex-1">
+                          <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
+                            {connector.name}
+                          </p>
+                          <p className="dark:text-dark-300 text-tiny text-gray-400">
+                            {!connected
+                              ? exigeCredenciais(connector.id)
+                                ? "Configure as credenciais para compartilhar"
+                                : "Conecte para compartilhar"
+                              : kind === "post"
+                                ? "Publicar como postagem"
+                                : "Enviar como mensagem"}
+                          </p>
+                        </div>
+                        {!connected ? (
+                          <span className="border-primary-200 text-primary-600 dark:border-primary-500/40 dark:text-primary-300 text-xs-plus inline-flex shrink-0 items-center gap-1 rounded-lg border px-2.5 py-1 font-semibold">
+                            <PlusIcon className="size-3.5" />
+                            {exigeCredenciais(connector.id)
+                              ? "Configurar"
+                              : "Conectar"}
+                          </span>
+                        ) : shared ? (
+                          <span className="text-xs-plus inline-flex shrink-0 items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckIcon className="size-4" />
+                            {kind === "post" ? "Publicado" : "Enviado"}
+                          </span>
+                        ) : (
+                          <span className="text-primary-600 dark:text-primary-400 text-xs-plus shrink-0 font-semibold">
+                            {kind === "post" ? "Publicar" : "Enviar"}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
             )}
           </TransitionChild>
         </div>
@@ -1032,8 +1040,7 @@ function PlatformPeoplePicker({
   const people = q
     ? INSIGHT_USUARIOS.filter(
         (u) =>
-          u.nome.toLowerCase().includes(q) ||
-          u.cargo.toLowerCase().includes(q),
+          u.nome.toLowerCase().includes(q) || u.cargo.toLowerCase().includes(q),
       )
     : INSIGHT_USUARIOS;
 
@@ -1079,7 +1086,7 @@ function PlatformPeoplePicker({
                   <p className="dark:text-dark-100 truncate text-sm font-medium text-gray-800">
                     {person.nome}
                   </p>
-                  <p className="dark:text-dark-300 truncate text-tiny text-gray-400">
+                  <p className="dark:text-dark-300 text-tiny truncate text-gray-400">
                     {person.cargo}
                   </p>
                 </div>

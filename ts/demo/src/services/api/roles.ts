@@ -21,8 +21,16 @@ export interface Role {
   permissoes: string[];
   /** Quantos membros usam esta role — deriva o aviso de impacto e a exclusão. */
   membros: number;
-  /** Role de sistema é imutável: não pode ser editada nem excluída. */
+  /**
+   * Pode ser editada e excluída. Falso só para a Owner — Admin, Editor e Viewer
+   * são de sistema por ORIGEM (`tipo`), mas administráveis como qualquer outra.
+   */
   editavel: boolean;
+  /**
+   * É a role do proprietário da organização — a única protegida. Só admite
+   * visualizar e transferir a propriedade.
+   */
+  proprietaria: boolean;
   criadoEm: string; // ISO
   atualizadoEm: string; // ISO
 }
@@ -86,5 +94,37 @@ export async function fetchMinhasPermissoesApi(): Promise<MinhasPermissoes> {
   const { data } = await axios.get<MinhasPermissoes>(
     "/empresa/roles/minhas-permissoes",
   );
+  return data;
+}
+
+export interface TransferirPropriedadeInput {
+  /** Id do MEMBRO que assume a propriedade. */
+  novoOwnerMembroId: string;
+  /**
+   * Role que o proprietário atual passa a ter. Só é usada quando a Owner é a
+   * única role dele — quando já tem outra, o campo é ignorado.
+   */
+  roleParaOwnerAtual?: string;
+}
+
+/**
+ * POST /empresa/roles/owner/transferir
+ *
+ * Muda o proprietário da organização. Só o proprietário atual pode chamar (a
+ * API recusa até para admin, que seria auto-promoção). A Role Owner não é
+ * alterada: continua a mesma entidade, com as mesmas permissões — só muda de
+ * portador.
+ *
+ * Depois de concluir, chame `refreshSession()` do contexto de autenticação: o
+ * papel da conta de quem transferiu muda no banco, e sem isso a interface dele
+ * segue mostrando controles que a API passou a recusar.
+ */
+export async function transferirPropriedadeApi(
+  input: TransferirPropriedadeInput,
+): Promise<{ ownerAnterior: string; ownerAtual: string }> {
+  const { data } = await axios.post<{
+    ownerAnterior: string;
+    ownerAtual: string;
+  }>('/empresa/roles/owner/transferir', input);
   return data;
 }

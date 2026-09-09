@@ -8,7 +8,10 @@ import { useConversasContext } from "@/app/contexts/conversas/context";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { agruparPorPeriodo } from "@/app/pages/ceo/conversas-periodo";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
-import { fetchConversasApi, type ConversaListItem } from "@/services/api/conversas";
+import {
+  fetchConversasApi,
+  type ConversaListItem,
+} from "@/services/api/conversas";
 
 export default function ConversasHistorico() {
   const { pathname } = useLocation();
@@ -36,7 +39,9 @@ export default function ConversasHistorico() {
     }
     setBuscando(true);
     try {
-      setBusca(await fetchConversasApi({ origem: "prompt", q: termo, repositorioId }));
+      setBusca(
+        await fetchConversasApi({ origem: "prompt", q: termo, repositorioId }),
+      );
     } catch {
       setBusca([]);
     } finally {
@@ -96,7 +101,7 @@ export default function ConversasHistorico() {
                   <li key={c.id}>
                     <Link
                       to={`/${product.code}/conversas/${c.id}`}
-                      className="hover:bg-gray-50 dark:hover:bg-dark-600 block px-4 py-3"
+                      className="dark:hover:bg-dark-600 block px-4 py-3 hover:bg-gray-50"
                     >
                       <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
                         {c.title}

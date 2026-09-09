@@ -265,7 +265,7 @@ export function gruposDeRepositorios(
   return [
     {
       chave: "pessoal",
-      rotulo: "Organização pessoal",
+      rotulo: ROTULO_ESCOPO_PESSOAL,
       escopo: "pessoal",
       repositorios: pessoais,
     },
@@ -314,11 +314,38 @@ export function conteudoDoRepositorioAtivo(
   return s.conteudo[repositorioId] ?? conteudoVazio();
 }
 
+/**
+ * Como o escopo pessoal se chama no menu de perfil.
+ *
+ * Constante, e não literal repetido: o menu (`gruposDeRepositorios`) e o título
+ * de Configurações (`rotuloOrganizacaoAtiva`) mostram o MESMO nome, e é isso que
+ * se espera de "a organização selecionada no perfil". Com dois literais, mudar
+ * um deles faria os dois discordarem em silêncio.
+ */
+export const ROTULO_ESCOPO_PESSOAL = "Organização pessoal";
+
 /** Rótulo do escopo do repositório ativo, para o badge de contexto. */
 export function rotuloEscopoAtivo(s: EstadoPrototipo): string {
   const org = organizacaoAtiva(s);
   if (org) return org.nome;
   return repositorioAtivo(s) ? "Repositório pessoal" : "Nenhum repositório";
+}
+
+/**
+ * Rótulo da ORGANIZAÇÃO ativa — o mesmo nome que o menu de perfil lista e
+ * marca como selecionado. `null` = nenhum repositório aberto, logo nenhuma
+ * organização a nomear.
+ *
+ * Separado de `rotuloEscopoAtivo`, que fica logo acima e é parecido de propósito
+ * ATÉ o segundo `return`: aquele serve ao badge de contexto e fala de
+ * REPOSITÓRIO ("Repositório pessoal", "Nenhum repositório"); este fala de
+ * ORGANIZAÇÃO. Reusar um pelo outro põe a palavra errada na tela — e no título
+ * de Configurações a diferença aparece na primeira sessão sem organização.
+ */
+export function rotuloOrganizacaoAtiva(s: EstadoPrototipo): string | null {
+  const org = organizacaoAtiva(s);
+  if (org) return org.nome;
+  return repositorioAtivo(s) ? ROTULO_ESCOPO_PESSOAL : null;
 }
 
 /** Convites pendentes de uma organização. */

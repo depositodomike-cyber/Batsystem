@@ -62,6 +62,23 @@ enum MembroStatus {
   inativo
 }
 
+/// Que ESPÉCIE de vínculo a pessoa tem com a organização — não confundir com
+/// `MembroStatus`, que diz em que ponto do onboarding ela está. Os dois eixos
+/// são independentes: existe convidado ativo, convidado com convite pendente e
+/// convidado inativo.
+///
+/// `convidado` é acesso externo: fica FORA da estrutura organizacional (sem
+/// área, sem cargo, sem posição na hierarquia), não pode ser gestor de ninguém
+/// e carrega exclusivamente a role de sistema `convidado`.
+///
+/// A distinção é estrutural, e não "uma role chamada Convidado", porque ela
+/// decide coisas que role nenhuma decide: quem entra no organograma, quem pode
+/// ser apontado como gestor, e quais campos o cadastro sequer oferece.
+enum MembroTipo {
+  membro
+  convidado
+}
+
 enum RoleTipo {
   sistema
   personalizada
@@ -232,6 +249,15 @@ model Membro {
 
   status MembroStatus @default(convite_pendente)
 
+  /// V8 — `membro` por DEFAULT, e é o default que torna esta coluna aditiva:
+  /// toda linha que já existia continua sendo membro da organização, e nenhuma
+  /// vira convidada sozinha.
+  ///
+  /// Sem índice de propósito. Nenhuma consulta filtra por tipo no servidor — a
+  /// listagem devolve o tenant inteiro e o recorte é no cliente —, então um
+  /// `@@index([empresaId, tipo])` existiria para uma query que não existe.
+  tipo MembroTipo @default(membro)
+
   /// LEGADO (pré-V6). Guardava a role ÚNICA do membro. Substituída por
   /// `MembroRole`, que permite até duas, e lida pela última vez no backfill
   /// da migration `membro_roles_multiplas`. O código novo não a escreve.
@@ -262,9 +288,13 @@ model Membro {
 
   /// V2 — Hierarquia. Gestor direto: a quem este membro responde. Nulo =
   /// topo da estrutura (ou relação ainda não configurada), estado válido.
-  /// É a ÚNICA relação hierárquica persistida: subordinados, cadeia acima e
+  /// É a única relação hierárquica ESTRUTURAL: subordinados, cadeia acima e
   /// árvore inteira são derivados dela. Deliberadamente não há coluna de
   /// nível, para não existir dado que possa divergir das relações.
+  ///
+  /// V7 acrescentou `MembroGestorIndireto`, que é relação de gestão mas NÃO
+  /// entra aqui: a árvore continua sendo montada só por `gestorId`, e é essa
+  /// separação que mantém uma posição por membro. Ver o model.
   ///
   /// Cargo NÃO define hierarquia: dois gerentes podem estar em cadeias
   /// diferentes, e Área é só contexto organizacional.
@@ -277,21 +307,34 @@ model Membro {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  empresa         Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa                       Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   /// SetNull e não Cascade: apagar uma conta não apaga o histórico do vínculo.
-  usuario         Usuario?     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuario                       Usuario?               @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   /// Auto-relação. SetNull e não Cascade: se o gestor deixar de existir
   /// (cancelamento de um convite que era gestor), a equipe dele fica sem
   /// gestor em vez de ser apagada junto.
-  gestor          Membro?      @relation("MembroGestor", fields: [gestorId], references: [id], onDelete: SetNull)
-  subordinados    Membro[]     @relation("MembroGestor")
+  gestor                        Membro?                @relation("MembroGestor", fields: [gestorId], references: [id], onDelete: SetNull)
+  subordinados                  Membro[]               @relation("MembroGestor")
+  /// V7 — Gestores indiretos. `gestoresIndiretos` é a lista DESTE membro;
+  /// `atribuicoesComoGestorIndireto` são as linhas em que ele é o apontado.
+  ///
+  /// O segundo NÃO se chama `subordinadosIndiretos` de propósito: apontar
+  /// alguém como gestor indireto não torna ninguém subordinado dele para
+  /// efeito nenhum — nem de estrutura, nem de acesso a dados, nem de
+  /// permissão. O nome descreve linhas de junção, não pessoas.
+  ///
+  /// Nenhum dos dois é consultado em lugar algum (o Prisma exige o lado
+  /// inverso), exatamente como `subordinados` acima. Não são peso morto a
+  /// limpar: sem eles o schema não valida.
+  gestoresIndiretos             MembroGestorIndireto[] @relation("MembroGestoresIndiretos")
+  atribuicoesComoGestorIndireto MembroGestorIndireto[] @relation("MembroComoGestorIndireto")
   /// LEGADO, junto de `roleId`. SetNull: excluir uma role nunca deixa membro
   /// apontando para id inexistente — e é justamente esse SetNull que faz a
   /// coluna continuar mudando depois de "congelada".
-  role            Role?        @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  role                          Role?                  @relation(fields: [roleId], references: [id], onDelete: SetNull)
   /// V6 — Acesso. As roles do membro (até duas). Fonte de verdade das
   /// permissões efetivas, que são a UNIÃO das permissões destas roles.
-  rolesAtribuidas MembroRole[]
+  rolesAtribuidas               MembroRole[]
   /// `areaRef`/`cargoRef` e não `area`/`cargo`: os escalares legados acima
   /// ocupam esses nomes, e nome de campo é único por model no Prisma. A API
   /// expõe exatamente estes nomes, então front e banco falam a mesma língua.
@@ -301,8 +344,8 @@ model Membro {
   /// apontando para id inexistente. Restrict quebraria o Cascade de Empresa,
   /// porque o Postgres o checa na hora e a ordem das deleções filhas não é
   /// garantida.
-  areaRef         Area?        @relation(fields: [areaId], references: [id], onDelete: SetNull)
-  cargoRef        Cargo?       @relation(fields: [cargoId], references: [id], onDelete: SetNull)
+  areaRef                       Area?                  @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  cargoRef                      Cargo?                 @relation(fields: [cargoId], references: [id], onDelete: SetNull)
 
   @@unique([empresaId, email])
   /// Composta (e não unique em usuarioId sozinho) para não travar a V2+, em que
@@ -414,6 +457,72 @@ model MembroRole {
   /// `membroId`, então não há índice para ele.
   @@index([roleId])
   @@map("membro_roles")
+}
+
+/// V7 — Hierarquia. Gestores indiretos de um membro: as outras lideranças que
+/// têm relação de gestão, acompanhamento ou influência sobre ele.
+///
+/// O SEGUNDO tipo de relação de gestão, e o contraste com `Membro.gestorId` é
+/// a razão de existir desta tabela:
+///
+///   gestorId (1)  → define a POSIÇÃO do membro. A árvore é montada só com ela.
+///   esta tabela (N) → relações COMPLEMENTARES sobre os mesmos nós.
+///
+/// Não virou `gestorId2`, nem uma lista em `Membro`, nem um segundo tipo
+/// dentro de uma tabela só com coluna de tipo: misturar as duas na mesma
+/// estrutura tornaria "qual delas define a posição?" uma pergunta de runtime,
+/// e a árvore passaria a depender de um filtro em vez da forma do dado.
+///
+/// DIRECIONAL. `(membroId: M, gestorIndiretoId: G)` significa "G acompanha M"
+/// e não cria nada no sentido inverso — G continua sem relação nenhuma com M
+/// até que alguém cadastre a linha oposta, que é permitida e independente.
+///
+/// NÃO concede nada. Gestor indireto não dá acesso a dados, não entra em
+/// `permissoesEfetivas`, não sugere role e não coloca o membro na "equipe" de
+/// ninguém para fins de autorização. Essa separação é o ponto: sem ela, editar
+/// a estrutura organizacional passaria a ampliar acesso em silêncio.
+///
+/// NUNCA é derivada. Uma cadeia `Carolina → Renato → Michael` não gera
+/// `(Michael, Carolina)` aqui: superior hierárquico já é dedutível de
+/// `gestorId`, e materializá-lo criaria dado redundante capaz de divergir da
+/// árvore. Toda linha desta tabela foi cadastrada explicitamente por alguém.
+///
+/// Sem `empresaId`, pela mesma regra de `MembroRole`: os dois lados são FK
+/// real para `Membro`, então o Cascade de `Empresa` alcança esta tabela por
+/// dois caminhos, e denormalizar criaria uma terceira fonte capaz de divergir.
+/// Mas seja honesto sobre o que isso NÃO protege: nada no DDL barra um par
+/// entre membros de organizações diferentes. O único guarda é o
+/// `where: { id, empresaId }` de `exigirGestoresDoTenant` no service — como
+/// já acontece com `MembroRole` (membro de A + role de B). É uma escolha,
+/// não uma prova.
+model MembroGestorIndireto {
+  id String @id @default(cuid())
+
+  /// Dono da lista: de quem estes são os gestores indiretos.
+  membroId         String
+  /// Apontado como gestor indireto.
+  gestorIndiretoId String
+
+  criadoEm DateTime @default(now())
+
+  /// Cascade nos dois lados, ao contrário do SetNull de `gestorId`: lá a
+  /// linha apagada seria uma PESSOA, e a equipe dela tem de sobreviver sem
+  /// gestor. Aqui a linha É a relação — sem os dois membros ela não significa
+  /// nada, e apagá-la não deixa ninguém sem posição na estrutura. É isto que
+  /// faz a exclusão de um membro não exigir realocação dos indiretos.
+  membro         Membro @relation("MembroGestoresIndiretos", fields: [membroId], references: [id], onDelete: Cascade)
+  gestorIndireto Membro @relation("MembroComoGestorIndireto", fields: [gestorIndiretoId], references: [id], onDelete: Cascade)
+
+  /// Impede o mesmo gestor indireto duas vezes no mesmo membro, no banco.
+  /// A auto-associação é barrada por um CHECK escrito à mão na migration (o
+  /// Prisma não expressa CHECK). Já a regra "o gestor DIRETO não pode estar
+  /// nesta tabela" compara com `membros.gestorId`, em outra tabela: não cabe
+  /// aqui e vive em `resolverGestoresIndiretos`.
+  @@unique([membroId, gestorIndiretoId])
+  /// Serve "de quem esta pessoa é gestora indireta?". O prefixo da unique já
+  /// cobre `membroId`, então não há índice para ele.
+  @@index([gestorIndiretoId])
+  @@map("membro_gestores_indiretos")
 }
 
 /// V4 — Estrutura. Área organizacional: ONDE a pessoa está alocada.

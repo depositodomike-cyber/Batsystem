@@ -40,20 +40,20 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
     id: 'membros',
     titulo: 'Membros',
     permissoes: [
-      { code: 'membros.visualizar', rotulo: 'Visualizar membros' },
+      { code: 'membros.visualizar', rotulo: 'Visualizar colaboradores' },
       {
         code: 'membros.criar',
-        rotulo: 'Adicionar membros',
+        rotulo: 'Adicionar colaboradores',
         requer: 'membros.visualizar',
       },
       {
         code: 'membros.editar',
-        rotulo: 'Editar membros',
+        rotulo: 'Editar colaboradores',
         requer: 'membros.visualizar',
       },
       {
         code: 'membros.desativar',
-        rotulo: 'Desativar membros',
+        rotulo: 'Desativar colaboradores',
         requer: 'membros.visualizar',
       },
     ],
@@ -241,14 +241,14 @@ export const ROLES_DE_SISTEMA: RoleDeSistema[] = [
     codigo: ROLE_OWNER,
     nome: 'Owner',
     descricao:
-      'Responsável pela conta que criou a organização. Acesso total e exclusivo: não pode ser atribuída a outro membro.',
+      'Responsável pela conta que criou a organização. Acesso total e exclusivo: não pode ser atribuída a outro colaborador.',
     permissoes: TODAS,
   },
   {
     codigo: 'admin',
     nome: 'Admin',
     descricao:
-      'Acesso administrativo amplo: gerencia membros, estrutura, roles e as configurações da organização.',
+      'Acesso administrativo amplo: gerencia colaboradores, estrutura, roles e as configurações da organização.',
     permissoes: TODAS,
   },
   {

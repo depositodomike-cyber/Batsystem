@@ -183,7 +183,7 @@ export function OwnerTransferenciaModal({
             <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
               {confirmando
                 ? `${novoOwner?.nome} passa a ser o proprietário desta organização. Depois de confirmar, você não é mais o proprietário e não poderá desfazer.`
-                : "A propriedade da organização passa para outro membro. Depois da transferência, ele passa a ser o proprietário e você deixa de ser."}
+                : "A propriedade da organização passa para outro colaborador. Depois da transferência, ele passa a ser o proprietário e você deixa de ser."}
             </p>
           </div>
         </div>
@@ -193,7 +193,7 @@ export function OwnerTransferenciaModal({
             <label className="mt-4 block text-sm">
               <RotuloCampo
                 rotulo="Novo proprietário"
-                ajuda="Só membros ativos e com conta de acesso podem assumir a propriedade."
+                ajuda="Só colaboradores ativos e com conta de acesso podem assumir a propriedade."
               />
               <select
                 value={novoOwnerId}
@@ -239,8 +239,8 @@ export function OwnerTransferenciaModal({
 
             {candidatos.length === 0 && (
               <p className="dark:text-dark-300 text-xs-plus mt-3 text-gray-400">
-                Nenhum outro membro pode assumir a propriedade agora. É preciso
-                que alguém esteja ativo e já tenha concluído o acesso.
+                Nenhum outro colaborador pode assumir a propriedade agora. É
+                preciso que alguém esteja ativo e já tenha concluído o acesso.
               </p>
             )}
           </>

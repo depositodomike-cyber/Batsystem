@@ -59,7 +59,7 @@ function AiCard({
         "dark:border-dark-600 dark:bg-dark-700 group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-start transition-colors",
         disabled
           ? "cursor-not-allowed opacity-40"
-          : "dark:hover:border-dark-400 hover:border-gray-300",
+          : "dark:hover:border-dark-400 cursor-pointer hover:border-gray-300",
       )}
     >
       <span

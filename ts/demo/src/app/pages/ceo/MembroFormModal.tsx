@@ -312,11 +312,11 @@ export function MembroFormModal({
     setErro(null);
 
     if (nome.trim() === "") {
-      setErro("Informe o nome do membro.");
+      setErro("Informe o nome do colaborador.");
       return;
     }
     if (email.trim() === "") {
-      setErro("Informe o e-mail do membro.");
+      setErro("Informe o e-mail do colaborador.");
       return;
     }
     if (!emailValido(email.trim())) {
@@ -331,7 +331,7 @@ export function MembroFormModal({
     // ANTES de enviar, no mesmo lugar em que ele escolheria. Sem ela o 409
     // voltaria depois de preencher tudo, sem apontar o campo.
     if (!ehConvidado && roleIds.length === 0) {
-      setErro("Escolha ao menos uma role para o membro.");
+      setErro("Escolha ao menos uma role para o colaborador.");
       return;
     }
 
@@ -396,12 +396,12 @@ export function MembroFormModal({
         className="scrollbar-sm dark:bg-dark-700 relative w-full max-w-md overflow-y-auto rounded-lg bg-white px-5 py-6"
       >
         <DialogTitle className="dark:text-dark-100 text-base font-semibold text-gray-800">
-          {editando ? "Editar membro" : "Adicionar membro"}
+          {editando ? "Editar colaborador" : "Adicionar colaborador"}
         </DialogTitle>
         <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
           {editando
             ? "Atualize os dados da pessoa e a sua posição na organização."
-            : "Adicione um membro à organização."}
+            : "Adicione um colaborador à organização."}
         </p>
 
         <div className="mt-4 space-y-3">
@@ -458,10 +458,9 @@ export function MembroFormModal({
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value as MembroTipo)}
-              // Só na criação. Converter alguém que já existe mexe na
-              // estrutura — pode exigir realocar liderados — e isso vive no
-              // menu da lista, que é de onde a realocação já é aberta. O
-              // formulário nunca abre outro modal; ele aponta o caminho.
+              // Só na criação. Depois disso, a única mudança de tipo que
+              // existe é promover um convidado, e ela vive no menu da lista —
+              // o formulário nunca abre outro modal; ele aponta o caminho.
               disabled={editando}
               className="form-select dark:border-dark-450 dark:bg-dark-700 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -469,16 +468,16 @@ export function MembroFormModal({
               <option value="convidado">{TIPO_MEMBRO.convidado.rotulo}</option>
             </select>
             {/* A DESCRIÇÃO do tipo virou o ícone acima. Isto aqui não é
-                descrição: é onde fazer a operação, com o campo desabilitado —
-                um aviso que destrava o fluxo, e escondê-lo no hover deixaria o
-                operador diante de um select travado sem saída. Fica visível.
-                A ressalva do proprietário só na direção em que ela vale: o item
-                do menu fica escondido para ele, e um item ausente não instrui. */}
+                descrição: é o que fazer com o campo desabilitado. Para o
+                convidado é onde fazer a operação; para quem já é colaborador é
+                o motivo de não haver operação nenhuma — o caminho de volta foi
+                retirado da interface, e um select travado sem explicação é pior
+                do que a explicação. */}
             {editando && (
               <span className="dark:text-dark-300 mt-1 block text-xs font-normal text-gray-400">
                 {ehConvidado
-                  ? 'Use "Converter em membro" no menu da lista.'
-                  : 'Use "Converter em convidado" no menu da lista. O responsável pela conta precisa transferir a propriedade antes.'}
+                  ? 'Use "Converter em colaborador" no menu da lista.'
+                  : "O tipo da conta não muda depois do cadastro."}
               </span>
             )}
           </label>
@@ -685,7 +684,7 @@ export function MembroFormModal({
               <div className="block text-sm">
                 <RotuloCampo
                   rotulo="Roles"
-                  ajuda="Ao menos uma é obrigatória: é a role que define o que a pessoa pode fazer na plataforma. Com duas, o acesso é a soma das duas — se qualquer uma concede, ela pode. As permissões vêm sempre das roles, não há permissão individual por membro."
+                  ajuda="Ao menos uma é obrigatória: é a role que define o que a pessoa pode fazer na plataforma. Com duas, o acesso é a soma das duas — se qualquer uma concede, ela pode. As permissões vêm sempre das roles, não há permissão individual por colaborador."
                 />
                 <div className="space-y-2">
                   {Array.from({ length: slotsVisiveis }, (_, i) => (
@@ -742,7 +741,7 @@ export function MembroFormModal({
               // (o que existe é o aviso de realocação, que fica visível abaixo).
               ajuda={
                 !editando
-                  ? "Todo membro novo entra como convite pendente."
+                  ? "Todo colaborador novo entra como convite pendente."
                   : undefined
               }
             />
@@ -777,9 +776,11 @@ export function MembroFormModal({
             {editando && desativacaoExigeRealocacao && (
               <span className="dark:text-dark-300 mt-1 block text-xs font-normal text-gray-400">
                 {liderados}{" "}
-                {liderados === 1 ? "membro responde" : "membros respondem"} a
-                esta pessoa. Use &ldquo;Desativar membro&rdquo; no menu da lista
-                para escolher quem assume a equipe.
+                {liderados === 1
+                  ? "colaborador responde"
+                  : "colaboradores respondem"}{" "}
+                a esta pessoa. Use &ldquo;Desativar membro&rdquo; no menu da
+                lista para escolher quem assume a equipe.
               </span>
             )}
           </label>

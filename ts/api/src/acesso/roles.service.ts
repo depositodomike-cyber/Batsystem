@@ -281,7 +281,7 @@ export class RolesService {
 
     if (emUso > 0 && query.reatribuirPara === undefined) {
       throw new ConflictException(
-        `${emUso} ${emUso === 1 ? 'membro usa' : 'membros usam'} esta role. Escolha por qual role ela será substituída antes de excluir.`,
+        `${emUso} ${emUso === 1 ? 'colaborador usa' : 'colaboradores usam'} esta role. Escolha por qual role ela será substituída antes de excluir.`,
       );
     }
 
@@ -308,7 +308,7 @@ export class RolesService {
       // a usavam, sem tirar nada deles.
       if (destino.codigo === ROLE_OWNER) {
         throw new ForbiddenException(
-          'A role Owner é exclusiva do responsável pela conta e não pode receber outros membros.',
+          'A role Owner é exclusiva do responsável pela conta e não pode receber outros colaboradores.',
         );
       }
       destinoId = destino.id;
@@ -343,7 +343,7 @@ export class RolesService {
         const orfaos = await this.contarMembrosSemOutraRole(tx, atual.id);
         if (orfaos > 0) {
           throw new ConflictException(
-            `${orfaos} ${orfaos === 1 ? 'membro ficaria' : 'membros ficariam'} sem role nenhuma. Escolha por qual role esta será substituída.`,
+            `${orfaos} ${orfaos === 1 ? 'colaborador ficaria' : 'colaboradores ficariam'} sem role nenhuma. Escolha por qual role esta será substituída.`,
           );
         }
       }
@@ -481,7 +481,7 @@ export class RolesService {
       });
       if (!destino || destino.usuarioId == null) {
         throw new NotFoundException(
-          'Este membro não pode receber a propriedade: ele precisa fazer parte desta organização, estar ativo e já ter conta de acesso.',
+          'Este colaborador não pode receber a propriedade: ele precisa fazer parte desta organização, estar ativo e já ter conta de acesso.',
         );
       }
       if (destino.usuarioId === usuarioLogadoId) {
@@ -745,7 +745,7 @@ export class RolesService {
     // que TODO convidado pode fazer.
     if (role.codigo === ROLE_CONVIDADO) {
       throw new ForbiddenException(
-        'A role Convidado é do sistema: não pode ser editada nem excluída. Ela é atribuída automaticamente aos membros do tipo convidado.',
+        'A role Convidado é do sistema: não pode ser editada nem excluída. Ela é atribuída automaticamente aos colaboradores do tipo convidado.',
       );
     }
   }

@@ -202,7 +202,7 @@ export class MembrosService {
       select: { id: true },
     });
     if (jaExiste) {
-      throw new ConflictException('Já existe um membro com este e-mail.');
+      throw new ConflictException('Já existe um colaborador com este e-mail.');
     }
 
     // Se o e-mail já é de um usuário DESTA empresa, o membro nasce vinculado e
@@ -241,7 +241,7 @@ export class MembrosService {
         (dto.roleIds?.length ? 'roles' : null);
       if (estruturais != null) {
         throw new ConflictException(
-          'Um membro convidado não tem área, cargo, gestores nem roles próprias: ele recebe a role Convidado automaticamente.',
+          'Um colaborador convidado não tem área, cargo, gestores nem roles próprias: ele recebe a role Convidado automaticamente.',
         );
       }
     }
@@ -291,7 +291,7 @@ export class MembrosService {
     // seria uma instrução impossível de cumprir.
     if (!ehConvidado && roleIds.length === 0) {
       throw new BadRequestException(
-        'Escolha ao menos uma role para o membro: ela é o que define o que a pessoa pode fazer na plataforma.',
+        'Escolha ao menos uma role para o colaborador: ela é o que define o que a pessoa pode fazer na plataforma.',
       );
     }
 
@@ -343,7 +343,7 @@ export class MembrosService {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        throw new ConflictException('Já existe um membro com este e-mail.');
+        throw new ConflictException('Já existe um colaborador com este e-mail.');
       }
       throw err;
     }
@@ -487,7 +487,7 @@ export class MembrosService {
           select: { id: true },
         });
         if (colide) {
-          throw new ConflictException('Já existe um membro com este e-mail.');
+          throw new ConflictException('Já existe um colaborador com este e-mail.');
         }
         data.email = email;
       }
@@ -523,7 +523,7 @@ export class MembrosService {
     // isso.
     if (tipoMudou && !ehConvidado && (rolesDesejadas?.length ?? 0) === 0) {
       throw new ConflictException(
-        'Escolha a role que este membro terá ao deixar de ser convidado.',
+        'Escolha a role que este colaborador terá ao deixar de ser convidado.',
       );
     }
 
@@ -548,7 +548,7 @@ export class MembrosService {
       atual.rolesAtribuidas.length > 0
     ) {
       throw new ConflictException(
-        'Um membro precisa de ao menos uma role. Escolha a nova antes de remover a atual.',
+        'Um colaborador precisa de ao menos uma role. Escolha a nova antes de remover a atual.',
       );
     }
 
@@ -597,7 +597,7 @@ export class MembrosService {
         dto.gestorIndiretoIds.length > 0
       ) {
         throw new ConflictException(
-          'Um membro convidado não tem gestores indiretos. Converta-o em membro antes de definir este campo.',
+          'Um colaborador convidado não tem gestores indiretos. Converta-o em colaborador antes de definir este campo.',
         );
       }
       if (indiretosAtuais.length > 0) indiretosDesejados = [];
@@ -762,7 +762,7 @@ export class MembrosService {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
-        throw new ConflictException('Já existe um membro com este e-mail.');
+        throw new ConflictException('Já existe um colaborador com este e-mail.');
       }
       throw err;
     }
@@ -791,7 +791,7 @@ export class MembrosService {
         );
       }
       throw new ConflictException(
-        'Membro com conta não é excluído; use o status Inativo.',
+        'Colaborador com conta não é excluído; use o status Inativo.',
       );
     }
 
@@ -842,7 +842,7 @@ export class MembrosService {
 
     if (reatribuirLiderados === undefined || reatribuirLiderados === '') {
       throw new ConflictException(
-        `${liderados} ${liderados === 1 ? 'membro responde' : 'membros respondem'} a esta pessoa. Escolha uma nova liderança para ${liderados === 1 ? 'ele' : 'eles'} antes de continuar.`,
+        `${liderados} ${liderados === 1 ? 'colaborador responde' : 'colaboradores respondem'} a esta pessoa. Escolha uma nova liderança para ${liderados === 1 ? 'ele' : 'eles'} antes de continuar.`,
       );
     }
 
@@ -851,7 +851,7 @@ export class MembrosService {
     // deixando todos os liderados como raiz — o desfecho errado, sem erro.
     if (reatribuirLiderados === gestor.id) {
       throw new ConflictException(
-        'A nova liderança não pode ser o próprio membro que está saindo da estrutura.',
+        'A nova liderança não pode ser o próprio colaborador que está saindo da estrutura.',
       );
     }
 
@@ -866,7 +866,7 @@ export class MembrosService {
       )
     ) {
       throw new ConflictException(
-        'A nova liderança escolhida responde a este membro, direta ou indiretamente. Escolha alguém de fora da equipe dele.',
+        'A nova liderança escolhida responde a este colaborador, direta ou indiretamente. Escolha alguém de fora da equipe dele.',
       );
     }
 
@@ -904,7 +904,7 @@ export class MembrosService {
       (await this.estaAbaixoDe(db, empresaId, gestorId, novoGestorId))
     ) {
       throw new ConflictException(
-        'A hierarquia mudou enquanto esta operação estava aberta: a liderança escolhida agora responde a este membro. Recarregue e tente de novo.',
+        'A hierarquia mudou enquanto esta operação estava aberta: a liderança escolhida agora responde a este colaborador. Recarregue e tente de novo.',
       );
     }
 
@@ -952,7 +952,7 @@ export class MembrosService {
       include: INCLUDE_MEMBRO,
     });
     if (!membro) {
-      throw new NotFoundException('Membro não encontrado.');
+      throw new NotFoundException('Colaborador não encontrado.');
     }
     return membro;
   }
@@ -1016,7 +1016,7 @@ export class MembrosService {
       // contraditórias na mesma requisição, e nenhuma delas é eco.
       if (roleIds.length > 0 && (roleIds.length !== 1 || roleIds[0] !== alvo)) {
         throw new ConflictException(
-          'Um membro convidado tem exclusivamente a role Convidado. Converta-o em membro para atribuir outras roles.',
+          'Um colaborador convidado tem exclusivamente a role Convidado. Converta-o em colaborador para atribuir outras roles.',
         );
       }
       return [alvo];
@@ -1065,7 +1065,7 @@ export class MembrosService {
     // "Transferir propriedade".
     if (idOwner != null && perdidas.includes(idOwner)) {
       throw new ConflictException(
-        'A role Owner não pode ser removida no cadastro do membro. Use "Transferir propriedade" na aba Acesso.',
+        'A role Owner não pode ser removida no cadastro do colaborador. Use "Transferir propriedade" na seção Roles.',
       );
     }
 
@@ -1200,7 +1200,7 @@ export class MembrosService {
     // exclusividade da Owner neste método.
     if (role.codigo === ROLE_CONVIDADO) {
       throw new ForbiddenException(
-        'A role Convidado é atribuída automaticamente aos membros do tipo convidado e não pode ser escolhida no cadastro.',
+        'A role Convidado é atribuída automaticamente aos colaboradores do tipo convidado e não pode ser escolhida no cadastro.',
       );
     }
 
@@ -1218,7 +1218,7 @@ export class MembrosService {
 
     if (conta?.role !== 'owner') {
       throw new ForbiddenException(
-        'A role Owner é exclusiva do responsável pela conta e não pode ser atribuída a outro membro.',
+        'A role Owner é exclusiva do responsável pela conta e não pode ser atribuída a outro colaborador.',
       );
     }
   }
@@ -1234,7 +1234,7 @@ export class MembrosService {
     await this.exigirGestoresDoTenant(empresaId, [gestorId], {
       foraDoTenant: 'O gestor escolhido não faz parte desta organização.',
       convidado:
-        'Um membro convidado não pode ser gestor: convidados não participam da estrutura da organização.',
+        'Um colaborador convidado não pode ser gestor: convidados não participam da estrutura da organização.',
     });
   }
 
@@ -1323,7 +1323,7 @@ export class MembrosService {
 
     if (membroId != null && ids.includes(membroId)) {
       throw new ConflictException(
-        'Um membro não pode ser gestor indireto de si mesmo.',
+        'Um colaborador não pode ser gestor indireto de si mesmo.',
       );
     }
 
@@ -1355,7 +1355,7 @@ export class MembrosService {
       foraDoTenant:
         'Um dos gestores indiretos escolhidos não faz parte desta organização.',
       convidado:
-        'Um dos gestores indiretos escolhidos é um membro convidado: convidados não participam da estrutura da organização.',
+        'Um dos gestores indiretos escolhidos é um colaborador convidado: convidados não participam da estrutura da organização.',
     });
 
     return ids;
@@ -1414,14 +1414,14 @@ export class MembrosService {
   ): Promise<void> {
     // Regra 02 — ninguém é gestor de si mesmo.
     if (gestorId === membroId) {
-      throw new ConflictException('Um membro não pode ser gestor de si mesmo.');
+      throw new ConflictException('Um colaborador não pode ser gestor de si mesmo.');
     }
 
     await this.exigirGestorDoTenant(empresaId, gestorId);
 
     if (await this.estaAbaixoDe(this.prisma, empresaId, membroId, gestorId)) {
       throw new ConflictException(
-        'Essa escolha criaria um ciclo na hierarquia: o gestor escolhido já responde a este membro.',
+        'Essa escolha criaria um ciclo na hierarquia: o gestor escolhido já responde a este colaborador.',
       );
     }
   }

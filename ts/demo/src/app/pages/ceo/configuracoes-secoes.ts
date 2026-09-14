@@ -118,7 +118,7 @@ export const SECOES = [
   {
     id: "membros",
     grupo: "estrutura",
-    titulo: "Membros",
+    titulo: "Colaboradores",
     icon: UsersIcon,
     feature: null,
   },

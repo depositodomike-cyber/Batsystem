@@ -38,6 +38,12 @@ export interface EstruturaItem {
 export type Area = EstruturaItem;
 export type Cargo = EstruturaItem;
 
+/**
+ * Valor de realocação que conclui a exclusão sem destino: os colaboradores
+ * ficam sem área / sem cargo. Espelha `SEM_REALOCACAO` da API.
+ */
+export const SEM_REALOCACAO = "nenhuma";
+
 export interface CriarEstruturaInput {
   nome: string;
   descricao?: string;
@@ -48,6 +54,12 @@ export interface AtualizarEstruturaInput {
   /** String vazia limpa a descrição (convenção de área/cargo em membros). */
   descricao?: string;
   status?: EstruturaStatus;
+  /**
+   * Destino OPCIONAL dos colaboradores, honrado só quando este PATCH desativa.
+   * Ausente = desativar preservando os vínculos, que é o comportamento de
+   * sempre. Não aceita `SEM_REALOCACAO`: desativar não desfaz associação.
+   */
+  realocarPara?: string;
 }
 
 export interface ListarEstruturaParams {
@@ -84,14 +96,20 @@ export async function atualizarAreaApi(
 }
 
 /**
- * DELETE /empresa/areas/:id
+ * DELETE /empresa/areas/:id?realocarPara=<id|nenhuma>
  *
- * Só passa quando nenhum membro está na área. Com membros, a API recusa com
- * 409 e a contagem — a saída é desativar, que preserva os vínculos. Nunca há
- * exclusão em cascata.
+ * Com colaboradores vinculados a resolução é OBRIGATÓRIA — não a realocação.
+ * Sem o parâmetro a API recusa com 409 e a contagem; com `SEM_REALOCACAO` ela
+ * conclui e os colaboradores ficam sem área. Nunca há exclusão em cascata: o
+ * que sai é a associação, nunca a pessoa.
  */
-export async function removerAreaApi(id: string): Promise<void> {
-  await axios.delete(`/empresa/areas/${encodeURIComponent(id)}`);
+export async function removerAreaApi(
+  id: string,
+  realocarPara?: string,
+): Promise<void> {
+  await axios.delete(`/empresa/areas/${encodeURIComponent(id)}`, {
+    params: realocarPara ? { realocarPara } : undefined,
+  });
 }
 
 // --------------------------------------------------------------- Cargos
@@ -124,7 +142,12 @@ export async function atualizarCargoApi(
   return data;
 }
 
-/** DELETE /empresa/cargos/:id → só quando nenhum membro ocupa o cargo. */
-export async function removerCargoApi(id: string): Promise<void> {
-  await axios.delete(`/empresa/cargos/${encodeURIComponent(id)}`);
+/** DELETE /empresa/cargos/:id?realocarPara=<id|nenhuma> — ver a de áreas. */
+export async function removerCargoApi(
+  id: string,
+  realocarPara?: string,
+): Promise<void> {
+  await axios.delete(`/empresa/cargos/${encodeURIComponent(id)}`, {
+    params: realocarPara ? { realocarPara } : undefined,
+  });
 }

@@ -34,20 +34,20 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
     titulo: "Membros",
     descricao: "Quem faz parte da organização.",
     permissoes: [
-      { code: "membros.visualizar", rotulo: "Visualizar membros" },
+      { code: "membros.visualizar", rotulo: "Visualizar colaboradores" },
       {
         code: "membros.criar",
-        rotulo: "Adicionar membros",
+        rotulo: "Adicionar colaboradores",
         requer: "membros.visualizar",
       },
       {
         code: "membros.editar",
-        rotulo: "Editar membros",
+        rotulo: "Editar colaboradores",
         requer: "membros.visualizar",
       },
       {
         code: "membros.desativar",
-        rotulo: "Desativar membros",
+        rotulo: "Desativar colaboradores",
         requer: "membros.visualizar",
       },
     ],
@@ -55,7 +55,7 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
   {
     id: "estrutura",
     titulo: "Estrutura",
-    descricao: "Áreas, cargos e a hierarquia entre os membros.",
+    descricao: "Áreas, cargos e a hierarquia entre os colaboradores.",
     permissoes: [
       { code: "estrutura.visualizar", rotulo: "Visualizar estrutura" },
       {

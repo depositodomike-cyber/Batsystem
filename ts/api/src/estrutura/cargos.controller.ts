@@ -14,6 +14,7 @@ import { CargosService } from './cargos.service';
 import { CriarEstruturaDto } from './dto/criar-estrutura.dto';
 import { AtualizarEstruturaDto } from './dto/atualizar-estrutura.dto';
 import { ListarEstruturaQuery } from './dto/listar-estrutura.query';
+import { ExcluirEstruturaQuery } from './dto/excluir-estrutura.query';
 import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
@@ -70,16 +71,21 @@ export class CargosController {
   }
 
   /**
-   * DELETE /empresa/cargos/:id → exclui um cargo sem membros.
+   * DELETE /empresa/cargos/:id?realocarPara=<id|nenhuma> → exclui.
    *
-   * Com membros vinculados recusa com 409 e a contagem, orientando a
-   * desativar.
+   * Com colaboradores vinculados e SEM `realocarPara`, recusa com 409 e a
+   * contagem: a resolução é sempre explícita. Com destino, move todo mundo e
+   * exclui na mesma transação; com `nenhuma`, eles ficam sem cargo.
    */
   @Delete(':id')
   @UseGuards(PermissoesGuard)
   @RequerPermissao('estrutura.gerenciar')
   @HttpCode(204)
-  remover(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
-    return this.cargos.remover(user.empresaId, id);
+  remover(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query() query: ExcluirEstruturaQuery,
+  ) {
+    return this.cargos.remover(user.empresaId, id, query);
   }
 }

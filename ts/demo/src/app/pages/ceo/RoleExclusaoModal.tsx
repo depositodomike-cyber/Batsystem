@@ -149,8 +149,8 @@ export function RoleExclusaoModal({
             </DialogTitle>
             <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
               {emUso > 0
-                ? `${emUso} ${emUso === 1 ? "membro usa" : "membros usam"} esta role. Escolha por qual role ela será substituída antes de excluir.`
-                : "Nenhum membro usa esta role. A exclusão não afeta ninguém."}
+                ? `${emUso} ${emUso === 1 ? "colaborador usa" : "colaboradores usam"} esta role. Escolha por qual role ela será substituída antes de excluir.`
+                : "Nenhum colaborador usa esta role. A exclusão não afeta ninguém."}
             </p>
           </div>
         </div>
@@ -190,9 +190,9 @@ export function RoleExclusaoModal({
         {emUso > 0 && !podeDeixarSemRole && (
           <p className="dark:text-dark-300 text-xs-plus mt-2 text-gray-500">
             {membrosQueFicariamSemRole === 1
-              ? "1 membro tem esta como única role"
-              : `${membrosQueFicariamSemRole} membros têm esta como única role`}
-            , e todo membro precisa de ao menos uma
+              ? "1 colaborador tem esta como única role"
+              : `${membrosQueFicariamSemRole} colaboradores têm esta como única role`}
+            , e todo colaborador precisa de ao menos uma
             {semSaida
               ? ". Crie ou atribua outra role antes de excluir esta."
               : " — por isso não há a opção de deixar sem role."}

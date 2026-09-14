@@ -34,8 +34,9 @@ export interface AiFunction {
 
 /**
  * Quando true, o AI Studio inteiro fica bloqueado (grade opaca + modal
- * “Em breve”). Uploads do Repositório (áudio/transcrição) têm flags próprias
- * em `temporarilyDisabledFeatures.ts` — não remova as funções.
+ * “Em breve”), e a allowlist abaixo não tem efeito. Hoje é false: o Studio
+ * está parcialmente aberto. Uploads do Repositório (áudio/transcrição) têm
+ * flags próprias em `temporarilyDisabledFeatures.ts` — não remova as funções.
  */
 export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
 
@@ -44,12 +45,15 @@ export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
  * - `null` → todas as funções da grade liberadas (quando `AI_STUDIO_DISABLED` é false)
  * - `Set([...])` → só esses ids ficam clicáveis; o restante permanece opaco
  *
- * Sem liberação parcial no momento: o AI Studio está desabilitado por inteiro
- * (`aiStudio` em temporarilyDisabledFeatures.ts), então esta lista não tem
- * efeito. Ao reabrir o Studio, `null` devolve a grade completa; para voltar a
- * liberar só algumas funções, troque por um `Set` com os ids.
+ * Hoje só "Criar apresentação". É uma lista de PERMITIDOS, e não de bloqueados,
+ * pelo mesmo motivo de `CONECTORES_HABILITADOS`: uma função nova no catálogo
+ * entra desabilitada por padrão, em vez de ser liberada em silêncio.
+ *
+ * Para liberar outra, acrescente o id (os ids estão em `FUNCTIONS`, abaixo);
+ * para devolver a grade inteira, volte a `null`.
  */
-export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null = null;
+export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null =
+  new Set(["apresentacao"]);
 
 /** Indica se uma função da grade do AI Studio está temporariamente desabilitada. */
 export function isAiStudioFunctionDisabled(id: string): boolean {

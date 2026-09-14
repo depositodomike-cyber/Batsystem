@@ -15,7 +15,7 @@ import { MAX_GESTORES_INDIRETOS } from '../membros.constants';
 /** Payload de criação de um membro da organização (V1: sem papel/permissão). */
 export class CriarMembroDto {
   @IsString()
-  @IsNotEmpty({ message: 'Informe o nome do membro.' })
+  @IsNotEmpty({ message: 'Informe o nome do colaborador.' })
   @MaxLength(160, { message: 'O nome deve ter no máximo 160 caracteres.' })
   nome!: string;
 
@@ -85,7 +85,7 @@ export class CriarMembroDto {
    * convidado ativo, com convite pendente e inativo.
    */
   @IsOptional()
-  @IsEnum(MembroTipo, { message: 'Tipo de membro inválido.' })
+  @IsEnum(MembroTipo, { message: 'Tipo de conta inválido.' })
   tipo?: MembroTipo;
 
   @IsOptional()
@@ -146,7 +146,7 @@ export class CriarMembroDto {
    */
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(2, { message: 'Um membro pode ter no máximo 2 roles.' })
+  @ArrayMaxSize(2, { message: 'Um colaborador pode ter no máximo 2 roles.' })
   @IsString({ each: true })
   roleIds?: string[];
 

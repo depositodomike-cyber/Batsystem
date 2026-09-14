@@ -139,17 +139,18 @@ export function RoleDrawer({
                         <>
                           Este é o acesso do proprietário da organização: não
                           pode ser editado, desativado nem excluído, e pertence
-                          a um único membro. Para mudar de proprietário, use
-                          &ldquo;Transferir propriedade&rdquo;.
+                          a um único colaborador. Para mudar de proprietário,
+                          use &ldquo;Transferir propriedade&rdquo;.
                         </>
                       ) : (
                         // Sem a frase "pertence a um único membro", que é
                         // verdade só da Owner: a Convidado pertence a TODOS os
                         // membros do tipo convidado.
                         <>
-                          Este é o acesso dos membros convidados: não pode ser
-                          editado nem excluído, e é atribuído automaticamente
-                          quando alguém é cadastrado ou convertido em convidado.
+                          Este é o acesso dos colaboradores convidados: não pode
+                          ser editado nem excluído, e é atribuído
+                          automaticamente quando alguém é cadastrado como
+                          convidado.
                         </>
                       )}
                     </p>
@@ -159,13 +160,13 @@ export function RoleDrawer({
 
                   <section>
                     <p className="dark:text-dark-200 text-xs font-semibold tracking-wider text-gray-500 uppercase">
-                      Membros com esta role
+                      Colaboradores com esta role
                       {comEstaRole.length > 0 && ` (${comEstaRole.length})`}
                     </p>
                     <div className="dark:divide-dark-600 dark:border-dark-600 mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200">
                       {comEstaRole.length === 0 ? (
                         <p className="dark:text-dark-300 text-xs-plus px-3.5 py-3 text-gray-400">
-                          Nenhum membro usa esta role no momento.
+                          Nenhum colaborador usa esta role no momento.
                         </p>
                       ) : (
                         comEstaRole.map((m) => (

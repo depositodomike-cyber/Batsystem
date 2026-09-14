@@ -29,7 +29,11 @@ export class AreasService extends EstruturaService {
     nomeDuplicadoInativo:
       'Já existe uma área inativa com este nome. Reative-a em vez de criar outra.',
     emUso: (membros) =>
-      `${membros} ${membros === 1 ? 'membro está' : 'membros estão'} nesta área. Desative-a em vez de excluir: o vínculo de quem já está nela é preservado.`,
+      `${membros} ${membros === 1 ? 'colaborador está' : 'colaboradores estão'} nesta área. Escolha para qual área realocá-los, ou confirme sem destino — eles ficam sem área.`,
+    destinoNaoEncontrado: 'A área de destino não faz parte desta organização.',
+    destinoInativo: (nome) =>
+      `A área "${nome}" está inativa e não pode receber colaboradores. Reative-a antes de escolhê-la como destino.`,
+    destinoEhAOrigem: 'A área de destino não pode ser a que está saindo.',
   };
 
   constructor(private readonly prisma: PrismaService) {
@@ -76,6 +80,53 @@ export class AreasService extends EstruturaService {
 
       excluir: async (id): Promise<void> => {
         await prismaService.area.delete({ where: { id } });
+      },
+
+      transacao: <T,>(
+        fn: (db: Prisma.TransactionClient) => Promise<T>,
+      ): Promise<T> => prismaService.$transaction(fn),
+
+      atualizarEm: (
+        db,
+        id,
+        dados: DadosAtualizacaoEstrutura,
+      ): Promise<EstruturaComContagem> =>
+        db.area.update({
+          where: { id },
+          data: dados,
+          include: INCLUDE_CONTAGEM,
+        }),
+
+      contarMembrosEm: (db, empresaId, id): Promise<number> =>
+        db.membro.count({
+          where: { empresaId, areaId: id, tipo: MembroTipo.membro },
+        }),
+
+      realocarMembros: async (
+        db,
+        empresaId,
+        deId,
+        destinoId,
+      ): Promise<number> => {
+        const { count } = await db.membro.updateMany({
+          // O MESMO filtro da contagem, `tipo` incluído: o número que a tela
+          // mostrou tem de ser o número de linhas que esta operação toca.
+          where: { empresaId, areaId: deId, tipo: MembroTipo.membro },
+          // Sem destino, a coluna legada de texto sai junto. Sem isso o
+          // colaborador fica com `areaId: null` e a tela segue exibindo o
+          // nome antigo, porque o rótulo no front cai no texto legado quando
+          // não há entidade. É a segunda escrita do código novo nessas
+          // colunas congeladas — a outra é a conversão para convidado.
+          data:
+            destinoId == null
+              ? { areaId: null, area: null }
+              : { areaId: destinoId },
+        });
+        return count;
+      },
+
+      excluirEm: async (db, id): Promise<void> => {
+        await db.area.delete({ where: { id } });
       },
 
       contarMembros: (empresaId, areaId): Promise<number> =>

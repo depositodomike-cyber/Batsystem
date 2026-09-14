@@ -131,7 +131,7 @@ export function OrganogramaCard({
             vira ruído sem responder a pergunta que o organograma faz, que é
             quem responde a quem. Inativo fica porque diz que a pessoa NÃO tem
             acesso — informação que a posição na árvore não dá.
-            A listagem de Membros continua mostrando os três status, com filtro
+            A listagem de Colaboradores continua mostrando os três status, com filtro
             próprio; é lá que se pergunta "quem ainda não entrou?". */}
         {membro.status === "inativo" && (
           <Badge

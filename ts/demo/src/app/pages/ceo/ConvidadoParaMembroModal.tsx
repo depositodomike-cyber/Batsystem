@@ -73,7 +73,7 @@ export function ConvidadoParaMembroModal({
       setErro(
         mensagemErroMembro(
           err,
-          "Não foi possível converter em membro. Tente novamente.",
+          "Não foi possível converter em colaborador. Tente novamente.",
         ),
       );
     } finally {
@@ -115,7 +115,7 @@ export function ConvidadoParaMembroModal({
             <ArrowsRightLeftIcon className="text-primary-600 dark:text-primary-400 mt-0.5 size-6 shrink-0" />
             <div className="min-w-0">
               <DialogTitle className="dark:text-dark-100 text-base font-semibold text-gray-800">
-                Converter em membro
+                Converter em colaborador
               </DialogTitle>
               <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
                 {membro?.nome} passa a fazer parte da organização e volta a
@@ -127,7 +127,7 @@ export function ConvidadoParaMembroModal({
           <label className="mt-4 block text-sm">
             <RotuloCampo
               rotulo="Role"
-              ajuda="A role Convidado é removida. Área, cargo e gestor direto ficam em branco — configure-os depois em “Editar membro”."
+              ajuda="A role Convidado é removida. Área, cargo e gestor direto ficam em branco — configure-os depois em “Editar colaborador”."
             />
             <select
               value={roleId}
@@ -157,7 +157,7 @@ export function ConvidadoParaMembroModal({
               onClick={confirmar}
               disabled={salvando || roleId === ""}
             >
-              {salvando ? "Convertendo…" : "Converter em membro"}
+              {salvando ? "Convertendo…" : "Converter em colaborador"}
             </Button>
           </div>
         </TransitionChild>

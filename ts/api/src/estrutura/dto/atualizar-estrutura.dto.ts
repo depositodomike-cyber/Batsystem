@@ -28,4 +28,22 @@ export class AtualizarEstruturaDto {
   @IsOptional()
   @IsEnum(EstruturaStatus, { message: 'Status inválido.' })
   status?: EstruturaStatus;
+
+  /**
+   * Destino OPCIONAL dos colaboradores, honrado só quando este PATCH desativa
+   * (ativo → inativo). Em qualquer outra edição é aceito e ignorado — mesma
+   * convenção de `AtualizarMembroDto.reatribuirLiderados`.
+   *
+   * Ausente não é omissão de decisão, ao contrário da exclusão: desativar sem
+   * realocar preserva os vínculos, e é um desfecho legítimo. Por isso aqui não
+   * há 409 quando o campo falta.
+   *
+   * Não aceita o `"nenhuma"` de `ExcluirEstruturaQuery`: "desativar deixando
+   * todo mundo sem área" não é uma operação que a tela oferece, e aceitá-la
+   * seria a via de contorno da própria distinção entre desativar e excluir.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  realocarPara?: string;
 }

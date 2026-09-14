@@ -211,7 +211,6 @@ export function MembrosLista({
   onReativar,
   onCancelarConvite,
   onConverter,
-  ownerMembroId,
 }: {
   membros: Membro[];
   carregando: boolean;
@@ -223,16 +222,8 @@ export function MembrosLista({
   onDesativar: (membro: Membro) => void;
   onReativar: (membro: Membro) => void;
   onCancelarConvite: (membro: Membro) => void;
-  /** Converter entre membro e convidado, nas duas direções. */
+  /** Promover um convidado a colaborador da organização. */
   onConverter: (membro: Membro) => void;
-  /**
-   * Membro que carrega a role Owner, para o item de conversão não aparecer
-   * para ele: o proprietário precisa transferir a propriedade antes.
-   *
-   * Um id, e não a lista de roles: a listagem não recebe `roles` hoje, e a
-   * derivação já existe na página.
-   */
-  ownerMembroId: string | null;
 }) {
   const [query, setQuery] = useState("");
   const [filtros, setFiltros] = useState<FiltrosMembros>(FILTROS_PADRAO);
@@ -365,7 +356,7 @@ export function MembrosLista({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por nome, e-mail, área, cargo, gestor ou role…"
-            aria-label="Buscar membros"
+            aria-label="Buscar colaboradores"
             className="form-input dark:border-dark-450 dark:bg-dark-900 dark:text-dark-100 dark:placeholder:text-dark-300 h-9 w-full rounded-lg border border-gray-300 bg-white ps-9 pe-9 text-sm placeholder:text-gray-400"
           />
           {query && (
@@ -382,7 +373,8 @@ export function MembrosLista({
 
         <div className="flex items-center gap-3">
           <p className="dark:text-dark-300 text-xs-plus text-gray-500">
-            {membros.length} {membros.length === 1 ? "membro" : "membros"}
+            {membros.length}{" "}
+            {membros.length === 1 ? "colaborador" : "colaboradores"}
             {" · "}
             {ativos} {ativos === 1 ? "ativo" : "ativos"}
             {pendentes > 0 && ` · ${pendentes} com convite pendente`}
@@ -395,7 +387,7 @@ export function MembrosLista({
             className="h-9 shrink-0 gap-1.5 rounded-lg px-3"
           >
             <PlusIcon className="size-4.5 stroke-[1.5]" />
-            Adicionar membro
+            Adicionar colaborador
           </Button>
         </div>
       </div>
@@ -434,7 +426,7 @@ export function MembrosLista({
                 então lê-se antes deles. */}
             {opcoes.temConvidado && opcoes.temMembro && (
               <SelectFiltro
-                rotulo="Filtrar por tipo de membro"
+                rotulo="Filtrar por tipo de colaborador"
                 valor={filtros.tipo}
                 onChange={(v) => definir("tipo", v as MembroTipo | "")}
               >
@@ -536,7 +528,7 @@ export function MembrosLista({
       ) : erroCarga ? (
         <EstadoVazio
           icon={UsersIcon}
-          titulo="Não foi possível carregar os membros"
+          titulo="Não foi possível carregar os colaboradores"
           hint={erroCarga}
           acao={{ rotulo: "Tentar de novo", onClick: onRecarregar }}
         />
@@ -546,15 +538,15 @@ export function MembrosLista({
            filtros". */
         <EstadoVazio
           icon={UsersIcon}
-          titulo="Nenhum membro ainda"
+          titulo="Nenhum colaborador ainda"
           hint="Adicione as pessoas da sua organização para começar."
-          acao={{ rotulo: "Adicionar membro", onClick: onAdicionar }}
+          acao={{ rotulo: "Adicionar colaborador", onClick: onAdicionar }}
         />
       ) : filtrados.length === 0 ? (
         algumFiltroAtivo ? (
           <EstadoVazio
             icon={FunnelIcon}
-            titulo="Nenhum membro com esses filtros"
+            titulo="Nenhum colaborador com esses filtros"
             hint={
               query
                 ? "Ajuste a busca ou os filtros para ver mais pessoas."
@@ -570,7 +562,7 @@ export function MembrosLista({
         ) : (
           <EstadoVazio
             icon={MagnifyingGlassIcon}
-            titulo="Nenhum membro encontrado"
+            titulo="Nenhum colaborador encontrado"
             hint="Ajuste a busca para ver mais pessoas."
             acao={{ rotulo: "Limpar busca", onClick: () => setQuery("") }}
           />
@@ -585,7 +577,7 @@ export function MembrosLista({
             <THead>
               <Tr className="dark:border-dark-600 dark:bg-dark-800 border-b border-gray-200 bg-gray-50">
                 {[
-                  "Membro",
+                  "Colaborador",
                   "E-mail",
                   "Área",
                   "Cargo",
@@ -706,7 +698,6 @@ export function MembrosLista({
                           onReativar={() => onReativar(m)}
                           onCancelarConvite={() => onCancelarConvite(m)}
                           onConverter={() => onConverter(m)}
-                          ehOwner={m.id === ownerMembroId}
                         />
                       </div>
                     </Td>
@@ -776,7 +767,6 @@ function MembroMenu({
   onReativar,
   onCancelarConvite,
   onConverter,
-  ehOwner,
 }: {
   membro: Membro;
   onVisualizar: () => void;
@@ -785,7 +775,6 @@ function MembroMenu({
   onReativar: () => void;
   onCancelarConvite: () => void;
   onConverter: () => void;
-  ehOwner: boolean;
 }) {
   return (
     <Menu as="div" className="relative shrink-0">
@@ -807,32 +796,29 @@ function MembroMenu({
         className="dark:bg-dark-750 dark:border-dark-500 z-100 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/60 outline-hidden dark:shadow-none"
       >
         <ItemMenu icon={EyeIcon} onClick={onVisualizar}>
-          Visualizar membro
+          Visualizar colaborador
         </ItemMenu>
         <ItemMenu icon={PencilSquareIcon} onClick={onEditar}>
-          Editar membro
+          Editar colaborador
         </ItemMenu>
-        {/* Reclassificação, não destruição: sem `destrutivo`, e com o mesmo
-            ícone que a transferência de propriedade usa.
+        {/* Só a promoção: convidado vira colaborador. A direção inversa
+            ("Converter em convidado") foi retirada da interface — quem já faz
+            parte da organização não é mais rebaixado por aqui.
 
-            Escondido para o proprietário — ele precisa transferir a
-            propriedade antes, e o item não teria onde explicar isso. Quem
-            tentar encontra a explicação na dica do campo "Tipo da conta" no
-            formulário, que é onde a pessoa vai olhar. */}
-        {!ehOwner && (
+            Reclassificação, não destruição: sem `destrutivo`, e com o mesmo
+            ícone que a transferência de propriedade usa. */}
+        {membro.tipo === "convidado" && (
           <ItemMenu icon={ArrowsRightLeftIcon} onClick={onConverter}>
-            {membro.tipo === "convidado"
-              ? "Converter em membro"
-              : "Converter em convidado"}
+            Converter em colaborador
           </ItemMenu>
         )}
         {membro.status === "inativo" ? (
           <ItemMenu icon={UserPlusIcon} onClick={onReativar}>
-            Reativar membro
+            Reativar colaborador
           </ItemMenu>
         ) : (
           <ItemMenu icon={UserMinusIcon} onClick={onDesativar} destrutivo>
-            Desativar membro
+            Desativar colaborador
           </ItemMenu>
         )}
         {/* Excluir só existe para convite: quem tem conta vira Inativo. */}

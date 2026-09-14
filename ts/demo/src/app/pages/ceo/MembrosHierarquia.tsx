@@ -91,7 +91,7 @@ export function MembrosHierarquia({
       <div className="dark:border-dark-600 grid place-items-center rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center">
         <ShareIcon className="dark:text-dark-400 size-10 text-gray-300" />
         <p className="dark:text-dark-100 mt-3 font-medium text-gray-800">
-          Nenhum membro na estrutura
+          Nenhum colaborador na estrutura
         </p>
         <p className="dark:text-dark-300 text-xs-plus mt-1 max-w-sm text-gray-500">
           {convidados === 1
@@ -103,7 +103,7 @@ export function MembrosHierarquia({
           color="primary"
           className="mt-4 h-9 gap-1.5 rounded-lg px-3"
         >
-          Ver membros
+          Ver colaboradores
         </Button>
       </div>
     );
@@ -114,7 +114,7 @@ export function MembrosHierarquia({
       <div className="dark:border-dark-600 grid place-items-center rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center">
         <ShareIcon className="dark:text-dark-400 size-10 text-gray-300" />
         <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
-          Nenhum membro ainda
+          Nenhum colaborador ainda
         </p>
         <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-400">
           Cadastre as pessoas da organização para desenhar a estrutura.
@@ -124,7 +124,7 @@ export function MembrosHierarquia({
           className="mt-4 rounded-lg"
           onClick={onIrParaLista}
         >
-          Ir para Membros
+          Ir para Colaboradores
         </Button>
       </div>
     );
@@ -186,8 +186,8 @@ export function MembrosHierarquia({
         <p className="dark:text-dark-300 text-xs-plus text-gray-500">
           {semVinculo.length}{" "}
           {semVinculo.length === 1
-            ? "membro ainda sem vínculo na hierarquia"
-            : "membros ainda sem vínculo na hierarquia"}{" "}
+            ? "colaborador ainda sem vínculo na hierarquia"
+            : "colaboradores ainda sem vínculo na hierarquia"}{" "}
           e por isso fora do desenho
           {": "}
           {semVinculo.map((m) => m.nome).join(", ")}. Defina o{" "}
@@ -208,8 +208,9 @@ export function MembrosHierarquia({
             </p>
           </div>
           <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-400">
-            Estes membros participam de um ciclo de gestores e não aparecem na
-            árvore. Edite o Gestor direto de um deles para desfazer o laço.
+            Estes colaboradores participam de um ciclo de gestores e não
+            aparecem na árvore. Edite o Gestor direto de um deles para desfazer
+            o laço.
           </p>
           <ul className="mt-3 space-y-1">
             {foraDaArvore.map((m) => (

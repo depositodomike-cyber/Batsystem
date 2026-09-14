@@ -4,6 +4,10 @@ import { ListarEstruturaQuery } from './dto/listar-estrutura.query';
 import { CriarEstruturaDto } from './dto/criar-estrutura.dto';
 import { AtualizarEstruturaDto } from './dto/atualizar-estrutura.dto';
 import {
+  SEM_REALOCACAO,
+  type ExcluirEstruturaQuery,
+} from './dto/excluir-estrutura.query';
+import {
   toEstruturaPublica,
   type EstruturaComContagem,
   type EstruturaPublica,
@@ -76,6 +80,59 @@ export interface RepositorioEstrutura {
   excluir(id: string): Promise<void>;
   /** Conta membros vinculados, para a guarda de exclusão. */
   contarMembros(empresaId: string, id: string): Promise<number>;
+
+  // As quatro abaixo recebem o cliente de transação: a realocação e a
+  // desativação/exclusão que a acompanha são uma operação só, e ler a
+  // contagem fora dela faria quem entrasse na área no intervalo ficar para
+  // trás. Convenção do projeto para helpers que rodam dentro e fora de
+  // transação (`RolesService` e `MembrosService` fazem igual).
+
+  /**
+   * Abre a transação.
+   *
+   * Mora no repositório, e não numa injeção de `PrismaService` nesta classe:
+   * o adaptador já é o único ponto que conhece o Prisma, e a regra aqui
+   * continua sem depender dele.
+   */
+  transacao<T>(fn: (db: Prisma.TransactionClient) => Promise<T>): Promise<T>;
+
+  /** A edição, dentro da transação. */
+  atualizarEm(
+    db: Prisma.TransactionClient,
+    id: string,
+    dados: DadosAtualizacaoEstrutura,
+  ): Promise<EstruturaComContagem>;
+
+  /** A mesma contagem, dentro da transação. */
+  contarMembrosEm(
+    db: Prisma.TransactionClient,
+    empresaId: string,
+    id: string,
+  ): Promise<number>;
+
+  /**
+   * Move os colaboradores de uma Área/Cargo para outro, ou para nenhum.
+   *
+   * `destinoId: null` desfaz o vínculo — e zera TAMBÉM a coluna legada de
+   * texto (`Membro.area` / `Membro.cargo`), sem a qual a tela continuaria
+   * exibindo o nome de uma entidade que deixou de existir: `rotuloArea` no
+   * front resolve `areaRef?.nome ?? texto legado`. Com destino a coluna legada
+   * fica intocada de propósito — a entidade vence na exibição, e aquelas
+   * colunas são congeladas.
+   *
+   * Grava UM campo (dois no caso acima) e nada mais: cargo ao realocar área,
+   * área ao realocar cargo, gestor direto, gestores indiretos, roles e status
+   * do membro não são tocados. Não "melhore" isto para um update mais amplo.
+   */
+  realocarMembros(
+    db: Prisma.TransactionClient,
+    empresaId: string,
+    deId: string,
+    destinoId: string | null,
+  ): Promise<number>;
+
+  /** A exclusão, dentro da transação. */
+  excluirEm(db: Prisma.TransactionClient, id: string): Promise<void>;
 }
 
 /** Mensagens específicas da entidade — gênero e substantivo mudam. */
@@ -87,7 +144,14 @@ export interface CopyEstrutura {
    * um registro INATIVO, que a listagem padrão da tela não destaca.
    */
   nomeDuplicadoInativo: string;
+  /** 409 da exclusão sem resolução: diz a contagem e as duas saídas. */
   emUso: (membros: number) => string;
+  /** 404 do destino de realocação fora do tenant. */
+  destinoNaoEncontrado: string;
+  /** 409 do destino inativo. */
+  destinoInativo: (nome: string) => string;
+  /** 409 do destino igual à origem. */
+  destinoEhAOrigem: string;
 }
 
 export abstract class EstruturaService {
@@ -128,9 +192,10 @@ export abstract class EstruturaService {
   /**
    * Edita nome, descrição e status.
    *
-   * NUNCA toca em `membro.areaId`/`membro.cargoId`: desativar preserva as
-   * associações existentes de propósito — só impede escolhas novas —, e o
-   * `MembrosService` é o único caminho de escrita do vínculo.
+   * Desativar continua PRESERVANDO as associações: é essa a diferença entre
+   * desativar e excluir, e ela não mudou. A única escrita em
+   * `membro.areaId`/`membro.cargoId` daqui é a realocação EXPLÍCITA pedida
+   * em `dto.realocarPara`, e só na transição ativo → inativo.
    */
   async atualizar(
     empresaId: string,
@@ -155,14 +220,33 @@ export abstract class EstruturaService {
 
     // Status e timestamp andam em par, como em `Membro.desativadoEm`: reativar
     // zera o registro de desativação em vez de deixar uma data órfã.
+    const desativando =
+      dto.status === EstruturaStatus.inativo &&
+      atual.status !== EstruturaStatus.inativo;
     if (dto.status !== undefined && dto.status !== atual.status) {
       dados.status = dto.status;
-      dados.desativadoEm =
-        dto.status === EstruturaStatus.inativo ? new Date() : null;
+      dados.desativadoEm = desativando ? new Date() : null;
     }
 
+    // Realocar só faz sentido na desativação. Em qualquer outra edição o campo
+    // é aceito e ignorado — o formulário manda o payload inteiro em todo save,
+    // e recusar aqui daria 409 numa troca de nome.
+    const destinoId = desativando
+      ? await this.resolverDestino(empresaId, atual.id, dto.realocarPara)
+      : null;
+
     try {
-      const atualizado = await this.repo.atualizar(atual.id, dados);
+      if (destinoId == null) {
+        const atualizado = await this.repo.atualizar(atual.id, dados);
+        return toEstruturaPublica(atualizado);
+      }
+
+      // Com destino, mover e desativar são uma operação só: nunca existe um
+      // instante com a entidade já inativa e os colaboradores ainda nela.
+      const atualizado = await this.repo.transacao(async (tx) => {
+        await this.repo.realocarMembros(tx, empresaId, atual.id, destinoId);
+        return this.repo.atualizarEm(tx, atual.id, dados);
+      });
       return toEstruturaPublica(atualizado);
     } catch (err) {
       throw this.traduzirErro(err);
@@ -170,27 +254,82 @@ export abstract class EstruturaService {
   }
 
   /**
-   * Exclui — só quando nada aponta para o registro.
+   * Exclui, com realocação OPCIONAL dos colaboradores vinculados.
    *
-   * Com membros vinculados a chamada é recusada com 409 e a contagem: a saída
-   * é desativar, que preserva registro, histórico e vínculos. Não há
-   * reatribuição em massa como em roles, porque área e cargo não têm destino
-   * óbvio, e não há exclusão em cascata em nenhuma hipótese.
+   * Antes esta chamada era simplesmente recusada com 409 quando havia gente na
+   * área, e o comentário aqui dizia que "área e cargo não têm destino óbvio".
+   * A regra mudou: o destino óbvio não existe mesmo, e por isso quem escolhe é
+   * quem administra — inclusive escolher não ter destino.
    *
-   * O `SetNull` da FK é apenas a rede de segurança do banco; a política é
-   * esta guarda.
+   * `realocarPara` ausente com colaboradores vinculados CONTINUA dando 409. A
+   * recusa não é sobre proteger o dado (a tela já explica a consequência): é
+   * sobre não deixar um cliente que desconhece o modal transformar em remoção
+   * silenciosa de vínculo uma chamada que até então era recusada.
    */
-  async remover(empresaId: string, id: string): Promise<void> {
+  async remover(
+    empresaId: string,
+    id: string,
+    query: ExcluirEstruturaQuery = {},
+  ): Promise<void> {
     const atual = await this.buscar(empresaId, id);
 
     // Contagem própria, e não o `_count` já carregado: a guarda tem de ler o
     // estado mais recente possível (mesma escolha de `RolesService.remover`).
     const emUso = await this.repo.contarMembros(empresaId, atual.id);
-    if (emUso > 0) {
+    if (emUso > 0 && query.realocarPara === undefined) {
       throw new ConflictException(this.copy.emUso(emUso));
     }
 
-    await this.repo.excluir(atual.id);
+    if (emUso === 0) {
+      await this.repo.excluir(atual.id);
+      return;
+    }
+
+    const destinoId = await this.resolverDestino(
+      empresaId,
+      atual.id,
+      query.realocarPara,
+    );
+
+    await this.repo.transacao(async (tx) => {
+      // Recontar AQUI dentro, e não confiar no número de fora: o modal pode
+      // ter ficado aberto enquanto alguém entrava na área, e é a lista de
+      // agora que precisa ser movida. Mesma razão de `aplicarRealocacao` em
+      // MembrosService.
+      const agora = await this.repo.contarMembrosEm(tx, empresaId, atual.id);
+      if (agora > 0) {
+        await this.repo.realocarMembros(tx, empresaId, atual.id, destinoId);
+      }
+      await this.repo.excluirEm(tx, atual.id);
+    });
+  }
+
+  /**
+   * Traduz `realocarPara` no id de destino, ou `null` para "sem destino".
+   *
+   * Compartilhado pela desativação e pela exclusão, que validam o destino da
+   * mesma forma. O destino nunca atravessa o tipo (Área → Cargo) por
+   * construção: cada service concreto só enxerga o próprio delegate.
+   */
+  private async resolverDestino(
+    empresaId: string,
+    origemId: string,
+    realocarPara: string | undefined,
+  ): Promise<string | null> {
+    if (realocarPara === undefined || realocarPara === SEM_REALOCACAO) {
+      return null;
+    }
+
+    if (realocarPara === origemId) {
+      throw new ConflictException(this.copy.destinoEhAOrigem);
+    }
+
+    const destino = await this.repo.buscar(empresaId, realocarPara);
+    if (!destino) throw new NotFoundException(this.copy.destinoNaoEncontrado);
+    if (destino.status === EstruturaStatus.inativo) {
+      throw new ConflictException(this.copy.destinoInativo(destino.nome));
+    }
+    return destino.id;
   }
 
   // --------------------------------------------------------------------

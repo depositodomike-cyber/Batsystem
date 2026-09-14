@@ -227,7 +227,7 @@ export function EstruturaLista({
                   </Td>
                   <Td className="dark:text-dark-200 text-sm-plus py-3 text-gray-600">
                     {i.membros > 0 ? (
-                      `${i.membros} ${i.membros === 1 ? "membro" : "membros"}`
+                      `${i.membros} ${i.membros === 1 ? "colaborador" : "colaboradores"}`
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}
@@ -268,10 +268,11 @@ export function EstruturaLista({
 /**
  * Menu de ações da linha.
  *
- * "Excluir" só aparece quando ninguém está vinculado. A API recusa a exclusão
- * de algo em uso, e a mesma decisão do menu de roles vale aqui: é melhor a
- * opção não aparecer do que aparecer e ser recusada. Com membros, o caminho é
- * desativar — que preserva registro, histórico e vínculos.
+ * "Excluir" aparece SEMPRE, inclusive com colaboradores vinculados. Antes era
+ * escondido, porque a API recusava e mostrar uma opção que seria negada é
+ * pior que não mostrá-la; hoje a API aceita, desde que a resolução seja
+ * explícita, e quem decide o destino — ou a falta dele — é quem administra.
+ * Desativar e Excluir com gente vinculada passam pelo modal de realocação.
  */
 function ItemMenu({
   item,
@@ -322,11 +323,9 @@ function ItemMenu({
             Desativar {copy.singular}
           </ItemAcao>
         )}
-        {item.membros === 0 && (
-          <ItemAcao icon={TrashIcon} onClick={onExcluir} destrutivo>
-            Excluir {copy.singular}
-          </ItemAcao>
-        )}
+        <ItemAcao icon={TrashIcon} onClick={onExcluir} destrutivo>
+          Excluir {copy.singular}
+        </ItemAcao>
       </Transition>
     </Menu>
   );

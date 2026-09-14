@@ -24,6 +24,7 @@ import {
   fetchCargosApi,
   removerAreaApi,
   removerCargoApi,
+  SEM_REALOCACAO,
   type EstruturaItem,
 } from "@/services/api/estrutura";
 import { mensagemErroMembro } from "./membros-status";
@@ -35,9 +36,15 @@ import { EstruturaFormModal } from "./EstruturaFormModal";
 import {
   COPY_AREAS_FORM,
   COPY_AREAS_LISTA,
+  COPY_AREAS_REALOCACAO,
   COPY_CARGOS_FORM,
   COPY_CARGOS_LISTA,
+  COPY_CARGOS_REALOCACAO,
 } from "./estrutura-copy";
+import {
+  EstruturaRealocacaoModal,
+  type ModoEstrutura,
+} from "./EstruturaRealocacaoModal";
 import { MembrosLista } from "./MembrosLista";
 import { MembrosHierarquia } from "./MembrosHierarquia";
 import { MembroDrawer } from "./MembroDrawer";
@@ -93,9 +100,9 @@ const CABECALHOS: Record<
   { titulo: string; subtitulo: string; ajuda: ReactNode }
 > = {
   membros: {
-    titulo: "Membros",
+    titulo: "Colaboradores",
     subtitulo:
-      "Membros da organização, a hierarquia entre eles e o que cada um pode fazer",
+      "Colaboradores da organização, a hierarquia entre eles e o que cada um pode fazer",
     ajuda: (
       <>
         <p>
@@ -110,10 +117,10 @@ const CABECALHOS: Record<
           mesma área pode ter várias cadeias de gestores.
         </p>
         <p>
-          Um membro pode ter até duas roles, e o acesso é a soma das duas: se
-          qualquer uma concede, ele pode. As permissões vêm sempre das roles —
-          não há permissão individual por membro, então para mudar o que alguém
-          pode fazer, altera-se a role.
+          Um colaborador pode ter até duas roles, e o acesso é a soma das duas:
+          se qualquer uma concede, ele pode. As permissões vêm sempre das roles
+          — não há permissão individual por colaborador, então para mudar o que
+          alguém pode fazer, altera-se a role.
         </p>
       </>
     ),
@@ -128,7 +135,7 @@ const CABECALHOS: Record<
       <>
         <p>
           As áreas cadastradas aqui são as opções que aparecem no formulário de
-          membro. Área diz <strong>onde</strong> a pessoa está — não define
+          colaborador. Área diz <strong>onde</strong> a pessoa está — não define
           hierarquia nem concede permissão.
         </p>
         <p>
@@ -145,8 +152,9 @@ const CABECALHOS: Record<
       <>
         <p>
           Os cargos cadastrados aqui são as opções que aparecem no formulário de
-          membro. Cargo diz <strong>qual posição</strong> a pessoa ocupa — e não
-          define hierarquia: dois gerentes podem estar em cadeias diferentes.
+          colaborador. Cargo diz <strong>qual posição</strong> a pessoa ocupa —
+          e não define hierarquia: dois gerentes podem estar em cadeias
+          diferentes.
         </p>
         <p>
           Desativar um cargo apenas o tira das escolhas novas: quem já estava
@@ -157,13 +165,15 @@ const CABECALHOS: Record<
   },
   hierarquia: {
     titulo: "Hierarquia",
-    subtitulo: "A estrutura montada a partir do gestor direto de cada membro",
+    subtitulo:
+      "A estrutura montada a partir do gestor direto de cada colaborador",
     ajuda: (
       <>
         <p>
           Esta é a única seção que você não preenche: ela é{" "}
           <strong>derivada</strong> do <strong>Gestor direto</strong> de cada
-          membro, editado no cadastro dele. Não existe cadastro de subordinados.
+          colaborador, editado no cadastro dele. Não existe cadastro de
+          subordinados.
         </p>
         <p>
           Os <strong>gestores indiretos</strong> aparecem como conexões
@@ -183,9 +193,9 @@ const CABECALHOS: Record<
     ajuda: (
       <>
         <p>
-          Uma <strong>role</strong> responde o que o membro pode fazer. Não há
-          permissão individual: para mudar o que alguém pode fazer, altera-se a
-          role — ou atribui-se outra.
+          Uma <strong>role</strong> responde o que o colaborador pode fazer. Não
+          há permissão individual: para mudar o que alguém pode fazer, altera-se
+          a role — ou atribui-se outra.
         </p>
         <p>
           Duas são protegidas e só admitem visualizar: a <strong>Owner</strong>,
@@ -206,7 +216,6 @@ type Recurso = "area" | "cargo";
 /** Ação destrutiva em confirmação. */
 type Acao =
   | { tipo: "desativar"; membro: Membro }
-  | { tipo: "converterConvidado"; membro: Membro }
   | { tipo: "cancelar"; membro: Membro }
   | { tipo: "excluirEstrutura"; recurso: Recurso; item: EstruturaItem };
 
@@ -243,6 +252,19 @@ export function PainelAdministracao({
   const [roleSelecionada, setRoleSelecionada] = useState<Role | null>(null);
   const [roleEditando, setRoleEditando] = useState<Role | null>(null);
   const [roleFormAberto, setRoleFormAberto] = useState(false);
+  /**
+   * Desativar/excluir uma área ou cargo COM colaboradores.
+   *
+   * Um estado só para os quatro casos, porque o modal é um só. Com zero
+   * vinculados nada disto entra em cena: aquele caminho continua sendo um
+   * clique (desativar) ou o ConfirmModal de sempre (excluir) — acrescentar
+   * uma etapa onde não há consequência a explicar seria atrito puro.
+   */
+  const [realocandoEstrutura, setRealocandoEstrutura] = useState<{
+    recurso: Recurso;
+    modo: ModoEstrutura;
+    item: EstruturaItem;
+  } | null>(null);
   const [roleExcluindo, setRoleExcluindo] = useState<Role | null>(null);
   const [transferindoPropriedade, setTransferindoPropriedade] = useState(false);
 
@@ -370,7 +392,7 @@ export function PainelAdministracao({
       void carregar();
     } catch (err) {
       toast.error(
-        mensagemErroMembro(err, "Não foi possível reativar o membro."),
+        mensagemErroMembro(err, "Não foi possível reativar o colaborador."),
       );
     }
   };
@@ -393,7 +415,7 @@ export function PainelAdministracao({
     toast.success(
       criada
         ? `Role "${role.nome}" criada.`
-        : `Role "${role.nome}" atualizada${role.membros > 0 ? ` — ${role.membros} ${role.membros === 1 ? "membro herda" : "membros herdam"} as novas permissões` : ""}.`,
+        : `Role "${role.nome}" atualizada${role.membros > 0 ? ` — ${role.membros} ${role.membros === 1 ? "colaborador herda" : "colaboradores herdam"} as novas permissões` : ""}.`,
     );
     void carregar();
   };
@@ -452,16 +474,26 @@ export function PainelAdministracao({
   };
 
   /**
-   * Alterna ativo/inativo direto pelo menu da linha.
+   * Alterna ativo/inativo pelo menu da linha.
    *
-   * Não passa por confirmação: desativar aqui NÃO é destrutivo — preserva o
-   * registro, o histórico e todas as associações de membro, e só tira a
-   * entidade das escolhas novas.
+   * Reativar e desativar algo sem ninguém vinculado seguem diretos, sem
+   * confirmação: não são destrutivos — preservam registro, histórico e
+   * associações, e só mexem nas escolhas novas.
+   *
+   * Desativar COM colaboradores abre o modal de realocação. Não porque a ação
+   * passou a ser perigosa (ela continua preservando tudo), mas porque é o
+   * único momento em que oferecer o destino faz sentido — depois, mover as
+   * pessoas viraria edição uma a uma.
    */
   const alternarStatusEstrutura = async (
     recurso: Recurso,
     item: EstruturaItem,
   ) => {
+    if (item.status === "ativo" && item.membros > 0) {
+      setRealocandoEstrutura({ recurso, modo: "desativar", item });
+      return;
+    }
+
     const proximo = item.status === "ativo" ? "inativo" : "ativo";
     const atualizar = recurso === "area" ? atualizarAreaApi : atualizarCargoApi;
     try {
@@ -513,18 +545,13 @@ export function PainelAdministracao({
     // O drawer pode estar aberto sobre quem acabou de sair da estrutura. Quem
     // deixou de existir sai do drawer; quem continua tem de ser RE-SINCRONIZADO
     // — `carregar()` troca a lista, mas o selecionado é estado separado, e sem
-    // isto o detalhe seguiria mostrando área, cargo e gestor de quem acabou de
-    // virar convidado.
+    // isto o detalhe seguiria mostrando o estado anterior de quem acabou de ser
+    // desativado.
     setSelecionado((atual) => {
       if (atual?.id !== membro.id) return atual;
       return modo === "excluir" ? null : (atualizado ?? atual);
     });
-    const desfecho =
-      modo === "excluir"
-        ? "foi excluído"
-        : modo === "converter"
-          ? "agora é convidado"
-          : "ficou inativo";
+    const desfecho = modo === "excluir" ? "foi excluído" : "ficou inativo";
     toast.success(
       `${membro.nome} ${desfecho}. ${liderados} ${liderados === 1 ? "liderado agora responde" : "liderados agora respondem"} a ${novaLideranca.nome}.`,
     );
@@ -532,22 +559,14 @@ export function PainelAdministracao({
   };
 
   /**
-   * Converter entre os dois tipos, nas duas direções.
+   * Convidado → colaborador, a única direção que existe.
    *
-   * Membro → convidado espelha `pedirSaida`: é saída da estrutura, então com
-   * liderados passa pelo modal de realocação e sem liderados pela confirmação.
-   * Convidado → membro tem modal próprio, porque o que ela precisa é uma role.
+   * A inversa saiu da interface a pedido: quem já faz parte da organização não
+   * é mais rebaixado a convidado por aqui. A que ficou tem modal próprio,
+   * porque o que ela precisa é uma role.
    */
   const pedirConversao = (membro: Membro) => {
-    if (membro.tipo === "convidado") {
-      setConvertendoEmMembro(membro);
-      return;
-    }
-    if (lideradosDiretos(membro) > 0) {
-      setRealocando({ modo: "converter", membro });
-      return;
-    }
-    pedirConfirmacao({ tipo: "converterConvidado", membro });
+    setConvertendoEmMembro(membro);
   };
 
   const aoConverterEmMembro = (atualizado: Membro) => {
@@ -556,8 +575,40 @@ export function PainelAdministracao({
       atual?.id === atualizado.id ? atualizado : atual,
     );
     toast.success(
-      `${atualizado.nome} agora faz parte da organização. Defina área, cargo e gestor em Editar membro.`,
+      `${atualizado.nome} agora faz parte da organização. Defina área, cargo e gestor em Editar colaborador.`,
     );
+    void carregar();
+  };
+
+  /**
+   * A chamada de API da realocação, já ligada à espécie certa.
+   *
+   * O mapeamento de "sem destino" difere entre as duas ações, e é aqui que
+   * ele mora: na exclusão manda-se `SEM_REALOCACAO` (a API recusa a chamada
+   * sem resolução, de propósito); na desativação manda-se nada, porque
+   * desativar sem realocar preserva os vínculos e não há o que resolver.
+   */
+  const aplicarRealocacaoEstrutura = async (
+    recurso: Recurso,
+    modo: ModoEstrutura,
+    item: EstruturaItem,
+    destinoId: string | null,
+  ) => {
+    if (modo === "excluir") {
+      const remover = recurso === "area" ? removerAreaApi : removerCargoApi;
+      await remover(item.id, destinoId ?? SEM_REALOCACAO);
+      return;
+    }
+    const atualizar = recurso === "area" ? atualizarAreaApi : atualizarCargoApi;
+    await atualizar(item.id, {
+      status: "inativo",
+      ...(destinoId ? { realocarPara: destinoId } : {}),
+    });
+  };
+
+  const aoConcluirRealocacao = (mensagem: string) => {
+    setRealocandoEstrutura(null);
+    toast.success(mensagem);
     void carregar();
   };
 
@@ -577,29 +628,13 @@ export function PainelAdministracao({
         await remover(acao.item.id);
       } else if (acao.tipo === "desativar") {
         await atualizarMembroApi(acao.membro.id, { status: "inativo" });
-      } else if (acao.tipo === "converterConvidado") {
-        // Só chega aqui com zero liderados: com equipe, a conversão passa pelo
-        // modal de realocação. Os campos estruturais explícitos pelo mesmo
-        // motivo do modal: num PATCH, omitir significa "não mexe".
-        await atualizarMembroApi(acao.membro.id, {
-          tipo: "convidado",
-          areaId: "",
-          cargoId: "",
-          gestorId: "",
-          gestorIndiretoIds: [],
-        });
       } else {
         await removerMembroApi(acao.membro.id);
       }
       setEstadoConfirm("success");
-      // Converter NÃO fecha o detalhe: a pessoa continua existindo, e fechar
-      // esconderia justamente o resultado da operação. `carregar()` abaixo
-      // atualiza a lista, e o efeito que sincroniza o selecionado cuida do
-      // resto.
-      if (
-        acao.tipo !== "excluirEstrutura" &&
-        acao.tipo !== "converterConvidado"
-      ) {
+      // Quem saiu da lista sai do detalhe junto. Estrutura fica de fora: as
+      // áreas e os cargos não têm detalhe aberto para fechar.
+      if (acao.tipo !== "excluirEstrutura") {
         setSelecionado((atual) =>
           atual?.id === acao.membro.id ? null : atual,
         );
@@ -648,14 +683,6 @@ export function PainelAdministracao({
           onReativar={(m) => void reativar(m)}
           onCancelarConvite={(m) => pedirSaida("excluir", m)}
           onConverter={pedirConversao}
-          // A mesma derivação da transferência de propriedade, logo
-          // abaixo: o proprietário não pode virar convidado sem antes
-          // transferir, então o item nem aparece para ele.
-          ownerMembroId={
-            membros.find((m) =>
-              m.roleIds.includes(roles.find((r) => r.proprietaria)?.id ?? ""),
-            )?.id ?? null
-          }
         />
       ) : active === "areas" ? (
         <EstruturaLista
@@ -670,11 +697,17 @@ export function PainelAdministracao({
             void alternarStatusEstrutura("area", item)
           }
           onExcluir={(item) =>
-            pedirConfirmacao({
-              tipo: "excluirEstrutura",
-              recurso: "area",
-              item,
-            })
+            item.membros > 0
+              ? setRealocandoEstrutura({
+                  recurso: "area",
+                  modo: "excluir",
+                  item,
+                })
+              : pedirConfirmacao({
+                  tipo: "excluirEstrutura",
+                  recurso: "area",
+                  item,
+                })
           }
         />
       ) : active === "cargos" ? (
@@ -690,11 +723,17 @@ export function PainelAdministracao({
             void alternarStatusEstrutura("cargo", item)
           }
           onExcluir={(item) =>
-            pedirConfirmacao({
-              tipo: "excluirEstrutura",
-              recurso: "cargo",
-              item,
-            })
+            item.membros > 0
+              ? setRealocandoEstrutura({
+                  recurso: "cargo",
+                  modo: "excluir",
+                  item,
+                })
+              : pedirConfirmacao({
+                  tipo: "excluirEstrutura",
+                  recurso: "cargo",
+                  item,
+                })
           }
         />
       ) : active === "hierarquia" ? (
@@ -804,6 +843,38 @@ export function PainelAdministracao({
         onExcluida={aoExcluirRole}
       />
 
+      {/* Desativar ou excluir área/cargo COM colaboradores. `key` remonta o
+          modal a cada abertura, para o select de destino não vir preenchido
+          da vez anterior — convenção de todos os modais desta página. O
+          prefixo evita empatar com o `"nenhum"` dos modais vizinhos: chaves
+          se comparam entre irmãos, e duas iguais viram aviso do React. */}
+      <EstruturaRealocacaoModal
+        key={
+          realocandoEstrutura
+            ? `estrutura-${realocandoEstrutura.modo}-${realocandoEstrutura.item.id}`
+            : "estrutura-nenhum"
+        }
+        item={realocandoEstrutura?.item ?? null}
+        modo={realocandoEstrutura?.modo ?? "desativar"}
+        // A lista da própria espécie: o destino nunca atravessa área ↔ cargo.
+        itens={realocandoEstrutura?.recurso === "cargo" ? cargos : areas}
+        copy={
+          realocandoEstrutura?.recurso === "cargo"
+            ? COPY_CARGOS_REALOCACAO
+            : COPY_AREAS_REALOCACAO
+        }
+        onConfirmar={(item, destinoId) =>
+          aplicarRealocacaoEstrutura(
+            realocandoEstrutura?.recurso ?? "area",
+            realocandoEstrutura?.modo ?? "desativar",
+            item,
+            destinoId,
+          )
+        }
+        onClose={() => setRealocandoEstrutura(null)}
+        onConcluido={aoConcluirRealocacao}
+      />
+
       {/* Saída de um gestor com equipe. `key` remonta o form limpo a cada
           abertura, para o select de nova liderança não vir preenchido do
           membro anterior. */}
@@ -863,7 +934,7 @@ export function PainelAdministracao({
                   // Só chega aqui sem ninguém vinculado: o menu esconde
                   // "Excluir" quando há membros, e a API recusaria de todo
                   // jeito.
-                  description: `"${acao.item.nome}" será removido da organização. Nenhum membro está ${acao.recurso === "area" ? "nesta área" : "com este cargo"}, então nada é desfeito.`,
+                  description: `"${acao.item.nome}" será removido da organização. Nenhum colaborador está ${acao.recurso === "area" ? "nesta área" : "com este cargo"}, então nada é desfeito.`,
                   actionText: "Excluir",
                 },
                 success: {
@@ -877,69 +948,46 @@ export function PainelAdministracao({
                   actionText: "Tentar de novo",
                 },
               }
-            : acao?.tipo === "converterConvidado"
+            : acao?.tipo === "cancelar"
               ? {
                   pending: {
-                    title: "Converter em convidado?",
+                    title: "Cancelar este convite?",
                     // Este branch só roda com zero liderados: quem lidera
                     // alguém passa pelo modal de realocação, não por aqui.
-                    description: acao
-                      ? `${acao.membro.nome} deixa de fazer parte da estrutura da organização: área, cargo e relações de gestão são removidas, a pessoa sai do organograma e passa a ter apenas a role Convidado. O acesso à plataforma continua.`
-                      : "",
-                    actionText: "Converter em convidado",
+                    description: `O convite de ${acao.membro.nome} será removido da organização. Ninguém responde a essa pessoa, e você pode enviar um novo convite depois.`,
+                    actionText: "Cancelar convite",
                   },
                   success: {
-                    title: "Convertido em convidado",
+                    title: "Convite cancelado",
                     description:
-                      "A pessoa continua na lista, agora como convidado.",
+                      "A pessoa não aparece mais na lista de colaboradores.",
                     actionText: "Ok",
                   },
                   error: {
-                    title: "Não foi possível converter",
+                    title: "Não foi possível cancelar",
                     description: "Tente novamente em instantes.",
                     actionText: "Tentar de novo",
                   },
                 }
-              : acao?.tipo === "cancelar"
-                ? {
-                    pending: {
-                      title: "Cancelar este convite?",
-                      // Este branch só roda com zero liderados: quem lidera
-                      // alguém passa pelo modal de realocação, não por aqui.
-                      description: `O convite de ${acao.membro.nome} será removido da organização. Ninguém responde a essa pessoa, e você pode enviar um novo convite depois.`,
-                      actionText: "Cancelar convite",
-                    },
-                    success: {
-                      title: "Convite cancelado",
-                      description:
-                        "A pessoa não aparece mais na lista de membros.",
-                      actionText: "Ok",
-                    },
-                    error: {
-                      title: "Não foi possível cancelar",
-                      description: "Tente novamente em instantes.",
-                      actionText: "Tentar de novo",
-                    },
-                  }
-                : {
-                    pending: {
-                      title: "Desativar este membro?",
-                      description: acao
-                        ? `${acao.membro.nome} deixa de ter acesso ativo à organização. A posição na hierarquia é preservada e você pode reativar depois.`
-                        : "",
-                      actionText: "Desativar",
-                    },
-                    success: {
-                      title: "Membro desativado",
-                      description: "O acesso à organização ficou inativo.",
-                      actionText: "Ok",
-                    },
-                    error: {
-                      title: "Não foi possível desativar",
-                      description: "Tente novamente em instantes.",
-                      actionText: "Tentar de novo",
-                    },
-                  }
+              : {
+                  pending: {
+                    title: "Desativar este colaborador?",
+                    description: acao
+                      ? `${acao.membro.nome} deixa de ter acesso ativo à organização. A posição na hierarquia é preservada e você pode reativar depois.`
+                      : "",
+                    actionText: "Desativar",
+                  },
+                  success: {
+                    title: "Colaborador desativado",
+                    description: "O acesso à organização ficou inativo.",
+                    actionText: "Ok",
+                  },
+                  error: {
+                    title: "Não foi possível desativar",
+                    description: "Tente novamente em instantes.",
+                    actionText: "Tentar de novo",
+                  },
+                }
         }
       />
     </>

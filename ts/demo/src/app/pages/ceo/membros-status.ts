@@ -49,7 +49,7 @@ export const STATUS_MEMBRO: Record<MembroStatus, StatusMembroMeta> = {
  */
 export const TIPO_MEMBRO: Record<MembroTipo, StatusMembroMeta> = {
   membro: {
-    rotulo: "Membro",
+    rotulo: "Colaborador",
     cor: "neutral",
     descricao:
       "Faz parte da estrutura da organização e pode receber área, cargo, gestores e roles.",

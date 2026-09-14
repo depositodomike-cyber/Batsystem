@@ -154,14 +154,16 @@ export function AcessoRoles({
           <Table hoverable className="w-full min-w-2xl text-left">
             <THead>
               <Tr className="dark:border-dark-600 dark:bg-dark-800 border-b border-gray-200 bg-gray-50">
-                {["Acesso", "Descrição", "Membros", "Status"].map((titulo) => (
-                  <Th
-                    key={titulo}
-                    className="dark:text-dark-200 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase"
-                  >
-                    {titulo}
-                  </Th>
-                ))}
+                {["Acesso", "Descrição", "Colaboradores", "Status"].map(
+                  (titulo) => (
+                    <Th
+                      key={titulo}
+                      className="dark:text-dark-200 py-3 text-xs font-semibold tracking-wider text-gray-500 uppercase"
+                    >
+                      {titulo}
+                    </Th>
+                  ),
+                )}
                 <Th className="w-12 py-3">
                   <span className="sr-only">Ações</span>
                 </Th>
@@ -195,7 +197,7 @@ export function AcessoRoles({
                   </Td>
                   <Td className="dark:text-dark-200 text-sm-plus py-3 text-gray-600">
                     {r.membros > 0 ? (
-                      `${r.membros} ${r.membros === 1 ? "membro" : "membros"}`
+                      `${r.membros} ${r.membros === 1 ? "colaborador" : "colaboradores"}`
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}

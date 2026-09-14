@@ -30,7 +30,11 @@ export class CargosService extends EstruturaService {
     nomeDuplicadoInativo:
       'Já existe um cargo inativo com este nome. Reative-o em vez de criar outro.',
     emUso: (membros) =>
-      `${membros} ${membros === 1 ? 'membro ocupa' : 'membros ocupam'} este cargo. Desative-o em vez de excluir: o vínculo de quem já o ocupa é preservado.`,
+      `${membros} ${membros === 1 ? 'colaborador ocupa' : 'colaboradores ocupam'} este cargo. Escolha para qual cargo realocá-los, ou confirme sem destino — eles ficam sem cargo.`,
+    destinoNaoEncontrado: 'O cargo de destino não faz parte desta organização.',
+    destinoInativo: (nome) =>
+      `O cargo "${nome}" está inativo e não pode receber colaboradores. Reative-o antes de escolhê-lo como destino.`,
+    destinoEhAOrigem: 'O cargo de destino não pode ser o que está saindo.',
   };
 
   constructor(private readonly prisma: PrismaService) {
@@ -77,6 +81,53 @@ export class CargosService extends EstruturaService {
 
       excluir: async (id): Promise<void> => {
         await prismaService.cargo.delete({ where: { id } });
+      },
+
+      transacao: <T,>(
+        fn: (db: Prisma.TransactionClient) => Promise<T>,
+      ): Promise<T> => prismaService.$transaction(fn),
+
+      atualizarEm: (
+        db,
+        id,
+        dados: DadosAtualizacaoEstrutura,
+      ): Promise<EstruturaComContagem> =>
+        db.cargo.update({
+          where: { id },
+          data: dados,
+          include: INCLUDE_CONTAGEM,
+        }),
+
+      contarMembrosEm: (db, empresaId, id): Promise<number> =>
+        db.membro.count({
+          where: { empresaId, cargoId: id, tipo: MembroTipo.membro },
+        }),
+
+      realocarMembros: async (
+        db,
+        empresaId,
+        deId,
+        destinoId,
+      ): Promise<number> => {
+        const { count } = await db.membro.updateMany({
+          // O MESMO filtro da contagem, `tipo` incluído: o número que a tela
+          // mostrou tem de ser o número de linhas que esta operação toca.
+          where: { empresaId, cargoId: deId, tipo: MembroTipo.membro },
+          // Sem destino, a coluna legada de texto sai junto. Sem isso o
+          // colaborador fica com `cargoId: null` e a tela segue exibindo o
+          // nome antigo, porque o rótulo no front cai no texto legado quando
+          // não há entidade. É a segunda escrita do código novo nessas
+          // colunas congeladas — a outra é a conversão para convidado.
+          data:
+            destinoId == null
+              ? { cargoId: null, cargo: null }
+              : { cargoId: destinoId },
+        });
+        return count;
+      },
+
+      excluirEm: async (db, id): Promise<void> => {
+        await db.cargo.delete({ where: { id } });
       },
 
       contarMembros: (empresaId, cargoId): Promise<number> =>

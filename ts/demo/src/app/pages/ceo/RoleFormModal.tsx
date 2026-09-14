@@ -134,8 +134,8 @@ export function RoleFormModal({
             {editando ? "Editar role" : "Nova role"}
           </DialogTitle>
           <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
-            Defina o que os membros com esta role podem visualizar e gerenciar
-            na plataforma.
+            Defina o que os colaboradores com esta role podem visualizar e
+            gerenciar na plataforma.
           </p>
         </div>
 
@@ -198,8 +198,10 @@ export function RoleFormModal({
               <ExclamationTriangleIcon className="text-warning mt-0.5 size-4.5 shrink-0" />
               <p className="dark:text-dark-200 text-xs-plus text-gray-600">
                 Esta alteração afetará {afetados}{" "}
-                {afetados === 1 ? "membro que usa" : "membros que usam"} a role{" "}
-                <strong>{role.nome}</strong>.
+                {afetados === 1
+                  ? "colaborador que usa"
+                  : "colaboradores que usam"}{" "}
+                a role <strong>{role.nome}</strong>.
               </p>
             </div>
           )}

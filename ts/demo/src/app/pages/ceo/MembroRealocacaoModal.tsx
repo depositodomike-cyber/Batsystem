@@ -43,14 +43,12 @@ import {
 const MAX_NOMES = 6;
 
 /**
- * As três formas de sair da estrutura sem que a equipe fique sem gestor.
+ * As duas formas de sair da estrutura sem que a equipe fique sem gestor.
  *
- * `converter` é o membro que vira CONVIDADO: ele continua existindo e com
- * acesso, mas deixa o organograma — então tem exatamente a mesma exigência de
- * realocação das outras duas. O nome do tipo continua correto: sair da
- * estrutura é o que as três têm em comum.
+ * Houve uma terceira, `converter` — o colaborador que virava convidado —,
+ * retirada da interface junto com o item de menu que a abria.
  */
-export type ModoSaida = "excluir" | "desativar" | "converter";
+export type ModoSaida = "excluir" | "desativar";
 
 export function MembroRealocacaoModal({
   membro,
@@ -69,10 +67,9 @@ export function MembroRealocacaoModal({
    * `atualizado` é o membro DEPOIS da operação, ou nulo quando ele deixou de
    * existir (modo "excluir").
    *
-   * Sem ele, o detalhe aberto sobre a mesma pessoa continuaria mostrando área,
-   * cargo e gestor de quem acabou de virar convidado — `carregar()` troca a
-   * lista, mas o membro selecionado é estado separado e só é re-sincronizado à
-   * mão. O modo "desativar" tinha a mesma obsolescência latente.
+   * Sem ele, o detalhe aberto sobre a mesma pessoa continuaria mostrando o
+   * estado anterior — `carregar()` troca a lista, mas o membro selecionado é
+   * estado separado e só é re-sincronizado à mão.
    */
   onConcluido: (
     membro: Membro,
@@ -130,19 +127,6 @@ export function MembroRealocacaoModal({
       let atualizado: Membro | null = null;
       if (modo === "excluir") {
         await removerMembroApi(membro.id, novaLideranca.id);
-      } else if (modo === "converter") {
-        // Os campos estruturais como string vazia, e não omitidos: num PATCH,
-        // omitir significa "não mexe". O backend também os zera por conta
-        // própria numa conversão, mas mandá-los explicitamente deixa a
-        // intenção legível e não depende dessa garantia.
-        atualizado = await atualizarMembroApi(membro.id, {
-          tipo: "convidado",
-          areaId: "",
-          cargoId: "",
-          gestorId: "",
-          gestorIndiretoIds: [],
-          reatribuirLiderados: novaLideranca.id,
-        });
       } else {
         atualizado = await atualizarMembroApi(membro.id, {
           status: "inativo",
@@ -203,11 +187,7 @@ export function MembroRealocacaoModal({
             </DialogTitle>
             <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
               {membro?.nome} é gestor direto de outros membros. Para{" "}
-              {modo === "excluir"
-                ? "excluir o cadastro"
-                : modo === "converter"
-                  ? "converter em convidado"
-                  : "desativar o acesso"}
+              {modo === "excluir" ? "excluir o cadastro" : "desativar o acesso"}
               , escolha quem passa a liderar essas pessoas — a nova liderança é
               aplicada antes de concluir.
             </p>
@@ -270,8 +250,8 @@ export function MembroRealocacaoModal({
               Não há uma nova liderança disponível
             </p>
             <p className="dark:text-dark-300 text-xs-plus mt-1 text-gray-400">
-              Todos os outros membros respondem a esta pessoa. Cadastre alguém
-              de fora da equipe dela, ou mude o gestor direto de um dos
+              Todos os outros colaboradores respondem a esta pessoa. Cadastre
+              alguém de fora da equipe dela, ou mude o gestor direto de um dos
               liderados, antes de continuar.
             </p>
           </div>
@@ -304,15 +284,6 @@ export function MembroRealocacaoModal({
           </p>
         )}
 
-        {modo === "converter" && (
-          <p className="dark:text-dark-300 mt-3 text-xs text-gray-400">
-            Como convidado, {membro?.nome} deixa de fazer parte da estrutura:
-            área, cargo e relações de gestão são removidas, sai do organograma e
-            passa a ter apenas a role Convidado. O acesso à plataforma continua.
-            Converter de volta é possível, mas não devolve nada disso.
-          </p>
-        )}
-
         {erro && <p className="text-error mt-3 text-sm">{erro}</p>}
 
         <div className="mt-5 flex items-center justify-end gap-2">
@@ -320,9 +291,7 @@ export function MembroRealocacaoModal({
             Cancelar
           </Button>
           <Button
-            // Converter é reclassificação, não destruição: o cadastro e o
-            // acesso continuam. `primary` em vez de `error` nesse caso.
-            color={modo === "converter" ? "primary" : "error"}
+            color="error"
             onClick={confirmar}
             disabled={salvando || novaLideranca == null}
           >
@@ -330,9 +299,7 @@ export function MembroRealocacaoModal({
               ? "Concluindo…"
               : modo === "excluir"
                 ? "Realocar e excluir"
-                : modo === "converter"
-                  ? "Realocar e converter"
-                  : "Realocar e desativar"}
+                : "Realocar e desativar"}
           </Button>
         </div>
       </TransitionChild>

@@ -317,7 +317,7 @@ export function MembroDrawer({
                     >
                       {equipe.length === 0 ? (
                         <p className="dark:text-dark-300 text-xs-plus px-3.5 py-3 text-gray-400">
-                          Ninguém responde a este membro no momento.
+                          Ninguém responde a este colaborador no momento.
                         </p>
                       ) : (
                         equipe.map((sub) => (
@@ -357,7 +357,7 @@ export function MembroDrawer({
                   onClick={onEditar}
                 >
                   <PencilSquareIcon className="size-4.5 stroke-[1.5]" />
-                  Editar membro
+                  Editar colaborador
                 </Button>
               </div>
             </>

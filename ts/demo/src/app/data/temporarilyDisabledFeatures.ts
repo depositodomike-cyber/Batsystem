@@ -37,9 +37,12 @@ export type TemporarilyDisabledFeature =
 
 export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
   {
-    // true = AI Studio inteiro inacessível (grade opaca + modal "Em breve"),
-    // incluindo "Criar Dashboard". A saída do modal leva ao Repositório.
-    aiStudio: true,
+    // AI Studio PARCIALMENTE reaberto: a tela e o bloco da sidebar voltam a
+    // ser acessíveis, e a liberação por função fica em
+    // AI_STUDIO_ENABLED_FUNCTION_IDS (ia-functions.ts) — hoje só "Criar
+    // apresentação". Voltar esta flag para true fecha o Studio inteiro de novo
+    // (grade opaca + modal "Em breve"), independentemente daquela lista.
+    aiStudio: false,
     squads: true,
     groups: true,
     history: false,

@@ -153,6 +153,7 @@ model Empresa {
   roles               Role[]
   areas               Area[]
   cargos              Cargo[]
+  marcas              Marca[]
   assinatura          Assinatura?
   aiCredentials       AiCredential[]
   aiConnections       AiConnection[]
@@ -615,6 +616,62 @@ model Cargo {
   @@unique([empresaId, nome])
   @@index([empresaId])
   @@map("cargos")
+}
+
+/// V5 — Guia de marca (design system) da organização. Configurações › Geral ›
+/// Aparência › Guia de marca.
+///
+/// Substitui o store de localStorage que vivia em
+/// ts/demo/src/app/pages/ceo/design-system/store.ts, onde as marcas eram por
+/// NAVEGADOR: quem criava a marca num computador não a via no outro, e ninguém
+/// da organização via a marca de ninguém. Agora pertencem à empresa, que é o
+/// que o isolamento por `empresaId` garante na camada de dados.
+///
+/// O que a Marca deliberadamente NÃO tem:
+///   • status/desativadoEm — ao contrário de Area e Cargo, NADA referencia uma
+///     Marca (nenhuma tela persiste o id; as telas de IA enviam o documento
+///     inteiro na hora de gerar), então excluir não desfaz vínculo nenhum e o
+///     soft-delete só acrescentaria um filtro a toda query;
+///   • marca ativa — QUAL marca está selecionada é preferência do USUÁRIO
+///     naquele navegador, não da organização, e continua no localStorage.
+model Marca {
+  id        String @id @default(cuid())
+  empresaId String
+
+  /// Denormalizado de `conteudo.marca.nome`. O service grava os DOIS na mesma
+  /// escrita, sempre, com o mesmo valor já aparado. Existe como coluna porque
+  /// a unique e a ordenação da listagem precisam de uma, e um caminho dentro
+  /// do Json não sustenta índice único no Prisma.
+  nome String
+
+  /// O DesignSystem inteiro MENOS os logos — a mesma forma de
+  /// ts/demo/src/app/pages/ceo/design-system/types.ts (marca, cores,
+  /// tipografia, espacamento, componentes, visual, tokens).
+  ///
+  /// Json e não ~45 colunas: é um documento que só o editor lê e escreve, e
+  /// sempre por inteiro. O contrato é mantido pelos DTOs aninhados, que é onde
+  /// os limites de tamanho por campo são aplicados.
+  conteudo Json
+
+  /// Data URLs (image/png|jpeg|svg+xml|webp), como o FileReader do editor as
+  /// produz. FORA do `conteudo` de propósito: são o único campo que passa de
+  /// alguns KB, e separá-los deixa a listagem poder omiti-los no futuro sem
+  /// tocar no formato do documento.
+  logoClaro  String? @db.Text
+  logoEscuro String? @db.Text
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  /// Nome único no tenant: a tabela de Configurações e o seletor de marca do
+  /// AI Studio identificam a marca pelo nome. A unique do Postgres é
+  /// case-sensitive, então o service ainda faz o pré-check insensitive — mesma
+  /// relação entre unique e normalização já documentada em `Area`.
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+  @@map("marcas")
 }
 
 /// Assinatura/cobrança da empresa (1:1). Snapshot de preços no momento.

@@ -13,6 +13,7 @@ import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import {
   AiFunction,
   FUNCTIONS,
+  aiFunctionScreenPath,
   isAiStudioFunctionDisabled,
 } from "@/app/pages/ceo/ia-functions";
 import { GroupChevron } from "./GroupChevron";
@@ -78,7 +79,10 @@ export function AiStudioGroup({ product }: { product: string }) {
   const { close: closeSidebar } = useSidebarContext();
 
   const handleItemClick = () => lgAndDown && closeSidebar();
-  const itemPath = (id: string) => `/${product}/ia?fn=${id}`;
+  // Funções que viraram tela apontam direto para ela — assim o NavLink marca o
+  // item como ativo. As demais continuam como deep link na tela de IA.
+  const itemPath = (id: string) =>
+    aiFunctionScreenPath(id, product) ?? `/${product}/ia?fn=${id}`;
 
   const items = useMemo(
     () =>

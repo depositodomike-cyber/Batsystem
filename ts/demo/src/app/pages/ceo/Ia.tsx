@@ -24,6 +24,7 @@ import {
   AiFunction,
   AI_STUDIO_DISABLED,
   FUNCTIONS,
+  aiFunctionScreenPath,
   isAiStudioFunction,
   isAiStudioFunctionDisabled,
   isUploadFunction,
@@ -174,6 +175,7 @@ function AiStudioComingSoonModal({
 export default function Ia() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const product = getCurrentProduct(pathname);
   const { open, states } = useIaModals();
@@ -183,6 +185,12 @@ export default function Ia() {
 
   const run = (fn: AiFunction) => {
     if (isAiStudioFunctionDisabled(fn.id)) return;
+    // Funções que viraram tela navegam; as demais seguem abrindo modal aqui.
+    const tela = aiFunctionScreenPath(fn.id, product.code);
+    if (tela) {
+      navigate(tela);
+      return;
+    }
     if (IA_MODALS_BY_ID[fn.id]) {
       open(fn.id);
       return;
@@ -200,6 +208,15 @@ export default function Ia() {
       isMemoryUploadFnTemporarilyDisabled(fnParam);
 
     if (!blocked) {
+      // Função que virou tela: o deep link antigo (`/ia?fn=apresentacao`) vira
+      // uma navegação para ela. `replace` porque o histórico não deve guardar a
+      // URL intermediária — e não há `setSearchParams` a fazer, já que saímos
+      // desta rota.
+      const tela = aiFunctionScreenPath(fnParam, product.code);
+      if (tela) {
+        navigate(tela, { replace: true });
+        return;
+      }
       // Deep links de upload abrem o modal único na aba correspondente.
       if (
         fnParam === "documento" ||

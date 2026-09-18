@@ -247,6 +247,21 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  const anunciar = useCallback(
+    ({ titulo, corpo }: { titulo: string; corpo: string }) => {
+      setTab("chat");
+      // `origem: "vault"` porque o aviso nasce dentro do produto, não da web —
+      // e sem `fontes`, que só existem para resposta de busca.
+      setConversa((c) => [
+        ...c,
+        { pergunta: titulo, resposta: corpo, fontes: [], origem: "vault" },
+      ]);
+      setStatus("open");
+      setNaoLido(false);
+    },
+    [],
+  );
+
   const abrirConversa = useCallback(
     async (id: string) => {
       if (loading) return;
@@ -297,6 +312,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       novaConversa,
       perguntar,
       continuar,
+      anunciar,
       abrirConversa,
     }),
     [
@@ -314,6 +330,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       novaConversa,
       perguntar,
       continuar,
+      anunciar,
       abrirConversa,
     ],
   );

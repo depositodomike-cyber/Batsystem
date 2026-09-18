@@ -5,7 +5,7 @@
 //
 // As cores, fontes e o raio saem do design system da marca escolhida no AI
 // Studio; sem design system, cai no tema beculture (âmbar sobre grafite).
-import type { Roteiro } from './prompts';
+import type { Roteiro, SlideItem } from './prompts';
 import { designTheme, type DesignSystemDto } from '../design/design';
 
 function esc(s: string): string {
@@ -27,6 +27,67 @@ function cssVars(design?: DesignSystemDto | null): string {
   );
 }
 
+/**
+ * Um slide, no layout que o `tipo` pede.
+ *
+ * Os casos aqui são os mesmos do `build-pptx.ts` e do catálogo de tipos do
+ * prompt: os três andam juntos, senão o plano promete um layout que algum dos
+ * formatos não desenha. Sem `tipo` (roteiro anterior aos layouts) cai no
+ * `default`, que é o layout de sempre.
+ */
+function corpoDoSlide(s: SlideItem, i: number, total: number): string {
+  const titulo = esc(s.titulo || `Slide ${i + 1}`);
+  const num = `<span class="num">${i + 1} / ${total}</span>`;
+
+  if (s.tipo === 'secao') {
+    return (
+      `<section class="slide secao">` +
+      `<h2>${titulo}</h2>` +
+      (s.subtitulo ? `<p class="sub">${esc(s.subtitulo)}</p>` : '') +
+      num +
+      `</section>`
+    );
+  }
+
+  let miolo: string;
+  if (s.tipo === 'destaque' && s.destaques?.length) {
+    miolo =
+      `<div class="destaques">` +
+      s.destaques
+        .slice(0, 3)
+        .map(
+          (d) =>
+            `<div class="kpi"><strong>${esc(d.valor)}</strong><span>${esc(d.rotulo)}</span></div>`,
+        )
+        .join('') +
+      `</div>`;
+  } else if (s.tipo === 'comparacao' && s.colunas?.length) {
+    miolo =
+      `<div class="colunas">` +
+      s.colunas
+        .slice(0, 2)
+        .map(
+          (c) =>
+            `<div class="col"><h3>${esc(c.titulo)}</h3><ul>` +
+            (c.itens ?? []).filter(Boolean).map((t) => `<li>${esc(t)}</li>`).join('') +
+            `</ul></div>`,
+        )
+        .join('') +
+      `</div>`;
+  } else {
+    miolo = `<ul>${(s.bullets ?? []).filter(Boolean).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`;
+  }
+
+  return (
+    `<section class="slide">` +
+    `<div class="bar"></div>` +
+    `<h2>${titulo}</h2>` +
+    miolo +
+    num +
+    `</section>`
+  );
+}
+
 // ---------------------------------------------------------------- slides-html
 export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | null): string {
   const slides = roteiro.slides ?? [];
@@ -35,17 +96,7 @@ export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | nul
     `<h1>${esc(roteiro.titulo)}</h1>` +
     (roteiro.subtitulo ? `<p class="sub">${esc(roteiro.subtitulo)}</p>` : '') +
     `</section>`;
-  const corpo = slides
-    .map(
-      (s, i) =>
-        `<section class="slide">` +
-        `<div class="bar"></div>` +
-        `<h2>${esc(s.titulo || `Slide ${i + 1}`)}</h2>` +
-        `<ul>${(s.bullets ?? []).filter(Boolean).map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` +
-        `<span class="num">${i + 1} / ${slides.length}</span>` +
-        `</section>`,
-    )
-    .join('');
+  const corpo = slides.map((s, i) => corpoDoSlide(s, i, slides.length)).join('');
 
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -66,6 +117,17 @@ export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | nul
   .sub{font-size:clamp(16px,2.2vw,24px);color:var(--destaque);margin:0}
   ul{margin:0;padding-left:26px;display:grid;gap:14px}
   li{font-size:clamp(15px,2vw,22px);line-height:1.45}
+  .slide.secao{background:var(--destaque);display:grid;align-content:center}
+  .slide.secao h2{color:var(--bg);font-size:clamp(28px,5vw,52px);margin:0 0 8px}
+  .slide.secao .sub{color:var(--bg);opacity:.8}
+  .destaques{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:32px;align-items:start}
+  .kpi{display:grid;gap:8px}
+  .kpi strong{font-family:var(--ft);font-size:clamp(34px,6vw,72px);line-height:1;color:var(--destaque)}
+  .kpi span{font-size:clamp(13px,1.6vw,18px);color:var(--texto);line-height:1.35}
+  .colunas{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+  .col h3{margin:0 0 14px;font-family:var(--ft);font-size:clamp(16px,2.2vw,24px);color:var(--destaque)}
+  .col ul{gap:10px}
+  .col li{font-size:clamp(13px,1.7vw,19px)}
   .num{position:absolute;right:28px;bottom:20px;color:var(--suave);font-size:13px}
   .nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;
     background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:6px 10px;z-index:5}

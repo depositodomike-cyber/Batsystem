@@ -21,6 +21,8 @@ export type TemporarilyDisabledFeature =
   | "connectors"
   | "notifications"
   | "settingsAppearance"
+  | "settingsAppearancePanel"
+  | "brandGuideSecoesAvancadas"
   | "settingsVoice"
   | "settingsMemory"
   | "settingsHierarchy"
@@ -30,6 +32,8 @@ export type TemporarilyDisabledFeature =
   | "memoryGraph"
   | "memoryNoteEditing"
   | "rulesCorporatePin"
+  | "sendToGroup"
+  | "presentationRepositorySource"
   // Funil legado de criação de conta — ver bloco no fim deste arquivo.
   | "legacySignup"
   | "legacyOnboarding"
@@ -44,11 +48,34 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // (grade opaca + modal "Em breve"), independentemente daquela lista.
     aiStudio: false,
     squads: true,
+    // Grupos DESABILITADO de novo: o bloco "GRUPOS" da sidebar fica visível,
+    // opaco e sem clique — o "+" não cria, os itens não navegam nem
+    // renomeiam/excluem, e o "ver mais" some. Ponto de corte único, em
+    // AgrupamentosGroup.tsx.
+    //
+    // A rota /:produto/agrupamentos/:id continua NÃO bloqueada — quem tiver o
+    // link salvo ainda abre o grupo. É o mesmo comportamento das outras flags de
+    // navegação (E-mail, Slack, Conectores): elas decidem o que é clicável, não
+    // o que existe. Se um dia o corte precisar valer também para links diretos,
+    // o lugar é uma guarda na rota, em ceoRoutes.tsx.
     groups: true,
     history: false,
 
     insights: true,
     notes: true,
+    // E-mail, Slack e Agenda DESABILITADOS: os três itens do PAINEL ficam
+    // visíveis, opacos e sem clique na sidebar. O corte é um só, em
+    // `isNavItemTemporarilyDisabled` (mais abaixo), que resolve pelo último
+    // segmento do caminho — `email`, `slack` e `agenda`.
+    //
+    // As ROTAS continuam abertas: quem tiver `/:produto/email` salvo ainda abre
+    // a tela. É o mesmo comportamento das outras flags de navegação — elas
+    // decidem o que é clicável, não o que existe. Para valer também em link
+    // direto, o lugar é uma guarda em ceoRoutes.tsx.
+    //
+    // E-mail e Slack têm tela própria (`pageBySlug` em ceoRoutes.tsx); Agenda
+    // nunca teve, e caía no `Placeholder` ("em construção") enquanto esteve
+    // clicável.
     email: true,
     slack: true,
     calendar: true,
@@ -59,7 +86,44 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // FEATURE_FLAG_BY_SLUG (Funcionalidades).
     connectors: false,
     notifications: true,
-    settingsAppearance: true,
+    // Aparência REATIVADA: a seção volta a ser clicável no menu de
+    // Configurações e `?secao=aparencia` volta a resolver para ela.
+    //
+    // Ela volta com DUAS abas: a de sempre (animação de fundo e vinheta,
+    // preferências deste navegador) e Guia de marca, que passou a ser o único
+    // lugar onde se cria, edita e exclui as marcas da organização — o AI Studio
+    // inteiro virou consumidor e apenas seleciona (ver DesignSystemBar). Manter
+    // a flag ligada deixaria a gestão de marcas inalcançável.
+    settingsAppearance: false,
+    // true = a ABA "Aparência" (animação de fundo e vinheta) fica OCULTA dentro
+    // da seção Aparência, que passa a mostrar só "Guia de marca". Com uma aba
+    // só, a barra de abas também some — dois rótulos para um conteúdo seriam
+    // ruído.
+    //
+    // OCULTA, e não opaca: é o mesmo caso de `settingsHierarchy` e
+    // `sendToGroup`. O padrão de "visível e opaco" existe para anunciar o que
+    // vem, e estes dois toggles já existiam e funcionavam — anunciá-los como
+    // novidade indisponível seria mentira.
+    //
+    // Nada foi removido: `AbaPainel` e as preferências em `beculturePrefs`
+    // seguem intactas, e voltar a flag para `false` traz a aba de volta ao
+    // mesmo lugar, com o mesmo id de `?aba=`.
+    settingsAppearancePanel: true,
+    // true = as seções "Espaçamento e forma", "Componentes" e "Tokens e regras"
+    // ficam OCULTAS no formulário do guia de marca (criar e editar). Sobram
+    // Marca, Cores, Tipografia, Elementos visuais e Logos.
+    //
+    // OCULTAS, e não opacas: o formulário já existia inteiro e funcionava, e
+    // anunciar campos como novidade indisponível seria mentira — mesmo
+    // raciocínio de `settingsHierarchy` e `settingsAppearancePanel`.
+    //
+    // Os DADOS continuam: o formulário é controlado e passa o documento inteiro
+    // adiante, então o que estas seções guardam é preservado ao salvar. Marca
+    // nova nasce com os valores do PADRAO nesses campos. Consequência a saber:
+    // `tokens.dos` e `tokens.donts` alimentam o prompt de geração
+    // (`designBrief`), e com a seção fora do ar eles deixam de ser editáveis —
+    // sem deixar de ser enviados.
+    brandGuideSecoesAvancadas: true,
     settingsVoice: true,
     settingsMemory: false,
     // true = a seção Hierarquia de Configurações fica OCULTA — não renderizada.
@@ -91,6 +155,31 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // caminhos que abrem o modal (grafo e lista do Repositório).
     memoryNoteEditing: true,
     rulesCorporatePin: true,
+    // true = o botão "Enviar para o grupo" SOME das 15 telas do AI Studio que o
+    // usam (Apresentação, Ata, Artigo, Análise, Carrossel, Cortes, Vídeo,
+    // Imagem, Dashboard, Melhorar, Documento e os painéis de upload).
+    //
+    // Some em vez de ficar opaco, pelo mesmo motivo de `settingsHierarchy`: o
+    // padrão de "visível e opaco" existe para anunciar o que vem, e este botão
+    // já existia e funcionava — anunciá-lo como novidade indisponível seria
+    // mentira.
+    //
+    // O corte é um só, dentro do próprio `EnviarParaGrupo.tsx` — nenhuma das 15
+    // telas foi tocada, e voltar esta flag para `false` traz o botão de volta em
+    // todas elas ao mesmo tempo.
+    sendToGroup: true,
+    // true = "Buscar no Repositório", no menu "+" do campo de Sobre em Criar
+    // apresentação, fica visível e sem clique.
+    //
+    // O que falta para virar false: o Repositório é CEGO para o que não é .md
+    // (três filtros `.endsWith(".md")` em memoria-inventario.ts e
+    // memoriaVault.ts), e a busca do vault indexa só texto de nota. Puxar as
+    // especificações visuais de um arquivo de lá exige enxergar esse arquivo
+    // primeiro — é outra natureza de dado, não um botão a mais.
+    //
+    // O upload do mesmo menu JÁ funciona: PDF e .docx passam por `extrairTexto`,
+    // que a plataforma já usa em Análise, Ata e Documento.
+    presentationRepositorySource: true,
     legacySignup: true,
     legacyOnboarding: true,
     legacyPriceCalculator: true,

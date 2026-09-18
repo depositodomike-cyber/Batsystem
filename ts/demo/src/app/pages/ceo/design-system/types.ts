@@ -173,6 +173,84 @@ export const PADRAO: DesignSystem = {
   logos: { claro: "", escuro: "" },
 };
 
+/**
+ * Visual neutro — o que vale quando nenhuma identidade foi informada.
+ *
+ * É um DesignSystem como outro qualquer, e não a ausência dele, por dois
+ * motivos: no backend, `designTheme()` cai na paleta beculture quando o design
+ * falta, e `designBrief()` pula todo campo vazio. Com a `marca` em branco, o
+ * prompt recebe a PALETA sem receber identidade nenhuma — e o arquivo sai
+ * neutro sem exigir uma linha de backend.
+ *
+ * Escuro, e não claro, porque `build-html.ts` tem bordas `rgba(255,255,255,.08)`
+ * cravadas que assumem fundo escuro e sumiriam numa paleta clara.
+ *
+ * Os campos de texto ficam VAZIOS de propósito: preenchê-los com conselhos
+ * genéricos ("use uma estética sóbria") seria inventar uma identidade justamente
+ * onde o usuário disse não querer nenhuma.
+ */
+export const NEUTRO: DesignSystem = {
+  marca: {
+    nome: "",
+    proposito: "",
+    personalidade: "",
+    publico: "",
+    contexto: [],
+    tom: "",
+  },
+  cores: {
+    // Cinzas sobre grafite. O "destaque" é um cinza claro: ele vira a barra da
+    // capa e o realce dos números, então precisa contrastar sem virar cor de
+    // marca.
+    primaria: "#E5E7EB",
+    secundaria: "#9CA3AF",
+    acento: "#D1D5DB",
+    fundo: "#0F1115",
+    superficie: "#1A1D23",
+    texto: "#F5F6F7",
+    textoSuave: "#9BA1A8",
+    sucesso: "#10B981",
+    erro: "#EF4444",
+    alerta: "#F59E0B",
+    info: "#3B82F6",
+  },
+  tipografia: {
+    // Fontes de sistema: o renderizador cai em Arial quando não reconhece, e
+    // escolher uma fonte de marca aqui contradiria o "neutro".
+    fonteTitulo: "Inter",
+    fonteCorpo: "Inter",
+    base: 16,
+    escala: 1.25,
+    pesoTitulo: 700,
+    pesoCorpo: 400,
+    lineHeight: 1.5,
+    tracking: 0,
+  },
+  espacamento: {
+    base: 8,
+    grid: 12,
+    raio: 10,
+    padding: 16,
+    breakpoints: "",
+  },
+  componentes: {
+    botoes: "",
+    formularios: "",
+    superficies: "",
+    navegacao: "",
+    tabelas: "",
+  },
+  visual: { icones: "", ilustracoes: "", sombras: "", loading: "" },
+  tokens: {
+    modo: "",
+    nomeacao: "",
+    microinteracoes: "",
+    dos: "",
+    donts: "",
+  },
+  logos: { claro: "", escuro: "" },
+};
+
 export const FONTES = [
   "Inter",
   "Plus Jakarta Sans",

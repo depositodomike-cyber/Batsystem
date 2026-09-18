@@ -14,6 +14,7 @@ import Documentos from "@/app/pages/ceo/Documentos";
 import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
 import Ia from "@/app/pages/ceo/Ia";
+import Apresentacao from "@/app/pages/ceo/Apresentacao";
 import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
 import MemoriaGrafo from "@/app/pages/ceo/MemoriaGrafo";
@@ -202,6 +203,14 @@ const memoriaRedirects: RouteObject[] = products.map((p) => ({
   ),
 }));
 
+// Funções do AI Studio que são tela, e não modal (ver
+// `AI_STUDIO_FUNCTION_SCREENS` em ia-functions.ts). Ficam sob `/ia/` para deixar
+// claro de onde vêm; as demais funções continuam abrindo modal na própria /ia.
+const iaFuncaoRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/ia/apresentacao`,
+  Component: Apresentacao,
+}));
+
 // Detalhe de um documento gerado pelo upload de IA (Memória category documentos).
 const documentoRoutes: RouteObject[] = products.map((p) => ({
   path: `${p.code}/documento/:documentoId`,
@@ -255,6 +264,7 @@ export const ceoRoutes: RouteObject[] = [
   ...conversasDetailRoutes,
   ...administracaoRedirects,
   ...memoriaRedirects,
+  ...iaFuncaoRoutes,
   ...documentoRoutes,
   ...projectRoutes,
   ...chatRoutes,

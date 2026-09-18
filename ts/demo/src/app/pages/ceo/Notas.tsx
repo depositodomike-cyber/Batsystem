@@ -40,7 +40,10 @@ import {
 } from "./memoria-conteudo";
 import { setIaPrefill } from "@/utils/iaPrefill";
 import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
-import { isAiStudioFunctionDisabled } from "./ia-functions";
+import {
+  aiFunctionScreenPath,
+  isAiStudioFunctionDisabled,
+} from "./ia-functions";
 import clsx from "clsx";
 
 // ----------------------------------------------------------------------
@@ -311,7 +314,11 @@ export default function Notas() {
     }
     if (fn === "melhorar") setIaPrefill(fn, { texto: contexto });
     else setIaPrefill(fn, { tema, contexto });
-    navigate(`/${productCode}/ia?fn=${fn}`);
+    // O prefill é lido no destino — tela própria da função, quando existe; caso
+    // contrário, o deep link que abre o modal na tela de IA.
+    navigate(
+      aiFunctionScreenPath(fn, productCode) ?? `/${productCode}/ia?fn=${fn}`,
+    );
   };
 
   // Opções de assunto para o <Select> do editor.

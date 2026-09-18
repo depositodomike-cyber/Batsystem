@@ -1,94 +1,129 @@
 // Import Dependencies
-import { useState } from "react";
-import { CommandLineIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { Link, useLocation } from "react-router";
+import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
 // Local Imports
-import { DesignSystemEditor } from "./DesignSystemEditor";
+import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useActiveDesignSystem, useDesignSystems } from "./useDesignSystem";
 
 // ----------------------------------------------------------------------
-// Barra de marca / design system — portada do beculture/Confi (ia.js,
-// `dsBarHTML` + `wireDSBar`). Aparece em TODAS as ferramentas do AI Studio:
-// escolher a marca ativa, criar uma nova ou editar a selecionada. A marca
-// escolhida vale para a ação em curso (e fica salva como a marca ativa).
+// Barra de marca / design system — aparece em todas as ferramentas do AI
+// Studio. Serve para UMA coisa: escolher qual marca a ação em curso vai usar. A
+// escolha fica salva como a marca ativa deste navegador.
+//
+// Ela já criou e editou marca; não cria nem edita mais. Gerenciar guias de
+// marca é responsabilidade de Configurações › Geral › Aparência › Guia de
+// marca, e tirar a capacidade do componente — em vez de pedir a cada tela que
+// não a use — é o que garante que ela não volte pela porta dos fundos numa tela
+// nova.
 // ----------------------------------------------------------------------
 
 interface Props {
   className?: string;
+  /**
+   * Renderiza a barra como uma seção normal do formulário, sem borda, fundo nem
+   * padding próprios, e com rótulo/campo no mesmo tamanho dos demais campos.
+   *
+   * Existe porque, dentro de um card de formulário, a barra padrão vira um card
+   * dentro do card e ganha mais ênfase do que o campo principal da tela. O
+   * default continua sendo o visual de sempre — as janelas do AI Studio que a
+   * usam sobre o corpo do modal não mudam.
+   */
+  plain?: boolean;
 }
 
-export function DesignSystemBar({ className }: Props) {
-  const { brands, activeId, setActive, criar } = useDesignSystems();
+export function DesignSystemBar({ className, plain = false }: Props) {
+  const { brands, activeId, setActive, carregando, hidratado } =
+    useDesignSystems();
   const ds = useActiveDesignSystem();
-  const [editando, setEditando] = useState(false);
+  const { pathname } = useLocation();
 
-  const novaMarca = () => {
-    criar(); // cria a partir do padrão e já a torna ativa
-    setEditando(true);
-  };
+  // Computada aqui, e não recebida por prop: a barra só é montada sob
+  // /:produto/…, e passá-la por prop obrigaria cada tela a repetir a expressão.
+  const urlGuiaDeMarca = `/${getCurrentProduct(pathname).code}/configuracoes?secao=aparencia&aba=marca`;
+
+  // Sem nenhuma marca na organização não há o que selecionar: o conteúdo sai no
+  // estilo padrão da plataforma, e o campo dá lugar à explicação e ao caminho
+  // para criar uma. Só depois de hidratar — piscar "nenhuma marca" e então
+  // listar três é pior que meio segundo de esqueleto.
+  const semMarcas = brands.length === 0;
+  const vazioExplicado = hidratado && semMarcas;
+  const esqueleto = !hidratado && semMarcas;
 
   return (
-    <>
-      <div
-        className={clsx(
-          "dark:border-dark-600 dark:bg-dark-800/40 flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2",
-          className,
-        )}
-      >
-        <div className="min-w-[180px] flex-1">
-          <label className="dark:text-dark-300 mb-1 flex items-center gap-1.5 text-tiny-plus font-medium uppercase tracking-wider text-gray-500">
-            <span
-              className="size-3 shrink-0 rounded-full border border-black/10"
-              style={{ background: ds.cores.primaria }}
-              title={`Cor primária ${ds.cores.primaria}`}
-            />
-            Marca · design system
-          </label>
+    <div
+      className={clsx(
+        "flex flex-wrap items-end gap-2",
+        !plain &&
+          "dark:border-dark-600 dark:bg-dark-800/40 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2",
+        className,
+      )}
+    >
+      <div className="min-w-[180px] flex-1">
+        <label
+          className={clsx(
+            "mb-1 flex items-center gap-1.5 font-medium",
+            plain
+              ? "dark:text-dark-200 text-sm text-gray-600"
+              : "dark:text-dark-300 text-tiny-plus tracking-wider text-gray-500 uppercase",
+          )}
+        >
+          <span
+            className="size-3 shrink-0 rounded-full border border-black/10"
+            style={{ background: ds.cores.primaria }}
+            title={`Cor primária ${ds.cores.primaria}`}
+          />
+          {plain ? "Marca · Design System" : "Marca · design system"}
+        </label>
+
+        {esqueleto ? (
+          <div
+            aria-hidden
+            className="dark:bg-dark-600 h-9 w-full animate-pulse rounded-lg bg-gray-100"
+          />
+        ) : vazioExplicado ? (
+          <div className="dark:border-dark-600 dark:bg-dark-800/40 rounded-lg border border-dashed border-gray-300 px-3 py-3">
+            <p className="dark:text-dark-200 text-sm text-gray-600">
+              Nenhum guia de marca disponível nesta organização.
+            </p>
+            <p className="dark:text-dark-300 mt-0.5 text-xs text-gray-400">
+              O conteúdo será gerado no estilo padrão da plataforma.
+            </p>
+            <Link
+              to={urlGuiaDeMarca}
+              className="text-primary-600 dark:text-primary-400 text-xs-plus mt-2 inline-flex items-center gap-1 font-medium"
+            >
+              Ir para Guia de marca
+              <ArrowRightIcon className="size-3.5" />
+            </Link>
+          </div>
+        ) : (
           <select
             value={activeId}
             onChange={(e) => setActive(e.target.value)}
             aria-label="Marca / design system"
-            className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm"
+            className={clsx(
+              "form-select dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white text-sm",
+              plain
+                ? "dark:border-dark-450 dark:hover:border-dark-400 focus:border-primary-500 text-gray-800 hover:border-gray-400 focus:ring-0"
+                : "dark:border-dark-500 px-2.5 py-1.5",
+            )}
           >
-            {brands.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.nome}
+            {semMarcas ? (
+              <option value="">
+                {carregando ? "Carregando marcas…" : "Estilo padrão"}
               </option>
-            ))}
+            ) : (
+              brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.nome}
+                </option>
+              ))
+            )}
           </select>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={novaMarca}
-            title="Criar uma marca / design system"
-            className="dark:border-dark-500 dark:text-dark-200 dark:hover:bg-dark-600 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs-plus font-medium text-gray-600 transition-colors hover:bg-gray-100"
-          >
-            <PlusIcon className="size-4" /> Nova
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditando(true)}
-            title="Editar o design system da marca selecionada"
-            className="dark:border-dark-500 dark:text-dark-200 dark:hover:bg-dark-600 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-2.5 py-1.5 text-xs-plus font-medium text-gray-600 transition-colors hover:bg-gray-100"
-          >
-            <CommandLineIcon className="size-4" /> Editar
-          </button>
-        </div>
+        )}
       </div>
-
-      {/* Montado só quando abre, com `key` na marca: o editor sempre parte do
-          estado salvo da marca selecionada. */}
-      {editando && (
-        <DesignSystemEditor
-          key={activeId}
-          brandId={activeId}
-          isOpen
-          close={() => setEditando(false)}
-        />
-      )}
-    </>
+    </div>
   );
 }

@@ -55,6 +55,15 @@ export interface AssistenteContextValue {
   }) => Promise<PerguntarResult>;
   /** Follow-up dentro da conversa aberta. */
   continuar: (texto: string) => Promise<void>;
+  /**
+   * Publica um aviso do próprio app na conversa e abre o painel — sem chamar a
+   * IA. Para fluxos que concluem algo em outra tela e querem relatar o
+   * resultado aqui (ex.: o roteiro que o AI Studio acabou de gerar).
+   *
+   * Acrescenta ao fim da conversa em vez de zerá-la: um aviso não deve
+   * descartar o que o usuário estava perguntando.
+   */
+  anunciar: (aviso: { titulo: string; corpo: string }) => void;
   /** Carrega uma conversa persistida do histórico dentro do painel. */
   abrirConversa: (id: string) => Promise<void>;
 }

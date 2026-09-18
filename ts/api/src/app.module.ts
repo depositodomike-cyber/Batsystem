@@ -12,6 +12,7 @@ import { MemoriasModule } from './memorias/memorias.module';
 import { MembrosModule } from './membros/membros.module';
 import { AcessoModule } from './acesso/acesso.module';
 import { EstruturaModule } from './estrutura/estrutura.module';
+import { MarcasModule } from './marcas/marcas.module';
 import { ConversasModule } from './conversas/conversas.module';
 import { ConectoresModule } from './conectores/conectores.module';
 import { McpModule } from './mcp/mcp.module';
@@ -34,6 +35,7 @@ import { HealthController } from './health.controller';
     MembrosModule,
     AcessoModule,
     EstruturaModule,
+    MarcasModule,
     ConversasModule,
     ConectoresModule,
     McpModule,

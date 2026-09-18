@@ -22,6 +22,7 @@ import { Button, Input, Spinner } from "@/components/ui";
 import { getCurrentProduct, products } from "@/app/navigation/ceoOs";
 import { useProjectsContext } from "@/app/contexts/projects/context";
 import { useDocumentsContext } from "@/app/contexts/documents/context";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import type { DocumentAttachment } from "@/app/contexts/documents/context";
 import type { AnexoMemoria } from "@/utils/memoriaVault";
 import { memoriaVaultSupported } from "@/utils/memoriaVault";
@@ -85,6 +86,10 @@ export function EnviarParaGrupoButton({
   const { addDocument } = useDocumentsContext();
 
   const [aberto, setAberto] = useState(false);
+  // Desligado temporariamente em TODAS as telas do AI Studio. O corte fica aqui,
+  // e não nos 15 pontos de uso: cada tela segue passando as props, e reativar é
+  // só a flag. Depois dos hooks porque a ordem deles não pode variar.
+  const desligado = isFeatureTemporarilyDisabled("sendToGroup");
   const [enviando, setEnviando] = useState(false);
   const [novoGrupo, setNovoGrupo] = useState("");
   // Guardamos a assinatura do que foi enviado, não um booleano: um refino ou
@@ -185,6 +190,8 @@ export function EnviarParaGrupoButton({
     }
     await enviar(projeto.id, projeto.title, projeto.product);
   };
+
+  if (desligado) return null;
 
   return (
     <>

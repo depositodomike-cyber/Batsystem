@@ -2,7 +2,6 @@ import { ComponentType } from "react";
 
 import { ALL_AI_FUNCTIONS } from "@/app/pages/ceo/ia-functions";
 import { AnaliseModal } from "@/app/pages/ceo/AnaliseModal";
-import { ApresentacaoModal } from "@/app/pages/ceo/ApresentacaoModal";
 import { ArtigoModal } from "@/app/pages/ceo/ArtigoModal";
 import { AtaModal } from "@/app/pages/ceo/AtaModal";
 import { CarrosselModal } from "@/app/pages/ceo/CarrosselModal";
@@ -46,7 +45,6 @@ const fn = (id: string): IaModalMeta => {
 
 export const IA_MODALS: IaModalEntry[] = [
   { ...fn("analise"), Component: AnaliseModal },
-  { ...fn("apresentacao"), Component: ApresentacaoModal },
   { ...fn("artigo"), Component: ArtigoModal },
   { ...fn("ata"), Component: AtaModal },
   { ...fn("carrossel"), Component: CarrosselModal },

@@ -151,7 +151,11 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
       { code: 'configuracoes.visualizar', rotulo: 'Visualizar configurações' },
       {
         code: 'configuracoes.gerenciar',
-        rotulo: 'Gerenciar configurações e chaves de IA',
+        // O 'code' é o valor persistido em 'roles.permissoes' e não muda; o
+        // rótulo passou a cobrir também os guias de marca, que agora são
+        // entidades da organização administradas em Configurações › Geral ›
+        // Aparência. Mesmo movimento já feito em 'estrutura.gerenciar'.
+        rotulo: 'Gerenciar configurações, chaves de IA e guias de marca',
         requer: 'configuracoes.visualizar',
       },
     ],

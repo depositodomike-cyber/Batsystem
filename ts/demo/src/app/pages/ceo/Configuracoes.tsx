@@ -12,18 +12,13 @@ import {
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
-import { Button, Switch, Spinner } from "@/components/ui";
+import { Button, Spinner } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
-import {
-  getGrafoAtivo,
-  getVinhetaAtiva,
-  getTtsAtivo,
-  setGrafoAtivo,
-  setVinhetaAtiva,
-  setTtsAtivo,
-} from "@/utils/beculturePrefs";
+import { getTtsAtivo, setTtsAtivo } from "@/utils/beculturePrefs";
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
+import { AparenciaSection } from "./AparenciaSection";
+import { SectionCard, ToggleRow } from "./configuracoes-ui";
 import { RegrasSection } from "./Memoria";
 import { PainelAdministracao } from "./Administracao";
 import { NavegacaoSecoes } from "./NavegacaoSecoes";
@@ -60,7 +55,9 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 // MESMA lista alimenta o menu (`NavegacaoSecoes`) e o despacho do corpo.
 //
 // As seções renderizadas por ESTE arquivo:
-//   • Aparência — animação de fundo e vinheta (preferências locais).
+//   • Aparência — em arquivo próprio (AparenciaSection.tsx), com duas abas:
+//     animação de fundo e vinheta (preferências locais) e os guias de marca da
+//     organização, que decidem a cara do que o AI Studio gera.
 //   • Voz — resposta falada (TTS) após comandos de voz (preferência local).
 //   • IA & API — conexões BYOK (Texto/Imagem/Vídeo) via AiConnectionCard +
 //     consumo de tokens do usuário (GET /uso/tokens), este último oculto
@@ -132,18 +129,21 @@ export default function Configuracoes() {
                   <p>
                     <strong>Configurações</strong> é onde a plataforma e a
                     organização se configuram, em quatro grupos:{" "}
-                    <strong>Geral</strong> (aparência, voz e a pasta de dados
-                    que alimenta o grafo), <strong>IA</strong> (as orientações
-                    que a IA segue nas respostas e a conexão dos provedores de
-                    IA da empresa), <strong>Estrutura</strong> (as pessoas da
-                    organização, as áreas e cargos que ocupam e a hierarquia
-                    entre elas) e <strong>Acesso</strong> (as roles, que dizem o
-                    que cada pessoa pode fazer).
+                    <strong>Geral</strong> (aparência, os guias de marca da
+                    organização, voz e a pasta de dados que alimenta o grafo),{" "}
+                    <strong>IA</strong> (as orientações que a IA segue nas
+                    respostas e a conexão dos provedores de IA da empresa),{" "}
+                    <strong>Estrutura</strong> (as pessoas da organização, as
+                    áreas e cargos que ocupam e a hierarquia entre elas) e{" "}
+                    <strong>Acesso</strong> (as roles, que dizem o que cada
+                    pessoa pode fazer).
                   </p>
                   <p>
                     As preferências de aparência e voz ficam salvas só neste
                     navegador, e a pasta do Repositório é lida localmente —
-                    nenhum arquivo é enviado a servidores.
+                    nenhum arquivo é enviado a servidores. Os guias de marca são
+                    a exceção: pertencem à organização e valem para todo mundo
+                    nela.
                   </p>
                 </>
               ),
@@ -188,99 +188,6 @@ export default function Configuracoes() {
         </div>
       </div>
     </Page>
-  );
-}
-
-// ----------------------------------------------------------------------
-// Bloco base de uma seção (cartão + título + descrição).
-
-function SectionCard({
-  titulo,
-  descricao,
-  children,
-}: {
-  titulo: string;
-  descricao: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="dark:border-dark-600 dark:bg-dark-700 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-      <h3 className="dark:text-dark-50 text-lg font-semibold text-gray-800">
-        {titulo}
-      </h3>
-      <p className="dark:text-dark-300 mt-0.5 text-sm text-gray-500">
-        {descricao}
-      </p>
-      <div className="dark:bg-dark-500 my-5 h-px bg-gray-200" />
-      {children}
-    </div>
-  );
-}
-
-/** Linha com título/descrição à esquerda e um interruptor à direita. */
-function ToggleRow({
-  nome,
-  descricao,
-  checked,
-  onChange,
-}: {
-  nome: string;
-  descricao: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <p className="dark:text-dark-100 text-sm font-medium text-gray-800">
-          {nome}
-        </p>
-        <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-500">
-          {descricao}
-        </p>
-      </div>
-      <Switch
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="shrink-0"
-      />
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------------
-// Aparência
-
-function AparenciaSection() {
-  const [grafo, setGrafo] = useState(getGrafoAtivo);
-  const [vinheta, setVinheta] = useState(getVinhetaAtiva);
-
-  return (
-    <SectionCard
-      titulo="Aparência"
-      descricao="Ajustes visuais do painel. As escolhas ficam salvas só neste navegador."
-    >
-      <div className="dark:divide-dark-500 divide-y divide-gray-100">
-        <ToggleRow
-          nome="Animação de fundo"
-          descricao="A rede de nós animada por trás do painel."
-          checked={grafo}
-          onChange={(v) => {
-            setGrafo(v);
-            setGrafoAtivo(v);
-          }}
-        />
-        <ToggleRow
-          nome="Vinheta"
-          descricao="Escurecimento suave nas bordas da tela."
-          checked={vinheta}
-          onChange={(v) => {
-            setVinheta(v);
-            setVinhetaAtiva(v);
-          }}
-        />
-      </div>
-    </SectionCard>
   );
 }
 

@@ -62,8 +62,31 @@ export function isAiStudioFunctionDisabled(id: string): boolean {
   return !AI_STUDIO_ENABLED_FUNCTION_IDS.has(id);
 }
 
+/**
+ * Funções do AI Studio que abrem uma TELA própria, e não um modal: id → caminho
+ * relativo ao produto.
+ *
+ * São quatro os pontos de entrada de uma função (card da grade, deep link
+ * `?fn=`, item da sidebar e ações de IA das Notas). Sem esta tabela cada um
+ * decidiria por conta própria para onde mandar o usuário, e sairiam de sincronia
+ * na primeira função que virasse tela.
+ */
+const AI_STUDIO_FUNCTION_SCREENS: Record<string, string> = {
+  apresentacao: "ia/apresentacao",
+};
+
+/** Caminho da tela de uma função, ou `null` se ela ainda for um modal. */
+export function aiFunctionScreenPath(
+  id: string,
+  productCode: string,
+): string | null {
+  const rota = AI_STUDIO_FUNCTION_SCREENS[id];
+  return rota ? `/${productCode}/${rota}` : null;
+}
+
 // Funções nativas de inteligência (criar apresentação, editar vídeo, melhorar
-// texto…). Cada uma abre um modal na tela de IA.
+// texto…). Cada uma abre um modal — ou uma tela, quando listada em
+// `AI_STUDIO_FUNCTION_SCREENS`.
 export const FUNCTIONS: AiFunction[] = [
   { id: "analise", label: "Análise de conteúdo", desc: "Analisa um arquivo ou link em 17 seções.", Icon: MagnifyingGlassIcon, tint: "text-sky-500" },
   { id: "apresentacao", label: "Criar apresentação", desc: "Roteiro editável → .pptx, slides ou book HTML.", Icon: PresentationChartBarIcon, tint: "text-orange-500" },

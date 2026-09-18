@@ -70,6 +70,18 @@ interface Props {
   pessoas?: string[];
   disabled?: boolean;
   className?: string;
+  /**
+   * Rótulos do botão. O padrão é "Salvar na memória"/"Na memória"; telas que
+   * falam "Repositório" com o usuário passam os seus (a pasta é a mesma).
+   */
+  rotulo?: string;
+  rotuloSalvo?: string;
+  /**
+   * `true` = botão simples, sem a seta que abre a lista de pastas: grava direto
+   * em `pasta`. Para telas em que a pasta é evidente pelo próprio fluxo e a seta
+   * só competiria com o CTA ao lado.
+   */
+  semSeletorDePasta?: boolean;
 }
 
 export function SalvarNaMemoriaButton({
@@ -82,6 +94,9 @@ export function SalvarNaMemoriaButton({
   pessoas,
   disabled,
   className,
+  rotulo = "Salvar na memória",
+  rotuloSalvo = "Na memória",
+  semSeletorDePasta = false,
 }: Props) {
   const [gravando, setGravando] = useState(false);
   const [salvoEm, setSalvoEm] = useState<string | null>(null);
@@ -187,6 +202,31 @@ export function SalvarNaMemoriaButton({
 
   const bloqueado = disabled || gravando;
 
+  const icone = gravando ? (
+    <Spinner className="size-4" />
+  ) : salvo ? (
+    <CheckCircleIcon className="size-4" />
+  ) : (
+    <FolderPlusIcon className="size-4" />
+  );
+
+  // Sem a seta o botão deixa de ser dividido: nada de cantos retos nem de
+  // `text-xs-plus`/`h-8` embutidos, para ele poder acompanhar a altura do CTA
+  // ao lado só pelo `className` de quem chama.
+  if (semSeletorDePasta) {
+    return (
+      <Button
+        onClick={() => salvar(pasta)}
+        disabled={bloqueado || salvo}
+        color="primary"
+        className={clsx("gap-1.5", className)}
+      >
+        {icone}
+        {salvo ? rotuloSalvo : rotulo}
+      </Button>
+    );
+  }
+
   return (
     // `items-stretch` + altura automática na seta: o botão de seta acompanha a
     // altura do principal, inclusive quando quem chama passa `h-auto`.
@@ -200,14 +240,8 @@ export function SalvarNaMemoriaButton({
           className,
         )}
       >
-        {gravando ? (
-          <Spinner className="size-4" />
-        ) : salvo ? (
-          <CheckCircleIcon className="size-4" />
-        ) : (
-          <FolderPlusIcon className="size-4" />
-        )}
-        {salvo ? "Na memória" : "Salvar na memória"}
+        {icone}
+        {salvo ? rotuloSalvo : rotulo}
       </Button>
 
       <Menu as="div" className="relative">

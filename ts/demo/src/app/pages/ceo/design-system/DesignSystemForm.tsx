@@ -34,9 +34,9 @@ import {
 // ----------------------------------------------------------------------
 
 const inputCls =
-  "form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400";
+  "form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 dark:placeholder:text-dark-300";
 const areaCls =
-  "form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed placeholder:text-gray-400";
+  "form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm leading-relaxed placeholder:text-gray-400 dark:placeholder:text-dark-300";
 const labelCls =
   "dark:text-dark-200 mb-1 block text-xs-plus font-medium text-gray-600";
 
@@ -196,6 +196,10 @@ export function DesignSystemForm({
   const semAvancadas = isFeatureTemporarilyDisabled(
     "brandGuideSecoesAvancadas",
   );
+  const semContextos = isFeatureTemporarilyDisabled("brandGuideContextosDeUso");
+  const semElementosVisuais = isFeatureTemporarilyDisabled(
+    "brandGuideElementosVisuais",
+  );
   const tipos = useMemo(() => escalaTipos(ds.tipografia), [ds.tipografia]);
 
   // Pares de contraste checados (texto/fundo, texto suave/fundo, primária/fundo…).
@@ -241,11 +245,12 @@ export function DesignSystemForm({
               placeholder="Nome da marca"
             />
           </Campo>
-          <Campo label="Propósito">
+          <Campo label="O que a marca representa">
             <textarea
               className={areaCls}
               rows={2}
               value={ds.marca.proposito}
+              placeholder="Ex.: Transformar cultura organizacional em performance de negócio."
               onChange={(e) => set("marca", { proposito: e.target.value })}
             />
           </Campo>
@@ -254,20 +259,22 @@ export function DesignSystemForm({
               <input
                 className={inputCls}
                 value={ds.marca.personalidade}
+                placeholder="Ex.: Confiante, inovadora, próxima, sofisticada"
                 onChange={(e) =>
                   set("marca", { personalidade: e.target.value })
                 }
               />
             </Campo>
-            <Campo label="Público">
+            <Campo label="Para quem a marca comunica">
               <input
                 className={inputCls}
                 value={ds.marca.publico}
+                placeholder="Ex.: C-level, líderes de RH e gestores de times"
                 onChange={(e) => set("marca", { publico: e.target.value })}
               />
             </Campo>
           </div>
-          <Campo label="Tom">
+          <Campo label="Tom de voz">
             <select
               className={inputCls}
               value={ds.marca.tom}
@@ -283,29 +290,31 @@ export function DesignSystemForm({
               ))}
             </select>
           </Campo>
-          <Campo label="Contextos de uso">
-            <div className="flex flex-wrap gap-2">
-              {CONTEXTOS.map((c) => {
-                const on = (ds.marca.contexto || []).includes(c);
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => toggleContexto(c)}
-                    aria-pressed={on}
-                    className={clsx(
-                      "text-xs-plus rounded-lg border px-2.5 py-1 transition-colors",
-                      on
-                        ? "border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400"
-                        : "dark:border-dark-500 dark:text-dark-300 border-gray-300 text-gray-500",
-                    )}
-                  >
-                    {c}
-                  </button>
-                );
-              })}
-            </div>
-          </Campo>
+          {!semContextos && (
+            <Campo label="Contextos de uso">
+              <div className="flex flex-wrap gap-2">
+                {CONTEXTOS.map((c) => {
+                  const on = (ds.marca.contexto || []).includes(c);
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => toggleContexto(c)}
+                      aria-pressed={on}
+                      className={clsx(
+                        "text-xs-plus rounded-lg border px-2.5 py-1 transition-colors",
+                        on
+                          ? "border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400"
+                          : "dark:border-dark-500 dark:text-dark-300 border-gray-300 text-gray-500",
+                      )}
+                    >
+                      {c}
+                    </button>
+                  );
+                })}
+              </div>
+            </Campo>
+          )}
         </Secao>
 
         <Secao titulo="Cores">
@@ -536,6 +545,7 @@ export function DesignSystemForm({
               <input
                 className={inputCls}
                 value={ds.espacamento.breakpoints}
+                placeholder="Ex.: sm 640 · md 768 · lg 1024 · xl 1280"
                 onChange={(e) =>
                   set("espacamento", { breakpoints: e.target.value })
                 }
@@ -551,6 +561,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.componentes.botoes}
+                placeholder="Ex.: Primário sólido, secundário contorno; hover eleva"
                 onChange={(e) => set("componentes", { botoes: e.target.value })}
               />
             </Campo>
@@ -559,6 +570,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.componentes.formularios}
+                placeholder="Ex.: Borda de 1px, foco com realce da cor primária"
                 onChange={(e) =>
                   set("componentes", { formularios: e.target.value })
                 }
@@ -569,6 +581,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.componentes.superficies}
+                placeholder="Ex.: Cards elevados; modais centrais com overlay"
                 onChange={(e) =>
                   set("componentes", { superficies: e.target.value })
                 }
@@ -579,6 +592,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.componentes.navegacao}
+                placeholder="Ex.: Menu lateral e tabs; item ativo destacado"
                 onChange={(e) =>
                   set("componentes", { navegacao: e.target.value })
                 }
@@ -589,6 +603,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.componentes.tabelas}
+                placeholder="Ex.: Cabeçalho fixo, zebra sutil, densidade confortável"
                 onChange={(e) =>
                   set("componentes", { tabelas: e.target.value })
                 }
@@ -597,40 +612,46 @@ export function DesignSystemForm({
           </Secao>
         )}
 
-        <Secao titulo="Elementos visuais">
-          <Campo label="Ícones">
-            <textarea
-              className={areaCls}
-              rows={2}
-              value={ds.visual.icones}
-              onChange={(e) => set("visual", { icones: e.target.value })}
-            />
-          </Campo>
-          <Campo label="Ilustrações e fotos">
-            <textarea
-              className={areaCls}
-              rows={2}
-              value={ds.visual.ilustracoes}
-              onChange={(e) => set("visual", { ilustracoes: e.target.value })}
-            />
-          </Campo>
-          <Campo label="Sombras">
-            <textarea
-              className={areaCls}
-              rows={2}
-              value={ds.visual.sombras}
-              onChange={(e) => set("visual", { sombras: e.target.value })}
-            />
-          </Campo>
-          <Campo label="Loading e feedback">
-            <textarea
-              className={areaCls}
-              rows={2}
-              value={ds.visual.loading}
-              onChange={(e) => set("visual", { loading: e.target.value })}
-            />
-          </Campo>
-        </Secao>
+        {!semElementosVisuais && (
+          <Secao titulo="Elementos visuais">
+            <Campo label="Ícones">
+              <textarea
+                className={areaCls}
+                rows={2}
+                value={ds.visual.icones}
+                placeholder="Ex.: Estilo line, 24px, traço 1.5"
+                onChange={(e) => set("visual", { icones: e.target.value })}
+              />
+            </Campo>
+            <Campo label="Ilustrações e fotos">
+              <textarea
+                className={areaCls}
+                rows={2}
+                value={ds.visual.ilustracoes}
+                placeholder="Ex.: Flat geométrico; fotos com overlay escuro"
+                onChange={(e) => set("visual", { ilustracoes: e.target.value })}
+              />
+            </Campo>
+            <Campo label="Sombras">
+              <textarea
+                className={areaCls}
+                rows={2}
+                value={ds.visual.sombras}
+                placeholder="Ex.: Três níveis, difusas e de baixa opacidade"
+                onChange={(e) => set("visual", { sombras: e.target.value })}
+              />
+            </Campo>
+            <Campo label="Loading e feedback">
+              <textarea
+                className={areaCls}
+                rows={2}
+                value={ds.visual.loading}
+                placeholder="Ex.: Spinner e skeleton; avisos por toast"
+                onChange={(e) => set("visual", { loading: e.target.value })}
+              />
+            </Campo>
+          </Secao>
+        )}
 
         {!semAvancadas && (
           <Secao titulo="Tokens e regras">
@@ -652,6 +673,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.tokens.nomeacao}
+                placeholder="Ex.: color.primary · space.4 · radius.md"
                 onChange={(e) => set("tokens", { nomeacao: e.target.value })}
               />
             </Campo>
@@ -660,6 +682,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.tokens.microinteracoes}
+                placeholder="Ex.: Transições de 140ms; foco sempre visível"
                 onChange={(e) =>
                   set("tokens", { microinteracoes: e.target.value })
                 }
@@ -670,6 +693,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.tokens.dos}
+                placeholder="Ex.: Mantenha contraste AA+; use o acento com parcimônia"
                 onChange={(e) => set("tokens", { dos: e.target.value })}
               />
             </Campo>
@@ -678,6 +702,7 @@ export function DesignSystemForm({
                 className={areaCls}
                 rows={2}
                 value={ds.tokens.donts}
+                placeholder="Ex.: Não misture mais de duas fontes"
                 onChange={(e) => set("tokens", { donts: e.target.value })}
               />
             </Campo>

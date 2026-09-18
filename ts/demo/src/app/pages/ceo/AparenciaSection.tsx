@@ -105,7 +105,7 @@ export function AparenciaSection() {
       descricao={
         visiveis.length > 1
           ? "Ajustes visuais do painel e os guias de marca da organização. As preferências de exibição ficam neste navegador; os guias de marca valem para toda a organização."
-          : "Os guias de marca da organização, eles valem para todo mundo nela."
+          : "Preferências visuais da organização."
       }
     >
       {/* Uma aba só não é uma escolha: a barra some junto. */}
@@ -371,7 +371,8 @@ function AbaGuiaDeMarca({
           Guia de marca
         </h4>
         <p className="dark:text-dark-300 mt-0.5 text-sm text-gray-500">
-          Gerencie as identidades visuais disponíveis para a plataforma.
+          Gerencie as identidades visuais usadas pela IA na geração de
+          conteúdos.
         </p>
       </div>
 

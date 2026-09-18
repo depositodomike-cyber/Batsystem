@@ -32,6 +32,23 @@ import {
   Tr,
 } from "@/components/ui";
 import type { MarcaLocal } from "./design-system";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+
+/**
+ * O estado "ativo" está temporariamente fora da tabela — ver a flag. Módulo,
+ * e não prop: o selo e a ação do kebab ficam em componentes diferentes e
+ * precisam sumir juntos.
+ */
+const semEstadoAtivo = () =>
+  isFeatureTemporarilyDisabled("brandGuideMarcaAtiva");
+
+/**
+ * "Contextos de uso" está temporariamente fora — some a coluna daqui e o
+ * campo do formulário. A busca também deixa de olhar os contextos: casar por
+ * um texto que não aparece em lugar nenhum pareceria defeito.
+ */
+const semContextosDeUso = () =>
+  isFeatureTemporarilyDisabled("brandGuideContextosDeUso");
 
 // ----------------------------------------------------------------------
 // Tabela de guias de marca — Configurações › Geral › Aparência › Guia de marca.
@@ -78,9 +95,11 @@ export function MarcasLista({
     const q = query.trim().toLowerCase();
     if (!q) return marcas;
     return marcas.filter((m) =>
-      [m.ds.marca.nome, m.ds.marca.tom, ...(m.ds.marca.contexto ?? [])].some(
-        (campo) => campo.toLowerCase().includes(q),
-      ),
+      [
+        m.ds.marca.nome,
+        m.ds.marca.tom,
+        ...(semContextosDeUso() ? [] : (m.ds.marca.contexto ?? [])),
+      ].some((campo) => campo.toLowerCase().includes(q)),
     );
   }, [marcas, query]);
 
@@ -120,7 +139,7 @@ export function MarcasLista({
               className="h-9 shrink-0 gap-1.5 rounded-lg px-3"
             >
               <PlusIcon className="size-4.5 stroke-[1.5]" />
-              Nova marca
+              Adicionar guia de marca
             </Button>
           )}
         </div>
@@ -142,10 +161,10 @@ export function MarcasLista({
           <EstadoVazio
             icon={SwatchIcon}
             titulo="Nenhuma marca cadastrada"
-            hint="Crie um guia de marca para que o conteúdo gerado pela IA saia na identidade da sua organização. Sem nenhum, ele sai no estilo padrão da plataforma."
+            hint="Cadastre um guia de marca para definir a identidade visual dos conteúdos gerados pela IA."
             acao={
               podeGerenciar
-                ? { rotulo: "Nova marca", onClick: onCriar }
+                ? { rotulo: "Adicionar guia de marca", onClick: onCriar }
                 : undefined
             }
           />
@@ -165,7 +184,7 @@ export function MarcasLista({
                 {[
                   "Marca",
                   "Identidade visual",
-                  "Contextos",
+                  ...(semContextosDeUso() ? [] : ["Contextos"]),
                   "Atualizado em",
                 ].map((titulo) => (
                   <Th
@@ -193,7 +212,7 @@ export function MarcasLista({
                         <span className="truncate">
                           {m.ds.marca.nome?.trim() || "Sem nome"}
                         </span>
-                        {m.id === activeId && (
+                        {!semEstadoAtivo() && m.id === activeId && (
                           <Badge
                             color="primary"
                             variant="soft"
@@ -239,9 +258,11 @@ export function MarcasLista({
                     </div>
                   </Td>
 
-                  <Td className="py-3">
-                    <Contextos lista={m.ds.marca.contexto ?? []} />
-                  </Td>
+                  {!semContextosDeUso() && (
+                    <Td className="py-3">
+                      <Contextos lista={m.ds.marca.contexto ?? []} />
+                    </Td>
+                  )}
 
                   <Td className="dark:text-dark-200 text-sm-plus py-3 text-gray-600 tabular-nums">
                     {formatarData(m.atualizadoEm)}
@@ -351,9 +372,9 @@ function MarcaMenu({
         <ItemAcao icon={PencilSquareIcon} onClick={onEditar}>
           Editar guia
         </ItemAcao>
-        {/* A marca ativa é preferência DESTE navegador, não da organização —
-            por isso a ação some quando já é ela, em vez de ficar desabilitada. */}
-        {!ehAtiva && (
+        {/* Some quando já é a ativa (em vez de ficar desabilitada), e enquanto
+            a flag esconder o estado inteiro. */}
+        {!semEstadoAtivo() && !ehAtiva && (
           <ItemAcao icon={CheckCircleIcon} onClick={onAtivar}>
             Definir como marca ativa
           </ItemAcao>

@@ -23,6 +23,9 @@ export type TemporarilyDisabledFeature =
   | "settingsAppearance"
   | "settingsAppearancePanel"
   | "brandGuideSecoesAvancadas"
+  | "brandGuideMarcaAtiva"
+  | "brandGuideContextosDeUso"
+  | "brandGuideElementosVisuais"
   | "settingsVoice"
   | "settingsMemory"
   | "settingsHierarchy"
@@ -124,6 +127,39 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // (`designBrief`), e com a seção fora do ar eles deixam de ser editáveis —
     // sem deixar de ser enviados.
     brandGuideSecoesAvancadas: true,
+    // true = o estado "ativo" some da tabela de guias de marca: o selo "Ativa"
+    // ao lado do nome e a ação "Definir como marca ativa" no kebab.
+    //
+    // As duas juntas, de propósito. O selo sozinho seria um estado que não dá
+    // para mudar; a ação sozinha mudaria algo que não aparece em lugar nenhum.
+    //
+    // O CONCEITO continua vivo por baixo: a marca ativa é o que
+    // `useActiveDesignSystem()` devolve e o que o AI Studio usa por padrão. Sem
+    // esta tela, ela passa a ser definida só pela criação (marca nova nasce
+    // ativa) e pelo seletor de marca do AI Studio.
+    brandGuideMarcaAtiva: true,
+    // true = "Contextos de uso" some do formulário de guia de marca E a
+    // coluna Contextos some da tabela.
+    //
+    // As duas juntas, pelo mesmo motivo das outras daqui: a coluna sozinha
+    // mostraria um dado que ninguém consegue mais editar. A busca da tabela
+    // também deixa de olhar os contextos — casar por um texto invisível
+    // pareceria defeito.
+    //
+    // Os DADOS continuam: o formulário é controlado e devolve o documento
+    // inteiro, então `marca.contexto` é preservado ao salvar, e segue indo
+    // para o prompt de geração.
+    brandGuideContextosDeUso: true,
+    // true = a seção "Elementos visuais" (Ícones, Ilustrações e fotos,
+    // Sombras, Loading e feedback) fica OCULTA no formulário do guia de
+    // marca. Flag própria, e não junto de `brandGuideSecoesAvancadas`: as
+    // duas saíram por pedidos diferentes e podem voltar separadas.
+    //
+    // Os DADOS continuam, como nas outras: o formulário devolve o documento
+    // inteiro. Consequência a saber: `visual.ilustracoes` alimenta o
+    // `designImagemHint` da geração de imagem — segue sendo enviado, só
+    // deixa de ser editável.
+    brandGuideElementosVisuais: true,
     settingsVoice: true,
     settingsMemory: false,
     // true = a seção Hierarquia de Configurações fica OCULTA — não renderizada.

@@ -127,12 +127,18 @@ export class VaultService {
    * Recupera as notas mais relevantes à pergunta por busca textual do Postgres
    * (full-text em português). Se a pergunta não casar com nada (ou vier vazia),
    * cai para as notas mais recentes — melhor dar algum contexto do que nenhum.
+   *
+   * `semFallback` desliga essa queda. Quem o usa é a geração de planilha, e o
+   * motivo é concreto: ali a nota vira DADO, e cinco notas quaisquer fariam a
+   * IA preencher a planilha com assunto alheio. Para contexto de conversa, o
+   * fallback ajuda; para dado, nenhuma nota é melhor que nota errada.
    */
   async search(
     empresaId: string,
     repositorioId: string | null,
     query: string,
     k = 8,
+    opts: { semFallback?: boolean } = {},
   ): Promise<VaultNotaHit[]> {
     if (!repositorioId) return [];
     const q = query.trim();
@@ -152,6 +158,7 @@ export class VaultService {
       `;
       if (rows.length) return rows;
     }
+    if (opts.semFallback) return [];
 
     // Fallback: notas mais recentes.
     const recentes = await this.prisma.vaultNota.findMany({

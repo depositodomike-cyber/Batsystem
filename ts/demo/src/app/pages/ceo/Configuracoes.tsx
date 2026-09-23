@@ -129,7 +129,7 @@ export default function Configuracoes() {
                   <p>
                     <strong>Configurações</strong> é onde a plataforma e a
                     organização se configuram, em quatro grupos:{" "}
-                    <strong>Geral</strong> (aparência, os guias de marca da
+                    <strong>Geral</strong> (aparência, as identidades visuais da
                     organização, voz e a pasta de dados que alimenta o grafo),{" "}
                     <strong>IA</strong> (as orientações que a IA segue nas
                     respostas e a conexão dos provedores de IA da empresa),{" "}
@@ -141,9 +141,9 @@ export default function Configuracoes() {
                   <p>
                     As preferências de aparência e voz ficam salvas só neste
                     navegador, e a pasta do Repositório é lida localmente —
-                    nenhum arquivo é enviado a servidores. Os guias de marca são
-                    a exceção: pertencem à organização e valem para todo mundo
-                    nela.
+                    nenhum arquivo é enviado a servidores. As identidades
+                    visuais são a exceção: pertencem à organização e valem para
+                    todo mundo nela.
                   </p>
                 </>
               ),

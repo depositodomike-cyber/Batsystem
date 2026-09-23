@@ -3,9 +3,10 @@ import type { Insight, InsightSeveridade } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { AiService } from '@/ai/ai.service';
 import {
+  buildInsightsSystem,
   buildInsightsUser,
+  MAX_INSIGHTS_PADRAO,
   parseInsights,
-  SYSTEM_INSIGHTS,
   type InsightGerado,
 } from './insights.prompts';
 
@@ -86,28 +87,38 @@ export class InsightsService {
 
   /**
    * Gera insights a partir de um material (ata/resumo/documento) via IA e os
-   * persiste. Retorna os insights criados. NÃO lança em falha de geração —
+   * persiste. `max` limita o tamanho do lote — o documento pede menos que uma
+   * reunião (ver MAX_INSIGHTS_DOCUMENTO). Retorna os criados. NÃO lança em
+   * falha de geração —
    * devolve [] e loga, para nunca derrubar o fluxo que a chamou (ex.: a
    * transcrição de áudio, que já salvou a ata com sucesso).
    */
   async gerarDeMaterial(
     empresaId: string,
     usuarioId: string,
-    material: { titulo: string; conteudo: string; origem: string; memoriaId?: string },
+    material: {
+      titulo: string;
+      conteudo: string;
+      origem: string;
+      memoriaId?: string;
+      /** Teto do lote. Omitido, vale MAX_INSIGHTS_PADRAO. */
+      max?: number;
+    },
   ): Promise<InsightDto[]> {
     const conteudo = (material.conteudo || '').trim();
     if (!conteudo) return [];
+    const max = material.max ?? MAX_INSIGHTS_PADRAO;
     try {
-      const userPrompt = buildInsightsUser(material.titulo, conteudo);
+      const userPrompt = buildInsightsUser(material.titulo, conteudo, max);
       const { text } = await this.ai.completar(
         empresaId,
         usuarioId,
-        SYSTEM_INSIGHTS,
+        buildInsightsSystem(max),
         userPrompt,
         4000,
         'insights',
       );
-      const itens = parseInsights(text);
+      const itens = parseInsights(text, max);
       if (itens.length === 0) {
         this.logger.warn('IA não retornou insights válidos para o material.');
         return [];

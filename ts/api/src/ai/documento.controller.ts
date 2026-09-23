@@ -14,6 +14,8 @@ import { buildDocumentoUser, parseDocumento, SYSTEM_DOCUMENTO } from './document
 import { extrairTexto } from './analise/extrair-texto';
 import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
+import { InsightsService } from '@/insights/insights.service';
+import { MAX_INSIGHTS_DOCUMENTO } from '@/insights/insights.prompts';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
@@ -40,11 +42,14 @@ export class DocumentoController {
     private readonly ai: AiService,
     private readonly memorias: MemoriasService,
     private readonly vault: VaultService,
+    private readonly insights: InsightsService,
   ) {}
 
   /**
    * POST /ai/documento (multipart) → organiza um documento (arquivo ou texto) e
-   * o SALVA na Memória (Documentos). Retorna { titulo, conteudo, resumo, salvo }.
+   * o SALVA na Memória (Documentos). Em seguida, gera INSIGHTS a partir dele —
+   * poucos, ver MAX_INSIGHTS_DOCUMENTO — como já fazem Áudio e Transcrição.
+   * Retorna { titulo, conteudo, resumo, salvo, memoriaId, insightsGerados }.
    */
   @Post('documento')
   @UseInterceptors(FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }))
@@ -53,7 +58,14 @@ export class DocumentoController {
     @RepositorioAtual() repositorioId: string | null,
     @UploadedFile() arquivo: UploadedFileLike | undefined,
     @Body() body: DocumentoBody,
-  ): Promise<{ titulo: string; conteudo: string; resumo: string; salvo: boolean; memoriaId?: string }> {
+  ): Promise<{
+    titulo: string;
+    conteudo: string;
+    resumo: string;
+    salvo: boolean;
+    memoriaId?: string;
+    insightsGerados: number;
+  }> {
     let texto = (body.texto || '').trim();
     if (arquivo) {
       try {
@@ -103,6 +115,18 @@ export class DocumentoController {
       this.logger.error(`Falha ao salvar o documento na Memória: ${String(err)}`);
     }
 
-    return { titulo, conteudo, resumo, salvo, memoriaId };
+    // Gera e persiste os insights do documento (não bloqueia em falha: o
+    // documento já está salvo, e `gerarDeMaterial` devolve [] em vez de lançar).
+    // Teto baixo de propósito — um documento de referência não rende a mesma
+    // safra de sinais que uma reunião.
+    const gerados = await this.insights.gerarDeMaterial(user.empresaId, user.id, {
+      titulo,
+      conteudo: conteudo || resumo,
+      origem: 'Documento',
+      memoriaId,
+      max: MAX_INSIGHTS_DOCUMENTO,
+    });
+
+    return { titulo, conteudo, resumo, salvo, memoriaId, insightsGerados: gerados.length };
   }
 }

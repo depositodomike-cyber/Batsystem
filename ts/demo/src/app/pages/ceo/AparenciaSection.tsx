@@ -35,17 +35,19 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 //
 //   • Aparência — animação de fundo e vinheta, preferências deste navegador.
 //     São os dois toggles que a seção já tinha, sem uma linha de mudança.
-//   • Guia de marca — as marcas da ORGANIZAÇÃO: o que decide a cara do que o AI
-//     Studio gera. Criar, editar e excluir mora aqui e só aqui; o AI Studio
-//     inteiro virou consumidor e apenas seleciona.
+//   • Identidade visual — as marcas da ORGANIZAÇÃO: o que decide a cara do que
+//     o AI Studio gera. Criar, editar e excluir mora aqui e só aqui; o AI
+//     Studio inteiro virou consumidor e apenas seleciona.
 //
-// Guia de marca é uma aba, e não um item novo na navegação lateral, porque
+// Identidade visual é uma aba, e não um item novo na navegação lateral, porque
 // responde à mesma pergunta que Aparência: com que cara as coisas aparecem.
 // ----------------------------------------------------------------------
 
 const ABAS = [
   { id: "aparencia", titulo: "Aparência" },
-  { id: "marca", titulo: "Guia de marca" },
+  // `id` segue "marca": é o valor que vai para a URL (?aba=marca) e o que o
+  // resto da tela usa para se localizar. Só o rótulo mudou.
+  { id: "marca", titulo: "Identidade visual" },
 ] as const;
 
 type AbaId = (typeof ABAS)[number]["id"];
@@ -104,7 +106,7 @@ export function AparenciaSection() {
       // "ajustes do painel" descreveria algo que não está na tela.
       descricao={
         visiveis.length > 1
-          ? "Ajustes visuais do painel e os guias de marca da organização. As preferências de exibição ficam neste navegador; os guias de marca valem para toda a organização."
+          ? "Ajustes visuais do painel e as identidades visuais da organização. As preferências de exibição ficam neste navegador; as identidades visuais valem para toda a organização."
           : "Preferências visuais da organização."
       }
     >
@@ -368,7 +370,7 @@ function AbaGuiaDeMarca({
 
       <div className="mb-5">
         <h4 className="dark:text-dark-50 text-base font-semibold text-gray-800">
-          Guia de marca
+          Identidade visual
         </h4>
         <p className="dark:text-dark-300 mt-0.5 text-sm text-gray-500">
           Gerencie as identidades visuais usadas pela IA na geração de

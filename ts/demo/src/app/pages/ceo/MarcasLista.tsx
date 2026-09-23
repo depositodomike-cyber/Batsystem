@@ -51,7 +51,8 @@ const semContextosDeUso = () =>
   isFeatureTemporarilyDisabled("brandGuideContextosDeUso");
 
 // ----------------------------------------------------------------------
-// Tabela de guias de marca — Configurações › Geral › Aparência › Guia de marca.
+// Tabela de identidades visuais — Configurações › Geral › Aparência ›
+// Identidade visual.
 //
 // Componente de apresentação: não busca, não grava, não confirma. Quem faz isso
 // é `AparenciaSection`, que é dona do estado do store e da permissão.
@@ -139,7 +140,7 @@ export function MarcasLista({
               className="h-9 shrink-0 gap-1.5 rounded-lg px-3"
             >
               <PlusIcon className="size-4.5 stroke-[1.5]" />
-              Adicionar guia de marca
+              Adicionar identidade visual
             </Button>
           )}
         </div>
@@ -161,10 +162,10 @@ export function MarcasLista({
           <EstadoVazio
             icon={SwatchIcon}
             titulo="Nenhuma marca cadastrada"
-            hint="Cadastre um guia de marca para definir a identidade visual dos conteúdos gerados pela IA."
+            hint="Cadastre uma identidade visual para definir a cara dos conteúdos gerados pela IA."
             acao={
               podeGerenciar
-                ? { rotulo: "Adicionar guia de marca", onClick: onCriar }
+                ? { rotulo: "Adicionar identidade visual", onClick: onCriar }
                 : undefined
             }
           />
@@ -183,7 +184,11 @@ export function MarcasLista({
               <Tr className="dark:border-dark-600 dark:bg-dark-800 border-b border-gray-200 bg-gray-50">
                 {[
                   "Marca",
-                  "Identidade visual",
+                  // "Cores", e não "Identidade visual": a seção inteira passou
+                  // a se chamar Identidade visual, e repetir o nome numa coluna
+                  // dentro dela não diria a que ela se refere. A coluna mostra
+                  // as amostras da paleta — é isso que o rótulo agora nomeia.
+                  "Cores",
                   ...(semContextosDeUso() ? [] : ["Contextos"]),
                   "Atualizado em",
                 ].map((titulo) => (

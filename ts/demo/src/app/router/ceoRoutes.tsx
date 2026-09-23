@@ -15,6 +15,7 @@ import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
 import Ia from "@/app/pages/ceo/Ia";
 import Apresentacao from "@/app/pages/ceo/Apresentacao";
+import Planilha from "@/app/pages/ceo/Planilha";
 import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
 import MemoriaGrafo from "@/app/pages/ceo/MemoriaGrafo";
@@ -109,7 +110,9 @@ const productHome: Record<string, string> = {
 };
 const productRedirects: RouteObject[] = products.map((p) => ({
   path: p.code,
-  element: <Navigate to={`/${p.code}/${productHome[p.code] ?? "insights"}`} replace />,
+  element: (
+    <Navigate to={`/${p.code}/${productHome[p.code] ?? "insights"}`} replace />
+  ),
 }));
 
 // Contexto tem duas telas sobre a MESMA pasta de notas .md: o Grafo (item da
@@ -174,9 +177,7 @@ function AdministracaoRedirect({
     searchParams.get("aba"),
     padrao,
   );
-  return (
-    <Navigate to={`/${produto}/configuracoes?secao=${secao}`} replace />
-  );
+  return <Navigate to={`/${produto}/configuracoes?secao=${secao}`} replace />;
 }
 
 const administracaoRedirects: RouteObject[] = products.flatMap((p) => [
@@ -198,18 +199,16 @@ const administracaoRedirects: RouteObject[] = products.flatMap((p) => [
 // funcionando sem expor uma segunda entrada independente no sistema.
 const memoriaRedirects: RouteObject[] = products.map((p) => ({
   path: `${p.code}/memoria`,
-  element: (
-    <Navigate to={`/${p.code}/configuracoes?secao=regras`} replace />
-  ),
+  element: <Navigate to={`/${p.code}/configuracoes?secao=regras`} replace />,
 }));
 
 // Funções do AI Studio que são tela, e não modal (ver
 // `AI_STUDIO_FUNCTION_SCREENS` em ia-functions.ts). Ficam sob `/ia/` para deixar
 // claro de onde vêm; as demais funções continuam abrindo modal na própria /ia.
-const iaFuncaoRoutes: RouteObject[] = products.map((p) => ({
-  path: `${p.code}/ia/apresentacao`,
-  Component: Apresentacao,
-}));
+const iaFuncaoRoutes: RouteObject[] = products.flatMap((p) => [
+  { path: `${p.code}/ia/apresentacao`, Component: Apresentacao },
+  { path: `${p.code}/ia/planilha`, Component: Planilha },
+]);
 
 // Detalhe de um documento gerado pelo upload de IA (Memória category documentos).
 const documentoRoutes: RouteObject[] = products.map((p) => ({
@@ -247,7 +246,12 @@ const relatorioDetailRoutes: RouteObject[] = Object.keys(relatoriosPages).map(
 // preservando o restante do caminho (ex.: /business-partner/feed → /behuman/feed).
 function LegacyProductRedirect() {
   const rest = useParams()["*"] ?? "";
-  return <Navigate to={`/behuman${rest ? `/${rest}` : `/${REPOSITORIO_HOME}`}`} replace />;
+  return (
+    <Navigate
+      to={`/behuman${rest ? `/${rest}` : `/${REPOSITORIO_HOME}`}`}
+      replace
+    />
+  );
 }
 
 const legacyRedirects: RouteObject[] = [

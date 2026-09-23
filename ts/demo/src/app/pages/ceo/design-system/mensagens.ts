@@ -10,7 +10,7 @@ import type { ConfirmMessages } from "@/components/shared/ConfirmModal";
  */
 export const MENSAGENS_EXCLUIR_MARCA = (nome: string): ConfirmMessages => ({
   pending: {
-    title: "Excluir guia de marca?",
+    title: "Excluir identidade visual?",
     // Diz o que NÃO acontece de propósito: o design fica embutido no arquivo
     // gerado, então nenhuma apresentação antiga muda por causa desta exclusão.
     description: `"${nome || "Sem nome"}" sai da organização para todo mundo. O conteúdo já gerado não muda.`,

@@ -414,6 +414,10 @@ export default function Apresentacao() {
   // O relato do que foi gerado vai para o assistente que já existe (a bolinha),
   // e não para um painel próprio desta tela.
   const { anunciar } = useAssistente();
+  /** Ver `aiStudioGenerationChat`: o painel não abre sozinho. */
+  const semChatAutomatico = isFeatureTemporarilyDisabled(
+    "aiStudioGenerationChat",
+  );
 
   const irPara = (id: EtapaId) => {
     setEtapaAtiva(id);
@@ -601,6 +605,7 @@ export default function Apresentacao() {
       const gerou = direto ? await executarPlano(novo) : false;
       if (!direto) setStep("plano");
 
+      if (semChatAutomatico) return;
       anunciar({
         titulo: gerou
           ? "Criar apresentação · apresentação gerada"

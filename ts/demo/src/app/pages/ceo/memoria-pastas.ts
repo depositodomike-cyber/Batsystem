@@ -20,6 +20,7 @@ export const PASTA_MEMORIA = {
   imagem: "Imagens",
   melhorar: "Textos",
   pessoas: "Pessoas",
+  planilha: "Planilhas",
   reunioes: "Reuniões",
   video: "Vídeos",
 } as const;

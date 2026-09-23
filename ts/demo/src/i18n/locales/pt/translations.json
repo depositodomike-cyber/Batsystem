@@ -338,10 +338,11 @@
   },
   "ai": {
     "title": "AI Studio",
-    "subtitle": "Funções nativas de inteligência para criar e transformar conteúdo.",
+    "subtitle": "Crie, acompanhe e continue seus conteúdos gerados com IA.",
     "functions": "Funções",
+    "recent": "Criações recentes",
     "help1": "AI Studio reúne as funções nativas de inteligência para criar e transformar conteúdo — como criar apresentação, editar vídeo e melhorar texto.",
-    "help2": "Clique em uma função para abri-la. Os fluxos rodam em modais que continuam ativos ao navegar entre telas e podem ser minimizados para o rodapé.",
+    "help2": "Comece uma criação pelo menu lateral. Aqui ficam as suas criações recentes — rascunhos, planos prontos e resultados — para você continuar de onde parou. Elas são privadas: cada pessoa vê apenas as próprias.",
     "unavailable": "Função de IA — execução disponível no beculture.",
     "comingSoonTitle": "Em breve",
     "comingSoonBody": "Estamos construindo uma nova forma de explorar e criar com inteligência. O AI Studio chegará em breve. Até lá, continue criando conexões em seu Grafo!",

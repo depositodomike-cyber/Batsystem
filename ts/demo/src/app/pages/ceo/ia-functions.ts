@@ -19,6 +19,7 @@ import {
   MicrophoneIcon,
   SparklesIcon,
   ChartBarSquareIcon,
+  TableCellsIcon,
   ArrowUpTrayIcon,
 } from "@heroicons/react/24/outline";
 import i18n from "@/i18n/config";
@@ -53,7 +54,7 @@ export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
  * para devolver a grade inteira, volte a `null`.
  */
 export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null =
-  new Set(["apresentacao"]);
+  new Set(["apresentacao", "planilha"]);
 
 /** Indica se uma função da grade do AI Studio está temporariamente desabilitada. */
 export function isAiStudioFunctionDisabled(id: string): boolean {
@@ -73,6 +74,7 @@ export function isAiStudioFunctionDisabled(id: string): boolean {
  */
 const AI_STUDIO_FUNCTION_SCREENS: Record<string, string> = {
   apresentacao: "ia/apresentacao",
+  planilha: "ia/planilha",
 };
 
 /** Caminho da tela de uma função, ou `null` se ela ainda for um modal. */
@@ -88,30 +90,124 @@ export function aiFunctionScreenPath(
 // texto…). Cada uma abre um modal — ou uma tela, quando listada em
 // `AI_STUDIO_FUNCTION_SCREENS`.
 export const FUNCTIONS: AiFunction[] = [
-  { id: "analise", label: "Análise de conteúdo", desc: "Analisa um arquivo ou link em 17 seções.", Icon: MagnifyingGlassIcon, tint: "text-sky-500" },
-  { id: "apresentacao", label: "Criar apresentação", desc: "Roteiro editável → .pptx, slides ou book HTML.", Icon: PresentationChartBarIcon, tint: "text-orange-500" },
-  { id: "artigo", label: "Criar artigo", desc: "Artigo completo em Markdown, com refino.", Icon: DocumentTextIcon, tint: "text-blue-500" },
-  { id: "ata", label: "Criar Ata", desc: "Ata executiva a partir de transcrição/arquivo.", Icon: ClipboardDocumentIcon, tint: "text-emerald-500" },
-  { id: "carrossel", label: "Criar carrossel", desc: "Cards + legenda + hashtags, com prévia e refino.", Icon: ViewColumnsIcon, tint: "text-violet-500" },
-  { id: "cortes", label: "Criar cortes", desc: "Editor de vídeo no navegador: recorta e exporta MP4.", Icon: ScissorsIcon, tint: "text-rose-500" },
-  { id: "imagem", label: "Criar imagem", desc: "Imagem por IA (OpenAI): tamanho, qualidade, fundo…", Icon: PhotoIcon, tint: "text-amber-500" },
-  { id: "video", label: "Criar vídeo", desc: "Avatar falante (HeyGen) a partir de um roteiro.", Icon: VideoCameraIcon, tint: "text-indigo-500" },
-  { id: "melhorar", label: "Melhorar texto", desc: "Reescreve com mais clareza, com desfazer.", Icon: SparklesIcon, tint: "text-teal-500" },
-  { id: "dashboard", label: "Criar Dashboard", desc: "Painel HTML com KPIs e gráficos a partir dos seus dados.", Icon: ChartBarSquareIcon, tint: "text-cyan-500" },
+  {
+    id: "analise",
+    label: "Análise de conteúdo",
+    desc: "Analisa um arquivo ou link em 17 seções.",
+    Icon: MagnifyingGlassIcon,
+    tint: "text-sky-500",
+  },
+  {
+    id: "apresentacao",
+    label: "Criar apresentação",
+    desc: "Roteiro editável → .pptx, slides ou book HTML.",
+    Icon: PresentationChartBarIcon,
+    tint: "text-orange-500",
+  },
+  {
+    id: "planilha",
+    label: "Criar planilha",
+    desc: "Plano de abas e cálculos revisável → .xlsx funcional.",
+    Icon: TableCellsIcon,
+    tint: "text-green-500",
+  },
+  {
+    id: "artigo",
+    label: "Criar artigo",
+    desc: "Artigo completo em Markdown, com refino.",
+    Icon: DocumentTextIcon,
+    tint: "text-blue-500",
+  },
+  {
+    id: "ata",
+    label: "Criar Ata",
+    desc: "Ata executiva a partir de transcrição/arquivo.",
+    Icon: ClipboardDocumentIcon,
+    tint: "text-emerald-500",
+  },
+  {
+    id: "carrossel",
+    label: "Criar carrossel",
+    desc: "Cards + legenda + hashtags, com prévia e refino.",
+    Icon: ViewColumnsIcon,
+    tint: "text-violet-500",
+  },
+  {
+    id: "cortes",
+    label: "Criar cortes",
+    desc: "Editor de vídeo no navegador: recorta e exporta MP4.",
+    Icon: ScissorsIcon,
+    tint: "text-rose-500",
+  },
+  {
+    id: "imagem",
+    label: "Criar imagem",
+    desc: "Imagem por IA (OpenAI): tamanho, qualidade, fundo…",
+    Icon: PhotoIcon,
+    tint: "text-amber-500",
+  },
+  {
+    id: "video",
+    label: "Criar vídeo",
+    desc: "Avatar falante (HeyGen) a partir de um roteiro.",
+    Icon: VideoCameraIcon,
+    tint: "text-indigo-500",
+  },
+  {
+    id: "melhorar",
+    label: "Melhorar texto",
+    desc: "Reescreve com mais clareza, com desfazer.",
+    Icon: SparklesIcon,
+    tint: "text-teal-500",
+  },
+  {
+    id: "dashboard",
+    label: "Criar Dashboard",
+    desc: "Painel HTML com KPIs e gráficos a partir dos seus dados.",
+    Icon: ChartBarSquareIcon,
+    tint: "text-cyan-500",
+  },
 ];
 
 // Ações de upload — não aparecem na grade do AI Studio. A janela única
 // `upload` abre no topbar; os ids documento/audio/transcricao seguem como
 // deep links (`?fn=`) e rótulos de envio para grupos.
 export const UPLOAD_FUNCTIONS: AiFunction[] = [
-  { id: "upload", label: "Upload", desc: "Documento, áudio ou transcrição.", Icon: ArrowUpTrayIcon, tint: "text-sky-500" },
-  { id: "documento", label: "Upload Documento", desc: "Documento bruto → documento de referência.", Icon: DocumentTextIcon, tint: "text-sky-500" },
-  { id: "transcricao", label: "Upload Transcrição", desc: "Transcrição colada → ata estratégica.", Icon: DocumentCheckIcon, tint: "text-emerald-500" },
-  { id: "audio", label: "Upload Áudio", desc: "Áudio/vídeo → transcrição e ata.", Icon: MicrophoneIcon, tint: "text-rose-500" },
+  {
+    id: "upload",
+    label: "Upload",
+    desc: "Documento, áudio ou transcrição.",
+    Icon: ArrowUpTrayIcon,
+    tint: "text-sky-500",
+  },
+  {
+    id: "documento",
+    label: "Upload Documento",
+    desc: "Documento bruto → documento de referência.",
+    Icon: DocumentTextIcon,
+    tint: "text-sky-500",
+  },
+  {
+    id: "transcricao",
+    label: "Upload Transcrição",
+    desc: "Transcrição colada → ata estratégica.",
+    Icon: DocumentCheckIcon,
+    tint: "text-emerald-500",
+  },
+  {
+    id: "audio",
+    label: "Upload Áudio",
+    desc: "Áudio/vídeo → transcrição e ata.",
+    Icon: MicrophoneIcon,
+    tint: "text-rose-500",
+  },
 ];
 
 /** Todas as ações do AI Studio (grade + uploads). */
-export const ALL_AI_FUNCTIONS: AiFunction[] = [...FUNCTIONS, ...UPLOAD_FUNCTIONS];
+export const ALL_AI_FUNCTIONS: AiFunction[] = [
+  ...FUNCTIONS,
+  ...UPLOAD_FUNCTIONS,
+];
 
 /** Indica se o id é uma função da grade do AI Studio (não upload). */
 export function isAiStudioFunction(id: string): boolean {

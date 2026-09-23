@@ -164,6 +164,7 @@ model Empresa {
   vaultCategorias     VaultCategoria[]
   vaultNotaCategorias VaultNotaCategoria[]
   conversas           Conversa[]
+  criacoes            Criacao[]
   conectores          EmpresaConector[]
   mcpApiKeys          McpApiKey[]
   aiUsage             AiUsage[]
@@ -189,6 +190,7 @@ model Usuario {
   squadPins SquadPin[]
   membros   Membro[]
   conversas Conversa[]
+  criacoes  Criacao[]
   aiUsage   AiUsage[]
 
   @@index([empresaId])
@@ -1197,6 +1199,69 @@ model Mensagem {
 
   @@index([conversaId, criadoEm])
   @@map("mensagens")
+}
+
+// ---------- Criações do AI Studio ----------
+// O AI Studio é um workspace PRIVADO: uma criação pertence a quem a fez, e não
+// à organização. Duas pessoas da mesma empresa não veem as criações uma da
+// outra — o Repositório é o lugar onde o resultado é disponibilizado, por ação
+// explícita de quem criou.
+//
+// O escopo e a postura vêm de `Conversa`, que já resolve exatamente isso:
+// empresa + usuário + repositório em todo `where`, índice por
+// `atualizadoEm` e 404 (não 403) quando o id não é do usuário.
+
+/// Geradores que persistem trabalho. Os demais (artigo, ata, carrossel, imagem,
+/// vídeo, dashboard, análise, melhorar, cortes) são modais sem etapa de plano e
+/// entram quando cada um definir o que é rascunho relevante para ele.
+enum CriacaoTipo {
+  apresentacao
+  planilha
+}
+
+/// Estado real da criação. `rascunho` é trabalho iniciado; `plano_pronto` é
+/// trabalho que vale listar mesmo sem arquivo nenhum gerado.
+enum CriacaoStatus {
+  rascunho
+  planejando
+  plano_pronto
+  gerando
+  concluido
+  erro
+}
+
+/// Um trabalho do AI Studio: briefing, plano, ajustes e resultado de uma pessoa.
+model Criacao {
+  id            String        @id @default(cuid())
+  empresaId     String
+  /// Proprietário. Vem sempre do token (`currentUser.id`) e nunca da interface:
+  /// não há escolha nem transferência de propriedade.
+  usuarioId     String
+  /// Repositório (contexto) em que a criação nasceu. Mesmo isolamento que
+  /// `Conversa.repositorioId` já faz para o histórico.
+  repositorioId String?
+  tipo          CriacaoTipo
+  status        CriacaoStatus @default(rascunho)
+  /// Onde retomar: "configuracao", "plano" ou "resultado". É estado de
+  /// navegação, não de produto — não aparece na tabela.
+  etapa         String        @default("configuracao")
+  /// Título exibido na Home. Vazio até a IA sugerir um; a tela mostra o
+  /// fallback ("Planilha sem título").
+  titulo        String        @default("")
+  /// Briefing, configuração, fontes, guia de marca, plano, ajustes e conteúdo
+  /// final — tudo numa coluna, como `Marca.conteudo` já faz. O que só é lido
+  /// inteiro (ao retomar) ou não é lido (na listagem) não paga uma dúzia de
+  /// colunas. A listagem NÃO seleciona este campo.
+  dados         Json
+  criadoEm      DateTime      @default(now())
+  atualizadoEm  DateTime      @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, usuarioId, atualizadoEm])
+  @@index([empresaId, usuarioId, tipo, status, atualizadoEm])
+  @@map("criacoes")
 }
 
 /// Consumo de tokens da IA: um evento por chamada ao modelo. Alimenta o contador

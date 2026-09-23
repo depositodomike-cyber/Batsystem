@@ -26,6 +26,8 @@ export type TemporarilyDisabledFeature =
   | "brandGuideMarcaAtiva"
   | "brandGuideContextosDeUso"
   | "brandGuideElementosVisuais"
+  | "spreadsheetGeneration"
+  | "aiStudioGenerationChat"
   | "settingsVoice"
   | "settingsMemory"
   | "settingsHierarchy"
@@ -64,7 +66,32 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     groups: true,
     history: false,
 
-    insights: true,
+    // Insights REATIVADO: o item "Insights" do PAINEL volta a ficar clicável na
+    // sidebar e a página abre normalmente. O corte era um só, em
+    // `isNavItemTemporarilyDisabled` (mais abaixo), que resolve pelo sufixo
+    // `insights` do id/caminho — a rota nunca esteve bloqueada.
+    //
+    // A tela já lê dados de verdade: `listarInsightsApi()` chama GET
+    // /ai/insights (InsightsController, em ts/api), e sem nenhum insight
+    // gerado ela mostra o estado vazio em vez de lista estática.
+    //
+    // Quem grava insight é a geração automática no fim de dois fluxos do
+    // backend: upload de Áudio (audio.controller.ts) e de Transcrição
+    // (transcricao.controller.ts), que chamam `insights.gerarDeMaterial`
+    // depois de salvar a ata. Os dois estavam fechados na UI e voltaram
+    // junto com esta flag — ver `memoryUploadAudio` e
+    // `memoryUploadTranscript` mais abaixo. Sem um upload desses, a tela
+    // segue no estado vazio: é o esperado, não defeito.
+    //
+    // POST /ai/insights/gerar existe e `gerarInsightsApi` também, mas
+    // nenhuma tela os chama. O pós-upload do Repositório (SugerirPosUpload)
+    // NÃO é esse caminho: ele usa /ai/prompt em modo vault e só mostra o
+    // texto num modal — nada é persistido.
+    //
+    // Insights é por produto: só `behuman` tem página própria
+    // (`insightsPages` em ceoRoutes.tsx); nos demais o caminho cai no
+    // Placeholder.
+    insights: false,
     notes: true,
     // E-mail, Slack e Agenda DESABILITADOS: os três itens do PAINEL ficam
     // visíveis, opacos e sem clique na sidebar. O corte é um só, em
@@ -160,6 +187,28 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // `designImagemHint` da geração de imagem — segue sendo enviado, só
     // deixa de ser editável.
     brandGuideElementosVisuais: true,
+    // true = em Criar planilha, o CTA "Gerar planilha" da revisão do plano
+    // fica visível e sem clique — o padrão da casa para o que está a caminho.
+    //
+    // Hoje é FALSE: a geração existe (POST /ai/planilha/gerar + build-xlsx.ts).
+    // A flag fica de pé como interruptor: se o provedor de IA ou a construção
+    // do arquivo derem problema, ligá-la devolve a tela ao estado "planejar
+    // funciona, gerar chega depois" sem tirar nada do ar.
+    spreadsheetGeneration: false,
+    // true = os fluxos do AI Studio deixam de ABRIR o painel do assistente
+    // sozinhos ao terminar o plano ou o arquivo.
+    //
+    // Nada é apagado e nada entra no lugar: `anunciar()` continua existindo no
+    // provider, o histórico segue guardado, os endpoints seguem de pé, e voltar
+    // a flag para false devolve o comportamento exato de antes. O que muda é só
+    // quem chama — as duas telas de geração.
+    //
+    // O aviso era redundante de todo jeito: quando o plano fica pronto a tela
+    // mostra o plano, e quando o arquivo fica pronto a tela diz "pronta".
+    //
+    // "Ajustar com IA" não tem relação com isto: é ação contextual na própria
+    // tela, não o chat geral, e continua igual.
+    aiStudioGenerationChat: true,
     settingsVoice: true,
     settingsMemory: false,
     // true = a seção Hierarquia de Configurações fica OCULTA — não renderizada.
@@ -180,8 +229,27 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // sai do texto de ajuda de Configurações. O painel e o GET /uso/tokens
     // seguem intactos no código.
     settingsTokenUsage: true,
-    memoryUploadAudio: true,
-    memoryUploadTranscript: true,
+    // Uploads de Áudio e Transcrição REATIVADOS. São eles que fazem a página
+    // de Insights sair do zero: os dois controllers chamam
+    // `insights.gerarDeMaterial` depois de salvar a ata na Memória
+    // (audio.controller.ts e transcricao.controller.ts, em ts/api). Com as
+    // flags ligadas, o gerador existia e nada o alcançava.
+    //
+    // Cada flag acende três pontos de uma vez: a aba do UploadModal (a barra
+    // de abas volta a ter três), o item da sidebar sob Repositório
+    // (`upload-audio` / `upload-transcricao`, via
+    // `isNavItemTemporarilyDisabled`) e o deep link `/ia?fn=audio|transcricao`
+    // (`isMemoryUploadFnTemporarilyDisabled`).
+    //
+    // A allow-list do AI Studio NÃO interfere aqui: os ids de upload vivem em
+    // `UPLOAD_FUNCTIONS`, e `isAiStudioFunction` só olha `FUNCTIONS` (a grade).
+    //
+    // Dependência a saber, só no Áudio: a transcrição é Whisper, então exige
+    // uma chave OpenAI — conexão de Texto, Imagem ou Vídeo do tenant, ou a
+    // OPENAI_API_KEY do servidor. Sem nenhuma, o POST responde 400 com esse
+    // texto. Transcrição (texto colado) usa o provedor de texto normal.
+    memoryUploadAudio: false,
+    memoryUploadTranscript: false,
     // Grafo REATIVADO. Com a flag ligada o item fica visível mas sem clique,
     // a rota /memoria-grafo redireciona para /memoria-lista e o modal do AI
     // Studio aponta para a LISTA do Repositório — ver `grafoPath` em Ia.tsx.

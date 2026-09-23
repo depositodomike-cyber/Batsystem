@@ -37,13 +37,13 @@ export function useEditorMarca(brandId: string) {
     try {
       await store.salvarAsync(brandId, ds);
       setSujo(false);
-      toast("Guia de marca salvo", { description: store.resumo(brandId) });
+      toast("Identidade visual salva", { description: store.resumo(brandId) });
       return true;
     } catch (e) {
       // 409 de nome duplicado, 403 de permissão, servidor fora: a API já manda
       // a frase pronta. Fica no formulário E no toast — quem está no fim de um
       // formulário longo não vê um toast que já sumiu.
-      const msg = mensagem(e, "Não foi possível salvar o guia de marca.");
+      const msg = mensagem(e, "Não foi possível salvar a identidade visual.");
       setErro(msg);
       toast.error(msg);
       return false;

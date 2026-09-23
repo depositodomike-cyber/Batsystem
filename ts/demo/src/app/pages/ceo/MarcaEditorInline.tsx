@@ -138,13 +138,13 @@ export function MarcaEditorInline({
             ) : (
               <CheckIcon className="size-4" />
             )}
-            {salvando ? "Salvando…" : "Salvar guia de marca"}
+            {salvando ? "Salvando…" : "Salvar identidade visual"}
           </Button>
         </div>
       ) : (
         <p className="dark:border-dark-600 dark:text-dark-300 mt-4 border-t border-gray-200 pt-3 text-sm text-gray-500">
-          Você pode consultar este guia de marca, mas a sua role não permite
-          editá-lo. Fale com um administrador da organização.
+          Você pode consultar esta identidade visual, mas a sua role não permite
+          editá-la. Fale com um administrador da organização.
         </p>
       )}
 

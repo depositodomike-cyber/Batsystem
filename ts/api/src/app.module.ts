@@ -14,6 +14,7 @@ import { AcessoModule } from './acesso/acesso.module';
 import { EstruturaModule } from './estrutura/estrutura.module';
 import { MarcasModule } from './marcas/marcas.module';
 import { ConversasModule } from './conversas/conversas.module';
+import { CriacoesModule } from './criacoes/criacoes.module';
 import { ConectoresModule } from './conectores/conectores.module';
 import { McpModule } from './mcp/mcp.module';
 import { UsoModule } from './uso/uso.module';
@@ -37,6 +38,7 @@ import { HealthController } from './health.controller';
     EstruturaModule,
     MarcasModule,
     ConversasModule,
+    CriacoesModule,
     ConectoresModule,
     McpModule,
     UsoModule,

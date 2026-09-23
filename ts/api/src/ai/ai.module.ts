@@ -5,6 +5,7 @@ import { AiCredentialsController } from './credentials.controller';
 import { AiMediaConnectionsController } from './media-connections.controller';
 import { AnaliseController } from './analise.controller';
 import { ApresentacaoController } from './apresentacao.controller';
+import { PlanilhaController } from './planilha.controller';
 import { ArtigoController } from './artigo.controller';
 import { AtaController } from './ata.controller';
 import { PromptController } from './prompt.controller';
@@ -40,6 +41,7 @@ import { UsoModule } from '@/uso/uso.module';
     AiMediaConnectionsController,
     AnaliseController,
     ApresentacaoController,
+    PlanilhaController,
     ArtigoController,
     AtaController,
     CarrosselController,

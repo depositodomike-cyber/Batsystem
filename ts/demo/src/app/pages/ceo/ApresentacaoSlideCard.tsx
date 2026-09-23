@@ -38,7 +38,15 @@ import type { PlanoSlide, TipoSlide } from "@/services/api/apresentacao";
 
 export const DRAG_TIPO = "apresentacao-item";
 
-export type ModoItem = "slide" | "capitulo";
+/**
+ * Qual lista o item pertence — o drop só aceita itens do MESMO modo.
+ *
+ * "aba" é da tela Criar planilha, que tem card próprio (PlanilhaAbaCard) mas
+ * reaproveita este protocolo de arrastar. Acrescentar um membro é
+ * retrocompatível: nenhum uso existente precisa mudar, e as duas listas
+ * continuam sem se misturar.
+ */
+export type ModoItem = "slide" | "capitulo" | "aba";
 
 interface DragData {
   tipo: string;

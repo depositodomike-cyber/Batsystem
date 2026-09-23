@@ -85,7 +85,7 @@ export function DesignSystemBar({ className, plain = false }: Props) {
         ) : vazioExplicado ? (
           <div className="dark:border-dark-600 dark:bg-dark-800/40 rounded-lg border border-dashed border-gray-300 px-3 py-3">
             <p className="dark:text-dark-200 text-sm text-gray-600">
-              Nenhum guia de marca disponível nesta organização.
+              Nenhuma identidade visual disponível nesta organização.
             </p>
             <p className="dark:text-dark-300 mt-0.5 text-xs text-gray-400">
               O conteúdo será gerado no estilo padrão da plataforma.
@@ -94,7 +94,7 @@ export function DesignSystemBar({ className, plain = false }: Props) {
               to={urlGuiaDeMarca}
               className="text-primary-600 dark:text-primary-400 text-xs-plus mt-2 inline-flex items-center gap-1 font-medium"
             >
-              Ir para Guia de marca
+              Ir para Identidade visual
               <ArrowRightIcon className="size-3.5" />
             </Link>
           </div>

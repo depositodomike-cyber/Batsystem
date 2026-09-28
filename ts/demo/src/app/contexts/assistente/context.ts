@@ -47,11 +47,18 @@ export interface AssistenteContextValue {
   /** Limpa a conversa e mantém o painel aberto na aba Chat. */
   novaConversa: () => void;
 
-  /** Pergunta nova: zera a conversa, abre o painel e responde. */
+  /**
+   * Pergunta nova: zera a conversa, abre o painel e responde.
+   *
+   * `contexto` é um bloco de texto que acompanha TODOS os turnos desta
+   * conversa como referência para a IA, sem aparecer nas bolhas (ex.: o
+   * insight de onde a conversa partiu). Nova conversa sem ele o descarta.
+   */
   perguntar: (p: {
     texto: string;
     modo: ModoBusca;
     arquivo?: File | null;
+    contexto?: string;
   }) => Promise<PerguntarResult>;
   /** Follow-up dentro da conversa aberta. */
   continuar: (texto: string) => Promise<void>;

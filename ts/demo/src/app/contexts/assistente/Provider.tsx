@@ -56,12 +56,21 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   const statusRef = useRef(status);
   statusRef.current = status;
 
+  // Contexto da conversa atual (ex.: o insight de onde ela partiu). O backend
+  // não o persiste, então ele é reenviado como `referencia` em cada turno.
+  // Ref e não state: não aparece na tela e não deve causar re-render.
+  const contextoRef = useRef<string | null>(null);
+  const referenciaDoTurno = () =>
+    [contextoRef.current, coletarReferencia()].filter(Boolean).join("\n\n") ||
+    undefined;
+
   // Troca de repositório/organização: a conversa e o id pertencem ao contexto
   // anterior, então zeramos tudo e recolhemos o painel. Ajuste em render (e não
   // em efeito) para não exibir um frame com a conversa do repositório antigo.
   const repoRef = useRef(repositorioId);
   if (repoRef.current !== repositorioId) {
     repoRef.current = repositorioId;
+    contextoRef.current = null;
     setConversa([]);
     setConversaId(null);
     setStatus("closed");
@@ -85,6 +94,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const novaConversa = useCallback(() => {
+    contextoRef.current = null;
     setConversa([]);
     setConversaId(null);
     setTab("chat");
@@ -102,13 +112,17 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       texto,
       modo,
       arquivo,
+      contexto,
     }: {
       texto: string;
       modo: ModoBusca;
       arquivo?: File | null;
+      contexto?: string;
     }): Promise<PerguntarResult> => {
       const pergunta = texto.trim();
       if (!pergunta || loading) return { ok: false, erro: "" };
+      // Conversa nova: o contexto é o desta pergunta (ou nenhum).
+      contextoRef.current = contexto?.trim() || null;
 
       setLoading(true);
       setModoConversa(modo);
@@ -132,7 +146,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       const animaGrafo = modo !== "web";
       if (animaGrafo) marcarBuscaMemoria(true);
       try {
-        const referencia = modo !== "web" ? coletarReferencia() : undefined;
+        const referencia = modo !== "web" ? referenciaDoTurno() : undefined;
         const r = await perguntarPromptApi({
           texto: pergunta,
           modo,
@@ -199,7 +213,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       if (animaGrafo) marcarBuscaMemoria(true);
       try {
         const referencia =
-          modoConversa !== "web" ? coletarReferencia() : undefined;
+          modoConversa !== "web" ? referenciaDoTurno() : undefined;
         const r = await perguntarPromptApi({
           texto: pergunta,
           modo: modoConversa,
@@ -265,6 +279,8 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   const abrirConversa = useCallback(
     async (id: string) => {
       if (loading) return;
+      // Conversa do histórico: o contexto de origem não foi persistido.
+      contextoRef.current = null;
       setLoading(true);
       setTab("chat");
       setStatus("open");

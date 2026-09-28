@@ -3,12 +3,29 @@ import clsx from "clsx";
 
 // Local Imports
 import { ScrollShadow } from "@/components/ui";
-import { DISABLED_MENU_CLASS } from "@/app/data/temporarilyDisabledFeatures";
 import {
-  gruposVisiveis,
-  secaoEstaDesabilitada,
-  type SecaoId,
-} from "./configuracoes-secoes";
+  DISABLED_MENU_CLASS,
+  isFeatureTemporarilyDisabled,
+  type TemporarilyDisabledFeature,
+} from "@/app/data/temporarilyDisabledFeatures";
+import { gruposVisiveis } from "./configuracoes-secoes";
+
+/** Item da navegação. `feature` ligada = item opaco e sem clique. */
+export interface ItemNavegacao {
+  id: string;
+  titulo: string;
+  icon: React.ComponentType<{ className?: string }>;
+  feature?: TemporarilyDisabledFeature | null;
+}
+
+export interface GrupoNavegacao {
+  id: string;
+  titulo: string;
+  itens: readonly ItemNavegacao[];
+}
+
+const itemDesabilitado = (s: ItemNavegacao) =>
+  s.feature != null && isFeatureTemporarilyDisabled(s.feature);
 
 // ----------------------------------------------------------------------
 // Navegação lateral de Configurações, agrupada por rótulos de seção.
@@ -30,20 +47,24 @@ import {
 // no eixo horizontal nada desambigua os dois.
 // ----------------------------------------------------------------------
 
-export function NavegacaoSecoes({
+// Reusada por Configurações de usuário: a mesma anatomia, só outra lista de
+// grupos, outro nome acessível e outro prefixo de id. Sem as props, é
+// exatamente a navegação das Configurações da organização.
+export function NavegacaoSecoes<Id extends string>({
   ativo,
   onSelecionar,
+  grupos = gruposVisiveis(),
+  ariaLabel = "Seções das configurações",
+  prefixoId = "cfg",
 }: {
-  ativo: SecaoId;
-  onSelecionar: (secao: SecaoId) => void;
+  ativo: Id;
+  onSelecionar: (secao: Id) => void;
+  grupos?: readonly GrupoNavegacao[];
+  ariaLabel?: string;
+  prefixoId?: string;
 }) {
-  const grupos = gruposVisiveis();
-
   return (
-    <nav
-      aria-label="Seções das configurações"
-      className="min-w-0 lg:w-56 lg:shrink-0"
-    >
+    <nav aria-label={ariaLabel} className="min-w-0 lg:w-56 lg:shrink-0">
       {/* `flex-col` em TODOS os breakpoints, e é a linha que não pode faltar:
           antes o cartão tinha um filho único, então a direção dele nunca
           importou (quem virava coluna era o `<ul>` interno). Com quatro grupos
@@ -54,7 +75,7 @@ export function NavegacaoSecoes({
           borda de cima. Com `py-3` a folga do topo é a mesma do fim da lista. */}
       <div className="dark:border-dark-600 dark:bg-dark-700 flex flex-col rounded-xl border border-gray-200 bg-white px-1.5 py-3">
         {grupos.map((g) => {
-          const idRotulo = `cfg-grupo-${g.id}`;
+          const idRotulo = `${prefixoId}-grupo-${g.id}`;
           return (
             // 20px entre grupos contra 4px entre itens: a fronteira precisa ser
             // lida à distância de um relance, e com dez itens no cartão a folga
@@ -106,7 +127,7 @@ export function NavegacaoSecoes({
                 className="hide-scrollbar flex gap-1.5 overflow-x-auto lg:flex-col lg:gap-1 lg:overflow-visible"
               >
                 {g.itens.map((s) => {
-                  const disabled = secaoEstaDesabilitada(s);
+                  const disabled = itemDesabilitado(s);
                   const isActive = !disabled && ativo === s.id;
                   return (
                     <li key={s.id} className="shrink-0 lg:shrink">
@@ -128,7 +149,7 @@ export function NavegacaoSecoes({
                       ) : (
                         <button
                           type="button"
-                          onClick={() => onSelecionar(s.id)}
+                          onClick={() => onSelecionar(s.id as Id)}
                           // A seção vive na query string e o controle é um
                           // botão, então `"true"` e não `"page"`. Antes o item
                           // ativo era comunicado só por cor.

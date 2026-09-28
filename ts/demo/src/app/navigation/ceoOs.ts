@@ -507,7 +507,21 @@ export const systemAreas: SystemArea[] = [
   { slug: "tour", title: "Tour", transKey: k("tour"), icon: "ceo.tour" },
   { slug: "atualizacoes", title: "Atualizações", transKey: k("updates"), icon: "ceo.atualizacoes" },
   { slug: "configuracoes", title: "Configurações", transKey: k("settings"), icon: "ceo.config" },
+  // Configurações de usuário (menu de perfil): Orientador de insights e
+  // Conectores. Não aparece na sidebar — áreas de sistema só geram a rota.
+  { slug: "configuracoes-usuario", title: "Configurações de usuário", transKey: k("userSettings"), icon: "ceo.config" },
 ];
+
+/** Seções de Configurações de usuário (`?secao=`). */
+export type SecaoConfiguracoesUsuario = "orientador" | "conectores";
+
+/** Caminho de Configurações de usuário, opcionalmente já numa seção. */
+export function userSettingsPath(
+  productCode: string,
+  secao?: SecaoConfiguracoesUsuario,
+): string {
+  return `/${productCode}/configuracoes-usuario${secao ? `?secao=${secao}` : ""}`;
+}
 
 /** Resolve o código do produto a partir do pathname. */
 export function getProductCodeFromPath(pathname: string): string {

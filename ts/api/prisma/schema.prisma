@@ -147,27 +147,28 @@ model Empresa {
   onboardingConcluidoEm DateTime?
   criadoEm              DateTime      @default(now())
 
-  usuarios            Usuario[]
-  convites            Convite[]
-  membros             Membro[]
-  roles               Role[]
-  areas               Area[]
-  cargos              Cargo[]
-  marcas              Marca[]
-  assinatura          Assinatura?
-  aiCredentials       AiCredential[]
-  aiConnections       AiConnection[]
-  aiMediaConnections  AiMediaConnection[]
-  memorias            Memoria[]
-  insights            Insight[]
-  vaultNotas          VaultNota[]
-  vaultCategorias     VaultCategoria[]
-  vaultNotaCategorias VaultNotaCategoria[]
-  conversas           Conversa[]
-  criacoes            Criacao[]
-  conectores          EmpresaConector[]
-  mcpApiKeys          McpApiKey[]
-  aiUsage             AiUsage[]
+  usuarios               Usuario[]
+  convites               Convite[]
+  membros                Membro[]
+  roles                  Role[]
+  areas                  Area[]
+  cargos                 Cargo[]
+  marcas                 Marca[]
+  assinatura             Assinatura?
+  aiCredentials          AiCredential[]
+  aiConnections          AiConnection[]
+  aiMediaConnections     AiMediaConnection[]
+  memorias               Memoria[]
+  insights               Insight[]
+  insightDirecionamentos InsightDirecionamento[]
+  vaultNotas             VaultNota[]
+  vaultCategorias        VaultCategoria[]
+  vaultNotaCategorias    VaultNotaCategoria[]
+  conversas              Conversa[]
+  criacoes               Criacao[]
+  conectores             EmpresaConector[]
+  mcpApiKeys             McpApiKey[]
+  aiUsage                AiUsage[]
 
   @@map("empresas")
 }
@@ -192,6 +193,10 @@ model Usuario {
   conversas Conversa[]
   criacoes  Criacao[]
   aiUsage   AiUsage[]
+
+  insightLeituras        InsightLeitura[]
+  insightFeedbacks       InsightFeedback[]
+  insightDirecionamentos InsightDirecionamento[]
 
   @@index([empresaId])
   @@map("usuarios")
@@ -568,6 +573,8 @@ model Area {
   empresa Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   membros Membro[]
 
+  insightDirecionamentos InsightDirecionamento[]
+
   /// A quantidade de membros da área é SEMPRE derivada desta relação
   /// (`_count`), nunca uma coluna: um contador gravado divergiria na primeira
   /// edição de membro feita por outro caminho.
@@ -935,27 +942,122 @@ enum InsightSeveridade {
 
 /// Um sinal estratégico gerado pela IA para o líder.
 model Insight {
-  id         String            @id @default(cuid())
-  empresaId  String
+  id               String            @id @default(cuid())
+  empresaId        String
   /// Título curto (uma linha).
-  titulo     String
+  titulo           String
   /// Explicação/implicação para o negócio.
-  descricao  String
+  descricao        String
   /// Rótulo do tipo exibido no badge (ex.: "Rotatividade", "Engajamento").
-  tipo       String            @default("Insight")
-  severidade InsightSeveridade @default(light)
+  tipo             String            @default("Insight")
+  severidade       InsightSeveridade @default(light)
   /// Pessoa ou time a que o insight se refere (nome ou "Todos"). Opcional.
-  liderado   String?
+  liderado         String?
   /// De onde o insight veio (ex.: "Áudio", "Transcrição", "Manual").
-  origem     String            @default("Manual")
+  origem           String            @default("Manual")
   /// Memória de origem (ata/resumo) que gerou o insight, quando houver.
-  memoriaId  String?
-  criadoEm   DateTime          @default(now())
+  memoriaId        String?
+  /// Direcionamento a que a IA disse que o insight se relaciona, quando houver.
+  /// Só explicabilidade/filtro — excluir o direcionamento zera o vínculo e o
+  /// insight continua existindo.
+  direcionamentoId String?
+  /// Análise completa (modal "Ver insight"). Nula nos insights anteriores a
+  /// este campo e quando a IA não teve o que acrescentar ao resumo.
+  analise          String?
+  /// Trechos LITERAIS do material de origem que sustentam o insight. O parse
+  /// descarta qualquer trecho que não apareça no material — nunca inventado.
+  evidencias       String[]          @default([])
+  criadoEm         DateTime          @default(now())
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa        Empresa                @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  direcionamento InsightDirecionamento? @relation(fields: [direcionamentoId], references: [id], onDelete: SetNull)
+  leituras       InsightLeitura[]
+  feedbacks      InsightFeedback[]
 
   @@index([empresaId])
   @@map("insights")
+}
+
+/// O que o direcionamento pede à IA.
+enum DirecionamentoTipo {
+  priorizar_assunto // Quero receber mais insights sobre determinado tema.
+  ajustar_insights // Quero orientar a IA sobre insights que não estão sendo úteis.
+}
+
+enum DirecionamentoPrioridade {
+  normal
+  alta
+}
+
+/// "Direcionador de insights": orientação que a empresa dá à IA sobre O QUE
+/// observar e COMO tratar os insights. Entra no prompt de geração de insights
+/// (só os ativos). Orienta foco e critério — nunca a conclusão, e prioridade
+/// alta não obriga a IA a gerar insight sem evidência.
+model InsightDirecionamento {
+  id           String                   @id @default(cuid())
+  empresaId    String
+  nome         String
+  tipo         DirecionamentoTipo
+  instrucao    String
+  /// Área observada. Nulo = toda a organização.
+  areaId       String?
+  prioridade   DirecionamentoPrioridade @default(normal)
+  /// Inativo continua salvo e editável, mas fica fora das próximas análises.
+  ativo        Boolean                  @default(true)
+  criadoPorId  String?
+  criadoEm     DateTime                 @default(now())
+  atualizadoEm DateTime                 @updatedAt
+
+  empresa   Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  area      Area?     @relation(fields: [areaId], references: [id], onDelete: SetNull)
+  criadoPor Usuario?  @relation(fields: [criadoPorId], references: [id], onDelete: SetNull)
+  insights  Insight[]
+
+  @@index([empresaId, ativo])
+  @@map("insight_direcionamentos")
+}
+
+/// Por que o insight não foi útil (feedback negativo).
+enum InsightFeedbackMotivo {
+  nao_relevante
+  ja_conhecia
+  conclusao_incorreta
+  nao_quero_assunto
+  outro
+}
+
+/// "Este insight foi útil?" — um voto por usuário por insight.
+model InsightFeedback {
+  insightId    String
+  usuarioId    String
+  util         Boolean
+  motivo       InsightFeedbackMotivo?
+  comentario   String?
+  criadoEm     DateTime               @default(now())
+  atualizadoEm DateTime               @updatedAt
+
+  insight Insight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([insightId, usuarioId])
+  @@index([usuarioId])
+  @@map("insight_feedbacks")
+}
+
+/// Marca que um usuário já viu um insight. É o que tira o insight do sino de
+/// notificações do header: "novo" = sem leitura para aquele usuário. Por
+/// usuário, não por empresa — cada pessoa do time tem o seu "não lido".
+model InsightLeitura {
+  insightId String
+  usuarioId String
+  lidoEm    DateTime @default(now())
+
+  insight Insight @relation(fields: [insightId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([insightId, usuarioId])
+  @@index([usuarioId])
+  @@map("insight_leituras")
 }
 
 // ---------- Vault de notas (.md) por tenant ----------

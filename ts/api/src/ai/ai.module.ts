@@ -19,6 +19,9 @@ import { AudioController } from './audio.controller';
 import { DashboardController } from './dashboard.controller';
 import { InsightsController } from '@/insights/insights.controller';
 import { InsightsService } from '@/insights/insights.service';
+import { DirecionamentosController } from '@/insights/direcionamentos.controller';
+import { DirecionamentosService } from '@/insights/direcionamentos.service';
+import { AcessoModule } from '@/acesso/acesso.module';
 import { VaultController } from '@/vault/vault.controller';
 import { VaultService } from '@/vault/vault.service';
 import { VaultCategoriasService } from '@/vault/categorias.service';
@@ -33,7 +36,7 @@ import { MemoriasModule } from '@/memorias/memorias.module';
 import { UsoModule } from '@/uso/uso.module';
 
 @Module({
-  imports: [AuthModule, ConversasModule, MemoriasModule, UsoModule],
+  imports: [AuthModule, AcessoModule, ConversasModule, MemoriasModule, UsoModule],
   controllers: [
     AiController,
     AiConnectionsController,
@@ -53,6 +56,9 @@ import { UsoModule } from '@/uso/uso.module';
     DocumentoController,
     AudioController,
     DashboardController,
+    // Antes de InsightsController: as rotas estáticas de direcionamentos
+    // (/ai/insights/direcionamentos...) não disputam com /ai/insights/:id/...
+    DirecionamentosController,
     InsightsController,
     VaultController,
   ],
@@ -63,6 +69,7 @@ import { UsoModule } from '@/uso/uso.module';
     AiMediaConnectionsService,
     CryptoService,
     InsightsService,
+    DirecionamentosService,
     VaultService,
     VaultCategoriasService,
   ],

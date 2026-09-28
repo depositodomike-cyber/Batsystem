@@ -9,8 +9,8 @@
  *
  * As permissões estão organizadas por recurso, com verbos que um administrador
  * entende, e não por endpoint. Só existe permissão para funcionalidade que
- * existe hoje: Áreas e Cargos ainda são catálogos em código, e Notas, Insights,
- * E-mail e Slack estão desligados por feature flag.
+ * existe hoje: Notas, E-mail e Slack estão desligados por feature flag. Em
+ * Insights, ver é livre; só orientar a IA (Orientador) exige permissão.
  */
 
 export interface Permissao {
@@ -125,6 +125,17 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
         code: "ia.criar_conteudo",
         rotulo: "Gerar conteúdo com IA",
         requer: "ia.usar",
+      },
+    ],
+  },
+  {
+    id: "insights",
+    titulo: "Insights",
+    descricao: "Orientações que ajudam a IA a gerar insights mais relevantes.",
+    permissoes: [
+      {
+        code: "insights.gerenciar_direcionadores",
+        rotulo: "Gerenciar orientadores de insights",
       },
     ],
   },

@@ -20,6 +20,7 @@ export type TemporarilyDisabledFeature =
   | "calendar"
   | "connectors"
   | "notifications"
+  | "notificationsSettings"
   | "settingsAppearance"
   | "settingsAppearancePanel"
   | "brandGuideSecoesAvancadas"
@@ -109,13 +110,25 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     email: true,
     slack: true,
     calendar: true,
-    // Conectores REATIVADO: o ícone de link no header e o card no menu
-    // "Funcionalidades" voltam a ser clicáveis, e /:produto/conectores renderiza a
-    // tela normalmente. Com a flag em true os dois pontos de entrada ficam
-    // visíveis, opacos e sem clique — ver SYSTEM_AREA_FEATURE (Header) e
-    // FEATURE_FLAG_BY_SLUG (Funcionalidades).
+    // Conectores REATIVADO. O ponto de entrada agora é Configurações de
+    // usuário (menu de perfil) › Conectores; /:produto/conectores redireciona
+    // para lá preservando a query (retorno do OAuth). Com a flag em true o
+    // item fica opaco e sem clique na navegação de Configurações de usuário
+    // (e o card do menu "Funcionalidades", ver FEATURE_FLAG_BY_SLUG).
     connectors: false,
-    notifications: true,
+    // Notificações REATIVADAS: o sino do header abre a central
+    // "Notificações". Hoje a única origem real são os insights que o usuário
+    // ainda não viu (GET /ai/insights/nao-lidos, leitura por usuário em
+    // `InsightLeitura`), marcados com o badge [Insight]; outros tipos, quando
+    // existirem, entram no mesmo formato sem o badge. Clicar num insight marca
+    // como lido e o abre em /behuman/insights. Com a flag em true o sino fica
+    // opaco, sem clique, e não consulta a API.
+    notifications: false,
+    // Ícone de engrenagem ("settings") no topo do painel de Notificações
+    // OCULTO temporariamente. Ele levava a /settings/notifications, a tela
+    // de preferências de notificação do template, que não reflete o que o
+    // painel mostra hoje (só insights). Em false o ícone volta como estava.
+    notificationsSettings: true,
     // Aparência REATIVADA: a seção volta a ser clicável no menu de
     // Configurações e `?secao=aparencia` volta a resolver para ela.
     //

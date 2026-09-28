@@ -22,6 +22,7 @@ import {
   CheckCircleIcon,
   CheckIcon,
   ChevronUpDownIcon,
+  Cog6ToothIcon,
   PlusIcon,
   TrashIcon,
   UserIcon,
@@ -32,7 +33,7 @@ import { toast } from "sonner";
 
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { useLocaleContext } from "@/app/contexts/locale/context";
-import { getProductCodeFromPath } from "@/app/navigation/ceoOs";
+import { getProductCodeFromPath, userSettingsPath } from "@/app/navigation/ceoOs";
 import {
   useGruposDeRepositorios,
   useOrganizacaoAtiva,
@@ -283,6 +284,27 @@ export function ProfileMenu({
                   />
                   <span className="dark:text-dark-100 text-sm font-medium text-gray-800">
                     Criar organização
+                  </span>
+                </button>
+              </div>
+
+              {/* Configurações de usuário: Orientador de insights e Conectores.
+                  Mesmo desenho de linha de "Criar organização". */}
+              <div className="dark:border-dark-600 border-t border-gray-150 px-2 py-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    navigate(userSettingsPath(getProductCodeFromPath(pathname)));
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left outline-hidden transition-colors hover:bg-gray-100 dark:hover:bg-dark-600"
+                >
+                  <Cog6ToothIcon
+                    className="dark:text-dark-300 size-4 shrink-0 text-gray-400"
+                    strokeWidth="1.8"
+                  />
+                  <span className="dark:text-dark-100 text-sm font-medium text-gray-800">
+                    Configurações de usuário
                   </span>
                 </button>
               </div>

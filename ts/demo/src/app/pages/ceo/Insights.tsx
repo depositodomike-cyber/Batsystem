@@ -2,12 +2,24 @@
 // Cada produto tem a SUA própria página de Insights (diferente do Feed, que é
 // o mesmo para todos os produtos). Lista única de insights gerados pela IA a
 // partir dos dados das áreas; quando um insight se refere a uma pessoa, o card
-// mostra o avatar e o nome dela. Aja direto pelo insight (criar tarefa, agendar
-// 1:1, elogiar). Reescrito no design system do Tailux.
+// mostra o avatar e o nome dela. Pelo card: ver o detalhe, dar feedback e
+// conversar com o assistente (as ações mock de tarefa/1:1/elogio estão
+// ocultas — ver INSIGHT_ACOES_OCULTAS). Reescrito no design system do Tailux.
 
 // Import Dependencies
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useLocation } from "react-router";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 import {
   Dialog,
   DialogPanel,
@@ -20,6 +32,7 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import {
+  ChatBubbleLeftRightIcon,
   CheckCircleIcon,
   CheckIcon,
   EllipsisVerticalIcon,
@@ -30,28 +43,44 @@ import {
   SparklesIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircleIcon as CheckCircleSolidIcon } from "@heroicons/react/24/solid";
+import {
+  CheckCircleIcon as CheckCircleSolidIcon,
+  HandThumbDownIcon as HandThumbDownSolidIcon,
+  HandThumbUpIcon as HandThumbUpSolidIcon,
+} from "@heroicons/react/24/solid";
 import clsx from "clsx";
+import { toast } from "sonner";
 
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { Avatar, Badge, Button, Card, Spinner } from "@/components/ui";
-import { getCurrentProduct } from "@/app/navigation/ceoOs";
-import { listarInsightsApi } from "@/services/api/insights";
+import { getCurrentProduct, userSettingsPath } from "@/app/navigation/ceoOs";
+import {
+  listarInsightsApi,
+  salvarFeedbackInsightApi,
+} from "@/services/api/insights";
+import { usePodeGerenciarDirecionadores } from "./usePodeGerenciarDirecionadores";
+import { InsightDetalheModal } from "./InsightDetalheModal";
+import { FeedbackNegativoModal } from "./InsightFeedbackNegativoModal";
+import { useConversarSobreInsight } from "./useConversarSobreInsight";
 import {
   ACOES_SEM_PESSOA,
   dataParaNumero,
   FILTRO_OPCOES,
   INSIGHT_ACOES,
+  INSIGHT_ACOES_OCULTAS,
   INSIGHT_USUARIOS,
   MEETING_EMAIL_CONNECTOR,
   ORDENACAO_OPCOES,
+  sugerirDirecionamento,
   TEAM_FACES,
+  type DirecionamentoInput,
   type FiltroInsight,
   type Insight,
   type InsightAcao,
   type InsightCor,
+  type InsightFeedback,
   type InsightUser,
   type OrdenacaoInsight,
   type PersonalInsight,
@@ -104,6 +133,72 @@ export default function Insights() {
     carregar();
   }, []);
 
+  // `?insight=<id>` vem do sino de notificações ("Ver insight"): abre o modal
+  // daquele insight, com o card rolado até a vista e destacado. Fechar o
+  // modal remove o param (replace), então um reload não o reabre.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const destaqueId = searchParams.get("insight");
+  const recarregouPara = useRef<string | null>(null);
+
+  // O Orientador de insights saiu desta tela para Configurações de usuário
+  // (menu de perfil). O antigo `?aba=direcionador` vira redirect, para links
+  // salvos não quebrarem.
+  const abaAntigaDoOrientador =
+    !destaqueId && searchParams.get("aba") === "direcionador";
+
+  // 👎 → "Adicionar orientação": leva a sugestão para o Orientador, em
+  // Configurações de usuário, que abre o modal pré-preenchido. Nada é salvo
+  // sem o usuário confirmar.
+  const navigate = useNavigate();
+  const sugerir = (sug: Partial<DirecionamentoInput>) =>
+    navigate(userSettingsPath(product.code, "orientador"), {
+      state: { sugestao: sug },
+    });
+
+  // Tira o `?insight=` da URL (replace): fechar o modal do deep link ou um
+  // insight que não existe mais. Um reload não reabre nada.
+  const limparDestaque = () =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("insight");
+        return next;
+      },
+      { replace: true },
+    );
+
+  // `?insight=<id>` abre o modal do insight (ver InsightsBoard) e rola a
+  // grade até o card, que fica destacado enquanto o modal estiver aberto.
+  useEffect(() => {
+    if (!destaqueId || carregando || erro) return;
+    if (!itens.some((i) => i.id === destaqueId)) {
+      // Já na página e o insight é mais novo que a lista carregada: recarrega
+      // uma vez só. Se continuar faltando, não existe mais — avisa e segue,
+      // sem abrir modal vazio.
+      if (recarregouPara.current !== destaqueId) {
+        recarregouPara.current = destaqueId;
+        carregar();
+      } else {
+        toast.info("Este insight não está mais disponível.");
+        limparDestaque();
+      }
+      return;
+    }
+    const rolar = window.setTimeout(() => {
+      document
+        .getElementById(`insight-${destaqueId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+    return () => window.clearTimeout(rolar);
+    // `itens` fica de fora de propósito: o recarregar vira `carregando` e,
+    // ao terminar, dispara este efeito de novo com a lista nova.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destaqueId, carregando]);
+
+  if (abaAntigaDoOrientador) {
+    return <Navigate to={userSettingsPath(product.code, "orientador")} replace />;
+  }
+
   return (
     <Page title={`Insights · ${product.name}`}>
       <div className="transition-content w-full px-(--margin-x) py-5">
@@ -120,10 +215,16 @@ export default function Insights() {
                       avaliados.
                     </p>
                     <p>
-                      Você pode agir direto pelo insight: criar uma tarefa,
-                      agendar uma reunião, levar a pauta para o próximo 1:1 ou
-                      reconhecer um bom trabalho. Use os filtros e a busca no
-                      topo para focar no que importa.
+                      Abra um insight para ver a análise completa e as
+                      evidências, converse com o assistente sobre ele para pedir
+                      dicas de como agir e diga se ele foi útil. Use os filtros
+                      e a busca no topo para focar no que importa.
+                    </p>
+                    <p>
+                      Em <strong>Configurações de usuário › Orientador de
+                      insights</strong> (no menu do seu perfil), você indica à
+                      IA os assuntos que merecem atenção e o que não deve ser
+                      considerado relevante.
                     </p>
                   </>
                 ),
@@ -132,9 +233,9 @@ export default function Insights() {
               Insights
             </PageTitle>
             <p className="dark:text-dark-300 max-w-2xl text-sm text-gray-500">
-              Sinais gerados pela IA a partir dos dados das suas áreas. Aja
-              direto pelo insight — crie tarefas, agende reuniões, leve pautas
-              para o 1:1 ou reconheça um bom trabalho.
+              Sinais gerados pela IA a partir dos dados das suas áreas. Abra um
+              insight para entender o que foi encontrado e converse com o
+              assistente para decidir como agir.
             </p>
           </header>
 
@@ -143,7 +244,12 @@ export default function Insights() {
           ) : erro ? (
             <ErrorState mensagem={erro} onRetry={carregar} />
           ) : (
-            <InsightsBoard items={itens} />
+            <InsightsBoard
+              items={itens}
+              destaqueId={destaqueId}
+              onFecharDestaque={limparDestaque}
+              onSugerirDirecionamento={sugerir}
+            />
           )}
         </div>
       </div>
@@ -154,17 +260,52 @@ export default function Insights() {
 // ----------------------------------------------------------------------
 // Quadro de insights: barra de filtros + grade de cards (lista única).
 
-function InsightsBoard({ items }: { items: Insight[] }) {
+function InsightsBoard({
+  items,
+  destaqueId,
+  onFecharDestaque,
+  onSugerirDirecionamento,
+}: {
+  items: Insight[];
+  destaqueId: string | null;
+  onFecharDestaque: () => void;
+  onSugerirDirecionamento: (sug: Partial<DirecionamentoInput>) => void;
+}) {
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<FiltroInsight>("todos");
   const [ordenacao, setOrdenacao] = useState<OrdenacaoInsight>("data-recente");
   const [ocultos, setOcultos] = useState<Set<string>>(new Set());
-  const [curtidos, setCurtidos] = useState<Set<string>>(new Set());
-  const [descurtidos, setDescurtidos] = useState<Set<string>>(new Set());
+  const podeOrientar = usePodeGerenciarDirecionadores();
+
+  // Modal "Ver insight". Mora AQUI, e não numa página: filtros, ordenação e a
+  // grade (logo, o scroll) seguem montados enquanto ele está aberto. O deep
+  // link `?insight=` (notificação) abre o mesmo modal.
+  const [abertoId, setAbertoId] = useState<string | null>(null);
+  const idNoModal = destaqueId ?? abertoId;
+  const noModal = items.find((i) => i.id === idNoModal) ?? null;
+  const fecharDetalhe = () => {
+    setAbertoId(null);
+    if (destaqueId) onFecharDestaque();
+  };
+
+  // Feedback: o que veio do servidor (`meuFeedback`) com as mudanças desta
+  // sessão por cima — `null` é "desfeito".
+  const [feedbackLocal, setFeedbackLocal] = useState<
+    Record<string, InsightFeedback | null>
+  >({});
+  const feedbackDe = (i: Insight): InsightFeedback | undefined =>
+    i.id in feedbackLocal
+      ? (feedbackLocal[i.id] ?? undefined)
+      : i.meuFeedback;
+  const [negativoPara, setNegativoPara] = useState<Insight | null>(null);
 
   const exibidos = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     let lista: Insight[];
+
+    // Chegando do sino, o insight destacado sempre aparece, mesmo que a busca,
+    // o filtro ou o "ocultar" o tirassem da grade.
+    const destaque = items.find((i) => i.id === destaqueId);
 
     if (filtro === "ocultados") {
       lista = items.filter((i) => ocultos.has(i.id));
@@ -185,6 +326,8 @@ function InsightsBoard({ items }: { items: Insight[] }) {
       );
     }
 
+    if (destaque && !lista.includes(destaque)) lista = [...lista, destaque];
+
     const ord = [...lista];
     if (ordenacao === "alfabetica") {
       ord.sort((a, b) => a.titulo.localeCompare(b.titulo, "pt-BR"));
@@ -194,24 +337,20 @@ function InsightsBoard({ items }: { items: Insight[] }) {
       ord.sort((a, b) => dataParaNumero(a.data) - dataParaNumero(b.data));
     }
     return ord;
-  }, [items, busca, filtro, ordenacao, ocultos]);
+  }, [items, busca, filtro, ordenacao, ocultos, destaqueId]);
 
-  const curtir = (id: string) => {
-    setCurtidos((prev) => new Set(prev).add(id));
-    setDescurtidos((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
+  // 👍 grava direto, sem modal; volta ao estado anterior se o servidor falhar.
+  const curtir = (item: Insight) => {
+    const anterior = feedbackDe(item) ?? null;
+    setFeedbackLocal((m) => ({ ...m, [item.id]: { util: true } }));
+    salvarFeedbackInsightApi(item.id, { util: true }).catch(() => {
+      setFeedbackLocal((m) => ({ ...m, [item.id]: anterior }));
+      toast.error("Não foi possível registrar o feedback.");
     });
   };
-  const descurtir = (id: string) => {
-    setDescurtidos((prev) => new Set(prev).add(id));
-    setCurtidos((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  };
+  // 👎 abre o "O que podemos melhorar?" — o modal grava.
+  const registrarNegativo = (id: string, fb: InsightFeedback) =>
+    setFeedbackLocal((m) => ({ ...m, [id]: fb }));
   const ocultar = (id: string) => setOcultos((prev) => new Set(prev).add(id));
 
   return (
@@ -261,14 +400,23 @@ function InsightsBoard({ items }: { items: Insight[] }) {
       {exibidos.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {exibidos.map((item) => {
+            const fb = feedbackDe(item);
             const shared = {
-              liked: curtidos.has(item.id),
-              disliked: descurtidos.has(item.id),
-              onLike: () => curtir(item.id),
-              onDislike: () => descurtir(item.id),
+              liked: fb?.util === true,
+              disliked: fb?.util === false,
+              onLike: () => curtir(item),
+              onDislike: () => setNegativoPara(item),
               onHide: () => ocultar(item.id),
             };
-            return <InsightCard key={item.id} {...shared} item={item} />;
+            return (
+              <InsightCard
+                key={item.id}
+                {...shared}
+                item={item}
+                destacado={item.id === idNoModal}
+                onAbrir={() => setAbertoId(item.id)}
+              />
+            );
           })}
         </div>
       ) : items.length === 0 ? (
@@ -281,9 +429,30 @@ function InsightsBoard({ items }: { items: Insight[] }) {
           }}
         />
       )}
+
+      <InsightDetalheModal
+        insight={noModal}
+        feedback={noModal ? feedbackDe(noModal) : undefined}
+        onLike={() => noModal && curtir(noModal)}
+        onDislike={() => noModal && setNegativoPara(noModal)}
+        onClose={fecharDetalhe}
+      />
+
+      {/* Depois do detalhe: o 👎 aberto de dentro do modal fica por cima. */}
+      <FeedbackNegativoModal
+        insight={negativoPara}
+        podeOrientar={podeOrientar}
+        onClose={() => setNegativoPara(null)}
+        onRegistrado={registrarNegativo}
+        onAdicionarOrientacao={(insight, motivo) => {
+          setNegativoPara(null);
+          onSugerirDirecionamento(sugerirDirecionamento(insight, motivo));
+        }}
+      />
     </div>
   );
 }
+
 
 // ----------------------------------------------------------------------
 // Card do insight — barra lateral colorida pela severidade. Quando o insight
@@ -296,15 +465,23 @@ function InsightCard({
   onLike,
   onDislike,
   onHide,
-}: CardProps<Insight>) {
+  destacado = false,
+  onAbrir,
+}: CardProps<Insight> & { destacado?: boolean; onAbrir: () => void }) {
   const pessoa =
     item.liderado && item.liderado !== "Todos" ? item.liderado : null;
 
+  // O card inteiro abre o detalhe no clique do mouse. Pelo teclado, o caminho
+  // é o botão "Ver insight" do rodapé — o card não vira <button> porque tem
+  // botões dentro. Os controles internos param a propagação.
   return (
     <Card
+      id={`insight-${item.id}`}
+      onClick={onAbrir}
       className={clsx(
-        "flex h-full flex-col overflow-hidden border-l-4",
+        "flex h-full cursor-pointer flex-col overflow-hidden border-l-4 ring-offset-2 transition-shadow duration-500 dark:ring-offset-dark-900",
         SIDEBAR_BORDER[item.cor],
+        destacado ? "ring-primary-500 ring-2" : "ring-0",
       )}
     >
       <div className="flex flex-1 items-start gap-2.5 p-4">
@@ -335,8 +512,17 @@ function InsightCard({
               {pessoa}
             </p>
           )}
+          {item.direcionamento && (
+            <p className="dark:text-dark-400 text-tiny mt-1 text-gray-400">
+              Relacionado à orientação “{item.direcionamento.nome}”
+            </p>
+          )}
         </div>
-        <ActionsMenu />
+        {/* stopPropagation também cobre o ActionDialog: evento de portal
+            sobe pela árvore do React até o card. */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <ActionsMenu item={item} />
+        </div>
       </div>
       <CardFooter
         item={item}
@@ -345,13 +531,16 @@ function InsightCard({
         onLike={onLike}
         onDislike={onDislike}
         onHide={onHide}
+        onAbrir={onAbrir}
       />
     </Card>
   );
 }
 
 // ----------------------------------------------------------------------
-// Rodapé compartilhado: data + feedback (útil?) + ocultar.
+// Rodapé compartilhado: data + feedback (útil?) + Ver insight + ocultar.
+// A pergunta "Este insight foi útil?" por extenso fica no modal; aqui os
+// botões carregam o sentido nos aria-labels, para caber no card.
 
 function CardFooter({
   item,
@@ -361,6 +550,7 @@ function CardFooter({
   onLike,
   onDislike,
   onHide,
+  onAbrir,
 }: {
   item: PersonalInsight;
   onLight?: boolean;
@@ -369,6 +559,7 @@ function CardFooter({
   onLike: () => void;
   onDislike: () => void;
   onHide: () => void;
+  onAbrir: () => void;
 }) {
   const respondeu = liked || disliked;
   const muted = onLight ? "text-gray-400 dark:text-dark-300" : "text-white/75";
@@ -380,27 +571,38 @@ function CardFooter({
   );
 
   return (
+    // Clicar no rodapé (fora dos botões) não abre o detalhe por engano.
     <div
+      onClick={(e) => e.stopPropagation()}
       className={clsx(
-        "flex items-center justify-between gap-2 px-4 py-2.5",
+        "flex cursor-default items-center justify-between gap-2 px-4 py-2.5",
         onLight
           ? "dark:border-dark-500 border-t border-gray-100"
           : "border-t border-white/15",
       )}
     >
       <span className={clsx("text-tiny font-medium", muted)}>{item.data}</span>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         {respondeu ? (
-          <span className={clsx("text-tiny", muted)}>
-            Agradecemos o feedback.
+          <span
+            className={clsx("grid size-7 place-items-center", muted)}
+            role="status"
+            title="Obrigado pelo feedback."
+          >
+            {liked ? (
+              <HandThumbUpSolidIcon className="text-primary-500 size-4" aria-hidden />
+            ) : (
+              <HandThumbDownSolidIcon className="size-4" aria-hidden />
+            )}
+            <span className="sr-only">Obrigado pelo feedback.</span>
           </span>
         ) : (
           <>
-            <span className={clsx("text-tiny", muted)}>Insight foi útil?</span>
             <button
               type="button"
               onClick={onLike}
-              aria-label="Curtir"
+              aria-label="Marcar insight como útil"
+              title="Útil"
               className={iconBtn}
             >
               <HandThumbUpIcon className="size-4" />
@@ -408,7 +610,8 @@ function CardFooter({
             <button
               type="button"
               onClick={onDislike}
-              aria-label="Não curtir"
+              aria-label="Marcar insight como não útil"
+              title="Não útil"
               className={iconBtn}
             >
               <HandThumbDownIcon className="size-4" />
@@ -419,10 +622,20 @@ function CardFooter({
           type="button"
           onClick={onHide}
           aria-label="Ocultar insight"
+          title="Ocultar"
           className={iconBtn}
         >
           <EyeSlashIcon className="size-4" />
         </button>
+        <Button
+          variant="flat"
+          color="primary"
+          onClick={onAbrir}
+          aria-label={`Ver insight: ${item.titulo}`}
+          className="text-tiny h-7 rounded-lg px-2 font-medium whitespace-nowrap"
+        >
+          Ver insight
+        </Button>
       </div>
     </div>
   );
@@ -431,9 +644,20 @@ function CardFooter({
 // ----------------------------------------------------------------------
 // Menu de ações do card (3 pontinhos).
 
-function ActionsMenu({ onLight = true }: { onLight?: boolean }) {
+const ACOES_VISIVEIS = INSIGHT_ACOES.filter(
+  (a) => !INSIGHT_ACOES_OCULTAS.includes(a),
+);
+
+function ActionsMenu({
+  item,
+  onLight = true,
+}: {
+  item: Insight;
+  onLight?: boolean;
+}) {
   // Ação escolhida no menu que abriu o modal (null = fechado).
   const [acaoAberta, setAcaoAberta] = useState<InsightAcao | null>(null);
+  const { conversar, ocupado } = useConversarSobreInsight();
 
   const handleAcao = (acao: InsightAcao) => {
     // "Upload Documento" não abre a lista de pessoas.
@@ -465,7 +689,25 @@ function ActionsMenu({ onLight = true }: { onLight?: boolean }) {
         leaveTo="opacity-0 translate-y-1"
         className="dark:bg-dark-750 dark:border-dark-500 z-100 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/60 outline-hidden dark:shadow-none"
       >
-        {[...INSIGHT_ACOES]
+        <MenuItem disabled={ocupado}>
+          {({ focus, disabled }) => (
+            <button
+              type="button"
+              onClick={() => void conversar(item)}
+              disabled={disabled}
+              className={clsx(
+                "flex w-full items-center gap-2 px-3.5 py-2 text-left text-sm transition-colors disabled:opacity-60",
+                focus
+                  ? "dark:bg-dark-600 dark:text-dark-100 bg-gray-100 text-gray-800"
+                  : "dark:text-dark-200 text-gray-600",
+              )}
+            >
+              <ChatBubbleLeftRightIcon className="size-4 shrink-0" />
+              Conversar com o assistente
+            </button>
+          )}
+        </MenuItem>
+        {[...ACOES_VISIVEIS]
           .sort((a, b) => a.localeCompare(b, "pt-BR"))
           .map((acao) => (
             <MenuItem key={acao}>

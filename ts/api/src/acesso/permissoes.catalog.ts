@@ -3,8 +3,11 @@
  *
  * Cada permissão corresponde a uma funcionalidade que EXISTE hoje no protótipo.
  * Deliberadamente não há permissão para:
- *   • Notas, Insights, E-mail, Slack, Agenda — desligados por feature flag
+ *   • Notas, E-mail, Slack, Agenda — desligados por feature flag
  *     (ver ts/demo/src/app/data/temporarilyDisabledFeatures.ts).
+ *   • VER Insights — a lista é de toda a organização e segue aberta a quem
+ *     entra na plataforma. O que Insights controla é só quem orienta a IA
+ *     (grupo `insights`, abaixo).
  * Criar permissão para o que não existe daria a impressão de controle que a
  * plataforma não tem. Quando essas funcionalidades entrarem, acrescente aqui.
  *
@@ -129,6 +132,18 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
         code: 'ia.criar_conteudo',
         rotulo: 'Gerar conteúdo com IA',
         requer: 'ia.usar',
+      },
+    ],
+  },
+  {
+    id: 'insights',
+    titulo: 'Insights',
+    permissoes: [
+      {
+        // Criar, editar, ativar/desativar e excluir itens do "Direcionador de
+        // insights". Visualizar a aba não exige permissão (ver cabeçalho).
+        code: 'insights.gerenciar_direcionadores',
+        rotulo: 'Gerenciar orientadores de insights',
       },
     ],
   },
@@ -268,6 +283,7 @@ export const ROLES_DE_SISTEMA: RoleDeSistema[] = [
       'grafo.visualizar',
       'documentos.enviar',
       'ia.criar_conteudo',
+      'insights.gerenciar_direcionadores',
       'conectores.visualizar',
       'configuracoes.visualizar',
     ]),

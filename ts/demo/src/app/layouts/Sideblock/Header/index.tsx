@@ -4,7 +4,6 @@ import { NavLink, useLocation } from "react-router";
 import {
   ArrowUpTrayIcon,
   Cog6ToothIcon,
-  LinkIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 
@@ -93,12 +92,8 @@ export function Header() {
           <TokenUsage />
         </div>
         <div className="hidden items-center gap-1 md:flex">
-          <SystemAreaLink
-            productCode={productCode}
-            slug="conectores"
-            label={t("chrome.connectors")}
-            icon={LinkIcon}
-          />
+          {/* Conectores saiu daqui: agora mora em Configurações de usuário,
+              no menu de perfil. A rota antiga redireciona para lá. */}
           <SystemAreaLink
             productCode={productCode}
             slug="configuracoes"

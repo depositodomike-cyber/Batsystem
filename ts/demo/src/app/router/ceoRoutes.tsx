@@ -1,5 +1,6 @@
 import {
   Navigate,
+  useLocation,
   useParams,
   useSearchParams,
   type RouteObject,
@@ -9,7 +10,6 @@ import Placeholder from "@/app/pages/ceo/Placeholder";
 import ProjectDetail from "@/app/pages/ceo/ProjectDetail";
 import ChatDetail from "@/app/pages/ceo/ChatDetail";
 import SquadDetail from "@/app/pages/ceo/SquadDetail";
-import Conectores from "@/app/pages/ceo/Conectores";
 import Documentos from "@/app/pages/ceo/Documentos";
 import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
@@ -24,6 +24,7 @@ import ConversaPrompt from "@/app/pages/ceo/ConversaPrompt";
 import ConversasHistorico from "@/app/pages/ceo/ConversasHistorico";
 import Documento from "@/app/pages/ceo/Documento";
 import Configuracoes from "@/app/pages/ceo/Configuracoes";
+import ConfiguracoesUsuario from "@/app/pages/ceo/ConfiguracoesUsuario";
 import Feed from "@/app/pages/ceo/Feed";
 import FeedDetail from "@/app/pages/ceo/FeedDetail";
 import BusinessPartnerInsights from "@/app/pages/ceo/Insights";
@@ -33,6 +34,8 @@ import {
   allCeoPaths,
   products,
   SQUADS_PRODUCT_CODE,
+  userSettingsPath,
+  type SecaoConfiguracoesUsuario,
 } from "@/app/navigation/ceoOs";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import { type SecaoAdministracao } from "@/app/pages/ceo/configuracoes-secoes";
@@ -58,7 +61,7 @@ const relatoriosPages: Record<string, RouteObject["Component"]> = {
 // "memoria" e "memoria-grafo". O que não estiver aqui cai no Placeholder.
 const pageBySlug: Record<string, RouteObject["Component"]> = {
   configuracoes: Configuracoes,
-  conectores: Conectores,
+  "configuracoes-usuario": ConfiguracoesUsuario,
   documentos: Documentos,
   email: Email,
   slack: Slack,
@@ -74,6 +77,19 @@ const pageBySlug: Record<string, RouteObject["Component"]> = {
 const leafRoutes: RouteObject[] = allCeoPaths().map((p) => {
   const slug = p.split("/").pop() ?? "";
   const productCode = p.split("/")[1] ?? "";
+  // Conectores mora em Configurações de usuário. A rota antiga continua viva
+  // como redirect QUE PRESERVA A QUERY: é para ela que o backend devolve o
+  // fluxo OAuth (`/behuman/conectores?conector=…&status=…`, fixo em
+  // oauth-provider.service / slack-oauth.service), além de links salvos e do
+  // FeedDetail. Nada de OAuth, token ou backend muda.
+  if (slug === "conectores") {
+    return {
+      path: p.replace(/^\//, ""),
+      element: (
+        <ParaConfiguracoesUsuario productCode={productCode} secao="conectores" />
+      ),
+    };
+  }
   if (slug === "memoria-grafo" && GRAFO_DESABILITADO) {
     return {
       path: p.replace(/^\//, ""),
@@ -92,6 +108,30 @@ const leafRoutes: RouteObject[] = allCeoPaths().map((p) => {
             : (pageBySlug[slug] ?? Placeholder),
   };
 });
+
+/**
+ * Redireciona para Configurações de usuário numa seção, mantendo os demais
+ * parâmetros da URL (ex.: o retorno do OAuth de Conectores).
+ */
+function ParaConfiguracoesUsuario({
+  productCode,
+  secao,
+}: {
+  productCode: string;
+  secao: SecaoConfiguracoesUsuario;
+}) {
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  params.delete("secao");
+  params.delete("aba");
+  const resto = params.toString();
+  return (
+    <Navigate
+      to={`${userSettingsPath(productCode, secao)}${resto ? `&${resto}` : ""}`}
+      replace
+    />
+  );
+}
 
 // Rota dinâmica de squad: `behuman/:squadSlug`. O catálogo é carregado da API
 // (SquadsProvider), então não há mais uma rota estática por squad. As rotas

@@ -1,26 +1,27 @@
+// Notificações do header. Cada item é uma `Notificacao` com um `tipo`; hoje a
+// única origem real são os INSIGHTS que o usuário ainda não viu (sem leitura
+// dele no backend), e esses levam a identificação [Insight]. Notificações de
+// outros tipos, quando existirem, entram pelo mesmo formato SEM o badge.
+// Clicar num insight marca como lido e abre o MESMO modal de detalhe da tela
+// de Insights na tela em que o usuário está — sem navegar. O modal tem um
+// botão "Ir para Insights" para quem quiser ir até a tela.
+
 // Import Dependencies
 import {
   Popover,
   PopoverButton,
   PopoverPanel,
-  Tab,
-  TabGroup,
-  TabList,
-  TabPanel,
-  TabPanels,
   Transition,
 } from "@headlessui/react";
 import {
   ArchiveBoxXMarkIcon,
   Cog6ToothIcon,
-  DocumentTextIcon,
-  EnvelopeIcon,
-  ExclamationTriangleIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
-import { IoCheckmarkDoneOutline } from "react-icons/io5";
 import clsx from "clsx";
-import React, { Fragment, useState, FocusEvent } from "react";
-import { Link } from "react-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 
 // Local Imports
 import {
@@ -31,7 +32,25 @@ import {
   Button,
 } from "@/components/ui";
 import { useThemeContext } from "@/app/contexts/theme/context";
-import { NotificationType } from "@/@types/common";
+import {
+  sugerirDirecionamento,
+  type Insight,
+  type InsightCor,
+  type InsightFeedback,
+} from "@/app/data/insights";
+import {
+  getProductCodeFromPath,
+  userSettingsPath,
+} from "@/app/navigation/ceoOs";
+import { InsightDetalheModal } from "@/app/pages/ceo/InsightDetalheModal";
+import { FeedbackNegativoModal } from "@/app/pages/ceo/InsightFeedbackNegativoModal";
+import { usePodeGerenciarDirecionadores } from "@/app/pages/ceo/usePodeGerenciarDirecionadores";
+import {
+  listarInsightsNaoLidosApi,
+  salvarFeedbackInsightApi,
+  marcarInsightLidoApi,
+  marcarTodosInsightsLidosApi,
+} from "@/services/api/insights";
 import AlarmIcon from "@/assets/dualicons/alarm.svg?react";
 import GirlEmptyBox from "@/assets/illustrations/girl-empty-box.svg?react";
 import {
@@ -41,304 +60,274 @@ import {
 
 // ----------------------------------------------------------------------
 
-interface NotificationTypeInfo {
-  title: string;
-  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  color: AvatarProps["initialColor"];
+// Só o Business Partner tem página de Insights (ver `insightsPages` em
+// ceoRoutes.tsx) — o clique leva sempre para lá, qualquer que seja o produto
+// aberto.
+const INSIGHTS_PATH = "/behuman/insights";
+
+// Intervalo de atualização do sino enquanto a página está aberta.
+const POLL_MS = 60_000;
+
+// Mesma correspondência severidade → cor do Badge da página de Insights.
+const COR_AVATAR: Record<InsightCor, AvatarProps["initialColor"]> = {
+  secondary: "error",
+  warning: "warning",
+  success: "success",
+  light: "neutral",
+};
+
+/**
+ * Tempo relativo curto. As mesmas regras de `quandoFoi` em CriacoesLista.tsx,
+ * repetidas de propósito pelo mesmo motivo de lá.
+ */
+function quandoFoi(iso?: string, fallback = ""): string {
+  if (!iso) return fallback;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return fallback;
+  const min = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `há ${horas} h`;
+  if (horas < 48) return "ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
-interface Notification {
+/** Um item da central. `tipo` decide o badge e o texto da ação. */
+interface Notificacao {
   id: string;
-  title: string;
-  description: string;
-  type: NotificationType;
-  time: string;
+  tipo: "insight";
+  titulo: string;
+  descricao: string;
+  /** ISO; sem ele, cai em `dataTexto`. */
+  criadoEm?: string;
+  dataTexto: string;
+  cor: AvatarProps["initialColor"];
+  /** Linha extra de contexto (ex.: o direcionamento relacionado). */
+  contexto?: string;
+}
+
+function deInsight(i: Insight): Notificacao {
+  return {
+    id: i.id,
+    tipo: "insight",
+    titulo: i.titulo,
+    descricao: i.descricao,
+    criadoEm: i.criadoEm,
+    dataTexto: i.data,
+    cor: COR_AVATAR[i.cor],
+    ...(i.direcionamento
+      ? { contexto: `Relacionado à orientação “${i.direcionamento.nome}”` }
+      : {}),
+  };
 }
 
 interface NotificationItemProps {
-  data: Notification;
-  remove: (id: string) => void;
+  data: Notificacao;
+  onOpen: (item: Notificacao) => void;
+  onArchive: (id: string) => void;
 }
 
-const types: Record<NotificationType, NotificationTypeInfo> = {
-  message: {
-    title: "Message",
-    Icon: EnvelopeIcon,
-    color: "info",
-  },
-  task: {
-    title: "Task",
-    Icon: IoCheckmarkDoneOutline,
-    color: "success",
-  },
-  log: {
-    title: "Log",
-    Icon: DocumentTextIcon,
-    color: "neutral",
-  },
-  security: {
-    title: "Security",
-    Icon: ExclamationTriangleIcon,
-    color: "error",
-  },
-};
-
-const fakeNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "User Photo Changed",
-    description: "John Doe changed his avatar photo",
-    type: "log",
-    time: "2 hours ago",
-  },
-  {
-    id: "2",
-    title: "New user registered",
-    description: "Jane Doe has registered",
-    type: "message",
-    time: "2 hours ago",
-  },
-  {
-    id: "3",
-    title: "Security alert",
-    description: "New device login detected ",
-    type: "security",
-    time: "11 hours ago",
-  },
-  {
-    id: "4",
-    title: "Design ERP Completed",
-    description: "Design ERP completed",
-    type: "task",
-    time: "a day ago",
-  },
-  {
-    id: "5",
-    title: "Weekly Report",
-    description: "The weekly report was uploaded",
-    type: "log",
-    time: "2 days ago",
-  },
-  {
-    id: "6",
-    title: "Vercel Conf",
-    description: "Join to online Vercel conference",
-    type: "message",
-    time: "3 days ago",
-  },
-  {
-    id: "7",
-    title: "Images Added",
-    description: "Mores Clarke added new image gallery",
-    type: "log",
-    time: "5 days ago",
-  },
-];
-
-const typesKey = Object.keys(types) as NotificationType[];
-
 export function Notifications() {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(fakeNotifications);
-  const [activeTab, setActiveTab] = useState<number>(0);
+  const disabled = isFeatureTemporarilyDisabled("notifications");
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [itens, setItens] = useState<Insight[]>([]);
+  const [total, setTotal] = useState(0);
 
-  if (isFeatureTemporarilyDisabled("notifications")) {
+  // Modal de detalhe aberto a partir do sino, na tela atual. O feedback dado
+  // aqui fica neste estado (o modal usa o do servidor enquanto não houver).
+  const [aberto, setAberto] = useState<Insight | null>(null);
+  const [feedback, setFeedback] = useState<InsightFeedback | undefined>();
+  const [negativoPara, setNegativoPara] = useState<Insight | null>(null);
+  const podeOrientar = usePodeGerenciarDirecionadores();
+
+  // Falha de rede é silenciosa: o sino mantém o que já mostrava.
+  const carregar = useCallback(() => {
+    listarInsightsNaoLidosApi()
+      .then((r) => {
+        setItens(r.insights);
+        setTotal(r.total);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (disabled) return;
+    carregar();
+    const t = window.setInterval(carregar, POLL_MS);
+    return () => window.clearInterval(t);
+  }, [disabled, carregar]);
+
+  if (disabled) {
     return (
       <span
         aria-disabled="true"
-        aria-label="Notifications"
-        title="Notifications"
+        aria-label="Notificações"
+        title="Notificações"
         className={clsx(
           "relative flex size-9 items-center justify-center rounded-lg outline-hidden",
           DISABLED_MENU_CLASS,
         )}
       >
-        <AlarmIcon className="size-6 text-gray-900 dark:text-dark-100" />
+        <AlarmIcon className="dark:text-dark-100 size-6 text-gray-900" />
       </span>
     );
   }
 
-  const filteredNotifications = notifications.filter(
-    (notification) => notification.type === typesKey[activeTab - 1],
-  );
-
-  const removeNotification = (id: string): void => {
-    setNotifications((n) => n.filter((notification) => notification.id !== id));
+  // Remove da lista na hora e avisa o backend; se falhar, recarrega do servidor.
+  const marcarLido = (id: string) => {
+    setItens((l) => l.filter((i) => i.id !== id));
+    setTotal((n) => Math.max(0, n - 1));
+    marcarInsightLidoApi(id).catch(carregar);
   };
 
-  const clearNotifications = (): void => {
-    if (activeTab === 0) {
-      setNotifications([]);
-    } else {
-      setNotifications((n) =>
-        n.filter(
-          (notification) => notification.type !== typesKey[activeTab - 1],
-        ),
-      );
-    }
+  const abrirDetalhe = (insight: Insight) => {
+    setFeedback(undefined);
+    setAberto(insight);
+  };
+
+  const curtir = (insight: Insight) => {
+    setFeedback({ util: true });
+    salvarFeedbackInsightApi(insight.id, { util: true }).catch(() => {
+      setFeedback(undefined);
+      toast.error("Não foi possível registrar o feedback.");
+    });
+  };
+
+  const marcarTodos = () => {
+    setItens([]);
+    setTotal(0);
+    marcarTodosInsightsLidosApi().catch(carregar);
   };
 
   return (
-    <Popover className="relative flex">
-      <PopoverButton
-        as={Button}
-        variant="flat"
-        isIcon
-        className="relative size-9 rounded-lg"
-      >
-        <AlarmIcon className="size-6 text-gray-900 dark:text-dark-100" />
-        {notifications.length > 0 && (
-          <AvatarDot
-            color="error"
-            isPing
-            className="top-0 ltr:right-0 rtl:left-0"
-          />
-        )}
-      </PopoverButton>
-      <Transition
-        enter="transition ease-out"
-        enterFrom="opacity-0 translate-y-2"
-        enterTo="opacity-100 translate-y-0"
-        leave="transition ease-in"
-        leaveFrom="opacity-100 translate-y-0"
-        leaveTo="opacity-0 translate-y-2"
-      >
-        <PopoverPanel
-          anchor={{ to: "bottom end", gap: 8 }}
-          className="z-70 mx-4 flex h-[min(32rem,calc(100vh-6rem))] w-[calc(100vw-2rem)] flex-col rounded-lg border border-gray-150 bg-white shadow-soft dark:border-dark-800 dark:bg-dark-700 dark:shadow-soft-dark sm:m-0 sm:w-80"
+    <>
+      <Popover className="relative flex">
+        <PopoverButton
+          as={Button}
+          variant="flat"
+          isIcon
+          className="relative size-9 rounded-lg"
+          onClick={carregar}
+          aria-label="Notificações"
         >
-          {({ close }: { close: () => void }) => (
-            <div className="flex grow flex-col overflow-hidden">
-              <div className="rounded-t-lg bg-gray-100 dark:bg-dark-800">
-                <div className="flex items-center justify-between px-4 pt-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-gray-800 dark:text-dark-100">
-                      Notifications
-                    </h3>
-                    {notifications.length > 0 && (
-                      <Badge
-                        color="primary"
-                        className="h-5 rounded-full px-1.5"
-                        variant="soft"
+          <AlarmIcon className="dark:text-dark-100 size-6 text-gray-900" />
+          {total > 0 && (
+            <AvatarDot
+              color="error"
+              isPing
+              className="top-0 ltr:right-0 rtl:left-0"
+            />
+          )}
+        </PopoverButton>
+        <Transition
+          enter="transition ease-out"
+          enterFrom="opacity-0 translate-y-2"
+          enterTo="opacity-100 translate-y-0"
+          leave="transition ease-in"
+          leaveFrom="opacity-100 translate-y-0"
+          leaveTo="opacity-0 translate-y-2"
+        >
+          <PopoverPanel
+            anchor={{ to: "bottom end", gap: 8 }}
+            className="border-gray-150 shadow-soft dark:border-dark-800 dark:bg-dark-700 dark:shadow-soft-dark z-70 mx-4 flex h-[min(32rem,calc(100vh-6rem))] w-[calc(100vw-2rem)] flex-col rounded-lg border bg-white sm:m-0 sm:w-80"
+          >
+            {({ close }: { close: () => void }) => (
+              <div className="flex grow flex-col overflow-hidden">
+                <div className="dark:bg-dark-800 rounded-t-lg bg-gray-100">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="dark:text-dark-100 font-medium text-gray-800">
+                        Notificações
+                      </h3>
+                      {total > 0 && (
+                        <Badge
+                          color="primary"
+                          className="h-5 rounded-full px-1.5"
+                          variant="soft"
+                        >
+                          {total}
+                        </Badge>
+                      )}
+                    </div>
+                    {/* Oculto temporariamente — ver `notificationsSettings`. */}
+                    {!isFeatureTemporarilyDisabled("notificationsSettings") && (
+                      <Button
+                        component={Link}
+                        to="/settings/notifications"
+                        className="size-7 rounded-lg ltr:-mr-1.5 rtl:-ml-1.5"
+                        isIcon
+                        variant="flat"
+                        onClick={close}
                       >
-                        {notifications.length}
-                      </Badge>
+                        <Cog6ToothIcon className="size-4.5" />
+                      </Button>
                     )}
                   </div>
-                  <Button
-                    component={Link}
-                    to="/settings/notifications"
-                    className="size-7 rounded-lg ltr:-mr-1.5 rtl:-ml-1.5"
-                    isIcon
-                    variant="flat"
-                    onClick={close}
-                  >
-                    <Cog6ToothIcon className="size-4.5" />
-                  </Button>
                 </div>
-              </div>
-              <TabGroup
-                as={Fragment}
-                selectedIndex={activeTab}
-                onChange={setActiveTab}
-              >
-                <TabList className="hide-scrollbar flex shrink-0 overflow-x-auto scroll-smooth bg-gray-100 px-3 dark:bg-dark-800">
-                  <Tab
-                    onFocus={(e: FocusEvent<HTMLButtonElement>) => {
-                      const target = e.target;
-                      const parent = target.parentNode as HTMLElement;
-                      if (parent) {
-                        parent.scrollLeft =
-                          target.offsetLeft - parent.offsetWidth / 2;
-                      }
-                    }}
-                    className={({ selected }: { selected: boolean }) =>
-                      clsx(
-                        "shrink-0 scroll-mx-16 whitespace-nowrap border-b-2 px-3 py-2 font-medium",
-                        selected
-                          ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
-                          : "border-transparent hover:text-gray-800 focus:text-gray-800 dark:hover:text-dark-100 dark:focus:text-dark-100",
-                      )
-                    }
-                    as={Button}
-                    unstyled
-                  >
-                    All
-                  </Tab>
-                  {typesKey.map((key) => (
-                    <Tab
-                      onFocus={(e: FocusEvent<HTMLButtonElement>) => {
-                        const target = e.target;
-                        const parent = target.parentNode as HTMLElement;
-                        if (parent) {
-                          parent.scrollLeft =
-                            target.offsetLeft - parent.offsetWidth / 2;
-                        }
-                      }}
-                      key={key}
-                      className={({ selected }: { selected: boolean }) =>
-                        clsx(
-                          "shrink-0 scroll-mx-16 whitespace-nowrap border-b-2 px-3 py-2 font-medium",
-                          selected
-                            ? "border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-400"
-                            : "border-transparent hover:text-gray-800 focus:text-gray-800 dark:hover:text-dark-100 dark:focus:text-dark-100",
-                        )
-                      }
-                      as={Button}
-                      unstyled
-                    >
-                      {types[key].title}
-                    </Tab>
-                  ))}
-                </TabList>
-                {(notifications.length > 0 && activeTab === 0) ||
-                filteredNotifications.length > 0 ? (
-                  <TabPanels as={Fragment}>
-                    <TabPanel className="custom-scrollbar grow space-y-4 overflow-y-auto overflow-x-hidden p-4 outline-hidden">
-                      {notifications.map((item) => (
-                        <NotificationItem
-                          key={item.id}
-                          remove={removeNotification}
-                          data={item}
-                        />
-                      ))}
-                    </TabPanel>
-                    {typesKey.map((key) => (
-                      <TabPanel
-                        key={key}
-                        className="custom-scrollbar scrollbar-hide grow space-y-4 overflow-y-auto overflow-x-hidden p-4"
-                      >
-                        {filteredNotifications.map((item) => (
-                          <NotificationItem
-                            key={item.id}
-                            remove={removeNotification}
-                            data={item}
-                          />
-                        ))}
-                      </TabPanel>
+                {itens.length > 0 ? (
+                  <div className="custom-scrollbar grow space-y-1 overflow-x-hidden overflow-y-auto p-2">
+                    {itens.map(deInsight).map((item) => (
+                      <NotificationItem
+                        key={item.id}
+                        data={item}
+                        onArchive={marcarLido}
+                        onOpen={(n) => {
+                          const insight = itens.find((i) => i.id === n.id);
+                          marcarLido(n.id);
+                          close();
+                          if (insight) abrirDetalhe(insight);
+                        }}
+                      />
                     ))}
-                  </TabPanels>
+                  </div>
                 ) : (
                   <Empty />
                 )}
-              </TabGroup>
-              {((notifications.length > 0 && activeTab === 0) ||
-                filteredNotifications.length > 0) && (
-                <div className="shrink-0 overflow-hidden rounded-b-lg bg-gray-100 dark:bg-dark-800">
-                  <Button
-                    // variant="flat"
-                    className="w-full rounded-t-none"
-                    onClick={clearNotifications}
-                  >
-                    <span>Archive all notifications</span>
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </PopoverPanel>
-      </Transition>
-    </Popover>
+                {itens.length > 0 && (
+                  <div className="dark:bg-dark-800 shrink-0 overflow-hidden rounded-b-lg bg-gray-100">
+                    <Button
+                      className="w-full rounded-t-none"
+                      onClick={marcarTodos}
+                    >
+                      <span>Marcar todas como lidas</span>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </PopoverPanel>
+        </Transition>
+      </Popover>
+
+      {/* Fora do Popover: o painel fecha ao abrir o modal, e o modal fica. */}
+      <InsightDetalheModal
+        insight={aberto}
+        feedback={feedback}
+        onLike={() => aberto && curtir(aberto)}
+        onDislike={() => aberto && setNegativoPara(aberto)}
+        onClose={() => setAberto(null)}
+        onIrParaInsights={() => {
+          setAberto(null);
+          navigate(INSIGHTS_PATH);
+        }}
+      />
+      <FeedbackNegativoModal
+        insight={negativoPara}
+        podeOrientar={podeOrientar}
+        onClose={() => setNegativoPara(null)}
+        onRegistrado={(_, fb) => setFeedback(fb)}
+        onAdicionarOrientacao={(insight, motivo) => {
+          setNegativoPara(null);
+          setAberto(null);
+          navigate(
+            userSettingsPath(getProductCodeFromPath(pathname), "orientador"),
+            { state: { sugestao: sugerirDirecionamento(insight, motivo) } },
+          );
+        }}
+      />
+    </>
   );
 }
 
@@ -358,40 +347,66 @@ function Empty() {
           }
         />
         <div className="mt-6">
-          <p>No new notifications yet</p>
+          <p>Nenhuma notificação nova por enquanto</p>
         </div>
       </div>
     </div>
   );
 }
 
-function NotificationItem({ data, remove }: NotificationItemProps) {
-  const Icon = types[data.type].Icon;
+function NotificationItem({ data, onOpen, onArchive }: NotificationItemProps) {
   return (
-    <div className="group flex items-center justify-between gap-3">
-      <div className="flex min-w-0 gap-3">
+    <div className="group dark:hover:bg-dark-600 flex items-center justify-between gap-2 rounded-lg px-2 py-2 hover:bg-gray-100">
+      <button
+        type="button"
+        onClick={() => onOpen(data)}
+        className="flex min-w-0 flex-1 gap-3 text-left outline-hidden"
+      >
         <Avatar
           size={10}
-          initialColor={types[data.type].color}
-          classNames={{ display: "rounded-lg" }}
+          initialColor={data.cor}
+          classNames={{ root: "shrink-0", display: "rounded-lg" }}
         >
-          <Icon className="size-4.5" />
+          <SparklesIcon className="size-4.5" />
         </Avatar>
         <div className="min-w-0">
-          <p className="-mt-0.5 truncate font-medium text-gray-800 dark:text-dark-100">
-            {data.title}
+          {data.tipo === "insight" && (
+            <Badge
+              color="primary"
+              variant="soft"
+              className="mb-1 h-5 rounded-full px-2 text-[10px]"
+            >
+              Insight
+            </Badge>
+          )}
+          <p className="dark:text-dark-100 truncate font-medium text-gray-800">
+            {data.titulo}
           </p>
-          <div className="mt-0.5 truncate text-xs">{data.description}</div>
-          <div className="mt-1 truncate text-xs text-gray-400 dark:text-dark-300">
-            {data.time}
+          <div className="mt-0.5 line-clamp-2 text-xs">{data.descricao}</div>
+          {data.contexto && (
+            <div className="dark:text-dark-300 mt-0.5 truncate text-xs text-gray-400">
+              {data.contexto}
+            </div>
+          )}
+          <div className="mt-1 flex items-center gap-2 text-xs">
+            <span className="dark:text-dark-300 text-gray-400">
+              {quandoFoi(data.criadoEm, data.dataTexto)}
+            </span>
+            {data.tipo === "insight" && (
+              <span className="text-primary-600 dark:text-primary-400 font-medium">
+                Ver insight
+              </span>
+            )}
           </div>
         </div>
-      </div>
+      </button>
       <Button
         variant="flat"
         isIcon
-        onClick={() => remove(data.id)}
-        className="size-7 rounded-lg opacity-0 group-hover:opacity-100 ltr:-mr-2 rtl:-ml-2"
+        onClick={() => onArchive(data.id)}
+        title="Marcar como lida"
+        aria-label="Marcar como lida"
+        className="size-7 shrink-0 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100"
       >
         <ArchiveBoxXMarkIcon className="size-4" />
       </Button>

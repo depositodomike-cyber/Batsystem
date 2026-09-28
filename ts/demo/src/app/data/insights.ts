@@ -17,6 +17,8 @@ export interface PersonalInsight {
   data: string;
   tipo: string;
   cor: InsightCor;
+  /** Criação em ISO (vem do backend; usado no tempo relativo do sino). */
+  criadoEm?: string;
 }
 
 export type TeamMember =
@@ -36,6 +38,160 @@ export type TeamTarget = TeamMember | "Todos";
  */
 export interface Insight extends PersonalInsight {
   liderado?: TeamTarget;
+  /** De onde veio (ex.: "Áudio", "Transcrição", "Documento"). */
+  origem?: string;
+  /** Direcionamento a que a IA relacionou o insight, quando houver. */
+  direcionamento?: { id: string; nome: string };
+  /** O "Este insight foi útil?" do próprio usuário. */
+  meuFeedback?: InsightFeedback;
+}
+
+/**
+ * Detalhe do insight (modal "Ver insight"). A listagem não traz estes campos —
+ * o modal os busca sob demanda. Tudo opcional: insights antigos não têm
+ * análise nem evidências, e o modal só mostra a seção que existir.
+ */
+export interface InsightDetalhe extends Insight {
+  analise?: string;
+  /** Trechos literais do material de origem. */
+  evidencias: string[];
+  /** Material de origem (Memória), se ainda existir. */
+  fonte?: { titulo: string; categoria: string; data: string };
+}
+
+// ----------------------------------------------------------------------
+// Feedback ("Este insight foi útil?").
+// ----------------------------------------------------------------------
+
+export type InsightFeedbackMotivo =
+  | "nao_relevante"
+  | "ja_conhecia"
+  | "conclusao_incorreta"
+  | "nao_quero_assunto"
+  | "outro";
+
+export interface InsightFeedback {
+  util: boolean;
+  motivo?: InsightFeedbackMotivo;
+}
+
+export const MOTIVOS_FEEDBACK: { value: InsightFeedbackMotivo; label: string }[] =
+  [
+    { value: "nao_relevante", label: "Não é relevante" },
+    { value: "ja_conhecia", label: "Já conheço essa informação" },
+    { value: "conclusao_incorreta", label: "A conclusão não parece correta" },
+    {
+      value: "nao_quero_assunto",
+      label: "Não quero receber insights sobre este assunto",
+    },
+    { value: "outro", label: "Outro" },
+  ];
+
+// ----------------------------------------------------------------------
+// Direcionador de insights — orientações da organização para a IA sobre o
+// que observar e como tratar os insights. Guiam foco e critério, nunca a
+// conclusão.
+// ----------------------------------------------------------------------
+
+export type DirecionamentoTipo = "priorizar_assunto" | "ajustar_insights";
+export type DirecionamentoPrioridade = "normal" | "alta";
+
+export interface InsightDirecionamento {
+  id: string;
+  nome: string;
+  tipo: DirecionamentoTipo;
+  instrucao: string;
+  /** Nulo = toda a organização. */
+  area: { id: string; nome: string } | null;
+  prioridade: DirecionamentoPrioridade;
+  ativo: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/** Campos editáveis — o que o modal de criar/editar envia. */
+export interface DirecionamentoInput {
+  nome: string;
+  tipo: DirecionamentoTipo;
+  instrucao: string;
+  areaId: string | null;
+  prioridade: DirecionamentoPrioridade;
+}
+
+export const DIRECIONAMENTO_TIPOS: {
+  value: DirecionamentoTipo;
+  titulo: string;
+  /** Rótulo curto para a listagem. */
+  rotulo: string;
+  descricao: string;
+  labelInstrucao: string;
+  placeholderInstrucao: string;
+}[] = [
+  {
+    value: "priorizar_assunto",
+    titulo: "Priorizar um assunto",
+    rotulo: "Priorizar assunto",
+    descricao: "Quero receber mais insights sobre determinado tema.",
+    labelInstrucao: "O que você quer que a IA observe?",
+    placeholderInstrucao:
+      "Ex.: Identifique mudanças, padrões ou sinais que possam indicar aumento de turnover e possíveis fatores relacionados.",
+  },
+  {
+    value: "ajustar_insights",
+    titulo: "Ajustar os insights",
+    rotulo: "Ajustar insights",
+    descricao: "Quero orientar a IA sobre insights que não estão sendo úteis.",
+    labelInstrucao: "Como você quer ajustar os insights?",
+    placeholderInstrucao:
+      "Ex.: Evite considerar pequenas oscilações semanais como tendências relevantes.",
+  },
+];
+
+export const PRIORIDADE_ROTULO: Record<DirecionamentoPrioridade, string> = {
+  normal: "Normal",
+  alta: "Alta",
+};
+
+export const DIRECIONAMENTO_MAX_NOME = 120;
+export const DIRECIONAMENTO_MAX_INSTRUCAO = 2000;
+
+/**
+ * Sugestão de direcionamento a partir de um 👎. Só PRÉ-PREENCHE o modal — o
+ * usuário revisa e decide se salva; nada é criado sozinho.
+ */
+export function sugerirDirecionamento(
+  insight: Pick<Insight, "titulo" | "tipo">,
+  motivo: InsightFeedbackMotivo,
+): Partial<DirecionamentoInput> {
+  const tema = insight.tipo || "este tema";
+  switch (motivo) {
+    case "nao_relevante":
+      return {
+        nome: `Menos insights como: ${tema}`,
+        tipo: "ajustar_insights",
+        instrucao: `Evite gerar insights como “${insight.titulo}” quando não houver evidência de uma tendência relevante.`,
+      };
+    case "ja_conhecia":
+      return {
+        nome: `Evitar o óbvio em ${tema}`,
+        tipo: "ajustar_insights",
+        instrucao: `Em ${tema}, evite destacar informações já conhecidas, como “${insight.titulo}”. Priorize mudanças e padrões novos.`,
+      };
+    case "conclusao_incorreta":
+      return {
+        nome: `Mais cuidado nas conclusões sobre ${tema}`,
+        tipo: "ajustar_insights",
+        instrucao: `Ao analisar ${tema}, só apresente uma conclusão quando houver evidência suficiente. Sem ela, descreva o sinal como possível relação que pode merecer investigação.`,
+      };
+    case "nao_quero_assunto":
+      return {
+        nome: `Não priorizar ${tema}`,
+        tipo: "ajustar_insights",
+        instrucao: `Não gere insights sobre ${tema}, a menos que haja um sinal claramente crítico.`,
+      };
+    default:
+      return { tipo: "ajustar_insights" };
+  }
 }
 
 // Rostos reutilizados do acervo do Feed (public/images/feed/faces).
@@ -91,6 +247,19 @@ export const INSIGHT_ACOES = [
 ] as const;
 
 export type InsightAcao = (typeof INSIGHT_ACOES)[number];
+
+// Ações OCULTAS temporariamente no menu do card — hoje, todas. O fluxo delas
+// (seletor de pessoa, formulário de reunião) continua no código; para voltar
+// a exibir uma, basta tirá-la desta lista. No lugar, o menu oferece
+// "Conversar com o assistente".
+export const INSIGHT_ACOES_OCULTAS: readonly InsightAcao[] = [
+  "Adicionar pauta para 1:1",
+  "Agendar Reunião",
+  "Criar Tarefa",
+  "Enviar via Chat",
+  "Fazer Elogio",
+  "Upload Documento",
+];
 
 // Ações que exigem escolher uma pessoa antes de prosseguir. "Upload Documento"
 // é a única exceção (não abre a lista de usuários).

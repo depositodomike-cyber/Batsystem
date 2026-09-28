@@ -103,7 +103,13 @@ function ConnectorLogo({
 
 // ----------------------------------------------------------------------
 
-export default function Conectores() {
+/**
+ * `embutido`: renderizada como seção de Configurações de usuário — sem `<Page>`
+ * nem padding externo (a página de configurações já dá), barra de filtros
+ * alinhada ao conteúdo e grid ajustado à largura menor (a nav lateral ocupa
+ * 224px). Cards, estados, drawer, credenciais e OAuth são os mesmos.
+ */
+export default function Conectores({ embutido = false }: { embutido?: boolean }) {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
 
@@ -134,7 +140,16 @@ export default function Conectores() {
     const conectorId = params.get("conector");
     const status = params.get("status");
     if (!conectorId || !status) return;
-    window.history.replaceState({}, "", window.location.pathname);
+    // Tira só os parâmetros do retorno OAuth: dentro de Configurações de
+    // usuário a URL também carrega `?secao=conectores`, que precisa ficar.
+    const restantes = new URLSearchParams(window.location.search);
+    for (const k of ["conector", "status", "conta", "motivo"]) restantes.delete(k);
+    const qs = restantes.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      window.location.pathname + (qs ? `?${qs}` : ""),
+    );
     const nome =
       connectors.find((c) => c.id === conectorId)?.name ?? conectorId;
     // Pequeno atraso: o <Toaster/> é lazy (Root) e ainda não montou no
@@ -230,11 +245,25 @@ export default function Conectores() {
   const connectedCount = connectors.filter((c) => connected.has(c.id)).length;
   const hasResults = filtered.length > 0;
 
-  return (
-    <Page title={`Conectores · ${product.name}`}>
-      <div className="transition-content w-full px-(--margin-x) py-6">
+  const conteudo = (
+    <>
+      <div
+        className={
+          embutido ? "min-w-0" : "transition-content w-full px-(--margin-x) py-6"
+        }
+      >
         {/* Cabeçalho */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        {/* Título no fundo, no arranjo das seções da org (Regras,
+            Colaboradores). Embutida, a coluna ao lado da nav não comporta os
+            três StatCards à direita — eles quebravam em duas linhas e
+            empurravam o título para baixo, desalinhando-o das outras seções —,
+            então o resumo desce para baixo do subtítulo. */}
+        <div
+          className={clsx(
+            "flex flex-col gap-4",
+            !embutido && "sm:flex-row sm:items-end sm:justify-between",
+          )}
+        >
           <div className="flex flex-col gap-1">
             <PageTitle
               help={{
@@ -293,7 +322,14 @@ export default function Conectores() {
         {/* `top-(--header-h)`: com `top-0` a barra grudava atrás do
             `.app-header` (sticky, 65px, z-20) e busca e filtros desapareciam ao
             rolar — justamente a única navegação da tela no celular. */}
-        <div className="dark:bg-dark-900 sticky top-(--header-h) z-10 -mx-(--margin-x) mt-5 bg-gray-50 px-(--margin-x) pt-2 pb-3">
+        <div
+          className={clsx(
+            "dark:bg-dark-900 sticky top-(--header-h) z-10 mt-5 bg-gray-50 pt-2 pb-3",
+            // Página própria: a faixa vai de borda a borda. Embutida, fica
+            // alinhada à coluna de conteúdo (não invade a nav lateral).
+            !embutido && "-mx-(--margin-x) px-(--margin-x)",
+          )}
+        >
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Busca */}
             <div className="relative w-full lg:max-w-xs">
@@ -396,7 +432,12 @@ export default function Conectores() {
                     {cat.description}
                   </p>
 
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div
+                    className={clsx(
+                      "mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2",
+                      embutido ? "2xl:grid-cols-3" : "lg:grid-cols-3",
+                    )}
+                  >
                     {items.map((c) => (
                       <ConnectorCard
                         key={c.id}
@@ -458,8 +499,11 @@ export default function Conectores() {
         close={() => setCredenciaisPara(null)}
         onSaved={aplicarCredenciais}
       />
-    </Page>
+    </>
   );
+
+  if (embutido) return conteudo;
+  return <Page title={`Conectores · ${product.name}`}>{conteudo}</Page>;
 }
 
 // ----------------------------------------------------------------------

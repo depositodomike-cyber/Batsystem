@@ -53,7 +53,21 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // apresentação". Voltar esta flag para true fecha o Studio inteiro de novo
     // (grade opaca + modal "Em breve"), independentemente daquela lista.
     aiStudio: false,
-    squads: true,
+    // Squads REATIVADO: o bloco "SQUADS" da sidebar volta a funcionar por
+    // inteiro — o "+" abre o catálogo para fixar, os itens fixados navegam
+    // para o squad, o "X" desafixa e o "ver mais" reaparece. O corte era um
+    // só, dentro do próprio SquadsGroup.tsx, e a rota nunca esteve bloqueada.
+    //
+    // A tela lê dados de verdade: o catálogo vem de GET /squads
+    // (SquadsProvider) e o detalhe de GET /squads/:id (SquadDetail), os dois
+    // servidos por ts/api/src/squads. Os squads e seus agentes nascem do
+    // `db:seed`, que roda em todo deploy.
+    //
+    // Os squads FIXADOS são preferência de navegador, guardada em
+    // localStorage sob "ceo-os:pinned-squads" por conta — quem nunca fixou
+    // nada vê "nenhum squad fixado" até usar o "+". É a lista pessoal do
+    // usuário começando do zero, não falta de dados.
+    squads: false,
     // Grupos DESABILITADO de novo: o bloco "GRUPOS" da sidebar fica visível,
     // opaco e sem clique — o "+" não cria, os itens não navegam nem
     // renomeiam/excluem, e o "ver mais" some. Ponto de corte único, em

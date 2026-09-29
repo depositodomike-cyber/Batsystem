@@ -7,13 +7,7 @@
 // ocultas — ver INSIGHT_ACOES_OCULTAS). Reescrito no design system do Tailux.
 
 // Import Dependencies
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Navigate,
   useLocation,
@@ -196,7 +190,9 @@ export default function Insights() {
   }, [destaqueId, carregando]);
 
   if (abaAntigaDoOrientador) {
-    return <Navigate to={userSettingsPath(product.code, "orientador")} replace />;
+    return (
+      <Navigate to={userSettingsPath(product.code, "orientador")} replace />
+    );
   }
 
   return (
@@ -209,22 +205,23 @@ export default function Insights() {
                 description: (
                   <>
                     <p>
-                      <strong>Insights</strong> são sinais gerados pela IA a
-                      partir dos dados das suas áreas — cada card destaca algo
-                      que merece sua atenção, com o contexto e a severidade já
+                      <strong>Insights</strong> são sinais identificados pela IA
+                      nos dados das suas áreas. Cada card destaca algo que
+                      merece atenção, com contexto e nível de relevância
                       avaliados.
                     </p>
                     <p>
                       Abra um insight para ver a análise completa e as
-                      evidências, converse com o assistente sobre ele para pedir
-                      dicas de como agir e diga se ele foi útil. Use os filtros
-                      e a busca no topo para focar no que importa.
+                      evidências. Se quiser aprofundar, converse com o
+                      assistente sobre o sinal e possíveis próximos passos.
                     </p>
                     <p>
-                      Em <strong>Configurações de usuário › Orientador de
-                      insights</strong> (no menu do seu perfil), você indica à
-                      IA os assuntos que merecem atenção e o que não deve ser
-                      considerado relevante.
+                      Em{" "}
+                      <strong>
+                        Configurações de usuário › Orientador de insights
+                      </strong>
+                      , você pode indicar assuntos que a IA deve observar com
+                      mais atenção nas próximas análises.
                     </p>
                   </>
                 ),
@@ -233,9 +230,9 @@ export default function Insights() {
               Insights
             </PageTitle>
             <p className="dark:text-dark-300 max-w-2xl text-sm text-gray-500">
-              Sinais gerados pela IA a partir dos dados das suas áreas. Abra um
-              insight para entender o que foi encontrado e converse com o
-              assistente para decidir como agir.
+              Sinais identificados pela IA nos dados das suas áreas. Abra um
+              insight para entender o que foi observado e explorar as
+              evidências. Se quiser aprofundar, converse com o assistente.
             </p>
           </header>
 
@@ -294,9 +291,7 @@ function InsightsBoard({
     Record<string, InsightFeedback | null>
   >({});
   const feedbackDe = (i: Insight): InsightFeedback | undefined =>
-    i.id in feedbackLocal
-      ? (feedbackLocal[i.id] ?? undefined)
-      : i.meuFeedback;
+    i.id in feedbackLocal ? (feedbackLocal[i.id] ?? undefined) : i.meuFeedback;
   const [negativoPara, setNegativoPara] = useState<Insight | null>(null);
 
   const exibidos = useMemo(() => {
@@ -453,7 +448,6 @@ function InsightsBoard({
   );
 }
 
-
 // ----------------------------------------------------------------------
 // Card do insight — barra lateral colorida pela severidade. Quando o insight
 // se refere a uma pessoa específica, mostra o avatar e o nome dela.
@@ -479,7 +473,7 @@ function InsightCard({
       id={`insight-${item.id}`}
       onClick={onAbrir}
       className={clsx(
-        "flex h-full cursor-pointer flex-col overflow-hidden border-l-4 ring-offset-2 transition-shadow duration-500 dark:ring-offset-dark-900",
+        "dark:ring-offset-dark-900 flex h-full cursor-pointer flex-col overflow-hidden border-l-4 ring-offset-2 transition-shadow duration-500",
         SIDEBAR_BORDER[item.cor],
         destacado ? "ring-primary-500 ring-2" : "ring-0",
       )}
@@ -590,7 +584,10 @@ function CardFooter({
             title="Obrigado pelo feedback."
           >
             {liked ? (
-              <HandThumbUpSolidIcon className="text-primary-500 size-4" aria-hidden />
+              <HandThumbUpSolidIcon
+                className="text-primary-500 size-4"
+                aria-hidden
+              />
             ) : (
               <HandThumbDownSolidIcon className="size-4" aria-hidden />
             )}

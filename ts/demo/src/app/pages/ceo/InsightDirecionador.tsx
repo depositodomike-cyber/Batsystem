@@ -128,12 +128,16 @@ export function DirecionadorDeInsights({
           modal.item.id,
           input,
         );
-        setItens((l) => l.map((i) => (i.id === atualizado.id ? atualizado : i)));
+        setItens((l) =>
+          l.map((i) => (i.id === atualizado.id ? atualizado : i)),
+        );
         toast.success("Orientação atualizada.");
       } else {
         const criado = await criarDirecionamentoApi(input);
         setItens((l) => [criado, ...l]);
-        toast.success("Orientação criada. Ela passa a valer nas próximas análises.");
+        toast.success(
+          "Orientação criada. Ela passa a valer nas próximas análises.",
+        );
       }
       setModal({ modo: "fechado" });
     } catch (e) {
@@ -151,9 +155,7 @@ export function DirecionadorDeInsights({
       setItens((l) => l.map((i) => (i.id === atualizado.id ? atualizado : i)));
     } catch (e) {
       setItens((l) => l.map((i) => (i.id === item.id ? item : i)));
-      toast.error(
-        mensagemDeErroApi(e, "Não foi possível alterar o status."),
-      );
+      toast.error(mensagemDeErroApi(e, "Não foi possível alterar o status."));
     }
   };
 
@@ -200,8 +202,8 @@ export function DirecionadorDeInsights({
             Orientador de insights
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-            Oriente a IA sobre assuntos que merecem atenção e ajuste o tipo de
-            insight que você deseja receber.
+            Defina o que a IA deve observar com mais atenção ao analisar seus
+            dados e quais tipos de insight são mais relevantes para você.
           </p>
         </div>
         {podeGerenciar && (
@@ -236,8 +238,8 @@ export function DirecionadorDeInsights({
             Nenhuma orientação ainda
           </h3>
           <p className="dark:text-dark-300 mt-1 max-w-md text-sm text-gray-500">
-            Diga à IA quais assuntos importam para você — por exemplo,
-            “Turnover em Produto” — ou o que não deve ser considerado relevante.
+            Diga à IA quais assuntos importam para você — por exemplo, “Turnover
+            em Produto” — ou o que não deve ser considerado relevante.
             {!podeGerenciar &&
               " Fale com um administrador para criar uma orientação."}
           </p>
@@ -391,7 +393,11 @@ function AcoesMenu({
           Editar
         </ItemAcao>
         {item.ativo ? (
-          <ItemAcao icon={MinusCircleIcon} onClick={onAlternarStatus} destrutivo>
+          <ItemAcao
+            icon={MinusCircleIcon}
+            onClick={onAlternarStatus}
+            destrutivo
+          >
             Desativar
           </ItemAcao>
         ) : (
@@ -523,7 +529,8 @@ function DirecionamentoModal({
     const lista: { label: string; value: string }[] = [];
     if (opcoes?.podeTodaOrganizacao)
       lista.push({ label: "Toda a organização", value: TODA_ORG });
-    for (const a of opcoes?.areas ?? []) lista.push({ label: a.nome, value: a.id });
+    for (const a of opcoes?.areas ?? [])
+      lista.push({ label: a.nome, value: a.id });
     // Editando um item cuja área saiu das opções (desativada): mantém visível.
     const atual = editando?.area;
     if (atual && !lista.some((o) => o.value === atual.id))
@@ -627,7 +634,6 @@ function DirecionamentoModal({
                     setInstrucao(e.target.value)
                   }
                   placeholder={meta.placeholderInstrucao}
-                  description="Oriente o foco e o critério, não a conclusão."
                 />
 
                 {/* "Onde observar?" e "Prioridade" saíram do formulário. O

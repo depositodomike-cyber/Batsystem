@@ -5,13 +5,29 @@
 // A UI (bolinha + painel) é montada separadamente por <AssistenteHost />, no
 // layout Sideblock — é isso que restringe a bolinha às telas que também têm a
 // barra de prompt no header.
+//
+// AGENTES são chamados por @menção, mensagem a mensagem — não existe "agente
+// ativo" da conversa. No envio, as menções do texto viram uma chamada por
+// agente, NA ORDEM em que aparecem, cada uma com o seu turno e o seu
+// "pensando…". Sem menção, responde o Assistente padrão, como sempre. Um
+// agente nunca recebe a resposta do outro à mesma pergunta: não há conversa
+// entre agentes.
 import { ReactNode, useCallback, useMemo, useRef, useState } from "react";
 
-import { perguntarPromptApi, type ModoBusca } from "@/services/api/prompt";
-import { fetchConversaApi } from "@/services/api/conversas";
+import {
+  perguntarPromptApi,
+  type HistoricoTurno,
+  type MencaoAgente,
+  type ModoBusca,
+} from "@/services/api/prompt";
+import {
+  fetchConversaApi,
+  marcarArquivoSalvoApi,
+} from "@/services/api/conversas";
 import { coletarReferencia } from "@/services/referencia";
 import { marcarBuscaMemoria } from "@/utils/memoriaBusca";
 import { useConversasContext } from "@/app/contexts/conversas/context";
+import { useAgentes } from "@/app/contexts/agentes/context";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
 import {
   AssistenteProvider as Ctx,
@@ -36,10 +52,31 @@ function msgErro(e: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Histórico enviado à IA. Respostas de vários agentes à mesma pergunta viram
+ * um par só, com cada resposta rotulada pelo agente — o modelo enxerga quem
+ * disse o quê sem que a pergunta se repita.
+ */
+function historicoDe(turnos: Turno[]): HistoricoTurno[] {
+  const pares: HistoricoTurno[] = [];
+  for (const t of turnos) {
+    if (t.pendente) continue;
+    const resposta = t.agente ? `[${t.agente.titulo}] ${t.resposta}` : t.resposta;
+    const ultimo = pares[pares.length - 1];
+    if (t.continuacao && ultimo) {
+      ultimo.resposta = `${ultimo.resposta}\n\n${resposta}`;
+    } else {
+      pares.push({ pergunta: t.pergunta, resposta });
+    }
+  }
+  return pares;
+}
+
 // ----------------------------------------------------------------------
 
 export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   const { refresh } = useConversasContext();
+  const { encontrarMencoes } = useAgentes();
   const repositorioId = useRepositorioAtivo()?.id ?? undefined;
 
   const [status, setStatus] = useState<AssistenteStatus>("closed");
@@ -50,6 +87,8 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [naoLido, setNaoLido] = useState(false);
   const [expandido, setExpandido] = useState(false);
+  const [rascunho, setRascunho] = useState("");
+  const [pedidoDeFoco, setPedidoDeFoco] = useState(0);
 
   // `status` dentro dos callbacks assíncronos: sem isso, uma resposta que chega
   // depois de o usuário minimizar não acenderia o badge.
@@ -102,10 +141,132 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
     setNaoLido(false);
   }, []);
 
+  const inserirMencao = useCallback((agente: { mencao: string }) => {
+    const token = `@${agente.mencao}`;
+    setRascunho((r) => {
+      // Já mencionado: não duplica, só devolve o foco.
+      if (new RegExp(`(^|\\s)${token}(\\s|$)`, "u").test(r)) return r;
+      const base = r.replace(/\s+$/, "");
+      return `${base ? `${base} ` : ""}${token} `;
+    });
+    setTab("chat");
+    setStatus("open");
+    setNaoLido(false);
+    setPedidoDeFoco((n) => n + 1);
+  }, []);
+
   /** Marca não lido quando a resposta chega e o painel não está visível. */
   const sinalizarResposta = useCallback(() => {
     if (statusRef.current !== "open") setNaoLido(true);
   }, []);
+
+  /**
+   * Responde a uma pergunta — numa conversa nova (`base` vazia e sem id) ou
+   * continuando a aberta. Com @menções, faz uma chamada por agente, em
+   * sequência e na ordem das menções: a primeira grava a pergunta (e cria a
+   * conversa, se preciso); as demais gravam só a própria resposta.
+   */
+  const responder = useCallback(
+    async (p: {
+      pergunta: string;
+      modo: ModoBusca;
+      base: Turno[];
+      conversaIdBase: string | null;
+      arquivo?: File | null;
+    }): Promise<PerguntarResult> => {
+      const { pergunta, modo, base } = p;
+      const agentes = encontrarMencoes(pergunta);
+      const mencoes: MencaoAgente[] = agentes.map((a) => ({
+        id: a.id,
+        titulo: a.titulo,
+        mencao: a.mencao,
+      }));
+      const origemPadrao = modo === "web" ? "web" : "vault";
+
+      // Um turno pendente por agente (ou um só, do Assistente padrão).
+      const pendentes: Turno[] = (agentes.length ? agentes : [null]).map(
+        (a, i) => ({
+          pergunta: i === 0 ? pergunta : "",
+          resposta: "",
+          fontes: [],
+          origem: origemPadrao,
+          pendente: true,
+          agente: a ? { id: a.id, titulo: a.titulo } : null,
+          mencoes: i === 0 && mencoes.length ? mencoes : undefined,
+          continuacao: i > 0,
+        }),
+      );
+      setConversa([...base, ...pendentes]);
+
+      // Cada agente vê a conversa ATÉ esta pergunta — nunca a resposta do
+      // outro agente a ela.
+      const historico = historicoDe(base);
+      const referencia = modo !== "web" ? referenciaDoTurno() : undefined;
+      const animaGrafo = modo !== "web";
+      if (animaGrafo) marcarBuscaMemoria(true);
+
+      let cid = p.conversaIdBase;
+      let resultado: PerguntarResult = { ok: false, erro: "" };
+      try {
+        for (let i = 0; i < pendentes.length; i++) {
+          const pendente = pendentes[i];
+          try {
+            const r = await perguntarPromptApi({
+              texto: pergunta,
+              modo,
+              arquivo: modo !== "web" ? p.arquivo : null,
+              referencia,
+              historico,
+              conversaId: cid ?? undefined,
+              repositorioId,
+              agenteId: pendente.agente?.id,
+              mencoes: i === 0 ? mencoes : undefined,
+              // Sem conversa gravada (falhou a 1ª), cada um grava a sua.
+              respostaAdicional: i > 0 && !!cid,
+            });
+            if (r.conversaId) {
+              cid = r.conversaId;
+              setConversaId(r.conversaId);
+            }
+            const pronto: Turno = {
+              ...pendente,
+              pendente: false,
+              resposta: r.resposta,
+              fontes: r.fontes,
+              origem: r.origem,
+              agente: r.agente ?? pendente.agente ?? null,
+              arquivos: r.arquivos ?? [],
+              mensagemId: r.mensagemId,
+            };
+            setConversa((c) => c.map((t) => (t === pendente ? pronto : t)));
+            pendentes[i] = pronto;
+            if (!resultado.ok) resultado = { ok: true, origem: r.origem };
+          } catch (e) {
+            const erro = msgErro(e, "Erro na busca.");
+            const falha: Turno = {
+              ...pendente,
+              pendente: false,
+              resposta: `⚠️ ${erro}`,
+            };
+            setConversa((c) => c.map((t) => (t === pendente ? falha : t)));
+            pendentes[i] = falha;
+            if (!resultado.ok) resultado = { ok: false, erro };
+          }
+        }
+        sinalizarResposta();
+        void refresh();
+        // O título refinado pela IA chega um pouco depois da 1ª resposta.
+        if (!p.conversaIdBase && cid) {
+          window.setTimeout(() => void refresh(), 2500);
+        }
+        return resultado;
+      } finally {
+        if (animaGrafo) marcarBuscaMemoria(false);
+      }
+    },
+    // `referenciaDoTurno` lê só refs e o storage local.
+    [encontrarMencoes, refresh, repositorioId, sinalizarResposta],
+  );
 
   const perguntar = useCallback(
     async ({
@@ -127,138 +288,67 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setModoConversa(modo);
       setTab("chat");
-      // Turno pendente já visível: a bolinha abre mostrando "pensando…".
-      setConversa([
-        {
-          pergunta,
-          resposta: "",
-          fontes: [],
-          origem: modo === "web" ? "web" : "vault",
-          pendente: true,
-        },
-      ]);
       setConversaId(null);
       setStatus("open");
       setNaoLido(false);
-
-      // Busca que toca o Repositório faz o grafo "pensar" enquanto a resposta
-      // não vem. No modo Web o anexo/contexto local é ignorado.
-      const animaGrafo = modo !== "web";
-      if (animaGrafo) marcarBuscaMemoria(true);
       try {
-        const referencia = modo !== "web" ? referenciaDoTurno() : undefined;
-        const r = await perguntarPromptApi({
-          texto: pergunta,
+        return await responder({
+          pergunta,
           modo,
-          arquivo: modo !== "web" ? arquivo : null,
-          referencia,
-          repositorioId,
+          base: [],
+          conversaIdBase: null,
+          arquivo,
         });
-        setConversaId(r.conversaId ?? null);
-        setConversa([
-          {
-            pergunta,
-            resposta: r.resposta,
-            fontes: r.fontes,
-            origem: r.origem,
-          },
-        ]);
-        sinalizarResposta();
-        void refresh();
-        if (r.conversaId) {
-          window.setTimeout(() => void refresh(), 2500);
-        }
-        return { ok: true, origem: r.origem };
-      } catch (e) {
-        const erro = msgErro(e, "Erro na busca.");
-        setConversa([
-          {
-            pergunta,
-            resposta: `⚠️ ${erro}`,
-            fontes: [],
-            origem: modo === "web" ? "web" : "vault",
-          },
-        ]);
-        sinalizarResposta();
-        return { ok: false, erro };
       } finally {
-        if (animaGrafo) marcarBuscaMemoria(false);
         setLoading(false);
       }
     },
-    [loading, refresh, repositorioId, sinalizarResposta],
+    [loading, responder],
   );
 
   const continuar = useCallback(
     async (texto: string) => {
       const pergunta = texto.trim();
       if (!pergunta || loading) return;
-
-      const base = conversa;
-      const historico = base.map((t) => ({
-        pergunta: t.pergunta,
-        resposta: t.resposta,
-      }));
-      const pendente: Turno = {
-        pergunta,
-        resposta: "",
-        fontes: [],
-        origem: base[0]?.origem ?? "vault",
-        pendente: true,
-      };
-      setConversa([...base, pendente]);
       setLoading(true);
-
-      const animaGrafo = modoConversa !== "web";
-      if (animaGrafo) marcarBuscaMemoria(true);
       try {
-        const referencia =
-          modoConversa !== "web" ? referenciaDoTurno() : undefined;
-        const r = await perguntarPromptApi({
-          texto: pergunta,
+        await responder({
+          pergunta,
           modo: modoConversa,
-          historico,
-          conversaId: conversaId ?? undefined,
-          referencia,
-          repositorioId,
+          base: conversa,
+          conversaIdBase: conversaId,
         });
-        if (r.conversaId) setConversaId(r.conversaId);
-        void refresh();
-        setConversa((c) =>
-          c.map((t) =>
-            t === pendente
-              ? {
-                  pergunta,
-                  resposta: r.resposta,
-                  fontes: r.fontes,
-                  origem: r.origem,
-                }
-              : t,
-          ),
-        );
-        sinalizarResposta();
-      } catch (e) {
-        const msg = "⚠️ " + msgErro(e, "Erro na busca.");
-        setConversa((c) =>
-          c.map((t) =>
-            t === pendente ? { ...t, resposta: msg, pendente: false } : t,
-          ),
-        );
-        sinalizarResposta();
       } finally {
-        if (animaGrafo) marcarBuscaMemoria(false);
         setLoading(false);
       }
     },
-    [
-      conversa,
-      conversaId,
-      loading,
-      modoConversa,
-      refresh,
-      repositorioId,
-      sinalizarResposta,
-    ],
+    [conversa, conversaId, loading, modoConversa, responder],
+  );
+
+  const marcarArquivoSalvo = useCallback(
+    async (p: {
+      mensagemId: string;
+      arquivoId: string;
+      repositorioDocumentoId: string;
+    }) => {
+      if (!conversaId) return;
+      await marcarArquivoSalvoApi({ conversaId, ...p });
+      setConversa((c) =>
+        c.map((t) =>
+          t.mensagemId === p.mensagemId
+            ? {
+                ...t,
+                arquivos: (t.arquivos ?? []).map((a) =>
+                  a.id === p.arquivoId
+                    ? { ...a, repositorioDocumentoId: p.repositorioDocumentoId }
+                    : a,
+                ),
+              }
+            : t,
+        ),
+      );
+    },
+    [conversaId],
   );
 
   const anunciar = useCallback(
@@ -320,6 +410,11 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       loading,
       naoLido,
       expandido,
+      rascunho,
+      setRascunho,
+      pedidoDeFoco,
+      inserirMencao,
+      marcarArquivoSalvo,
       setTab,
       setExpandido,
       open,
@@ -340,6 +435,10 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       loading,
       naoLido,
       expandido,
+      rascunho,
+      pedidoDeFoco,
+      inserirMencao,
+      marcarArquivoSalvo,
       open,
       minimize,
       close,

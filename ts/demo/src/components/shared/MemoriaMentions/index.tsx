@@ -22,7 +22,9 @@ import {
 } from "react";
 
 import { useMergedRef } from "@/hooks";
+import type { AgenteMencionavel } from "@/app/contexts/agentes/context";
 import { useMemoriaMentions } from "./useMemoriaMentions";
+import { useAgenteMentions } from "./useAgenteMentions";
 
 export type { AlvoMemoria } from "./alvos";
 
@@ -45,8 +47,14 @@ function escreverValor(el: Campo, valor: string) {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-/** Liga o gatilho "[[" a um campo controlado e devolve os handlers dele. */
-function useCampoMemoria<T extends Campo>(desabilitado: boolean) {
+/**
+ * Liga os gatilhos a um campo controlado: "[[" sempre; "@" (agentes) só
+ * quando a tela passa a lista de `agentes`.
+ */
+function useCampoMemoria<T extends Campo>(
+  desabilitado: boolean,
+  agentes?: AgenteMencionavel[],
+) {
   const ref = useRef<T | null>(null);
 
   const aplicar = useCallback((valor: string, cursor: number) => {
@@ -61,22 +69,50 @@ function useCampoMemoria<T extends Campo>(desabilitado: boolean) {
     });
   }, []);
 
-  const mentions = useMemoriaMentions(ref, aplicar, desabilitado);
+  const memoria = useMemoriaMentions(ref, aplicar, desabilitado);
+  const agente = useAgenteMentions(ref, aplicar, agentes, desabilitado);
+
+  // Os dois gatilhos nunca abrem juntos ("[[" e "@" não se sobrepõem no
+  // cursor); o campo os trata como um só.
+  const mentions = {
+    sincronizar: () => {
+      memoria.sincronizar();
+      agente.sincronizar();
+    },
+    aoTeclar: (e: Parameters<typeof memoria.aoTeclar>[0]) =>
+      agente.aoTeclar(e) || memoria.aoTeclar(e),
+    fechar: () => {
+      memoria.fechar();
+      agente.fechar();
+    },
+    menu: (
+      <>
+        {memoria.menu}
+        {agente.menu}
+      </>
+    ),
+  };
   return { ref, mentions };
 }
 
 // ----------------------------------------------------------------------
 
-export type MemoriaTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
+export type MemoriaTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
+  /** Agentes mencionáveis com "@" (ex.: o campo do Assistente). */
+  agentes?: AgenteMencionavel[];
+};
 
 export const MemoriaTextarea = forwardRef<
   HTMLTextAreaElement,
   MemoriaTextareaProps
 >(function MemoriaTextarea(
-  { onChange, onKeyDown, onKeyUp, onClick, onBlur, disabled, ...rest },
+  { onChange, onKeyDown, onKeyUp, onClick, onBlur, disabled, agentes, ...rest },
   refExterna,
 ) {
-  const { ref, mentions } = useCampoMemoria<HTMLTextAreaElement>(!!disabled);
+  const { ref, mentions } = useCampoMemoria<HTMLTextAreaElement>(
+    !!disabled,
+    agentes,
+  );
   const refs = useMergedRef(ref, refExterna);
 
   return (

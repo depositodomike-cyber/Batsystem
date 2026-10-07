@@ -1,9 +1,11 @@
 import axios from "@/utils/axios";
-import type {
-  Insight,
-  InsightDetalhe,
-  InsightFeedback,
-  InsightFeedbackMotivo,
+import {
+  ehInsightDemo,
+  INSIGHT_EXEMPLO_REUNIAO,
+  type Insight,
+  type InsightDetalhe,
+  type InsightFeedback,
+  type InsightFeedbackMotivo,
 } from "@/app/data/insights";
 
 // Insights (IA) — chama o backend ts/api. Os insights são gerados a partir do
@@ -36,6 +38,7 @@ export async function listarInsightsNaoLidosApi(): Promise<{
 
 /** Marca um insight como visto pelo usuário (sai do sino). */
 export async function marcarInsightLidoApi(id: string): Promise<void> {
+  if (ehInsightDemo(id)) return;
   await axios.post(`/ai/insights/${encodeURIComponent(id)}/lido`);
 }
 
@@ -46,6 +49,8 @@ export async function marcarTodosInsightsLidosApi(): Promise<void> {
 
 /** Um insight com o conteúdo completo (análise, evidências, fonte). */
 export async function buscarInsightApi(id: string): Promise<InsightDetalhe> {
+  // Exemplo do protótipo: não existe no servidor — o detalhe é ele mesmo.
+  if (ehInsightDemo(id)) return { ...INSIGHT_EXEMPLO_REUNIAO, evidencias: [] };
   const { data } = await axios.get<{ insight: InsightDetalhe }>(
     `/ai/insights/${encodeURIComponent(id)}`,
   );
@@ -61,6 +66,8 @@ export async function salvarFeedbackInsightApi(
     comentario?: string;
   },
 ): Promise<InsightFeedback> {
+  // Exemplo do protótipo: o voto fica só no estado da tela.
+  if (ehInsightDemo(id)) return { util: feedback.util, motivo: feedback.motivo };
   const { data } = await axios.put<{ feedback: InsightFeedback }>(
     `/ai/insights/${encodeURIComponent(id)}/feedback`,
     feedback,
@@ -70,6 +77,7 @@ export async function salvarFeedbackInsightApi(
 
 /** Desfaz o 👍/👎 do usuário. */
 export async function removerFeedbackInsightApi(id: string): Promise<void> {
+  if (ehInsightDemo(id)) return;
   await axios.delete(`/ai/insights/${encodeURIComponent(id)}/feedback`);
 }
 
@@ -98,4 +106,16 @@ export async function gerarInsightsApi(
     ...(p.memoriaId ? { memoriaId: p.memoriaId } : {}),
   });
   return data.insights;
+}
+
+/**
+ * "Gerar insights" da tela de Insights: a IA analisa o conteúdo mais recente
+ * do Repositório (notas do repositório ativo + documentos da organização) e
+ * persiste os insights. Devolve os criados.
+ */
+export async function gerarInsightsDoRepositorioApi(): Promise<Insight[]> {
+  const { data } = await axios.post<InsightsResponse>(
+    "/ai/insights/gerar-repositorio",
+  );
+  return data.insights ?? [];
 }

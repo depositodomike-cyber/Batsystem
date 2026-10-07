@@ -23,11 +23,18 @@ import {
   type HistoricoTurno,
   type ModoBusca,
 } from './prompt/framework';
+import {
+  extrairArquivos,
+  REGRA_ARQUIVO,
+  type ArquivoConversa,
+} from './prompt/arquivos';
 import { VaultService } from '@/vault/vault.service';
+import { RepositorioOrgService } from '@/repositorio-org/repositorio-org.service';
 import { ConversasService } from '@/conversas/conversas.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
+import { OrganizacaoAtual } from '@/common/organizacao-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 interface UploadedFileLike {
@@ -43,6 +50,51 @@ interface PromptBody {
   referencia?: string; // Notas/Insights/To-do's coletados no cliente
   conversaId?: string;
   repositorioId?: string;
+  /**
+   * Agente (o antigo "squad") que participa deste turno. Ausente = o
+   * Assistente padrão. O agente só muda a voz e a especialização: o contexto
+   * (Repositório, vault, referências) continua o do usuário — agente não
+   * eleva permissão.
+   */
+  agenteId?: string;
+  /**
+   * Agentes mencionados na pergunta (JSON string: {id, titulo, mencao}[]). Vai
+   * para o `meta` da mensagem do usuário, para a menção continuar
+   * identificável ao reabrir a conversa.
+   */
+  mencoes?: string;
+  /**
+   * '1' = este turno é a resposta de MAIS UM agente à mesma pergunta (vários
+   * @mencionados): grava só a resposta, sem repetir a mensagem do usuário.
+   */
+  respostaAdicional?: string;
+}
+
+/** Agentes mencionados, validados no formato mínimo. */
+function parseMencoes(
+  raw: string | undefined,
+): { id: string; titulo: string; mencao: string }[] {
+  if (!raw) return [];
+  try {
+    const v: unknown = JSON.parse(raw);
+    if (!Array.isArray(v)) return [];
+    return v
+      .filter(
+        (m): m is { id: string; titulo: string; mencao: string } =>
+          !!m &&
+          typeof (m as { id?: unknown }).id === 'string' &&
+          typeof (m as { titulo?: unknown }).titulo === 'string' &&
+          typeof (m as { mencao?: unknown }).mencao === 'string',
+      )
+      .slice(0, 10)
+      .map((m) => ({
+        id: m.id.slice(0, 120),
+        titulo: m.titulo.slice(0, 80),
+        mencao: m.mencao.slice(0, 41),
+      }));
+  } catch {
+    return [];
+  }
 }
 
 /** Fonte da resposta: caminho/título (Memória) ou página web citada. */
@@ -54,6 +106,17 @@ interface PromptResposta {
   fontes: Fonte[];
   origem: 'vault' | 'web';
   conversaId?: string;
+  /** Mensagem da resposta, para o cliente marcar um arquivo como salvo. */
+  mensagemId?: string;
+  /** Agente que produziu esta resposta (null = Assistente padrão). */
+  agente: AgenteDoTurno | null;
+  /** Arquivos gerados nesta resposta — pertencem à conversa. */
+  arquivos: ArquivoConversa[];
+}
+
+interface AgenteDoTurno {
+  id: string;
+  titulo: string;
 }
 
 function parseHistorico(raw: string | undefined): HistoricoTurno[] {
@@ -81,6 +144,7 @@ export class PromptController {
   constructor(
     private readonly ai: AiService,
     private readonly vault: VaultService,
+    private readonly repositorioOrg: RepositorioOrgService,
     private readonly conversas: ConversasService,
   ) {}
 
@@ -98,6 +162,7 @@ export class PromptController {
   async prompt(
     @CurrentUser() user: AuthenticatedUser,
     @RepositorioAtual() repositorioDoHeader: string | null,
+    @OrganizacaoAtual() organizacaoId: string | null,
     @UploadedFile() arquivo: UploadedFileLike | undefined,
     @Body() body: PromptBody,
   ): Promise<PromptResposta> {
@@ -121,6 +186,41 @@ export class PromptController {
     const repositorioId =
       (body.repositorioId || '').trim() || repositorioDoHeader || undefined;
     const modoPedido = modo;
+
+    // Agente do turno: a persona vai NA FRENTE do system prompt do modo; as
+    // regras de formato (Conexões, FONTES) seguem as mesmas. Agente inválido ou
+    // inativo cai no Assistente padrão em vez de derrubar a pergunta.
+    const agenteIdIn = (body.agenteId || '').trim();
+    const persona = agenteIdIn
+      ? await this.ai
+          // Com o dono: agente personalizado só resolve se for DESTE usuário.
+          .personaDoAgente(agenteIdIn, {
+            empresaId: user.empresaId,
+            usuarioId: user.id,
+          })
+          .catch((err: unknown) => {
+            this.logger.warn(`Falha ao carregar o agente: ${String(err)}`);
+            return null;
+          })
+      : null;
+    const agente: AgenteDoTurno | null = persona
+      ? { id: persona.id, titulo: persona.titulo }
+      : null;
+    const mencoes = parseMencoes(body.mencoes);
+    const respostaAdicional = body.respostaAdicional === '1' && !!conversaIdIn;
+    const comAgente = (system: string) =>
+      persona ? `${persona.texto}\n\n---\n${system}${REGRA_ARQUIVO}` : system;
+    // O arquivo pertence à conversa, mas registra QUEM o gerou.
+    const separarArquivos = (bruta: string) => {
+      if (!persona) {
+        return { resposta: bruta, arquivos: [] as ArquivoConversa[] };
+      }
+      const r = extrairArquivos(bruta);
+      return {
+        resposta: r.resposta,
+        arquivos: r.arquivos.map((a) => ({ ...a, geradoPor: agente })),
+      };
+    };
 
     // Modo Auto: o modelo decide entre Memória e Web.
     if (modo === 'auto') {
@@ -158,13 +258,14 @@ export class PromptController {
       const { text, fontes, truncated } = await this.ai.completarWeb(
         user.empresaId,
         user.id,
-        SYSTEM_WEB,
+        comAgente(SYSTEM_WEB),
         buildWebUser({ texto, historico, titulosVault }),
         4000,
       );
-      let resposta = text.trim();
+      const separado = separarArquivos(text.trim());
+      let resposta = separado.resposta;
       if (truncated) resposta += '\n\n> ⚠️ Resposta truncada por tamanho.';
-      const conversaId = await this.persistirPrompt({
+      const salvo = await this.persistirPrompt({
         user,
         conversaId: conversaIdIn,
         repositorioId,
@@ -173,8 +274,20 @@ export class PromptController {
         resposta,
         fontes,
         origem: 'web',
+        agente,
+        arquivos: separado.arquivos,
+        mencoes,
+        respostaAdicional,
       });
-      return { tipo: 'resposta', resposta, fontes, origem: 'web', conversaId };
+      return {
+        tipo: 'resposta',
+        resposta,
+        fontes,
+        origem: 'web',
+        ...salvo,
+        agente,
+        arquivos: separado.arquivos,
+      };
     }
 
     // Modo Memória (vault): referência do cliente + anexo opcional (arquivo de
@@ -193,16 +306,32 @@ export class PromptController {
     // pergunta via busca textual do Postgres. É a base de conhecimento factual.
     // O bloco é o maior do prompt: `montarBlocoMemoria` recorta o trecho
     // relevante de cada nota sob um orçamento total de contexto (ver framework).
+    //
+    // Os documentos do Repositório da ORGANIZAÇÃO entram no mesmo bloco, na
+    // frente: só voltam quando casam com a pergunta (sem fallback), enquanto
+    // as notas do vault podem ser só "as mais recentes". Listagem ≠ contexto:
+    // eles não aparecem na lista nem no grafo pessoal, mas a IA os lê.
     let notasBloco = '';
     let titulosNotas: string[] = [];
     try {
       // Busca uma margem além do teto para o orçamento poder escolher.
-      const hits = await this.vault.search(
-        user.empresaId,
-        repositorioId ?? null,
-        texto,
-        MEMORIA_MAX_NOTAS + 2,
-      );
+      const [daOrganizacao, doVault] = await Promise.all([
+        this.repositorioOrg
+          .search(user.empresaId, organizacaoId, texto)
+          .catch((err: unknown) => {
+            this.logger.warn(
+              `Falha ao buscar no Repositório da organização: ${String(err)}`,
+            );
+            return [];
+          }),
+        this.vault.search(
+          user.empresaId,
+          repositorioId ?? null,
+          texto,
+          MEMORIA_MAX_NOTAS + 2,
+        ),
+      ]);
+      const hits = [...daOrganizacao, ...doVault];
       const { bloco, titulos } = montarBlocoMemoria(hits, texto);
       notasBloco = bloco;
       titulosNotas = titulos;
@@ -223,7 +352,7 @@ export class PromptController {
     const { text, truncated } = await this.ai.completar(
       user.empresaId,
       user.id,
-      SYSTEM_VAULT,
+      comAgente(SYSTEM_VAULT),
       userPrompt,
       4000,
     );
@@ -235,9 +364,10 @@ export class PromptController {
     const fontes: Fonte[] = citadas.filter((c) => setNotas.has(c.toLowerCase()));
     if (anexo && arquivo) fontes.unshift(`Anexo: ${arquivo.originalname}`);
 
-    let resposta = limpa;
+    const { resposta: semArquivos, arquivos } = separarArquivos(limpa);
+    let resposta = semArquivos;
     if (truncated) resposta += '\n\n> ⚠️ Resposta truncada por tamanho.';
-    const conversaId = await this.persistirPrompt({
+    const salvo = await this.persistirPrompt({
       user,
       conversaId: conversaIdIn,
       repositorioId,
@@ -246,8 +376,20 @@ export class PromptController {
       resposta,
       fontes,
       origem: 'vault',
+      agente,
+      arquivos,
+      mencoes,
+      respostaAdicional,
     });
-    return { tipo: 'resposta', resposta, fontes, origem: 'vault', conversaId };
+    return {
+      tipo: 'resposta',
+      resposta,
+      fontes,
+      origem: 'vault',
+      ...salvo,
+      agente,
+      arquivos,
+    };
   }
 
   private async persistirPrompt(params: {
@@ -259,9 +401,13 @@ export class PromptController {
     resposta: string;
     fontes: Fonte[];
     origem: 'vault' | 'web';
-  }): Promise<string | undefined> {
+    agente: AgenteDoTurno | null;
+    arquivos: ArquivoConversa[];
+    mencoes: { id: string; titulo: string; mencao: string }[];
+    respostaAdicional: boolean;
+  }): Promise<{ conversaId?: string; mensagemId?: string }> {
     try {
-      const { conversaId, nova } = await this.conversas.persistPromptTurn({
+      const { conversaId, nova, mensagemId } = await this.conversas.persistPromptTurn({
         empresaId: params.user.empresaId,
         usuarioId: params.user.id,
         conversaId: params.conversaId,
@@ -271,12 +417,16 @@ export class PromptController {
         resposta: params.resposta,
         fontes: params.fontes,
         origemResposta: params.origem,
+        agente: params.agente,
+        arquivos: params.arquivos,
+        mencoes: params.mencoes,
+        respostaAdicional: params.respostaAdicional,
       });
       if (nova) this.refinarTitulo(params.user, conversaId, params.pergunta, params.resposta);
-      return conversaId;
+      return { conversaId, mensagemId };
     } catch (err) {
       this.logger.warn(`Falha ao persistir conversa do Prompt: ${String(err)}`);
-      return params.conversaId;
+      return { conversaId: params.conversaId };
     }
   }
 

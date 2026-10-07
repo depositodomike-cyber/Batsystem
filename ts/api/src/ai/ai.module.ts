@@ -25,6 +25,10 @@ import { AcessoModule } from '@/acesso/acesso.module';
 import { VaultController } from '@/vault/vault.controller';
 import { VaultService } from '@/vault/vault.service';
 import { VaultCategoriasService } from '@/vault/categorias.service';
+import { RepositorioOrgController } from '@/repositorio-org/repositorio-org.controller';
+import { RepositorioOrgService } from '@/repositorio-org/repositorio-org.service';
+import { AgentesController } from '@/agentes/agentes.controller';
+import { AgentesService } from '@/agentes/agentes.service';
 import { AiService } from './ai.service';
 import { AiConnectionsService } from './connections.service';
 import { AiCredentialsService } from './credentials.service';
@@ -61,6 +65,8 @@ import { UsoModule } from '@/uso/uso.module';
     DirecionamentosController,
     InsightsController,
     VaultController,
+    RepositorioOrgController,
+    AgentesController,
   ],
   providers: [
     AiService,
@@ -72,6 +78,8 @@ import { UsoModule } from '@/uso/uso.module';
     DirecionamentosService,
     VaultService,
     VaultCategoriasService,
+    RepositorioOrgService,
+    AgentesService,
   ],
 })
 export class AiModule {}

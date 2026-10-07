@@ -1,7 +1,7 @@
 // Import Dependencies
 import { useState } from "react";
 import clsx from "clsx";
-import { NavLink } from "react-router";
+import { Link } from "react-router";
 import {
   Popover,
   PopoverButton,
@@ -18,7 +18,9 @@ import { useThemeContext } from "@/app/contexts/theme/context";
 import { useBreakpointsContext } from "@/app/contexts/breakpoint/context";
 import { useSidebarContext } from "@/app/contexts/sidebar/context";
 import { useSquadsContext } from "@/app/contexts/squads/context";
-import { squadPath } from "@/app/navigation/ceoOs";
+import { useAssistente } from "@/app/contexts/assistente/context";
+import { useAgentes } from "@/app/contexts/agentes/context";
+import { ROTA_AGENTES } from "@/components/template/Assistente/AgenteSelect";
 import { navigationIcons } from "@/app/navigation/icons";
 import { GroupChevron } from "./GroupChevron";
 import { useTranslation } from "react-i18next";
@@ -28,6 +30,12 @@ import {
 } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
+// Grupo AGENTES do sidebar (o antigo "Squads" — o nome mudou só na interface;
+// ids, tabelas e rotas continuam "squad").
+//
+// Cada agente fixado é um ATALHO: abre/foca o Assistente e insere a @menção
+// dele no campo de envio (sem enviar) — a pessoa escreve o pedido em seguida. O "+" continua sendo do contexto de agentes (fixar e
+// "Gerenciar agentes"); "Nova conversa" é o "+" do próprio Assistente.
 
 const MAX_VISIBLE = 5;
 
@@ -39,10 +47,16 @@ export function SquadsGroup() {
   const { close: closeSidebar } = useSidebarContext();
   const { catalog, pinnedSquads, isPinned, toggleSquad, unpinSquad } =
     useSquadsContext();
+  const { inserirMencao } = useAssistente();
+  const { porId } = useAgentes();
   const [showAll, setShowAll] = useState(false);
   const disabled = isFeatureTemporarilyDisabled("squads");
 
-  const handleItemClick = () => lgAndDown && closeSidebar();
+  const abrirComAgente = (id: string) => {
+    const agente = porId(id);
+    if (agente) inserirMencao(agente);
+    if (lgAndDown) closeSidebar();
+  };
 
   const visibleSquads = showAll
     ? pinnedSquads
@@ -65,12 +79,12 @@ export function SquadsGroup() {
             <span>{t("sidebar.squads")}</span>
           </button>
 
-          {/* Botão "+" abre o catálogo de squads para fixar no menu. */}
+          {/* Botão "+" abre o catálogo de agentes para fixar no menu. */}
           {disabled ? (
             <span
               aria-disabled="true"
-              aria-label="Adicionar squad"
-              title="Adicionar squad"
+              aria-label="Adicionar agente"
+              title="Adicionar agente"
               className={clsx(
                 "-mr-1 grid size-5 shrink-0 place-items-center rounded-lg text-gray-500 outline-hidden",
                 DISABLED_MENU_CLASS,
@@ -81,8 +95,8 @@ export function SquadsGroup() {
           ) : (
             <Popover className="relative inline-flex">
               <PopoverButton
-                aria-label="Adicionar squad"
-                title="Adicionar squad"
+                aria-label="Adicionar agente"
+                title="Adicionar agente"
                 className="dark:text-dark-300 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:data-[open]:bg-dark-300/10 -mr-1 grid size-5 shrink-0 cursor-pointer place-items-center rounded-lg text-gray-500 outline-hidden transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[open]:bg-gray-100"
               >
                 <PlusIcon className="size-4" />
@@ -129,6 +143,14 @@ export function SquadsGroup() {
                       </button>
                     );
                   })}
+                  <div className="dark:bg-dark-600 my-1 h-px bg-gray-200" />
+                  <Link
+                    to={ROTA_AGENTES}
+                    onClick={() => lgAndDown && closeSidebar()}
+                    className="dark:text-dark-200 dark:hover:bg-dark-600 text-xs-plus flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-gray-600 outline-hidden transition-colors hover:bg-gray-100"
+                  >
+                    Gerenciar agentes
+                  </Link>
                 </PopoverPanel>
               </Transition>
             </Popover>
@@ -198,23 +220,19 @@ export function SquadsGroup() {
                       {body(false)}
                     </div>
                   ) : (
-                    <NavLink
-                      to={squadPath(squad)}
-                      onClick={handleItemClick}
-                      className={({ isActive }) =>
-                        clsx(
-                          "group min-w-0 flex-1 rounded-md px-3 py-1 font-medium outline-hidden transition-colors ease-in-out",
-                          isActive
-                            ? "text-primary-600 dark:text-primary-400"
-                            : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
-                        )
-                      }
+                    <button
+                      type="button"
+                      onClick={() => abrirComAgente(squad.id)}
+                      className={clsx(
+                        "group min-w-0 flex-1 rounded-md px-3 py-1 text-start font-medium outline-hidden transition-colors ease-in-out",
+                        "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
+                      )}
                     >
-                      {({ isActive }) => body(isActive)}
-                    </NavLink>
+                      {body(false)}
+                    </button>
                   )}
 
-                  {/* Remover squad fixado do menu. */}
+                  {/* Remover agente fixado do menu. */}
                   {!disabled && (
                     <button
                       type="button"

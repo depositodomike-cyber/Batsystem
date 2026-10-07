@@ -311,10 +311,10 @@
     "aiStudio": "AI Studio",
     "expandAiStudio": "Expand AI Studio",
     "collapseAiStudio": "Collapse AI Studio",
-    "squads": "Squads",
+    "squads": "Agents",
     "groups": "Groups",
     "history": "Conversations",
-    "noPinnedSquads": "No pinned squads. Use + to add.",
+    "noPinnedSquads": "No pinned agents. Use + to add.",
     "noGroups": "No groups. Use + to create.",
     "noChats": "No conversations yet. Ask in the bar or start a new one.",
     "newConversation": "New conversation",
@@ -327,7 +327,7 @@
     "deleteGroupTitle": "Delete group?",
     "deleteChatTitle": "Delete chat?",
     "delete": "Delete",
-    "allSquads": "All squads"
+    "allSquads": "All agents"
   },
   "profile": {
     "profile": "Profile",

@@ -10,6 +10,7 @@ import Placeholder from "@/app/pages/ceo/Placeholder";
 import ProjectDetail from "@/app/pages/ceo/ProjectDetail";
 import ChatDetail from "@/app/pages/ceo/ChatDetail";
 import SquadDetail from "@/app/pages/ceo/SquadDetail";
+import AgentesCatalogo from "@/app/pages/ceo/AgentesCatalogo";
 import Documentos from "@/app/pages/ceo/Documentos";
 import Email from "@/app/pages/ceo/Email";
 import Slack from "@/app/pages/ceo/Slack";
@@ -60,6 +61,9 @@ const relatoriosPages: Record<string, RouteObject["Component"]> = {
 // igualdade, então não há ordem a respeitar entre slugs parecidos como
 // "memoria" e "memoria-grafo". O que não estiver aqui cai no Placeholder.
 const pageBySlug: Record<string, RouteObject["Component"]> = {
+  // Área de sistema "Agentes" (era Placeholder): o catálogo de agentes, alvo
+  // de "Gerenciar agentes" no sidebar e no Assistente.
+  agentes: AgentesCatalogo,
   configuracoes: Configuracoes,
   "configuracoes-usuario": ConfiguracoesUsuario,
   documentos: Documentos,

@@ -33,6 +33,7 @@ import { Button } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { idbGet, idbSet } from "@/utils/idbKv";
 import { chaveConta } from "@/utils/escopoConta";
+import { extOf, formatBytes, formatDate, tintForExt } from "@/utils/arquivos";
 
 // ----------------------------------------------------------------------
 
@@ -59,34 +60,6 @@ interface FsNode {
 
 function nextId(prefix = "node") {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB"];
-  const i = Math.min(
-    units.length - 1,
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-  );
-  const value = bytes / Math.pow(1024, i);
-  return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso.slice(0, 10);
-  }
-}
-
-function extOf(name: string): string {
-  const m = name.toLowerCase().match(/\.([a-z0-9]+)$/);
-  return m ? m[1] : "";
 }
 
 const IMAGE_EXTS = new Set([
@@ -170,29 +143,6 @@ function downscaleImage(
     };
     img.src = objectUrl;
   });
-}
-
-/** Cor/tint do badge por extensão de documento. */
-function tintForExt(ext: string): string {
-  switch (ext) {
-    case "pdf":
-      return "bg-rose-500";
-    case "doc":
-    case "docx":
-      return "bg-blue-500";
-    case "xls":
-    case "xlsx":
-    case "csv":
-      return "bg-emerald-500";
-    case "ppt":
-    case "pptx":
-      return "bg-orange-500";
-    case "zip":
-    case "rar":
-      return "bg-amber-500";
-    default:
-      return "bg-gray-500";
-  }
 }
 
 // Miniatura SVG colorida (data-URI) para os exemplos de imagem — sempre carrega,

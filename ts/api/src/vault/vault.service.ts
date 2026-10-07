@@ -171,6 +171,24 @@ export class VaultService {
   }
 
   /**
+   * As notas mais recentes do repositório, com conteúdo — matéria-prima da
+   * geração manual de insights ("Gerar insights", tela de Insights).
+   */
+  async recentes(
+    empresaId: string,
+    repositorioId: string | null,
+    k = 12,
+  ): Promise<VaultNotaHit[]> {
+    if (!repositorioId) return [];
+    return this.prisma.vaultNota.findMany({
+      where: { empresaId, repositorioId },
+      orderBy: { atualizadoEm: 'desc' },
+      take: k,
+      select: { path: true, titulo: true, conteudo: true },
+    });
+  }
+
+  /**
    * Notas cujo título casa com o que o usuário digitou depois de "[[" — os
    * alvos do autocomplete de conexão com a Memória. Diferente de `search`, que
    * é full-text para montar contexto: aqui a busca é por PEDAÇO do título

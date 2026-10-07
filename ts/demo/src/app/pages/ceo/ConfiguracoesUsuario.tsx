@@ -11,6 +11,8 @@
 //     aba da página de Insights. A tela de Insights (os cards) continua onde
 //     estava.
 //   • Conectores — a página `Conectores` em modo `embutido`.
+//   • Agentes — os agentes mencionáveis (@) no Assistente: os do sistema e os
+//     personalizados do usuário (AgentesUsuarioSection).
 //
 // Os dados continuam no mesmo escopo de antes (organização ativa, permissões,
 // conexões): isto é navegação, não mudança de dono dos dados.
@@ -21,6 +23,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router";
 import {
   AdjustmentsHorizontalIcon,
   LinkIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 
 // Local Imports
@@ -35,6 +38,7 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 import { NavegacaoSecoes, type GrupoNavegacao } from "./NavegacaoSecoes";
 import { DirecionadorDeInsights } from "./InsightDirecionador";
 import Conectores from "./Conectores";
+import { AgentesUsuarioSection } from "./AgentesUsuarioSection";
 
 // ----------------------------------------------------------------------
 
@@ -56,6 +60,11 @@ const GRUPOS: GrupoNavegacao[] = [
         titulo: "Conectores",
         icon: LinkIcon,
         feature: "connectors",
+      },
+      {
+        id: "agentes",
+        titulo: "Agentes",
+        icon: SparklesIcon,
       },
     ],
   },
@@ -130,7 +139,9 @@ export default function ConfiguracoesUsuario() {
                     os assuntos que merecem atenção e o que não deve ser
                     considerado relevante. Em <strong>Conectores</strong>, você
                     liga as ferramentas que já usa para ampliar o contexto
-                    disponível na plataforma.
+                    disponível na plataforma. Em <strong>Agentes</strong>, você
+                    cria especialistas próprios para chamar com @menção no
+                    Assistente.
                   </p>
                 </>
               ),
@@ -159,6 +170,7 @@ export default function ConfiguracoesUsuario() {
               <DirecionadorDeInsights sugestao={sugestao} />
             )}
             {ativo === "conectores" && <Conectores embutido />}
+            {ativo === "agentes" && <AgentesUsuarioSection />}
           </div>
         </div>
       </div>

@@ -87,33 +87,52 @@ export class AiService {
     }
   }
 
-  /** Monta o system prompt: persona do agente, ou nível-squad. Lê do catálogo no banco. */
-  private async buildSystem(input: ChatInput): Promise<string> {
+  /**
+   * Persona de um AGENTE (o antigo "squad") no nível consolidado: uma voz só,
+   * com o repertório dos conselheiros como base interna. É o mesmo texto que o
+   * chat de squad sempre usou; saiu daqui para o Assistente (/ai/prompt)
+   * poder usá-lo quando um agente participa da conversa. `null` = agente
+   * inexistente ou inativo.
+   *
+   * Com `dono`, o id também pode ser de um agente PERSONALIZADO — mas só do
+   * próprio usuário (empresa + usuário do JWT) e não excluído. Agente de outra
+   * pessoa simplesmente não existe para quem pergunta.
+   */
+  async personaDoAgente(
+    id: string,
+    dono?: { empresaId: string; usuarioId: string },
+  ): Promise<{ id: string; titulo: string; texto: string } | null> {
     const squad = await this.prisma.squad.findFirst({
-      where: { id: input.squadId, active: true },
+      where: { id, active: true },
       include: {
         agents: { where: { active: true }, orderBy: { order: 'asc' } },
       },
     });
     if (!squad) {
-      throw new NotFoundException('Squad não encontrado.');
-    }
-
-    // A resposta do squad pode ser salva como documento/nota na Memória: fecha
-    // com o bloco de conexões, ligando-a às notas que já existem no vault.
-    const conexoes = await this.buildConexoesContext(input);
-
-    if (input.agentId) {
-      const agent = squad.agents.find((a) => a.id === input.agentId);
-      if (agent) {
-        return `${agent.prompt}\n\n---\n${PLATFORM_FRAMING}${conexoes}`;
-      }
+      if (!dono) return null;
+      const pessoal = await this.prisma.agenteUsuario.findFirst({
+        where: {
+          id,
+          empresaId: dono.empresaId,
+          usuarioId: dono.usuarioId,
+          excluidoEm: null,
+        },
+      });
+      if (!pessoal) return null;
+      const partes = [
+        `Você é o agente "${pessoal.nome}", um especialista configurado pelo próprio usuário.`,
+        pessoal.descricao && `Especialidade: ${pessoal.descricao}`,
+        pessoal.instrucoes &&
+          `Instruções do usuário para este agente (siga-as ao responder):\n${pessoal.instrucoes}`,
+        'Responda a partir desta especialidade, de forma direta, e termine com os próximos passos práticos quando fizer sentido.',
+      ].filter(Boolean);
+      return { id: pessoal.id, titulo: pessoal.nome, texto: partes.join('\n\n') };
     }
 
     const conselheiros = squad.agents
       .map((a) => `- ${a.reference} (${a.position}): ${a.contribution}`)
       .join('\n');
-    return `Você responde como a inteligência consolidada deste squad: uma única voz que já integrou internamente o conhecimento dos conselheiros abaixo. Eles são seu repertório interno — o usuário NÃO quer ouvir a opinião de cada um separadamente.
+    const texto = `Você responde como a inteligência consolidada deste squad: uma única voz que já integrou internamente o conhecimento dos conselheiros abaixo. Eles são seu repertório interno — o usuário NÃO quer ouvir a opinião de cada um separadamente.
 Quando utilizar este squad: ${squad.description}
 
 Repertório interno do squad (não enderece um por um):
@@ -123,7 +142,38 @@ Como responder:
 - Entregue UMA resposta única, direta e resumida — sem seções por conselheiro, sem "Fulano diria...", sem listar a contribuição de cada membro.
 - Sintetize os pontos em comum e resolva as divergências relevantes, em vez de enumerá-las.
 - Mencione o nome de um conselheiro apenas quando uma perspectiva específica for decisiva (no máximo um ou dois, de passagem).
-- Priorize a concisão: vá ao ponto e termine com os próximos passos práticos.
+- Priorize a concisão: vá ao ponto e termine com os próximos passos práticos.`;
+    return { id: squad.id, titulo: squad.title, texto };
+  }
+
+  /** Monta o system prompt: persona do agente, ou nível-squad. Lê do catálogo no banco. */
+  private async buildSystem(input: ChatInput): Promise<string> {
+    // A resposta do squad pode ser salva como documento/nota na Memória: fecha
+    // com o bloco de conexões, ligando-a às notas que já existem no vault.
+    if (input.agentId) {
+      const agent = await this.prisma.squadAgent.findFirst({
+        where: {
+          id: input.agentId,
+          squadId: input.squadId,
+          active: true,
+          squad: { active: true },
+        },
+      });
+      if (agent) {
+        const conexoes = await this.buildConexoesContext(input);
+        return `${agent.prompt}
+
+---
+${PLATFORM_FRAMING}${conexoes}`;
+      }
+    }
+
+    const persona = await this.personaDoAgente(input.squadId);
+    if (!persona) {
+      throw new NotFoundException('Squad não encontrado.');
+    }
+    const conexoes = await this.buildConexoesContext(input);
+    return `${persona.texto}
 
 ---
 ${PLATFORM_FRAMING}${conexoes}`;

@@ -1103,6 +1103,77 @@ model VaultNota {
   @@map("vault_notas")
 }
 
+// ---------- Repositório da organização ----------
+// A base de conhecimento COMPARTILHADA da organização: documentos enviados pela
+// tela Configurações → Repositório. Tabela própria e isolada de propósito — não
+// é o vault (`VaultNota`, que espelha a pasta local do protótipo e alimenta o
+// grafo pessoal) e não se mistura com ele. O /ai/prompt e a planilha somam
+// estes documentos às notas do vault na hora de montar o contexto; a lista
+// pessoal e o grafo nunca os leem.
+//
+// Sem relação com `Empresa` de propósito: a tabela é aditiva e não mexe em
+// nenhum model existente. `organizacaoId` é o id da organização do protótipo
+// de contas (ou `pessoal:<usuarioId>` no escopo pessoal) e chega pelo header
+// `X-Organizacao-Id`.
+
+/// Documento do Repositório da organização. Pertence à organização, não a quem enviou.
+model RepositorioOrgDocumento {
+  id                String   @id @default(cuid())
+  empresaId         String
+  organizacaoId     String
+  nome              String
+  /// Extensão sem ponto, em minúsculas (ex.: "pdf", "md").
+  tipo              String
+  /// Tamanho do arquivo original, em bytes.
+  tamanho           Int
+  /// Texto extraído do arquivo — é o que a IA lê.
+  conteudo          String   @default("")
+  /// processando | disponivel | erro
+  status            String   @default("processando")
+  erro              String?
+  /// Quem enviou. Autoria, não posse: o documento é da organização.
+  adicionadoPorId   String
+  adicionadoPorNome String
+  criadoEm          DateTime @default(now())
+  atualizadoEm      DateTime @updatedAt
+
+  @@index([empresaId, organizacaoId])
+  @@map("repositorio_org_documentos")
+}
+
+// ---------- Agentes personalizados ----------
+// Agentes criados pelo usuário em Configurações de usuário → Agentes. Ficam ao
+// lado do catálogo do sistema (Squad/SquadAgent), que continua intocado, e são
+// chamados no Assistente por @menção. Pertencem a quem criou — não são
+// compartilhados com a organização.
+//
+// Tabela aditiva e isolada (sem relação com models existentes). Exclusão é
+// LÓGICA (`excluidoEm`): o agente sai do autocomplete, e as conversas antigas
+// continuam identificando quem respondeu (o nome também fica no `meta` da
+// mensagem).
+
+/// Agente personalizado de um usuário.
+model AgenteUsuario {
+  id           String    @id @default(cuid())
+  empresaId    String
+  usuarioId    String
+  nome         String
+  /// Identificador usado depois do "@" no Assistente (ex.: "RevisorDeUX").
+  mencao       String
+  descricao    String    @default("")
+  /// Instruções do agente — viram a persona no system prompt.
+  instrucoes   String    @default("")
+  /// Ícone escolhido para o avatar (chave do catálogo de ícones do cliente,
+  /// ex.: "agente:lampada"). Nulo = avatar com as iniciais do nome.
+  icone        String?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+  excluidoEm   DateTime?
+
+  @@index([empresaId, usuarioId])
+  @@map("agentes_usuario")
+}
+
 /// Vocabulário de categorias macro de um repositório, descoberto pela IA.
 ///
 /// Não é lista fixa: a IA propõe a partir do conteúdo. Mas também não é livre

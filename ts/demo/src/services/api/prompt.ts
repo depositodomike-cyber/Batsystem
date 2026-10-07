@@ -13,12 +13,47 @@ export interface HistoricoTurno {
   resposta: string;
 }
 
+/** Agente (o antigo "squad") que produziu uma resposta. */
+export interface AgenteDaResposta {
+  id: string;
+  titulo: string;
+}
+
+/** Agente @mencionado numa pergunta (vai no `meta` da mensagem do usuário). */
+export interface MencaoAgente {
+  id: string;
+  titulo: string;
+  /** Sem o "@". */
+  mencao: string;
+}
+
+/**
+ * Arquivo gerado por um agente numa conversa. Pertence à CONVERSA (vive no
+ * `meta` da mensagem) e só entra no Repositório se o usuário salvar.
+ */
+export interface ArquivoConversa {
+  id: string;
+  nome: string;
+  tipo: "md";
+  conteudo: string;
+  tamanho: number;
+  /** Id do documento no Repositório da organização, depois de salvo. */
+  repositorioDocumentoId?: string | null;
+  /** Agente que gerou o arquivo. */
+  geradoPor?: AgenteDaResposta | null;
+}
+
 export interface PromptResposta {
   tipo: "resposta";
   resposta: string;
   fontes: Fonte[];
   origem: "vault" | "web";
   conversaId?: string;
+  /** Mensagem da resposta — para marcar um arquivo dela como salvo. */
+  mensagemId?: string;
+  /** Agente que respondeu; null/ausente = Assistente padrão. */
+  agente?: AgenteDaResposta | null;
+  arquivos?: ArquivoConversa[];
 }
 
 export interface PromptParams {
@@ -34,6 +69,15 @@ export interface PromptParams {
   conversaId?: string;
   /** Repositório ativo — a conversa fica isolada neste contexto. */
   repositorioId?: string;
+  /** Agente que participa deste turno (ausente = Assistente padrão). */
+  agenteId?: string | null;
+  /** Agentes @mencionados na pergunta (gravados com a mensagem do usuário). */
+  mencoes?: MencaoAgente[];
+  /**
+   * Mais um agente respondendo à MESMA pergunta (vários @mencionados): o
+   * servidor grava só a resposta, sem repetir a mensagem do usuário.
+   */
+  respostaAdicional?: boolean;
 }
 
 export async function perguntarPromptApi(p: PromptParams): Promise<PromptResposta> {
@@ -48,6 +92,9 @@ export async function perguntarPromptApi(p: PromptParams): Promise<PromptRespost
     if (p.historico?.length) fd.append("historico", JSON.stringify(p.historico));
     if (p.conversaId) fd.append("conversaId", p.conversaId);
     if (p.repositorioId) fd.append("repositorioId", p.repositorioId);
+    if (p.agenteId) fd.append("agenteId", p.agenteId);
+    if (p.mencoes?.length) fd.append("mencoes", JSON.stringify(p.mencoes));
+    if (p.respostaAdicional) fd.append("respostaAdicional", "1");
     const { data } = await axios.post<PromptResposta>("/ai/prompt", fd);
     return data;
   }
@@ -59,6 +106,9 @@ export async function perguntarPromptApi(p: PromptParams): Promise<PromptRespost
     ...(p.historico?.length ? { historico: JSON.stringify(p.historico) } : {}),
     ...(p.conversaId ? { conversaId: p.conversaId } : {}),
     ...(p.repositorioId ? { repositorioId: p.repositorioId } : {}),
+    ...(p.agenteId ? { agenteId: p.agenteId } : {}),
+    ...(p.mencoes?.length ? { mencoes: JSON.stringify(p.mencoes) } : {}),
+    ...(p.respostaAdicional ? { respostaAdicional: "1" } : {}),
   });
   return data;
 }

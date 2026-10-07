@@ -44,7 +44,56 @@ export interface Insight extends PersonalInsight {
   direcionamento?: { id: string; nome: string };
   /** O "Este insight foi útil?" do próprio usuário. */
   meuFeedback?: InsightFeedback;
+  /**
+   * Ação que a IA sugere a partir do insight (hoje: marcar uma reunião). Com
+   * ela, o modal de detalhe mostra o bloco "Ação sugerida" e o rodapé de
+   * agendamento no lugar do feedback.
+   */
+  acaoSugerida?: AcaoSugeridaReuniao;
 }
+
+export interface AcaoSugeridaReuniao {
+  tipo: "reuniao";
+  titulo: string;
+  /** Ex.: "30 min". */
+  duracao: string;
+  descricao: string;
+  /** Áreas que participam da reunião sugerida. */
+  areas: string[];
+}
+
+// ----------------------------------------------------------------------
+// Insight de EXEMPLO do protótipo: um caso com sugestão de reunião. Vive só
+// no cliente — entra no topo da lista que vem da API, e os serviços de
+// insight o resolvem localmente (sem requisição). Agendar é
+// simulado com toast.
+// ----------------------------------------------------------------------
+
+const PREFIXO_DEMO = "demo-";
+
+/** True para insights de exemplo do protótipo (não existem no servidor). */
+export function ehInsightDemo(id: string): boolean {
+  return id.startsWith(PREFIXO_DEMO);
+}
+
+export const INSIGHT_EXEMPLO_REUNIAO: Insight = {
+  id: `${PREFIXO_DEMO}reuniao-regras`,
+  titulo: "Divergência recorrente na aplicação das regras",
+  descricao:
+    "Foram identificadas interpretações diferentes sobre a aplicação das regras de proteção de informações financeiras entre as áreas envolvidas. Essa divergência pode gerar decisões inconsistentes e aumentar o risco de falhas no processo.",
+  data: "23/09/2026",
+  criadoEm: "2026-09-23T12:00:00.000Z",
+  tipo: "Processo",
+  cor: "secondary",
+  acaoSugerida: {
+    tipo: "reuniao",
+    titulo: "Reunião de alinhamento",
+    duracao: "30 min",
+    descricao:
+      "Revisar as regras atuais, esclarecer as divergências identificadas e definir os próximos passos.",
+    areas: ["Compliance", "Segurança da Informação", "Produto"],
+  },
+};
 
 /**
  * Detalhe do insight (modal "Ver insight"). A listagem não traz estes campos —
@@ -248,18 +297,11 @@ export const INSIGHT_ACOES = [
 
 export type InsightAcao = (typeof INSIGHT_ACOES)[number];
 
-// Ações OCULTAS temporariamente no menu do card — hoje, todas. O fluxo delas
-// (seletor de pessoa, formulário de reunião) continua no código; para voltar
-// a exibir uma, basta tirá-la desta lista. No lugar, o menu oferece
-// "Conversar com o assistente".
-export const INSIGHT_ACOES_OCULTAS: readonly InsightAcao[] = [
-  "Adicionar pauta para 1:1",
-  "Agendar Reunião",
-  "Criar Tarefa",
-  "Enviar via Chat",
-  "Fazer Elogio",
-  "Upload Documento",
-];
+// Ações OCULTAS temporariamente no menu do card. Hoje nenhuma: as seis voltaram
+// a aparecer, abaixo de "Conversar com o assistente". Para ocultar uma de
+// novo, basta incluí-la nesta lista — o fluxo (seletor de pessoa, formulário
+// de reunião) continua no código.
+export const INSIGHT_ACOES_OCULTAS: readonly InsightAcao[] = [];
 
 // Ações que exigem escolher uma pessoa antes de prosseguir. "Upload Documento"
 // é a única exceção (não abre a lista de usuários).

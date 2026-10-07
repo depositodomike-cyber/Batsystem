@@ -1,7 +1,7 @@
 // Painel do assistente, em dois tamanhos: ancorado no canto inferior direito ou
 // ampliado como janela central com backdrop. Header com identidade do
 // assistente, abas Chat/Histórico, corpo e campo de envio nos dois modos.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
@@ -23,6 +23,8 @@ import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { useAssistente } from "@/app/contexts/assistente/context";
 import type { AssistenteTab } from "@/app/contexts/assistente/context";
 import { useConversasContext } from "@/app/contexts/conversas/context";
+import { useAgentes } from "@/app/contexts/agentes/context";
+import { AgenteSelect } from "./AgenteSelect";
 import { ChatTab } from "./ChatTab";
 import { HistoricoTab } from "./HistoricoTab";
 
@@ -48,9 +50,12 @@ export function Panel() {
     novaConversa,
     perguntar,
     continuar,
+    rascunho: texto,
+    setRascunho: setTexto,
+    pedidoDeFoco,
   } = useAssistente();
-
-  const [texto, setTexto] = useState("");
+  // Agentes mencionáveis com "@" no campo (sistema + do usuário).
+  const { todos: agentes } = useAgentes();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const visivel = status === "open";
@@ -73,9 +78,30 @@ export function Panel() {
 
   // Foca o campo ao abrir o painel na aba Chat. Minimizar não desmonta o painel,
   // então o rascunho do campo sobrevive.
+  // O cursor vai para o fim: com um rascunho (ex.: "@Cultura " inserido de
+  // fora com o painel fechado), focar deixaria o cursor no início do texto.
   useEffect(() => {
-    if (visivel && tab === "chat") inputRef.current?.focus();
+    if (!visivel || tab !== "chat") return;
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
   }, [visivel, tab, expandido]);
+
+  // Uma @menção inserida de fora (sidebar, perfil, botão "@ Agentes"): foca o
+  // campo com o cursor no fim, pronto para a pessoa escrever o pedido.
+  useEffect(() => {
+    if (!pedidoDeFoco) return;
+    const id = requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 120) + "px";
+    });
+    return () => cancelAnimationFrame(id);
+  }, [pedidoDeFoco]);
 
   const enviar = () => {
     const valor = texto.trim();
@@ -116,7 +142,7 @@ export function Panel() {
               // lado que encosta na borda da tela fica reto.
               // conteúdo (a margem vem da classe no `body`). Abaixo de `lg` a
               // base `fixed inset-0` já entrega a folha de tela cheia.
-              "lg:inset-y-0 lg:m-0 lg:h-full lg:w-(--assistant-panel-width) lg:rounded-none lg:border-y-0 lg:ltr:right-0 lg:ltr:left-auto lg:ltr:rounded-l-xl lg:ltr:border-r-0 lg:ltr:border-l lg:rtl:right-auto lg:rtl:left-0 lg:rtl:rounded-r-xl lg:rtl:border-l-0 lg:rtl:border-r",
+              "lg:inset-y-0 lg:m-0 lg:h-full lg:w-(--assistant-panel-width) lg:rounded-none lg:border-y-0 lg:ltr:right-0 lg:ltr:left-auto lg:ltr:rounded-l-xl lg:ltr:border-r-0 lg:ltr:border-l lg:rtl:right-auto lg:rtl:left-0 lg:rtl:rounded-r-xl lg:rtl:border-r lg:rtl:border-l-0",
           visivel
             ? "translate-y-0 opacity-100"
             : "pointer-events-none invisible translate-y-2 opacity-0",
@@ -142,7 +168,7 @@ export function Panel() {
           <HeaderBtn
             icon={PlusIcon}
             label={t("chrome.assistantNew")}
-            onClick={novaConversa}
+            onClick={() => novaConversa()}
             destaque
           />
           {/* Ampliar não aparece no celular: lá os dois modos são a mesma
@@ -196,47 +222,54 @@ export function Panel() {
           <div className="dark:border-dark-600 dark:bg-dark-800/40 shrink-0 border-t border-gray-200 bg-gray-50/60 p-2.5">
             <div
               className={clsx(
-                "dark:border-dark-500 dark:bg-dark-700 focus-within:border-primary-500/60 flex items-end gap-2 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5",
+                "dark:border-dark-500 dark:bg-dark-700 focus-within:border-primary-500/60 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5",
                 // Ampliado: acompanha a largura do corpo em vez de esticar.
                 expandido && "mx-auto w-full max-w-3xl",
               )}
             >
-              <MemoriaTextarea
-                ref={inputRef}
-                rows={1}
-                value={texto}
-                disabled={loading}
-                placeholder={
-                  conversa.length === 0
-                    ? t("chrome.assistantPlaceholder")
-                    : modoConversa === "web"
-                      ? t("chrome.assistantContinueWeb")
-                      : t("chrome.assistantContinue")
-                }
-                onChange={(e) => {
-                  setTexto(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height =
-                    Math.min(e.target.scrollHeight, 120) + "px";
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    enviar();
+              {/* Agentes: insere uma @menção no campo (atalho do "@"). */}
+              <div className="-ml-1 pb-1">
+                <AgenteSelect disabled={loading} />
+              </div>
+              <div className="flex items-end gap-2">
+                <MemoriaTextarea
+                  ref={inputRef}
+                  rows={1}
+                  value={texto}
+                  disabled={loading}
+                  agentes={agentes}
+                  placeholder={
+                    conversa.length === 0
+                      ? t("chrome.assistantPlaceholder")
+                      : modoConversa === "web"
+                        ? t("chrome.assistantContinueWeb")
+                        : t("chrome.assistantContinue")
                   }
-                }}
-                // text-base no celular: Safari dá zoom ao focar campos < 16px.
-                className="dark:text-dark-100 max-h-[120px] flex-1 resize-none bg-transparent text-base text-gray-800 outline-none placeholder:text-gray-400 sm:text-sm"
-              />
-              <button
-                type="button"
-                onClick={enviar}
-                disabled={loading || !texto.trim()}
-                title={t("chrome.assistantSend")}
-                className="from-primary-600 to-primary-400 grid size-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-white transition-opacity disabled:opacity-40 sm:size-8"
-              >
-                <ArrowUpIcon className="size-4" />
-              </button>
+                  onChange={(e) => {
+                    setTexto(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height =
+                      Math.min(e.target.scrollHeight, 120) + "px";
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      enviar();
+                    }
+                  }}
+                  // text-base no celular: Safari dá zoom ao focar campos < 16px.
+                  className="dark:text-dark-100 max-h-[120px] flex-1 resize-none bg-transparent text-base text-gray-800 outline-none placeholder:text-gray-400 sm:text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={enviar}
+                  disabled={loading || !texto.trim()}
+                  title={t("chrome.assistantSend")}
+                  className="from-primary-600 to-primary-400 grid size-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-white transition-opacity disabled:opacity-40 sm:size-8"
+                >
+                  <ArrowUpIcon className="size-4" />
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -303,7 +336,7 @@ function TabButton({
       onClick={() => onClick(id)}
       aria-selected={active}
       className={clsx(
-        "flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 text-xs-plus font-medium transition-colors",
+        "text-xs-plus flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2 font-medium transition-colors",
         active
           ? "border-primary-500 text-primary-600 dark:text-primary-400"
           : "dark:text-dark-300 dark:hover:text-dark-100 border-transparent text-gray-400 hover:text-gray-600",
@@ -312,7 +345,7 @@ function TabButton({
       <Icon className="size-4 shrink-0" />
       <span className="min-w-0 truncate">{label}</span>
       {count != null && count > 0 && (
-        <span className="dark:bg-dark-500 dark:text-dark-200 shrink-0 rounded-full bg-gray-100 px-1.5 text-tiny text-gray-500">
+        <span className="dark:bg-dark-500 dark:text-dark-200 text-tiny shrink-0 rounded-full bg-gray-100 px-1.5 text-gray-500">
           {count > 99 ? "99+" : count}
         </span>
       )}

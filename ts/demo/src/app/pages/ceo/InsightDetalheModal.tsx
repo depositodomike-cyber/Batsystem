@@ -15,6 +15,7 @@ import {
 } from "@headlessui/react";
 import {
   ArrowTopRightOnSquareIcon,
+  CalendarDaysIcon,
   ChatBubbleLeftRightIcon,
   HandThumbDownIcon,
   HandThumbUpIcon,
@@ -25,6 +26,7 @@ import {
   HandThumbUpIcon as HandThumbUpSolidIcon,
 } from "@heroicons/react/24/solid";
 import clsx from "clsx";
+import { toast } from "sonner";
 
 // Local Imports
 import { Badge, Button, Skeleton } from "@/components/ui";
@@ -33,6 +35,7 @@ import {
   type Insight,
   type InsightCor,
   type InsightDetalhe,
+  type AcaoSugeridaReuniao,
   type InsightFeedback,
 } from "@/app/data/insights";
 import { buscarInsightApi } from "@/services/api/insights";
@@ -172,8 +175,19 @@ export function InsightDetalheModal({
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className="dark:bg-dark-700 flex h-full w-full max-w-3xl flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl">
-              {alvo && (
+            <DialogPanel
+              className={clsx(
+                "dark:bg-dark-700 flex h-full w-full flex-col overflow-hidden bg-white shadow-xl sm:h-auto sm:max-h-[90vh] sm:rounded-2xl",
+                alvo?.acaoSugerida ? "max-w-xl" : "max-w-3xl",
+              )}
+            >
+              {alvo?.acaoSugerida ? (
+                <DetalheComReuniao
+                  insight={alvo}
+                  acao={alvo.acaoSugerida}
+                  onClose={onClose}
+                />
+              ) : alvo && (
                 <>
                   {/* Header fixo */}
                   <div className="dark:border-dark-500 flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-6">
@@ -407,6 +421,124 @@ export function InsightDetalheModal({
       </Dialog>
     </Transition>
   );
+}
+
+// ----------------------------------------------------------------------
+// Variante com AÇÃO SUGERIDA (reunião): resumo + card da reunião proposta, e o
+// rodapé de agendamento no lugar do feedback. No protótipo, agendar é
+// simulado com toast — nada é gravado nem vai para uma agenda real.
+
+function DetalheComReuniao({
+  insight,
+  acao,
+  onClose,
+}: {
+  insight: Insight;
+  acao: AcaoSugeridaReuniao;
+  onClose: () => void;
+}) {
+  const tituloReuniao = `${acao.titulo} · ${acao.duracao}`;
+
+  const agendar = () => {
+    toast.success("Reunião agendada", {
+      description: `“${tituloReuniao}” foi marcada na sua agenda para amanhã, às 10:00, com ${listaPorExtenso(acao.areas)}.`,
+    });
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="flex items-start justify-between gap-4 px-6 pt-6">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              color="primary"
+              variant="soft"
+              className="rounded-full text-[10px]"
+            >
+              Insight
+            </Badge>
+            <Badge
+              color={BADGE_COLOR[insight.cor]}
+              variant="soft"
+              className="rounded-full text-[10px]"
+            >
+              {insight.tipo}
+              {ROTULO_SEVERIDADE[insight.cor]
+                ? ` · ${ROTULO_SEVERIDADE[insight.cor]}`
+                : ""}
+            </Badge>
+          </div>
+          <DialogTitle className="dark:text-dark-50 mt-3 text-lg font-semibold text-gray-800">
+            {insight.titulo}
+          </DialogTitle>
+          <p className="dark:text-dark-300 text-xs-plus mt-0.5 text-gray-500">
+            Identificado em {dataPorExtenso(insight.criadoEm, insight.data)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar"
+          className="dark:hover:bg-dark-500 dark:text-dark-300 grid size-8 shrink-0 place-items-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100"
+        >
+          <XMarkIcon className="size-5" />
+        </button>
+      </div>
+
+      <div className="custom-scrollbar grow space-y-5 overflow-y-auto px-6 pt-5 pb-6">
+        <Secao titulo="Resumo">
+          <p className="dark:text-dark-100 text-sm text-gray-700">
+            {insight.descricao}
+          </p>
+        </Secao>
+
+        <Secao titulo="Ação sugerida">
+          <div className="border-primary-200 bg-primary-50/60 dark:border-primary-500/30 dark:bg-primary-500/10 flex gap-3 rounded-xl border p-4">
+            <span className="bg-primary-100 text-primary-600 dark:bg-primary-500/20 dark:text-primary-300 grid size-9 shrink-0 place-items-center rounded-lg">
+              <CalendarDaysIcon className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="dark:text-dark-50 text-sm font-semibold text-gray-800">
+                {tituloReuniao}
+              </p>
+              <p className="dark:text-dark-200 mt-1 text-sm text-gray-600">
+                {acao.descricao}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {acao.areas.map((area) => (
+                  <span
+                    key={area}
+                    className="dark:border-dark-500 dark:bg-dark-700 dark:text-dark-100 rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs text-gray-700"
+                  >
+                    {area}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Secao>
+      </div>
+
+      <div className="dark:border-dark-500 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 px-6 py-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outlined" className="rounded-lg" onClick={onClose}>
+            Fechar
+          </Button>
+          <Button color="primary" className="gap-2 rounded-lg" onClick={agendar}>
+            <CalendarDaysIcon className="size-4.5" />
+            Agendar reunião
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** ["A", "B", "C"] → "A, B e C". */
+function listaPorExtenso(itens: string[]): string {
+  if (itens.length <= 1) return itens[0] ?? "";
+  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
 }
 
 function Secao({

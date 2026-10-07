@@ -13,6 +13,7 @@ import {
 import { useProjectsContext } from "@/app/contexts/projects/context";
 import { Accordion } from "@/components/ui";
 import { isRouteActive } from "@/utils/isRouteActive";
+import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import { Group } from "./Group";
 import { AiStudioGroup } from "./AiStudioGroup";
 import { SquadsGroup } from "./SquadsGroup";
@@ -64,9 +65,16 @@ export function Menu() {
 
   return (
     <>
+      {/*
+        `absolute!`: o CSS do SimpleBar (`[data-simplebar] { position: relative }`)
+        vence o `absolute` do Tailwind, e sem o limite de altura a lista
+        transbordava por baixo do rodapé da sidebar (Pasta local) em vez de rolar.
+        `overflow-hidden`: o `.simplebar-wrapper` interno segue com a altura do
+        conteúdo e, sem o recorte, cobriria o rodapé e engoliria os cliques.
+      */}
       <SimpleBar
         scrollableNodeProps={{ ref }}
-        className="absolute inset-0"
+        className="absolute! inset-0 overflow-hidden"
       >
         <Accordion
           value={expanded}
@@ -78,7 +86,9 @@ export function Menu() {
             <Group key={nav.id} data={nav} />
           ))}
           {showSquads && <AiStudioGroup product={productCode} />}
-          {showSquads && <SquadsGroup />}
+          {showSquads && !isFeatureTemporarilyDisabled("sidebarAgents") && (
+            <SquadsGroup />
+          )}
           {showGroupings && <AgrupamentosGroup product={productCode} />}
         </Accordion>
       </SimpleBar>

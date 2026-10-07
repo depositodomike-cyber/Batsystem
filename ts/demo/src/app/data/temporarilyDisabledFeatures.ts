@@ -11,6 +11,7 @@
 export type TemporarilyDisabledFeature =
   | "aiStudio"
   | "squads"
+  | "sidebarAgents"
   | "groups"
   | "history"
   | "insights"
@@ -68,6 +69,13 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // nada vê "nenhum squad fixado" até usar o "+". É a lista pessoal do
     // usuário começando do zero, não falta de dados.
     squads: false,
+    // Grupo AGENTES (o antigo "Squads") OCULTO na sidebar — some por inteiro,
+    // em vez do padrão opaco. Agentes agora participam das conversas do
+    // Assistente: o acesso é o "+ Adicionar agente" do campo de envio e o
+    // catálogo /behuman/agentes ("Gerenciar agentes"). Os agentes fixados
+    // continuam salvos; com `false` o grupo volta como estava. Ponto de corte
+    // único, em Sidebar/Menu/index.tsx.
+    sidebarAgents: true,
     // Grupos DESABILITADO de novo: o bloco "GRUPOS" da sidebar fica visível,
     // opaco e sem clique — o "+" não cria, os itens não navegam nem
     // renomeiam/excluem, e o "ver mais" some. Ponto de corte único, em

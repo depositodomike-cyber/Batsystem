@@ -5,6 +5,7 @@ import { ChatsProvider } from "@/app/contexts/chats/Provider";
 import { ConversasProvider } from "@/app/contexts/conversas/Provider";
 import { ProjectsProvider } from "@/app/contexts/projects/Provider";
 import { SquadsProvider } from "@/app/contexts/squads/Provider";
+import { AgentesProvider } from "@/app/contexts/agentes/Provider";
 import { DocumentsProvider } from "@/app/contexts/documents/Provider";
 import { LikesProvider } from "@/app/contexts/likes/Provider";
 import { CommentsProvider } from "@/app/contexts/comments/Provider";
@@ -44,6 +45,7 @@ export function AccountScopedProviders({ children }: { children: ReactNode }) {
   return (
     <ProjectsProvider key={accountKey}>
       <SquadsProvider>
+        <AgentesProvider>
         <ChatsProvider>
           <ConversasProvider>
           <DocumentsProvider>
@@ -63,6 +65,7 @@ export function AccountScopedProviders({ children }: { children: ReactNode }) {
           </DocumentsProvider>
           </ConversasProvider>
         </ChatsProvider>
+        </AgentesProvider>
       </SquadsProvider>
     </ProjectsProvider>
   );

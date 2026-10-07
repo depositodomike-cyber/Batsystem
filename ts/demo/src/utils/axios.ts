@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { JWT_HOST_API } from "@/configs/auth";
 import { repositorioPastaAtivo } from "@/app/pages/ceo/memoria-inventario";
+import { organizacaoAtivaId } from "@/app/pages/ceo/repositorio-org/escopo";
 import { sessaoLocalAtiva, tokenArmazenado } from "@/utils/sessaoLocal";
 
 const axiosInstance = axios.create({
@@ -41,6 +42,13 @@ const ROTAS_DE_SESSAO = ["/login", "/registrar"];
 export const HEADER_REPOSITORIO = "X-Repositorio-Id";
 
 /**
+ * Header da organização ativa — dona do Repositório da organização (ver
+ * OrganizacaoAtual, no backend). Separado do repositório: a pasta local e a
+ * base de conhecimento da organização são donos diferentes.
+ */
+export const HEADER_ORGANIZACAO = "X-Organizacao-Id";
+
+/**
  * Injeta o repositório (contexto) ativo em toda requisição.
  *
  * Vai por header, e não no corpo, porque o ValidationPipe do backend roda com
@@ -54,6 +62,13 @@ export const HEADER_REPOSITORIO = "X-Repositorio-Id";
 axiosInstance.interceptors.request.use((config) => {
   const repositorioId = repositorioPastaAtivo();
   if (repositorioId) config.headers.set(HEADER_REPOSITORIO, repositorioId);
+  // Quem já manda o header explícito (services/api/repositorioOrg.ts) vence:
+  // o valor de módulo é gravado num efeito do Provider, que roda DEPOIS dos
+  // efeitos dos filhos, e no primeiro fetch ainda estaria vazio ou velho.
+  const organizacaoId = organizacaoAtivaId();
+  if (organizacaoId && !config.headers.has(HEADER_ORGANIZACAO)) {
+    config.headers.set(HEADER_ORGANIZACAO, organizacaoId);
+  }
 
   // O token vem do storage a CADA requisição, e não de `axios.defaults`. O
   // header em defaults só existia depois que `setSession` rodava, no efeito

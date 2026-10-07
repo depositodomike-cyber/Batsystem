@@ -94,7 +94,13 @@ export function configureApp(app: INestApplication): void {
     // `X-Repositorio-Id` é um header custom: sem declará-lo o preflight o
     // bloqueia e o isolamento por repositório cai, em silêncio, para o escopo
     // do tenant — que é exatamente o que ele existe para evitar.
-    allowedHeaders: ["Content-Type", "Authorization", "X-Repositorio-Id"],
+    // `X-Organizacao-Id` idem, para o Repositório da organização.
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Repositorio-Id",
+      "X-Organizacao-Id",
+    ],
   });
 
   app.useGlobalPipes(

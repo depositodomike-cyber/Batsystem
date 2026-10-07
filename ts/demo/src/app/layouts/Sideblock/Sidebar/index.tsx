@@ -9,6 +9,7 @@ import { useThemeContext } from "@/app/contexts/theme/context";
 import { useDidUpdate } from "@/hooks";
 import { Header } from "./Header";
 import { Menu } from "./Menu";
+import { PastaLocalButton } from "./PastaLocalButton";
 
 // ----------------------------------------------------------------------
 
@@ -42,6 +43,8 @@ export function Sidebar() {
         <div className="relative min-h-0 flex-1">
           <Menu />
         </div>
+        {/* Rodapé: acesso secundário à pasta local do protótipo. */}
+        <PastaLocalButton />
       </div>
 
       {lgAndDown && isSidebarExpanded && (

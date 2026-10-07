@@ -1,12 +1,24 @@
 import axios from "@/utils/axios";
 
-import type { Fonte, ModoBusca } from "@/services/api/prompt";
+import type {
+  AgenteDaResposta,
+  ArquivoConversa,
+  Fonte,
+  MencaoAgente,
+  ModoBusca,
+} from "@/services/api/prompt";
 
 export type ConversaOrigem = "prompt" | "squad";
 
 export interface ConversaMessageMeta {
   fontes?: Fonte[];
   origem?: "vault" | "web";
+  /** Agente que produziu a resposta (conversas do Assistente). */
+  agente?: AgenteDaResposta | null;
+  /** Arquivos gerados nesta resposta. */
+  arquivos?: ArquivoConversa[];
+  /** Agentes @mencionados (mensagens do usuário). */
+  mencoes?: MencaoAgente[];
 }
 
 export interface ConversaMessage {
@@ -27,6 +39,13 @@ export interface ConversaListItem {
   title: string;
   preview: string;
   date: string;
+  /** Agentes que já responderam na conversa (ids). */
+  agenteIds?: string[];
+  /**
+   * Os mesmos agentes com o nome gravado nas mensagens, na ordem em que
+   * participaram — vale também para agentes personalizados já excluídos.
+   */
+  agentes?: AgenteDaResposta[];
 }
 
 export interface ConversaDetail {
@@ -82,6 +101,29 @@ export async function renameConversaApi(
     { titulo },
   );
   return data;
+}
+
+/** Troca ou remove (`null`) o agente ativo de uma conversa do Assistente. */
+export async function definirAgenteConversaApi(
+  id: string,
+  agenteId: string | null,
+): Promise<void> {
+  await axios.patch(`/conversas/${encodeURIComponent(id)}/agente`, {
+    agenteId,
+  });
+}
+
+/** Marca um arquivo da conversa como salvo no Repositório. */
+export async function marcarArquivoSalvoApi(p: {
+  conversaId: string;
+  mensagemId: string;
+  arquivoId: string;
+  repositorioDocumentoId: string;
+}): Promise<void> {
+  await axios.patch(
+    `/conversas/${encodeURIComponent(p.conversaId)}/mensagens/${encodeURIComponent(p.mensagemId)}/arquivos/${encodeURIComponent(p.arquivoId)}`,
+    { repositorioDocumentoId: p.repositorioDocumentoId },
+  );
 }
 
 export async function deleteConversaApi(id: string): Promise<void> {

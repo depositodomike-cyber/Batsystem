@@ -513,7 +513,7 @@ export const systemAreas: SystemArea[] = [
 ];
 
 /** Seções de Configurações de usuário (`?secao=`). */
-export type SecaoConfiguracoesUsuario = "orientador" | "conectores";
+export type SecaoConfiguracoesUsuario = "orientador" | "conectores" | "agentes";
 
 /** Caminho de Configurações de usuário, opcionalmente já numa seção. */
 export function userSettingsPath(

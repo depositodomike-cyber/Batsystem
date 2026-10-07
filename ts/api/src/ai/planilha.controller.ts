@@ -34,9 +34,11 @@ import { extrairTexto } from './analise/extrair-texto';
 import { designBrief, parseDesign, type DesignSystemDto } from './design/design';
 import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
+import { RepositorioOrgService } from '@/repositorio-org/repositorio-org.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
+import { OrganizacaoAtual } from '@/common/organizacao-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
 // ----------------------------------------------------------------------
@@ -192,6 +194,7 @@ export class PlanilhaController {
     private readonly ai: AiService,
     private readonly memorias: MemoriasService,
     private readonly vault: VaultService,
+    private readonly repositorioOrg: RepositorioOrgService,
   ) {}
 
   /**
@@ -213,6 +216,8 @@ export class PlanilhaController {
   private async carregarFontes(
     user: AuthenticatedUser,
     repositorioId: string | null,
+    /** Organização ativa — dona do Repositório da organização. */
+    organizacaoId: string | null,
     // Estrutural: `/plano`, `/conteudo` e `/gerar` montam o material da mesma
     // forma — o arquivo precisa ser construído a partir do que o plano viu.
     body: { referencia?: string },
@@ -244,13 +249,24 @@ export class PlanilhaController {
     let notas: FontesPlanilha['notas'] = [];
     if (consulta.trim()) {
       try {
-        const hits = await this.vault.search(
-          user.empresaId,
-          repositorioId,
-          consulta,
-          MAX_NOTAS,
-          { semFallback: true },
-        );
+        // O Repositório da organização entra junto, na frente — a busca dele
+        // já não tem fallback, então só volta documento que casou.
+        const [daOrganizacao, doVault] = await Promise.all([
+          this.repositorioOrg.search(
+            user.empresaId,
+            organizacaoId,
+            consulta,
+            MAX_NOTAS,
+          ),
+          this.vault.search(
+            user.empresaId,
+            repositorioId,
+            consulta,
+            MAX_NOTAS,
+            { semFallback: true },
+          ),
+        ]);
+        const hits = [...daOrganizacao, ...doVault].slice(0, MAX_NOTAS);
         notas = hits.map((h) => ({ path: h.path, titulo: h.titulo }));
         for (const h of hits) {
           blocos.push(
@@ -294,6 +310,7 @@ export class PlanilhaController {
   async plano(
     @CurrentUser() user: AuthenticatedUser,
     @RepositorioAtual() repositorioId: string | null,
+    @OrganizacaoAtual() organizacaoId: string | null,
     @Body() body: PlanoBody,
   ): Promise<{ plano: PlanoPlanilha; fontes: FontesPlanilha }> {
     const necessidade = (body.necessidade || '').trim();
@@ -306,6 +323,7 @@ export class PlanilhaController {
     const { referencia, fontes } = await this.carregarFontes(
       user,
       repositorioId,
+      organizacaoId,
       body,
       necessidade,
     );
@@ -397,6 +415,7 @@ export class PlanilhaController {
   async conteudo(
     @CurrentUser() user: AuthenticatedUser,
     @RepositorioAtual() repositorioId: string | null,
+    @OrganizacaoAtual() organizacaoId: string | null,
     @Body() body: ConteudoBody,
   ): Promise<{ conteudo: ConteudoPlanilha }> {
     const plano = body.plano;
@@ -407,6 +426,7 @@ export class PlanilhaController {
     const { referencia } = await this.carregarFontes(
       user,
       repositorioId,
+      organizacaoId,
       body,
       consultaDoPlano(plano),
     );
@@ -440,6 +460,7 @@ export class PlanilhaController {
   async gerar(
     @CurrentUser() user: AuthenticatedUser,
     @RepositorioAtual() repositorioId: string | null,
+    @OrganizacaoAtual() organizacaoId: string | null,
     @Body() body: GerarBody,
     @Res() res: Response,
   ): Promise<void> {
@@ -453,6 +474,7 @@ export class PlanilhaController {
       const { referencia } = await this.carregarFontes(
         user,
         repositorioId,
+        organizacaoId,
         body,
         consultaDoPlano(plano),
       );

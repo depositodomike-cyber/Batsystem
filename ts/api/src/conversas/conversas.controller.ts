@@ -8,7 +8,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import type { ConversaOrigem } from '@prisma/client';
 import { ConversasService } from './conversas.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -20,6 +26,21 @@ class PatchConversaDto {
   @MinLength(1)
   @MaxLength(80)
   titulo!: string;
+}
+
+/** `agenteId: null` remove o agente ativo. */
+class PatchAgenteDto {
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
+  @MaxLength(120)
+  agenteId!: string | null;
+}
+
+class MarcarArquivoSalvoDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  repositorioDocumentoId!: string;
 }
 
 class ListConversasQuery {
@@ -88,6 +109,40 @@ export class ConversasController {
     @Body() body: PatchConversaDto,
   ) {
     return this.conversas.rename(user.empresaId, user.id, id, body.titulo);
+  }
+
+  /** Troca ou remove o agente ATIVO da conversa (sem apagar mensagens). */
+  @Patch(':id/agente')
+  definirAgente(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: PatchAgenteDto,
+  ) {
+    return this.conversas.definirAgente(
+      user.empresaId,
+      user.id,
+      id,
+      body.agenteId ?? null,
+    );
+  }
+
+  /** Marca um arquivo gerado na conversa como salvo no Repositório. */
+  @Patch(':id/mensagens/:mensagemId/arquivos/:arquivoId')
+  marcarArquivoSalvo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('mensagemId') mensagemId: string,
+    @Param('arquivoId') arquivoId: string,
+    @Body() body: MarcarArquivoSalvoDto,
+  ) {
+    return this.conversas.marcarArquivoSalvo(
+      user.empresaId,
+      user.id,
+      id,
+      mensagemId,
+      arquivoId,
+      body.repositorioDocumentoId,
+    );
   }
 
   @Delete(':id')

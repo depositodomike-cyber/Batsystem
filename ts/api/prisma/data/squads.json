@@ -9,36 +9,12 @@
     "starterQuestions": [
       "Como comunicar uma mudança difícil?",
       "Como aumentar engajamento interno?",
-      "Como criar comunicados mais humanos?",
-      "Como comunicar crise internamente?",
-      "Como medir efetividade da comunicação interna?",
-      "Como engajar líderes na comunicação?",
-      "Como reduzir ruídos entre áreas?",
-      "Como comunicar metas e resultados?",
-      "Como criar uma narrativa interna forte?",
-      "Como dar feedback institucional?",
-      "Como comunicar demissões e reestruturações?",
-      "Como melhorar comunicação em times remotos?",
-      "Como criar rituais de comunicação?",
-      "Como comunicar a estratégia para toda a empresa?",
-      "Como transformar líderes em porta-vozes?"
+      "Como comunicar a estratégia para toda a empresa?"
     ],
     "starterActions": [
       "Escrever um comunicado de mudança organizacional pronto para enviar",
       "Criar um plano de campanha interna de 30 dias",
-      "Gerar um roteiro de comunicação de crise",
-      "Redigir um e-mail de engajamento da liderança",
-      "Montar um plano de comunicação para um novo projeto",
-      "Criar um plano de comunicação interna anual",
-      "Redigir um comunicado de resultados trimestrais",
-      "Montar um calendário de rituais de comunicação",
-      "Elaborar um guia de tom de voz interno",
-      "Gerar um roteiro de town hall (reunião geral)",
-      "Criar uma pesquisa de efetividade da comunicação",
-      "Escrever um FAQ interno sobre uma mudança",
-      "Montar um plano de comunicação para time remoto",
-      "Redigir um informativo (newsletter) interno",
-      "Elaborar um playbook de comunicação de lideranças"
+      "Gerar um roteiro de comunicação de crise"
     ],
     "agents": [
       {
@@ -97,37 +73,13 @@
     "order": 1,
     "starterQuestions": [
       "Como estruturar governança?",
-      "Como escalar a empresa com segurança?",
-      "Como reduzir riscos estratégicos?",
-      "Como preparar empresa para investimento?",
       "Como priorizar iniciativas estratégicas?",
-      "Como avaliar uma proposta de investimento?",
-      "Como estruturar comitês do conselho?",
-      "Como definir indicadores para o board?",
-      "Como conduzir reuniões de conselho eficazes?",
-      "Como avaliar performance da gestão?",
-      "Como planejar sucessão executiva?",
-      "Como equilibrar curto e longo prazo?",
-      "Como avaliar fusões e aquisições?",
-      "Como blindar a empresa juridicamente?",
-      "Como tomar decisões de alocação de capital?"
+      "Como preparar empresa para investimento?"
     ],
     "starterActions": [
       "Elaborar uma pauta de reunião de conselho",
       "Gerar uma matriz de riscos estratégicos",
-      "Montar um painel de indicadores executivos (KPIs)",
-      "Criar um plano de governança corporativa",
-      "Estruturar um roadmap estratégico de crescimento",
-      "Elaborar um plano de sucessão executiva",
-      "Criar um modelo de relatório para o conselho",
-      "Estruturar a agenda anual do conselho",
-      "Gerar uma análise de cenários estratégicos",
-      "Montar um framework de tomada de decisão",
-      "Elaborar uma política de alocação de capital",
-      "Criar um dashboard de governança e compliance",
-      "Estruturar um comitê de auditoria e riscos",
-      "Gerar um memorando de decisão estratégica",
-      "Montar um plano de relacionamento com investidores"
+      "Montar um painel de indicadores executivos (KPIs)"
     ],
     "agents": [
       {
@@ -186,37 +138,13 @@
     "order": 2,
     "starterQuestions": [
       "Como melhorar cultura organizacional?",
-      "Como desenvolver cultura de dono?",
-      "Como fortalecer liderança?",
-      "Como alinhar cultura e estratégia?",
-      "Como transformar cultura sem perder essência?",
-      "Como medir engajamento dos times?",
-      "Como criar senso de pertencimento?",
-      "Como integrar cultura em times remotos?",
-      "Como reconhecer e recompensar comportamentos?",
-      "Como lidar com resistência cultural?",
-      "Como manter cultura ao crescer rápido?",
-      "Como desenvolver cultura de feedback?",
-      "Como alinhar líderes aos valores?",
-      "Como criar rituais de cultura significativos?",
-      "Como diagnosticar problemas culturais?"
+      "Como diagnosticar problemas culturais?",
+      "Como medir engajamento dos times?"
     ],
     "starterActions": [
-      "Redigir o documento de valores e princípios culturais",
-      "Criar um plano de rituais culturais para o trimestre",
-      "Gerar uma pesquisa de clima e pertencimento",
-      "Montar um plano de transformação cultural",
-      "Elaborar um guia de comportamentos da liderança",
       "Diagnosticar a cultura atual da empresa",
-      "Criar um programa de reconhecimento",
-      "Montar um plano de integração cultural (onboarding)",
-      "Elaborar um código de conduta",
-      "Gerar um plano de embaixadores de cultura",
-      "Criar uma trilha de desenvolvimento de líderes",
-      "Estruturar rituais de feedback contínuo",
-      "Montar uma pesquisa de eNPS",
-      "Elaborar um manual de cultura da empresa",
-      "Gerar um plano de comunicação dos valores"
+      "Redigir o documento de valores e princípios culturais",
+      "Montar um plano de transformação cultural"
     ],
     "agents": [
       {
@@ -275,37 +203,13 @@
     "order": 3,
     "starterQuestions": [
       "Como criar dashboards eficientes?",
-      "Como estruturar BI?",
-      "Como usar IA na empresa?",
-      "Como automatizar relatórios?",
-      "Como usar analytics na tomada de decisão?",
-      "Como criar uma cultura data-driven?",
-      "Como garantir qualidade dos dados?",
       "Como definir métricas que importam?",
-      "Como prever resultados com dados?",
-      "Como integrar dados de várias fontes?",
-      "Como usar dados para reduzir custos?",
-      "Como criar alertas inteligentes?",
-      "Como democratizar acesso aos dados?",
-      "Como medir ROI de iniciativas?",
       "Como aplicar IA generativa no negócio?"
     ],
     "starterActions": [
       "Desenhar a estrutura de um dashboard executivo",
       "Definir as métricas e KPIs estratégicos do negócio",
-      "Criar um plano de implementação de BI",
-      "Gerar um modelo de relatório automatizado",
-      "Mapear as fontes de dados e integrações necessárias",
-      "Criar um plano de governança de dados",
-      "Montar um mapa de indicadores por área",
-      "Elaborar um modelo de previsão (forecast)",
-      "Gerar um plano de integração de dados (ETL)",
-      "Estruturar um dashboard de vendas em tempo real",
-      "Criar uma política de qualidade de dados",
-      "Montar um caso de uso de IA generativa",
-      "Elaborar um plano de cultura data-driven",
-      "Gerar um relatório executivo automatizado",
-      "Definir um catálogo de métricas do negócio"
+      "Criar um plano de implementação de BI"
     ],
     "agents": [
       {
@@ -363,38 +267,14 @@
     "description": "Quando houver decisões financeiras, valuation, planejamento financeiro ou crescimento sustentável.",
     "order": 4,
     "starterQuestions": [
-      "Como calcular valuation?",
-      "Como melhorar margem?",
       "Como melhorar fluxo de caixa?",
-      "Como estruturar planejamento financeiro?",
-      "Como definir preço de produto?",
-      "Como reduzir custos sem perder qualidade?",
-      "Como estruturar o capital de giro?",
-      "Como avaliar viabilidade de um investimento?",
-      "Como precificar para maximizar lucro?",
-      "Como gerenciar endividamento?",
-      "Como criar reservas estratégicas?",
-      "Como acompanhar saúde financeira?",
-      "Como preparar para uma rodada de captação?",
-      "Como reduzir inadimplência?",
-      "Como aumentar a rentabilidade?"
+      "Como melhorar margem?",
+      "Como definir preço de produto?"
     ],
     "starterActions": [
       "Montar uma projeção de fluxo de caixa",
-      "Calcular o valuation da empresa",
-      "Criar um plano de redução de custos",
       "Estruturar o orçamento anual",
-      "Gerar uma análise de viabilidade financeira",
-      "Estruturar um DRE gerencial",
-      "Montar um painel de indicadores financeiros",
-      "Criar um plano de precificação por margem",
-      "Elaborar uma análise de ponto de equilíbrio",
-      "Gerar um modelo de projeção de receita",
-      "Estruturar um plano de capital de giro",
-      "Criar uma política de crédito e cobrança",
-      "Montar um business case de investimento",
-      "Elaborar um plano de redução de inadimplência",
-      "Gerar uma análise de rentabilidade por produto"
+      "Calcular o valuation da empresa"
     ],
     "agents": [
       {
@@ -453,37 +333,13 @@
     "order": 5,
     "starterQuestions": [
       "Como melhorar performance?",
-      "Como desenvolver líderes?",
-      "Como criar PDI?",
-      "Como estruturar feedback?",
       "Como reduzir turnover?",
-      "Como dar feedbacks difíceis?",
-      "Como engajar times desmotivados?",
-      "Como avaliar potencial de liderança?",
-      "Como criar metas individuais?",
-      "Como desenvolver autonomia nos times?",
-      "Como conduzir 1:1s eficazes?",
-      "Como reconhecer alta performance?",
-      "Como lidar com baixa performance?",
-      "Como criar trilhas de aprendizagem?",
-      "Como medir desenvolvimento humano?"
+      "Como dar feedbacks difíceis?"
     ],
     "starterActions": [
       "Criar um Plano de Desenvolvimento Individual (PDI)",
       "Montar um modelo de avaliação de performance",
-      "Gerar um roteiro de feedback para um liderado",
-      "Elaborar um plano de desenvolvimento de líderes",
-      "Estruturar um programa de retenção de talentos",
-      "Montar um roteiro de 1:1 com liderados",
-      "Criar um modelo de OKRs individuais",
-      "Elaborar um plano de ação para baixa performance",
-      "Gerar uma matriz 9-box de talentos",
-      "Estruturar uma trilha de aprendizagem",
-      "Criar um programa de mentoria interna",
-      "Montar um modelo de feedback contínuo",
-      "Elaborar um plano de sucessão de líderes",
-      "Gerar uma pesquisa de engajamento",
-      "Definir competências e níveis de senioridade"
+      "Gerar um roteiro de feedback para um liderado"
     ],
     "agents": [
       {
@@ -543,36 +399,12 @@
     "starterQuestions": [
       "Como adequar empresa à LGPD?",
       "Como reduzir riscos jurídicos?",
-      "Como estruturar contratos?",
-      "Como evitar passivos trabalhistas?",
-      "Como estruturar compliance?",
-      "Como proteger a propriedade intelectual?",
-      "Como mitigar riscos em contratos?",
-      "Como estruturar termos de uso e privacidade?",
-      "Como agir em uma fiscalização?",
-      "Como reduzir exposição trabalhista?",
-      "Como estruturar sociedade e acordo de sócios?",
-      "Como lidar com litígios?",
-      "Como garantir compliance societário?",
-      "Como adequar contratos à LGPD?",
-      "Como avaliar riscos de um novo negócio?"
+      "Como estruturar contratos?"
     ],
     "starterActions": [
       "Gerar um checklist de adequação à LGPD",
-      "Elaborar uma minuta de contrato",
-      "Criar uma política interna de compliance",
-      "Montar uma matriz de riscos jurídicos",
       "Revisar um contrato e apontar riscos",
-      "Elaborar um acordo de sócios",
-      "Redigir uma política de privacidade",
-      "Criar um termo de uso para produto digital",
-      "Montar um checklist de compliance trabalhista",
-      "Gerar um modelo de NDA (confidencialidade)",
-      "Elaborar um contrato de prestação de serviços",
-      "Estruturar um programa de integridade",
-      "Revisar cláusulas de risco em um contrato",
-      "Criar um fluxo de aprovação jurídica",
-      "Montar uma matriz de obrigações regulatórias"
+      "Elaborar uma minuta de contrato"
     ],
     "agents": [
       {
@@ -630,38 +462,14 @@
     "description": "Quando houver necessidade de branding, posicionamento, aquisição de clientes ou crescimento digital.",
     "order": 7,
     "starterQuestions": [
-      "Como fortalecer marca?",
-      "Como gerar leads?",
       "Como melhorar posicionamento?",
-      "Como aumentar conversão?",
-      "Como reduzir CAC?",
-      "Como construir uma marca memorável?",
-      "Como definir o público-alvo ideal?",
-      "Como medir ROI de marketing?",
-      "Como criar uma proposta de valor única?",
-      "Como estruturar o funil de marketing?",
-      "Como aumentar o ticket médio?",
-      "Como fidelizar clientes?",
-      "Como escolher os canais certos?",
-      "Como criar campanhas que convertem?",
-      "Como diferenciar da concorrência?"
+      "Como gerar leads?",
+      "Como reduzir CAC?"
     ],
     "starterActions": [
       "Criar um plano de marketing trimestral",
       "Definir o posicionamento e a proposta de valor",
-      "Gerar uma campanha de geração de leads",
-      "Montar um funil de aquisição completo",
-      "Elaborar um calendário de conteúdo",
-      "Definir personas e ICP",
-      "Criar uma estratégia de branding",
-      "Montar um plano de mídia paga",
-      "Elaborar um calendário de campanhas anual",
-      "Gerar uma matriz de canais e mensagens",
-      "Criar uma landing page de alta conversão",
-      "Estruturar um programa de fidelização",
-      "Montar um plano de SEO e conteúdo",
-      "Elaborar uma análise competitiva",
-      "Definir KPIs e metas de marketing"
+      "Definir personas e ICP"
     ],
     "agents": [
       {
@@ -720,37 +528,13 @@
     "order": 8,
     "starterQuestions": [
       "Como melhorar processos internos?",
-      "Como aumentar eficiência operacional?",
-      "Como implementar Scrum?",
       "Como automatizar processos?",
-      "Como escalar operação?",
-      "Como reduzir retrabalho?",
-      "Como padronizar a operação?",
-      "Como medir produtividade dos times?",
-      "Como implementar melhoria contínua?",
-      "Como reduzir tempo de ciclo?",
-      "Como documentar conhecimento da empresa?",
-      "Como integrar áreas e processos?",
-      "Como priorizar projetos de melhoria?",
-      "Como implementar metodologias ágeis?",
-      "Como reduzir desperdícios operacionais?"
+      "Como reduzir retrabalho?"
     ],
     "starterActions": [
       "Mapear um processo (fluxograma) ponta a ponta",
-      "Criar um plano de melhoria contínua",
-      "Gerar um POP (procedimento operacional padrão)",
       "Identificar gargalos e desperdícios de um processo",
-      "Estruturar um plano de automação operacional",
-      "Mapear a cadeia de valor da empresa",
-      "Criar uma matriz de priorização de processos",
-      "Elaborar um plano de implementação de OKRs",
-      "Gerar um modelo de indicadores operacionais",
-      "Montar um plano de gestão à vista (Kanban)",
-      "Estruturar um programa de melhoria contínua",
-      "Criar um manual de processos da empresa",
-      "Elaborar um diagnóstico de gargalos",
-      "Montar um plano de transformação ágil",
-      "Definir SLAs entre áreas"
+      "Gerar um POP (procedimento operacional padrão)"
     ],
     "agents": [
       {
@@ -809,37 +593,13 @@
     "order": 9,
     "starterQuestions": [
       "Como priorizar roadmap?",
-      "Como melhorar UX?",
-      "Como validar funcionalidades?",
       "Como definir MVP?",
-      "Como reduzir churn de produto?",
-      "Como descobrir o que o cliente realmente quer?",
-      "Como priorizar com framework (RICE/ICE)?",
-      "Como medir sucesso de uma feature?",
-      "Como reduzir tempo de entrega?",
-      "Como definir métricas de produto?",
-      "Como conduzir entrevistas de discovery?",
-      "Como criar uma visão de produto?",
-      "Como reduzir dívida técnica de produto?",
-      "Como melhorar retenção e ativação?",
-      "Como alinhar produto e negócio?"
+      "Como descobrir o que o cliente realmente quer?"
     ],
     "starterActions": [
       "Montar um roadmap de produto priorizado",
       "Definir o escopo de um MVP",
-      "Criar um plano de discovery",
-      "Gerar critérios de priorização do backlog",
-      "Elaborar um plano de testes de usabilidade",
-      "Criar uma visão e estratégia de produto",
-      "Montar um framework de priorização (RICE)",
-      "Elaborar um roteiro de entrevistas de discovery",
-      "Gerar um PRD (documento de requisitos)",
-      "Definir métricas North Star do produto",
-      "Criar um mapa de jornada do usuário",
-      "Montar um plano de lançamento (go-to-market)",
-      "Elaborar critérios de aceite de uma feature",
-      "Gerar um plano de testes A/B",
-      "Estruturar um ciclo de feedback de usuários"
+      "Gerar um PRD (documento de requisitos)"
     ],
     "agents": [
       {
@@ -899,36 +659,12 @@
     "starterQuestions": [
       "Como crescer no LinkedIn?",
       "Como criar conteúdo relevante?",
-      "Como gerar autoridade?",
-      "Como criar calendário editorial?",
-      "Como aumentar alcance orgânico?",
-      "Como definir um nicho e posicionamento?",
-      "Como criar conteúdo que viraliza?",
-      "Como aumentar engajamento?",
-      "Como transformar seguidores em clientes?",
-      "Como manter consistência de postagem?",
-      "Como criar autoridade em um tema?",
-      "Como usar reels e vídeos curtos?",
-      "Como crescer no Instagram?",
-      "Como medir resultados nas redes?",
-      "Como criar uma identidade visual?"
+      "Como transformar seguidores em clientes?"
     ],
     "starterActions": [
       "Criar um calendário editorial mensal",
       "Gerar uma sequência de posts para LinkedIn",
-      "Elaborar um plano de marca pessoal",
-      "Montar uma estratégia de conteúdo por canal",
-      "Escrever ganchos e ideias de conteúdo viral",
-      "Definir o posicionamento e nicho de conteúdo",
-      "Criar uma linha editorial e pilares de conteúdo",
-      "Montar um plano de 30 dias de postagens",
-      "Gerar roteiros de reels e vídeos curtos",
-      "Elaborar uma estratégia de marca pessoal",
-      "Escrever 20 ideias de conteúdo viral",
-      "Criar um modelo de calendário editorial",
-      "Montar uma estratégia de stories e engajamento",
-      "Elaborar um plano de crescimento orgânico",
-      "Definir métricas e metas por rede social"
+      "Definir o posicionamento e nicho de conteúdo"
     ],
     "agents": [
       {
@@ -988,36 +724,12 @@
     "starterQuestions": [
       "Como contratar melhor?",
       "Como reduzir turnover?",
-      "Como usar people analytics?",
-      "Como criar plano de carreira?",
-      "Como melhorar onboarding?",
-      "Como atrair os melhores talentos?",
-      "Como reduzir tempo de contratação?",
-      "Como estruturar cargos e salários?",
-      "Como melhorar a experiência do colaborador?",
-      "Como reter talentos-chave?",
-      "Como avaliar fit cultural?",
-      "Como estruturar trilhas de carreira?",
-      "Como usar dados em RH?",
-      "Como melhorar o employer branding?",
-      "Como estruturar programas de treinamento?"
+      "Como melhorar onboarding?"
     ],
     "starterActions": [
       "Criar uma descrição de vaga (job description)",
       "Montar um roteiro de entrevista estruturada",
-      "Elaborar um plano de onboarding de 90 dias",
-      "Estruturar um plano de carreira e cargos",
-      "Gerar um painel de people analytics",
-      "Criar uma estratégia de employer branding",
-      "Montar um processo seletivo estruturado",
-      "Elaborar uma matriz de cargos e salários",
-      "Gerar um plano de treinamento e desenvolvimento",
-      "Estruturar trilhas de carreira por área",
-      "Criar um programa de retenção de talentos",
-      "Montar um painel de people analytics",
-      "Elaborar um plano de diversidade e inclusão",
-      "Gerar um modelo de avaliação de competências",
-      "Definir o processo de offboarding"
+      "Elaborar um plano de onboarding de 90 dias"
     ],
     "agents": [
       {
@@ -1076,37 +788,13 @@
     "order": 12,
     "starterQuestions": [
       "Como reduzir churn?",
-      "Como melhorar onboarding?",
-      "Como aumentar retenção?",
-      "Como aumentar expansão de contas?",
       "Como identificar clientes em risco?",
-      "Como aumentar o LTV dos clientes?",
-      "Como estruturar o time de CS?",
-      "Como prever cancelamentos?",
-      "Como criar uma jornada de sucesso?",
-      "Como aumentar adoção do produto?",
-      "Como transformar clientes em promotores?",
-      "Como segmentar a carteira de clientes?",
-      "Como conduzir QBRs (revisões trimestrais)?",
-      "Como gerar upsell e cross-sell?",
-      "Como medir satisfação do cliente?"
+      "Como gerar upsell e cross-sell?"
     ],
     "starterActions": [
       "Desenhar a jornada do cliente",
-      "Criar um playbook de onboarding de clientes",
       "Montar um modelo de health score",
-      "Gerar um plano de redução de churn",
-      "Elaborar uma estratégia de expansão de contas",
-      "Criar uma jornada de sucesso do cliente",
-      "Montar um modelo de health score",
-      "Elaborar playbooks de CS por estágio",
-      "Gerar um plano de redução de churn",
-      "Estruturar um programa de expansão de contas",
-      "Criar um modelo de QBR com clientes",
-      "Montar uma estratégia de NPS e CSAT",
-      "Elaborar um plano de ativação e adoção",
-      "Definir a segmentação da carteira (tiers)",
-      "Gerar um fluxo de recuperação de clientes em risco"
+      "Gerar um plano de redução de churn"
     ],
     "agents": [
       {
@@ -1165,37 +853,13 @@
     "order": 13,
     "starterQuestions": [
       "Como aumentar conversão?",
-      "Como melhorar funil?",
-      "Como vender consultivamente?",
-      "Como gerar leads qualificados?",
-      "Como aumentar previsibilidade de receita?",
       "Como qualificar leads com eficiência?",
-      "Como reduzir o ciclo de vendas?",
-      "Como aumentar a taxa de fechamento?",
-      "Como nutrir leads que não compraram?",
-      "Como integrar marketing e vendas?",
-      "Como criar urgência sem pressão?",
-      "Como estruturar o time comercial?",
-      "Como prever a receita do mês?",
-      "Como melhorar a taxa de show-up?",
-      "Como vender valor em vez de preço?"
+      "Como reduzir o ciclo de vendas?"
     ],
     "starterActions": [
       "Estruturar um funil de vendas inbound",
-      "Criar uma cadência de follow-up",
       "Gerar um script de qualificação (SPIN/BANT)",
-      "Montar um playbook de vendas consultivas",
-      "Elaborar um roteiro de quebra de objeções",
-      "Estruturar um funil de vendas inbound",
-      "Criar um script de qualificação (SPIN/BANT)",
-      "Montar uma cadência de follow-up",
-      "Elaborar um playbook de vendas consultivas",
-      "Gerar um roteiro de quebra de objeções",
-      "Criar um modelo de proposta comercial",
-      "Definir critérios de lead scoring",
-      "Montar um plano de previsibilidade de receita",
-      "Elaborar um SLA entre marketing e vendas",
-      "Estruturar um processo de fechamento"
+      "Elaborar um roteiro de quebra de objeções"
     ],
     "agents": [
       {
@@ -1254,37 +918,13 @@
     "order": 14,
     "starterQuestions": [
       "Como gerar pipeline?",
-      "Como prospectar melhor?",
-      "Como aumentar respostas?",
-      "Como estruturar cadência?",
-      "Como aumentar taxa de fechamento?",
       "Como definir o ICP ideal?",
-      "Como construir listas de prospecção?",
-      "Como aumentar a taxa de resposta?",
-      "Como estruturar uma cadência multicanal?",
-      "Como personalizar abordagens em escala?",
-      "Como passar pelo gatekeeper?",
-      "Como qualificar no primeiro contato?",
-      "Como conduzir uma cold call?",
-      "Como agendar mais reuniões?",
-      "Como escalar um time de pré-vendas (SDR)?"
+      "Como aumentar a taxa de resposta?"
     ],
     "starterActions": [
       "Criar uma cadência de prospecção outbound",
       "Escrever modelos de e-mail de prospecção (cold mail)",
-      "Definir o perfil de cliente ideal (ICP)",
-      "Montar um script de cold call",
-      "Elaborar um roteiro de negociação e fechamento",
-      "Definir o perfil de cliente ideal (ICP)",
-      "Criar uma cadência de prospecção multicanal",
-      "Escrever modelos de cold mail",
-      "Montar um script de cold call",
-      "Elaborar um roteiro de descoberta (discovery)",
-      "Gerar uma estratégia de social selling",
-      "Criar uma lista de critérios de qualificação",
-      "Montar um playbook de pré-vendas (SDR)",
-      "Elaborar um roteiro de negociação e fechamento",
-      "Definir metas e métricas de prospecção"
+      "Montar um script de cold call"
     ],
     "agents": [
       {

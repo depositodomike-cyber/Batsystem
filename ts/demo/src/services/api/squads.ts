@@ -1,4 +1,5 @@
 import axios from "@/utils/axios";
+import { agenteSistemaVisivel } from "@/app/data/agentesVisiveis";
 
 /**
  * Cliente do catálogo de squads (backend ts/api → tabelas Squad/SquadAgent/…).
@@ -47,7 +48,8 @@ export interface SquadCatalogItem {
 /** GET /squads → catálogo (leve, sem agentes/prompts). */
 export async function fetchSquadCatalogApi(): Promise<SquadCatalogItem[]> {
   const { data } = await axios.get<SquadCatalogItem[]>("/squads");
-  return data;
+  // Só os agentes liberados na interface (ver agentesVisiveis.ts).
+  return data.filter((s) => agenteSistemaVisivel(s.id));
 }
 
 /** GET /squads/:id → detalhe completo (agentes + perguntas). */

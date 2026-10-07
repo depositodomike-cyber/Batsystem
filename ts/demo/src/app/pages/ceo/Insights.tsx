@@ -3,8 +3,8 @@
 // o mesmo para todos os produtos). Lista única de insights gerados pela IA a
 // partir dos dados das áreas; quando um insight se refere a uma pessoa, o card
 // mostra o avatar e o nome dela. Pelo card: ver o detalhe, dar feedback e
-// conversar com o assistente (as ações mock de tarefa/1:1/elogio estão
-// ocultas — ver INSIGHT_ACOES_OCULTAS). Reescrito no design system do Tailux.
+// conversar com o assistente, além das ações mock de tarefa/reunião/chat/1:1/
+// elogio/upload (ver INSIGHT_ACOES_OCULTAS). Reescrito no design system do Tailux.
 
 // Import Dependencies
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -51,6 +51,7 @@ import { PageTitle } from "@/components/shared/PageTitle";
 import { Avatar, Badge, Button, Card, Spinner } from "@/components/ui";
 import { getCurrentProduct, userSettingsPath } from "@/app/navigation/ceoOs";
 import {
+  gerarInsightsDoRepositorioApi,
   listarInsightsApi,
   salvarFeedbackInsightApi,
 } from "@/services/api/insights";
@@ -64,6 +65,8 @@ import {
   FILTRO_OPCOES,
   INSIGHT_ACOES,
   INSIGHT_ACOES_OCULTAS,
+  INSIGHT_EXEMPLO_REUNIAO,
+  ehInsightDemo,
   INSIGHT_USUARIOS,
   MEETING_EMAIL_CONNECTOR,
   ORDENACAO_OPCOES,
@@ -106,6 +109,21 @@ const BADGE_COLOR: Record<
 
 // ----------------------------------------------------------------------
 
+/**
+ * "Atualizado agora", "Atualizado há 5 min", "Atualizado há 3 h",
+ * "Atualizado ontem", depois "Atualizado em 23 de set.". Mesmas faixas do
+ * `quandoFoi` de CriacoesLista.tsx/Notifications.tsx, com o verbo na frente.
+ */
+function atualizadoHa(d: Date, agora: number): string {
+  const min = Math.max(0, Math.floor((agora - d.getTime()) / 60000));
+  if (min < 1) return "Atualizado agora";
+  if (min < 60) return `Atualizado há ${min} min`;
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `Atualizado há ${horas} h`;
+  if (horas < 48) return "Atualizado ontem";
+  return `Atualizado em ${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`;
+}
+
 export default function Insights() {
   const { pathname } = useLocation();
   const product = getCurrentProduct(pathname);
@@ -118,7 +136,8 @@ export default function Insights() {
     setCarregando(true);
     setErro("");
     listarInsightsApi()
-      .then(setItens)
+      // O exemplo do protótipo (sugestão de reunião) entra sempre no topo.
+      .then((lista) => setItens([INSIGHT_EXEMPLO_REUNIAO, ...lista]))
       .catch(() => setErro("Não foi possível carregar os insights."))
       .finally(() => setCarregando(false));
   };
@@ -126,6 +145,58 @@ export default function Insights() {
   useEffect(() => {
     carregar();
   }, []);
+
+  // "Gerar insights": a IA analisa o conteúdo recente do Repositório agora,
+  // sem esperar um upload. Os novos entram no topo da lista, sem recarregar a
+  // tela inteira.
+  const [gerando, setGerando] = useState(false);
+
+  // "Atualizado há …" ao lado do botão: quando chegou o insight mais recente
+  // (o exemplo do protótipo não conta — não tem data real). O relógio anda a
+  // cada minuto para o texto não ficar parado em "agora".
+  const ultimaAtualizacao = useMemo(() => {
+    let maior = 0;
+    for (const i of itens) {
+      if (ehInsightDemo(i.id) || !i.criadoEm) continue;
+      const t = new Date(i.criadoEm).getTime();
+      if (!Number.isNaN(t) && t > maior) maior = t;
+    }
+    return maior ? new Date(maior) : null;
+  }, [itens]);
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setAgora(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const gerar = async () => {
+    if (gerando) return;
+    setGerando(true);
+    try {
+      const novos = await gerarInsightsDoRepositorioApi();
+      if (novos.length === 0) {
+        toast("Nenhum insight novo", {
+          description:
+            "A IA não encontrou sinais novos no conteúdo recente do Repositório.",
+        });
+        return;
+      }
+      setItens((atuais) => [...novos, ...atuais]);
+      toast.success(
+        novos.length === 1
+          ? "1 insight gerado"
+          : `${novos.length} insights gerados`,
+        { description: "A partir do conteúdo recente do Repositório." },
+      );
+    } catch (e) {
+      const msg =
+        e && typeof e === "object" && "message" in e
+          ? String((e as { message: unknown }).message)
+          : "Não foi possível gerar os insights.";
+      toast.error("Não foi possível gerar os insights", { description: msg });
+    } finally {
+      setGerando(false);
+    }
+  };
 
   // `?insight=<id>` vem do sino de notificações ("Ver insight"): abre o modal
   // daquele insight, com o card rolado até a vista e destacado. Fechar o
@@ -199,41 +270,73 @@ export default function Insights() {
     <Page title={`Insights · ${product.name}`}>
       <div className="transition-content w-full px-(--margin-x) py-5">
         <div className="mx-auto flex max-w-7xl flex-col gap-5">
-          <header className="flex flex-col gap-1">
-            <PageTitle
-              help={{
-                description: (
-                  <>
-                    <p>
-                      <strong>Insights</strong> são sinais identificados pela IA
-                      nos dados das suas áreas. Cada card destaca algo que
-                      merece atenção, com contexto e nível de relevância
-                      avaliados.
-                    </p>
-                    <p>
-                      Abra um insight para ver a análise completa e as
-                      evidências. Se quiser aprofundar, converse com o
-                      assistente sobre o sinal e possíveis próximos passos.
-                    </p>
-                    <p>
-                      Em{" "}
-                      <strong>
-                        Configurações de usuário › Orientador de insights
-                      </strong>
-                      , você pode indicar assuntos que a IA deve observar com
-                      mais atenção nas próximas análises.
-                    </p>
-                  </>
-                ),
-              }}
-            >
-              Insights
-            </PageTitle>
-            <p className="dark:text-dark-300 max-w-2xl text-sm text-gray-500">
-              Sinais identificados pela IA nos dados das suas áreas. Abra um
-              insight para entender o que foi observado e explorar as
-              evidências. Se quiser aprofundar, converse com o assistente.
-            </p>
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-1">
+              <PageTitle
+                help={{
+                  description: (
+                    <>
+                      <p>
+                        <strong>Insights</strong> são sinais identificados pela
+                        IA nos dados das suas áreas. Cada card destaca algo que
+                        merece atenção, com contexto e nível de relevância
+                        avaliados.
+                      </p>
+                      <p>
+                        Abra um insight para ver a análise completa e as
+                        evidências. Se quiser aprofundar, converse com o
+                        assistente sobre o sinal e possíveis próximos passos.
+                      </p>
+                      <p>
+                        Em{" "}
+                        <strong>
+                          Configurações de usuário › Orientador de insights
+                        </strong>
+                        , você pode indicar assuntos que a IA deve observar com
+                        mais atenção nas próximas análises.
+                      </p>
+                    </>
+                  ),
+                }}
+              >
+                Insights
+              </PageTitle>
+              <p className="dark:text-dark-300 max-w-2xl text-sm text-gray-500">
+                Sinais identificados pela IA nos dados das suas áreas. Abra um
+                insight para entender o que foi observado e explorar as
+                evidências. Se quiser aprofundar, converse com o assistente.
+              </p>
+            </div>
+
+            {/* Ação da página, no lugar de sempre (topo à direita, como o
+                "Sincronizar" do Repositório), com a última atualização ao
+                lado — texto secundário, data completa no tooltip. */}
+            <div className="flex shrink-0 items-center gap-3 self-start sm:self-auto">
+              {ultimaAtualizacao && !carregando && (
+                <span
+                  className="dark:text-dark-300 text-xs text-gray-500"
+                  title={`Último insight gerado em ${ultimaAtualizacao.toLocaleString(
+                    "pt-BR",
+                    { dateStyle: "long", timeStyle: "short" },
+                  )}`}
+                >
+                  {atualizadoHa(ultimaAtualizacao, agora)}
+                </span>
+              )}
+              <Button
+                color="primary"
+                onClick={() => void gerar()}
+                disabled={gerando || carregando}
+                className="h-8 gap-1.5 px-3 text-xs"
+              >
+                {gerando ? (
+                  <Spinner className="size-4" />
+                ) : (
+                  <SparklesIcon className="size-4" />
+                )}
+                {gerando ? "Gerando insights…" : "Gerar insights"}
+              </Button>
+            </div>
           </header>
 
           {carregando ? (

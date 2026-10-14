@@ -100,7 +100,12 @@ export class AiService {
    */
   async personaDoAgente(
     id: string,
-    dono?: { empresaId: string; usuarioId: string },
+    dono?: {
+      empresaId: string;
+      usuarioId: string;
+      /** Organização ativa: libera os agentes DELA além dos pessoais. */
+      organizacaoId?: string | null;
+    },
   ): Promise<{ id: string; titulo: string; texto: string } | null> {
     const squad = await this.prisma.squad.findFirst({
       where: { id, active: true },
@@ -114,35 +119,59 @@ export class AiService {
         where: {
           id,
           empresaId: dono.empresaId,
-          usuarioId: dono.usuarioId,
           excluidoEm: null,
+          // Pessoal do próprio usuário, ou da organização ativa.
+          OR: [
+            { usuarioId: dono.usuarioId, organizacaoId: null },
+            ...(dono.organizacaoId
+              ? [{ organizacaoId: dono.organizacaoId }]
+              : []),
+          ],
         },
       });
       if (!pessoal) return null;
+
+      // Versão da organização de um agente do sistema: mantém o repertório do
+      // original e soma o que a organização configurou por cima.
+      if (pessoal.sistemaId) {
+        const original = await this.prisma.squad.findFirst({
+          where: { id: pessoal.sistemaId, active: true },
+          include: {
+            agents: { where: { active: true }, orderBy: { order: 'asc' } },
+          },
+        });
+        if (original) {
+          const partes = [
+            `Você é o agente "${pessoal.nome}", configurado pela organização a partir de um agente pré-programado.`,
+            textoDoSquad(
+              pessoal.descricao || original.description,
+              original.agents,
+            ),
+            pessoal.instrucoes &&
+              `Instruções da organização para este agente (siga-as ao responder):\n${pessoal.instrucoes}`,
+          ].filter(Boolean);
+          return {
+            id: pessoal.id,
+            titulo: pessoal.nome,
+            texto: partes.join('\n\n'),
+          };
+        }
+      }
+
+      const autor = pessoal.organizacaoId ? 'da organização' : 'do usuário';
       const partes = [
-        `Você é o agente "${pessoal.nome}", um especialista configurado pelo próprio usuário.`,
+        `Você é o agente "${pessoal.nome}", um especialista configurado ${
+          pessoal.organizacaoId ? 'pela organização' : 'pelo próprio usuário'
+        }.`,
         pessoal.descricao && `Especialidade: ${pessoal.descricao}`,
         pessoal.instrucoes &&
-          `Instruções do usuário para este agente (siga-as ao responder):\n${pessoal.instrucoes}`,
+          `Instruções ${autor} para este agente (siga-as ao responder):\n${pessoal.instrucoes}`,
         'Responda a partir desta especialidade, de forma direta, e termine com os próximos passos práticos quando fizer sentido.',
       ].filter(Boolean);
       return { id: pessoal.id, titulo: pessoal.nome, texto: partes.join('\n\n') };
     }
 
-    const conselheiros = squad.agents
-      .map((a) => `- ${a.reference} (${a.position}): ${a.contribution}`)
-      .join('\n');
-    const texto = `Você responde como a inteligência consolidada deste squad: uma única voz que já integrou internamente o conhecimento dos conselheiros abaixo. Eles são seu repertório interno — o usuário NÃO quer ouvir a opinião de cada um separadamente.
-Quando utilizar este squad: ${squad.description}
-
-Repertório interno do squad (não enderece um por um):
-${conselheiros}
-
-Como responder:
-- Entregue UMA resposta única, direta e resumida — sem seções por conselheiro, sem "Fulano diria...", sem listar a contribuição de cada membro.
-- Sintetize os pontos em comum e resolva as divergências relevantes, em vez de enumerá-las.
-- Mencione o nome de um conselheiro apenas quando uma perspectiva específica for decisiva (no máximo um ou dois, de passagem).
-- Priorize a concisão: vá ao ponto e termine com os próximos passos práticos.`;
+    const texto = textoDoSquad(squad.description, squad.agents);
     return { id: squad.id, titulo: squad.title, texto };
   }
 
@@ -457,4 +486,33 @@ ${PLATFORM_FRAMING}${conexoes}`;
     }
     return result;
   }
+}
+
+/**
+ * Persona de um agente do sistema (squad): uma voz única que integra o
+ * repertório dos conselheiros. Usada pelo original e pela versão que uma
+ * organização editou.
+ */
+function textoDoSquad(
+  descricao: string,
+  conselheirosAtivos: {
+    reference: string;
+    position: string;
+    contribution: string;
+  }[],
+): string {
+  const conselheiros = conselheirosAtivos
+    .map((a) => `- ${a.reference} (${a.position}): ${a.contribution}`)
+    .join('\n');
+  return `Você responde como a inteligência consolidada deste squad: uma única voz que já integrou internamente o conhecimento dos conselheiros abaixo. Eles são seu repertório interno — o usuário NÃO quer ouvir a opinião de cada um separadamente.
+Quando utilizar este squad: ${descricao}
+
+Repertório interno do squad (não enderece um por um):
+${conselheiros}
+
+Como responder:
+- Entregue UMA resposta única, direta e resumida — sem seções por conselheiro, sem "Fulano diria...", sem listar a contribuição de cada membro.
+- Sintetize os pontos em comum e resolva as divergências relevantes, em vez de enumerá-las.
+- Mencione o nome de um conselheiro apenas quando uma perspectiva específica for decisiva (no máximo um ou dois, de passagem).
+- Priorize a concisão: vá ao ponto e termine com os próximos passos práticos.`;
 }

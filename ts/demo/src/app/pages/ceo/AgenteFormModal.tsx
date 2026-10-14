@@ -20,13 +20,17 @@ import { AgenteAvatar } from "@/components/shared/AgenteAvatar";
 import { ICONES_AGENTE } from "@/components/shared/iconesAgente";
 import {
   atualizarAgenteApi,
+  atualizarAgenteOrganizacaoApi,
   criarAgenteApi,
+  criarAgenteOrganizacaoApi,
+  editarAgenteSistemaOrganizacaoApi,
   mencaoDe,
   type AgentePessoal,
 } from "@/services/api/agentes";
 
 // ----------------------------------------------------------------------
-// Criar / editar agente personalizado. `agente` nulo é criação.
+// Criar / editar agente personalizado — do usuário ou, com
+// `escopo="organizacao"`, da organização ativa. `agente` nulo é criação.
 //
 // Mesmo casco do RoleFormModal (`as={Dialog}`, cabeçalho, ScrollShadow,
 // rodapé com erro + Cancelar/Salvar). Quem chama usa `key={agente?.id ?? "novo"}`
@@ -70,7 +74,9 @@ function SeletorDeIcone({
   onEscolher: (icone: string | null) => void;
 }) {
   const selecionado = ICONES_AGENTE.find((i) => i.chave === icone);
-  const rotuloAtual = selecionado?.rotulo ?? "Iniciais do nome";
+  // Fora do catálogo = o ícone original de um agente pré-programado.
+  const rotuloAtual =
+    selecionado?.rotulo ?? (icone ? "Ícone padrão" : "Iniciais do nome");
 
   return (
     <Popover className="relative">
@@ -158,10 +164,22 @@ function SeletorDeIcone({
 export function AgenteFormModal({
   open,
   agente,
+  escopo = "pessoal",
+  dono = null,
+  sistemaId,
   onClose,
   onSalvo,
 }: {
   open: boolean;
+  /** De quem é o agente: do usuário (padrão) ou da organização `dono`. */
+  escopo?: "pessoal" | "organizacao";
+  /** Organização dona — obrigatória no escopo da organização. */
+  dono?: string | null;
+  /**
+   * Editando um agente pré-programado (do sistema) na organização: salvar
+   * cria a versão própria dela, sem mudar o original das outras.
+   */
+  sistemaId?: string;
   /** Nulo = criar. Preenchido = editar. */
   agente: AgentePessoal | null;
   onClose: () => void;
@@ -206,7 +224,22 @@ export function AgenteFormModal({
         instrucoes: instrucoes.trim(),
         icone,
       };
-      if (editando) {
+      if (escopo === "organizacao") {
+        if (!dono) throw new Error("Nenhuma organização ativa.");
+        if (sistemaId) {
+          onSalvo(
+            await editarAgenteSistemaOrganizacaoApi(dono, sistemaId, dados),
+            false,
+          );
+        } else if (editando) {
+          onSalvo(
+            await atualizarAgenteOrganizacaoApi(dono, agente.id, dados),
+            false,
+          );
+        } else {
+          onSalvo(await criarAgenteOrganizacaoApi(dono, dados), true);
+        }
+      } else if (editando) {
         onSalvo(await atualizarAgenteApi(agente.id, dados), false);
       } else {
         onSalvo(await criarAgenteApi(dados), true);
@@ -254,9 +287,9 @@ export function AgenteFormModal({
             {editando ? "Editar agente" : "Criar agente"}
           </DialogTitle>
           <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
-            Crie um especialista para ajudar em tarefas específicas. Você pode
-            chamá-lo com uma @menção nas conversas com o Assistente. Este
-            agente é visível apenas para você.
+            {escopo === "organizacao"
+              ? "Crie um especialista para ajudar em tarefas específicas. Todos da organização podem chamá-lo com uma @menção nas conversas com o Assistente."
+              : "Crie um especialista para ajudar em tarefas específicas. Você pode chamá-lo com uma @menção nas conversas com o Assistente. Este agente é visível apenas para você."}
           </p>
         </div>
 

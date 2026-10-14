@@ -193,10 +193,12 @@ export class PromptController {
     const agenteIdIn = (body.agenteId || '').trim();
     const persona = agenteIdIn
       ? await this.ai
-          // Com o dono: agente personalizado só resolve se for DESTE usuário.
+          // Com o dono: agente personalizado só resolve se for DESTE usuário
+          // ou da organização ativa.
           .personaDoAgente(agenteIdIn, {
             empresaId: user.empresaId,
             usuarioId: user.id,
+            organizacaoId,
           })
           .catch((err: unknown) => {
             this.logger.warn(`Falha ao carregar o agente: ${String(err)}`);

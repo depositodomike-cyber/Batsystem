@@ -22,6 +22,7 @@ import {
   type SecaoId,
 } from "./configuracoes-secoes";
 import { RepositorioSection } from "./repositorio-org/RepositorioSection";
+import { AgentesOrganizacaoSection } from "./AgentesUsuarioSection";
 import { RepositorioArquivos } from "./repositorio-org/RepositorioArquivos";
 import { useDonoRepositorio } from "./repositorio-org/useDocumentosOrg";
 import {
@@ -136,7 +137,9 @@ export default function Configuracoes() {
                     organização, voz e o Repositório, a base de conhecimento
                     compartilhada da organização),{" "}
                     <strong>IA</strong> (as orientações que a IA segue nas
-                    respostas e a conexão dos provedores de IA da empresa),{" "}
+                    respostas, os agentes da organização chamados por
+                    @menção no Assistente e a conexão dos provedores de IA da
+                    empresa),{" "}
                     <strong>Estrutura</strong> (as pessoas da organização, as
                     áreas e cargos que ocupam e a hierarquia entre elas) e{" "}
                     <strong>Acesso</strong> (as roles, que dizem o que cada
@@ -173,6 +176,10 @@ export default function Configuracoes() {
             {active === "voz" && <VozSection />}
             {active === "ia" && <IaSection />}
             {active === "regras" && <RegrasSection />}
+            {active === "agentes" && (
+              // `key` pelo dono: trocar de organização recarrega a lista.
+              <AgentesOrganizacaoSection key={donoRepositorio ?? ""} />
+            )}
             {active === "memoria" &&
               (vista === "arquivos" ? (
                 // `key` pelo dono: trocar de organização remonta a listagem,

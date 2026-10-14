@@ -8,8 +8,11 @@ export interface AgenteMencionavel {
   titulo: string;
   /** Sem o "@". */
   mencao: string;
-  /** "sistema" = pré-programado (antigo squad); "pessoal" = criado pelo usuário. */
-  tipo: "sistema" | "pessoal";
+  /**
+   * "sistema" = pré-programado (antigo squad); "organizacao" = criado na
+   * organização ativa; "pessoal" = criado pelo usuário.
+   */
+  tipo: "sistema" | "organizacao" | "pessoal";
   /** Chave do ícone (sistema: `navigationIcons`; pessoal: "agente:…"). */
   icone: string | null;
   descricao: string;
@@ -18,9 +21,11 @@ export interface AgenteMencionavel {
 export interface AgentesContextValue {
   /** Agentes do sistema, na ordem do catálogo. */
   sistema: AgenteMencionavel[];
+  /** Agentes da organização ativa, por nome. */
+  organizacao: AgenteMencionavel[];
   /** Agentes do usuário, por nome. */
   meus: AgenteMencionavel[];
-  /** `sistema` + `meus` — a lista do autocomplete. */
+  /** `sistema` + `organizacao` + `meus` — a lista do autocomplete. */
   todos: AgenteMencionavel[];
   carregando: boolean;
   /** Recarrega depois de criar/editar/excluir (o autocomplete reflete na hora). */

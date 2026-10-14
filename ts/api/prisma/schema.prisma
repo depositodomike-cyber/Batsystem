@@ -1154,23 +1154,31 @@ model RepositorioOrgDocumento {
 
 /// Agente personalizado de um usuário.
 model AgenteUsuario {
-  id           String    @id @default(cuid())
-  empresaId    String
-  usuarioId    String
-  nome         String
+  id            String    @id @default(cuid())
+  empresaId     String
+  usuarioId     String
+  nome          String
   /// Identificador usado depois do "@" no Assistente (ex.: "RevisorDeUX").
-  mencao       String
-  descricao    String    @default("")
+  mencao        String
+  descricao     String    @default("")
   /// Instruções do agente — viram a persona no system prompt.
-  instrucoes   String    @default("")
+  instrucoes    String    @default("")
   /// Ícone escolhido para o avatar (chave do catálogo de ícones do cliente,
   /// ex.: "agente:lampada"). Nulo = avatar com as iniciais do nome.
-  icone        String?
-  criadoEm     DateTime  @default(now())
-  atualizadoEm DateTime  @updatedAt
-  excluidoEm   DateTime?
+  icone         String?
+  /// Escopo: nulo = agente PESSOAL de `usuarioId`; preenchido = agente da
+  /// ORGANIZAÇÃO (header X-Organizacao-Id), visível a todos dela, e
+  /// `usuarioId` é quem o criou.
+  organizacaoId String?
+  /// Agente do sistema (id do squad) que esta linha SUBSTITUI na organização
+  /// `organizacaoId`: viva = versão editada; excluída = oculto na organização.
+  sistemaId     String?
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+  excluidoEm    DateTime?
 
   @@index([empresaId, usuarioId])
+  @@index([empresaId, organizacaoId])
   @@map("agentes_usuario")
 }
 

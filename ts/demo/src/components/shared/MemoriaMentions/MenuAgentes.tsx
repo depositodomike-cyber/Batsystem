@@ -14,8 +14,10 @@ import type { CaretPos } from "./caret";
 
 const LARGURA = 300;
 
+// Os pré-programados são agentes da organização: o mesmo grupo.
 const GRUPO: Record<AgenteMencionavel["tipo"], string> = {
-  sistema: "Agentes do sistema",
+  sistema: "Agentes da organização",
+  organizacao: "Agentes da organização",
   pessoal: "Meus agentes",
 };
 
@@ -46,7 +48,8 @@ export function MenuAgentes({
 
   // Altura real limitada (max-h-64 + cabeçalhos/rodapé): decide o lado.
   const alturaEstimada = Math.min(itens.length + 2, 8) * 40 + 32;
-  const abaixo = pos.top + pos.alturaLinha + alturaEstimada < window.innerHeight;
+  const abaixo =
+    pos.top + pos.alturaLinha + alturaEstimada < window.innerHeight;
   const left = Math.max(8, Math.min(pos.left, window.innerWidth - LARGURA - 8));
   const estilo = abaixo
     ? { left, top: pos.top + pos.alturaLinha + 4 }
@@ -61,7 +64,7 @@ export function MenuAgentes({
       onMouseDown={(e) => e.preventDefault()}
     >
       {itens.length === 0 ? (
-        <p className="dark:text-dark-300 px-3 py-3 text-xs-plus text-gray-500">
+        <p className="dark:text-dark-300 text-xs-plus px-3 py-3 text-gray-500">
           {termo
             ? `Nenhum agente com “${termo}”.`
             : "Nenhum agente disponível."}
@@ -70,8 +73,8 @@ export function MenuAgentes({
         <div ref={listaRef} className="max-h-64 overflow-y-auto py-1">
           {itens.map((agente, i) => (
             <Fragment key={agente.id}>
-              {(i === 0 || itens[i - 1].tipo !== agente.tipo) && (
-                <p className="dark:text-dark-300 px-3 pt-2 pb-1 text-tiny font-semibold tracking-wide text-gray-400 uppercase">
+              {(i === 0 || GRUPO[itens[i - 1].tipo] !== GRUPO[agente.tipo]) && (
+                <p className="dark:text-dark-300 text-tiny px-3 pt-2 pb-1 font-semibold tracking-wide text-gray-400 uppercase">
                   {GRUPO[agente.tipo]}
                 </p>
               )}
@@ -91,10 +94,10 @@ export function MenuAgentes({
                 )}
               >
                 <AgenteAvatar titulo={agente.titulo} icone={agente.icone} />
-                <span className="dark:text-dark-100 min-w-0 flex-1 truncate text-xs-plus font-medium text-gray-700">
+                <span className="dark:text-dark-100 text-xs-plus min-w-0 flex-1 truncate font-medium text-gray-700">
                   {agente.titulo}
                 </span>
-                <span className="dark:text-dark-400 shrink-0 text-tiny text-gray-400">
+                <span className="dark:text-dark-400 text-tiny shrink-0 text-gray-400">
                   @{agente.mencao}
                 </span>
               </button>
@@ -103,7 +106,7 @@ export function MenuAgentes({
         </div>
       )}
 
-      <p className="dark:border-dark-500 dark:text-dark-400 border-t border-gray-100 px-3 py-1.5 text-tiny text-gray-400">
+      <p className="dark:border-dark-500 dark:text-dark-400 text-tiny border-t border-gray-100 px-3 py-1.5 text-gray-400">
         ↑↓ navegar · ↵ mencionar · esc sair
       </p>
     </div>,

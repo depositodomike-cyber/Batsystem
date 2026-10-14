@@ -1,9 +1,14 @@
-import axios from "@/utils/axios";
+import axios, { HEADER_ORGANIZACAO } from "@/utils/axios";
 import { agenteSistemaVisivel } from "@/app/data/agentesVisiveis";
 
 // Cliente dos agentes mencionáveis no Assistente (backend: /agentes).
 // "Sistema" = o catálogo pré-programado (antigos squads, só leitura);
-// "meus" = agentes personalizados do usuário (CRUD, só dele).
+// "meus" = agentes personalizados do usuário (CRUD, só dele);
+// "organizacao" = agentes da organização ativa (CRUD, todos dela veem).
+//
+// O dono (organização) vai no header X-Organizacao-Id explícito quando quem
+// chama o tem — mesmo motivo de services/api/repositorioOrg.ts: o valor do
+// interceptor só é gravado depois do primeiro render.
 
 export interface AgenteSistema {
   id: string;
@@ -27,9 +32,17 @@ export interface AgentePessoal {
   atualizadoEm: string;
 }
 
+/** Agente da organização: mesma forma do pessoal, outro dono. */
+export type AgenteOrganizacao = AgentePessoal;
+
 export interface AgentesDisponiveis {
   sistema: AgenteSistema[];
   meus: AgentePessoal[];
+  organizacao: AgenteOrganizacao[];
+}
+
+function comDono(dono: string | null | undefined) {
+  return dono ? { headers: { [HEADER_ORGANIZACAO]: dono } } : undefined;
 }
 
 export interface SalvarAgenteInput {
@@ -40,12 +53,18 @@ export interface SalvarAgenteInput {
   icone?: string | null;
 }
 
-export async function listarAgentesApi(): Promise<AgentesDisponiveis> {
-  const { data } = await axios.get<AgentesDisponiveis>("/agentes");
+export async function listarAgentesApi(
+  dono?: string | null,
+): Promise<AgentesDisponiveis> {
+  const { data } = await axios.get<AgentesDisponiveis>(
+    "/agentes",
+    comDono(dono),
+  );
   // Só os agentes do sistema liberados na interface (ver agentesVisiveis.ts).
   return {
     sistema: (data.sistema ?? []).filter((a) => agenteSistemaVisivel(a.id)),
     meus: data.meus ?? [],
+    organizacao: data.organizacao ?? [],
   };
 }
 
@@ -69,6 +88,71 @@ export async function atualizarAgenteApi(
 
 export async function excluirAgenteApi(id: string): Promise<void> {
   await axios.delete(`/agentes/${encodeURIComponent(id)}`);
+}
+
+// Agentes da organização ------------------------------------------------
+
+export async function criarAgenteOrganizacaoApi(
+  dono: string,
+  input: SalvarAgenteInput,
+): Promise<AgenteOrganizacao> {
+  const { data } = await axios.post<AgenteOrganizacao>(
+    "/agentes/organizacao",
+    input,
+    comDono(dono),
+  );
+  return data;
+}
+
+export async function atualizarAgenteOrganizacaoApi(
+  dono: string,
+  id: string,
+  input: SalvarAgenteInput,
+): Promise<AgenteOrganizacao> {
+  const { data } = await axios.patch<AgenteOrganizacao>(
+    `/agentes/organizacao/${encodeURIComponent(id)}`,
+    input,
+    comDono(dono),
+  );
+  return data;
+}
+
+/**
+ * Edita um agente do SISTEMA só na organização: o servidor cria a versão
+ * própria dela, que passa a vir em `organizacao` no lugar do original.
+ */
+export async function editarAgenteSistemaOrganizacaoApi(
+  dono: string,
+  sistemaId: string,
+  input: SalvarAgenteInput,
+): Promise<AgenteOrganizacao> {
+  const { data } = await axios.patch<AgenteOrganizacao>(
+    `/agentes/organizacao/sistema/${encodeURIComponent(sistemaId)}`,
+    input,
+    comDono(dono),
+  );
+  return data;
+}
+
+/** Tira um agente do SISTEMA da organização (as outras não são afetadas). */
+export async function excluirAgenteSistemaOrganizacaoApi(
+  dono: string,
+  sistemaId: string,
+): Promise<void> {
+  await axios.delete(
+    `/agentes/organizacao/sistema/${encodeURIComponent(sistemaId)}`,
+    comDono(dono),
+  );
+}
+
+export async function excluirAgenteOrganizacaoApi(
+  dono: string,
+  id: string,
+): Promise<void> {
+  await axios.delete(
+    `/agentes/organizacao/${encodeURIComponent(id)}`,
+    comDono(dono),
+  );
 }
 
 // ----------------------------------------------------------------------

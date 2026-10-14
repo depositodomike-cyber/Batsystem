@@ -1,5 +1,5 @@
 // Botão "@ Agentes" no topo do campo de envio: lista os agentes mencionáveis
-// (do sistema e do usuário) e, ao escolher um, insere "@Menção " no campo —
+// (do sistema, da organização e do usuário) e, ao escolher um, insere "@Menção " no campo —
 // o mesmo efeito de digitar "@" e escolher no autocomplete. Não há "agente
 // ativo": o agente participa da mensagem em que foi mencionado.
 //
@@ -39,9 +39,10 @@ const ITEM_CLASS =
 export function AgenteSelect({ disabled }: { disabled?: boolean }) {
   const navigate = useNavigate();
   const { inserirMencao, minimize } = useAssistente();
-  const { sistema, meus } = useAgentes();
+  const { sistema, organizacao, meus } = useAgentes();
 
-  if (sistema.length === 0 && meus.length === 0) return null;
+  if (sistema.length === 0 && organizacao.length === 0 && meus.length === 0)
+    return null;
 
   const item = (agente: AgenteMencionavel) => (
     <MenuItem key={agente.id}>
@@ -58,7 +59,7 @@ export function AgenteSelect({ disabled }: { disabled?: boolean }) {
         >
           <AgenteAvatar titulo={agente.titulo} icone={agente.icone} />
           <span className="min-w-0 flex-1 truncate">{agente.titulo}</span>
-          <span className="dark:text-dark-400 shrink-0 text-tiny text-gray-400">
+          <span className="dark:text-dark-400 text-tiny shrink-0 text-gray-400">
             @{agente.mencao}
           </span>
         </button>
@@ -94,7 +95,10 @@ export function AgenteSelect({ disabled }: { disabled?: boolean }) {
           anchor={{ to: "top start", gap: 6 }}
           className="dark:border-dark-500 dark:bg-dark-750 z-[120] max-h-80 w-64 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg shadow-gray-200/60 outline-hidden dark:shadow-none"
         >
-          {sistema.length > 0 && cabecalho("Agentes do sistema")}
+          {/* Pré-programados e criados pelos admins: um grupo só. */}
+          {(organizacao.length > 0 || sistema.length > 0) &&
+            cabecalho("Agentes da organização")}
+          {organizacao.map(item)}
           {sistema.map(item)}
           {meus.length > 0 && cabecalho("Meus agentes")}
           {meus.map(item)}
@@ -117,7 +121,9 @@ export function AgenteSelect({ disabled }: { disabled?: boolean }) {
                 )}
               >
                 <Cog6ToothIcon className="size-4 shrink-0 stroke-[1.5] opacity-80" />
-                <span className="min-w-0 flex-1 truncate">Gerenciar agentes</span>
+                <span className="min-w-0 flex-1 truncate">
+                  Gerenciar agentes
+                </span>
               </button>
             )}
           </MenuItem>

@@ -89,12 +89,14 @@ export function useAgenteMentions<T extends Campo = Campo>(
 
   const ligado = !!agentes && agentes.length > 0 && !desabilitado;
 
-  // Ordem do menu = ordem da navegação: sistema primeiro, depois os do usuário.
+  // Ordem do menu = ordem da navegação: sistema primeiro, depois os da
+  // organização e por fim os do usuário.
   const itens = useMemo(() => {
     if (!agentes || !gatilho) return [];
     const filtrados = filtrar(agentes, gatilho.query);
     return [
       ...filtrados.filter((a) => a.tipo === "sistema"),
+      ...filtrados.filter((a) => a.tipo === "organizacao"),
       ...filtrados.filter((a) => a.tipo === "pessoal"),
     ];
   }, [agentes, gatilho]);

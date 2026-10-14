@@ -7,6 +7,7 @@ import {
   CpuChipIcon,
   KeyIcon,
   ShareIcon,
+  SparklesIcon,
   SpeakerWaveIcon,
   SwatchIcon,
   UsersIcon,
@@ -99,12 +100,21 @@ export const SECOES = [
   // Regras fica AQUI, e não em Geral: são as orientações que a IA segue em toda
   // resposta, e a própria tela mede o custo delas em tokens de contexto. "IA &
   // API" é a plumbing de credenciais e prioridade de modelos — as duas metades
-  // da mesma pergunta, "como a IA se comporta".
+  // da mesma pergunta, "como a IA se comporta". Agentes são os especialistas
+  // da organização, chamados por @menção no Assistente — mesma tela (e mesmo
+  // ícone) de Configurações de usuário → Agentes, no nível da organização.
   {
     id: "regras",
     grupo: "ia",
     titulo: "Regras",
     icon: BookOpenIcon,
+    feature: null,
+  },
+  {
+    id: "agentes",
+    grupo: "ia",
+    titulo: "Agentes",
+    icon: SparklesIcon,
     feature: null,
   },
   {

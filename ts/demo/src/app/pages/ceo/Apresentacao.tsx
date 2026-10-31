@@ -32,6 +32,7 @@ import {
   Transition,
 } from "@headlessui/react";
 import { Accordion, Button, Checkbox, Spinner } from "@/components/ui";
+import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { ApresentacaoEtapa, type EtapaStatus } from "./ApresentacaoEtapa";
 import {
   ApresentacaoSlideCard,
@@ -1228,7 +1229,7 @@ export default function Apresentacao() {
                   className="grid place-items-center py-10"
                 >
                   <div className="flex flex-col items-center gap-3 text-center">
-                    <Spinner className="size-6" />
+                    <BrandLoadingSplash label={null} />
                     <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
                       {step === "planejando"
                         ? "Planejando a apresentação…"

@@ -19,7 +19,8 @@ import {
 import clsx from "clsx";
 
 // Local Imports
-import { Button, Spinner } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { WindowControls } from "@/app/contexts/ia-modals/WindowControls";
 import { MarkdownView } from "./MarkdownView";
 import { SugerirPosUploadModal } from "./SugerirPosUpload";
@@ -231,7 +232,7 @@ export function AudioModal({ isOpen, close, onMinimize }: Props) {
                   ) : loading ? (
                     <div className="grid place-items-center py-10">
                       <div className="flex flex-col items-center gap-3 text-center">
-                        <Spinner className="size-6" />
+                        <BrandLoadingSplash label={null} />
                         <p className="dark:text-dark-200 text-sm text-gray-600">
                           Transcrevendo e gerando o resumo…
                         </p>

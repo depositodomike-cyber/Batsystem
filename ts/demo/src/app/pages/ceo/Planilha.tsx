@@ -31,6 +31,7 @@ import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { Accordion, Button, Checkbox, Spinner } from "@/components/ui";
+import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { ApresentacaoEtapa, type EtapaStatus } from "./ApresentacaoEtapa";
 import { PlanilhaAbaCard } from "./PlanilhaAbaCard";
 import { ehDragDoModo } from "./ApresentacaoSlideCard";
@@ -1111,7 +1112,7 @@ export default function Planilha() {
                   className="grid place-items-center py-10"
                 >
                   <div className="flex flex-col items-center gap-3 text-center">
-                    <Spinner className="size-6" />
+                    <BrandLoadingSplash label={null} />
                     <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
                       {planejando
                         ? "Planejando sua planilha…"

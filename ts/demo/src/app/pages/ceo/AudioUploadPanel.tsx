@@ -10,7 +10,8 @@ import {
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
-import { Button, Spinner } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { MarkdownView } from "./MarkdownView";
 import { SugerirPosUploadModal } from "./SugerirPosUpload";
 import { transcreverAudioApi } from "@/services/api/audio";
@@ -202,7 +203,7 @@ export function AudioUploadPanel({
       ) : loading ? (
         <div className="grid place-items-center py-10">
           <div className="flex flex-col items-center gap-3 text-center">
-            <Spinner className="size-6" />
+            <BrandLoadingSplash label={null} />
             <p className="dark:text-dark-200 text-sm text-gray-600">
               Transcrevendo e gerando o resumo…
             </p>

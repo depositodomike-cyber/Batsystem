@@ -20,7 +20,8 @@ import {
 import { toast } from "sonner";
 
 // Local Imports
-import { Button, Spinner } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { MarkdownView } from "./MarkdownView";
 import { perguntarPromptApi } from "@/services/api/prompt";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
@@ -240,7 +241,7 @@ export function SugerirPosUploadModal({
                 {etapa === "gerando" && (
                   <div className="grid place-items-center py-10">
                     <div className="flex flex-col items-center gap-3 text-center">
-                      <Spinner className="size-6" />
+                      <BrandLoadingSplash label={null} />
                       <p className="dark:text-dark-200 text-sm text-gray-600">
                         Gerando{" "}
                         {kind ? META[kind].label.toLowerCase() : "sugestões"} a

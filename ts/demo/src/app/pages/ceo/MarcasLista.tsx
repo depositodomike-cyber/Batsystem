@@ -392,7 +392,8 @@ function MarcaMenu({
   );
 }
 
-function ItemAcao({
+/** Exportado para a tabela de Templates (mesma aba de Aparência). */
+export function ItemAcao({
   icon: Icon,
   onClick,
   destrutivo,
@@ -431,7 +432,7 @@ function ItemAcao({
 // TODO: `EstadoVazio` é o mesmo de EstruturaLista, AcessoRoles e MembrosLista —
 // quatro cópias. Extrair para @/components/shared numa passagem própria, para
 // que migrar os outros três não seja pré-requisito desta tela.
-function EstadoVazio({
+export function EstadoVazio({
   icon: Icon,
   titulo,
   hint,

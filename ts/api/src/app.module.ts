@@ -13,6 +13,7 @@ import { MembrosModule } from './membros/membros.module';
 import { AcessoModule } from './acesso/acesso.module';
 import { EstruturaModule } from './estrutura/estrutura.module';
 import { MarcasModule } from './marcas/marcas.module';
+import { TemplatesModule } from './templates/templates.module';
 import { ConversasModule } from './conversas/conversas.module';
 import { CriacoesModule } from './criacoes/criacoes.module';
 import { ConectoresModule } from './conectores/conectores.module';
@@ -37,6 +38,7 @@ import { HealthController } from './health.controller';
     AcessoModule,
     EstruturaModule,
     MarcasModule,
+    TemplatesModule,
     ConversasModule,
     CriacoesModule,
     ConectoresModule,

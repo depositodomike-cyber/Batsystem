@@ -1,5 +1,6 @@
 import axios from "@/utils/axios";
 import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
+import type { TemplateEstrutura } from "./templates";
 
 // Criar apresentação (IA) — planejar → gerar → consumir, contra o ts/api:
 //  1) POST /ai/apresentacao/plano    → o que cada slide vai FAZER (revisável)
@@ -19,10 +20,40 @@ export type TipoSlide =
   | "destaque"
   | "comparacao";
 
+/**
+ * Composição vinda de um template (espelha `VarianteLayout` do backend).
+ * Ausente = o desenho padrão do tipo.
+ */
+export type VarianteLayout =
+  | "painel-esquerda"
+  | "painel-direita"
+  | "cards"
+  | "declaracao"
+  | "centralizado";
+
+/**
+ * O template escolhido, como vai nas chamadas de IA: a CÓPIA da estrutura
+ * guardada na criação, para que editar ou excluir o template depois não mude
+ * o que esta apresentação planejou.
+ */
+export interface TemplateSelecionado {
+  id: string;
+  nome: string;
+  formato: "pptx" | "html";
+  versao: number;
+  estrutura: TemplateEstrutura;
+}
+
+/** Campos de template no corpo das chamadas de IA. */
+function camposTemplate(t?: TemplateSelecionado | null) {
+  return t ? { template: t.estrutura, templateNome: t.nome } : {};
+}
+
 /** Especificação semântica de um slide — o que ele faz, não o texto final. */
 export interface PlanoSlide {
   id: string;
   tipo: TipoSlide;
+  variante?: VarianteLayout;
   titulo: string;
   subtitulo?: string;
   objetivo?: string;
@@ -41,6 +72,7 @@ export interface Plano {
 export interface SlideItem {
   /** Ausente = "conteudo". */
   tipo?: TipoSlide;
+  variante?: VarianteLayout;
   titulo: string;
   subtitulo?: string;
   bullets?: string[];
@@ -92,6 +124,8 @@ export interface RoteiroReq {
   referencia?: string;
   /** Design system da marca ativa (AI Studio). */
   design?: DesignSystem;
+  /** Template de estrutura escolhido; ausente = a IA decide. */
+  template?: TemplateSelecionado | null;
 }
 
 /**
@@ -119,11 +153,12 @@ export async function gerarPlanoApi(req: RoteiroReq): Promise<{
   plano: Plano;
   fontesUsadas?: FontesUsadas;
 }> {
+  const { template, ...resto } = req;
   const { data } = await axios.post<{
     formato: Formato;
     plano: Plano;
     fontesUsadas?: FontesUsadas;
-  }>("/ai/apresentacao/plano", req);
+  }>("/ai/apresentacao/plano", { ...resto, ...camposTemplate(template) });
   return data;
 }
 
@@ -137,10 +172,12 @@ export async function ajustarSlideApi(req: {
   indice: number;
   instrucao: string;
   design?: DesignSystem;
+  template?: TemplateSelecionado | null;
 }): Promise<PlanoSlide> {
+  const { template, ...resto } = req;
   const { data } = await axios.post<{ slide: PlanoSlide }>(
     "/ai/apresentacao/ajustar",
-    req,
+    { ...resto, ...camposTemplate(template) },
   );
   return data.slide;
 }
@@ -153,10 +190,12 @@ export async function gerarSlidesApi(req: {
   objetivo?: string;
   tom?: string;
   design?: DesignSystem;
+  template?: TemplateSelecionado | null;
 }): Promise<Roteiro> {
+  const { template, ...resto } = req;
   const { data } = await axios.post<{ formato: Formato; roteiro: Roteiro }>(
     "/ai/apresentacao/slides",
-    req,
+    { ...resto, ...camposTemplate(template) },
   );
   return data.roteiro;
 }

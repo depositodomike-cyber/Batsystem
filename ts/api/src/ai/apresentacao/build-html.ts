@@ -40,8 +40,9 @@ function corpoDoSlide(s: SlideItem, i: number, total: number): string {
   const num = `<span class="num">${i + 1} / ${total}</span>`;
 
   if (s.tipo === 'secao') {
+    const centro = s.variante === 'centralizado' ? ' centro' : '';
     return (
-      `<section class="slide secao">` +
+      `<section class="slide secao${centro}">` +
       `<h2>${titulo}</h2>` +
       (s.subtitulo ? `<p class="sub">${esc(s.subtitulo)}</p>` : '') +
       num +
@@ -49,10 +50,16 @@ function corpoDoSlide(s: SlideItem, i: number, total: number): string {
     );
   }
 
+  // Composições vindas de um template (variante) — mesmos casos do
+  // build-pptx.ts. Combinação que não se aplica cai no desenho de sempre.
+  const variante = slideComVariante(s, titulo, num);
+  if (variante) return variante;
+  const emCards = s.variante === 'cards' ? ' cards' : '';
+
   let miolo: string;
   if (s.tipo === 'destaque' && s.destaques?.length) {
     miolo =
-      `<div class="destaques">` +
+      `<div class="destaques${emCards}">` +
       s.destaques
         .slice(0, 3)
         .map(
@@ -63,7 +70,7 @@ function corpoDoSlide(s: SlideItem, i: number, total: number): string {
       `</div>`;
   } else if (s.tipo === 'comparacao' && s.colunas?.length) {
     miolo =
-      `<div class="colunas">` +
+      `<div class="colunas${emCards}">` +
       s.colunas
         .slice(0, 2)
         .map(
@@ -88,6 +95,55 @@ function corpoDoSlide(s: SlideItem, i: number, total: number): string {
   );
 }
 
+/** Slides de conteúdo com variante de composição; null = desenho padrão. */
+function slideComVariante(s: SlideItem, titulo: string, num: string): string | null {
+  const tipo = s.tipo ?? 'conteudo';
+  if (tipo !== 'conteudo' || !s.variante) return null;
+  const bullets = (s.bullets ?? []).filter(Boolean);
+  const lista = (itens: string[]) =>
+    itens.length ? `<ul>${itens.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>` : '';
+
+  if (s.variante === 'painel-esquerda' || s.variante === 'painel-direita') {
+    const lado = s.variante === 'painel-esquerda' ? 'esq' : 'dir';
+    return (
+      `<section class="slide painel ${lado}">` +
+      `<div class="bloco">${s.subtitulo ? `<p>${esc(s.subtitulo)}</p>` : ''}</div>` +
+      `<div class="lado"><h2>${titulo}</h2>${lista(bullets)}</div>` +
+      num +
+      `</section>`
+    );
+  }
+  if (s.variante === 'declaracao' && s.subtitulo) {
+    const apoio = bullets.slice(0, 3);
+    return (
+      `<section class="slide declaracao">` +
+      `<div class="bar"></div>` +
+      `<p class="rotulo">${titulo}</p>` +
+      `<p class="frase">${esc(s.subtitulo)}</p>` +
+      (apoio.length
+        ? `<div class="apoio">${apoio.map((b) => `<p>${esc(b)}</p>`).join('')}</div>`
+        : '') +
+      num +
+      `</section>`
+    );
+  }
+  if (s.variante === 'cards' && bullets.length >= 2) {
+    const itens = bullets.slice(0, 6);
+    const cols = itens.length <= 3 ? itens.length : itens.length === 4 ? 2 : 3;
+    return (
+      `<section class="slide">` +
+      `<div class="bar"></div>` +
+      `<h2>${titulo}</h2>` +
+      `<div class="grade" style="grid-template-columns:repeat(${cols},minmax(0,1fr))">` +
+      itens.map((b) => `<div class="card"><p>${esc(b)}</p></div>`).join('') +
+      `</div>` +
+      num +
+      `</section>`
+    );
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------- slides-html
 export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | null): string {
   const slides = roteiro.slides ?? [];
@@ -109,7 +165,8 @@ export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | nul
   .slide{display:none;position:relative;width:min(92vw,1120px);aspect-ratio:16/9;background:var(--bg);
     border:1px solid rgba(255,255,255,.08);border-radius:var(--raio);padding:56px 64px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
   .slide.active{display:block}
-  .slide.capa{background:var(--card);display:grid;align-content:center}
+  .slide.capa{background:var(--card);align-content:center}
+  .slide.capa.active{display:grid}
   .slide.capa::after{content:"";position:absolute;left:0;right:0;bottom:0;height:10px;background:var(--destaque)}
   .slide .bar{position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--destaque)}
   h1{font-size:clamp(28px,5vw,52px);margin:0 0 12px;color:var(--titulo);font-family:var(--ft);font-weight:800}
@@ -117,7 +174,10 @@ export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | nul
   .sub{font-size:clamp(16px,2.2vw,24px);color:var(--destaque);margin:0}
   ul{margin:0;padding-left:26px;display:grid;gap:14px}
   li{font-size:clamp(15px,2vw,22px);line-height:1.45}
-  .slide.secao{background:var(--destaque);display:grid;align-content:center}
+  /* display:grid só no ativo: na regra base ele anulava o display:none dos
+     slides inativos, e capa/seção ficavam empilhadas na tela. */
+  .slide.secao{background:var(--destaque);align-content:center}
+  .slide.secao.active{display:grid}
   .slide.secao h2{color:var(--bg);font-size:clamp(28px,5vw,52px);margin:0 0 8px}
   .slide.secao .sub{color:var(--bg);opacity:.8}
   .destaques{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:32px;align-items:start}
@@ -128,6 +188,23 @@ export function buildSlidesHtml(roteiro: Roteiro, design?: DesignSystemDto | nul
   .col h3{margin:0 0 14px;font-family:var(--ft);font-size:clamp(16px,2.2vw,24px);color:var(--destaque)}
   .col ul{gap:10px}
   .col li{font-size:clamp(13px,1.7vw,19px)}
+  .slide.secao.centro{text-align:center;justify-items:center}
+  .slide.painel{padding:0;grid-template-columns:40% 1fr}
+  .slide.painel.active{display:grid}
+  .slide.painel.dir{grid-template-columns:1fr 40%}
+  .slide.painel.dir .bloco{order:2}
+  .painel .bloco{background:var(--destaque);display:grid;align-content:center;padding:48px}
+  .painel .bloco p{margin:0;color:var(--bg);font-family:var(--ft);font-weight:800;font-size:clamp(20px,3.2vw,36px);line-height:1.2}
+  .painel .lado{padding:56px 56px 56px 48px;display:grid;align-content:start;overflow:hidden}
+  .slide.declaracao.active{display:grid;align-content:center}
+  .declaracao .rotulo{margin:0 0 18px;color:var(--suave);font-family:var(--ft);font-weight:700;font-size:clamp(13px,1.6vw,18px);text-transform:uppercase;letter-spacing:.06em}
+  .declaracao .frase{margin:0;color:var(--titulo);font-family:var(--ft);font-weight:800;font-size:clamp(24px,4vw,46px);line-height:1.2;text-align:center}
+  .declaracao .apoio{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:24px;margin-top:36px;text-align:center}
+  .declaracao .apoio p{margin:0;font-size:clamp(12px,1.5vw,16px);color:var(--texto);line-height:1.4}
+  .grade{display:grid;gap:20px}
+  .card,.cards .kpi,.cards .col{background:var(--card);border:1px solid rgba(127,127,127,.25);border-radius:var(--raio);padding:22px 22px 20px;position:relative}
+  .card::before,.cards .kpi::before,.cards .col::before{content:"";display:block;width:36px;height:4px;background:var(--destaque);margin-bottom:14px;border-radius:2px}
+  .card p{margin:0;font-size:clamp(13px,1.7vw,19px);line-height:1.4}
   .num{position:absolute;right:28px;bottom:20px;color:var(--suave);font-size:13px}
   .nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;
     background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:6px 10px;z-index:5}

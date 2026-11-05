@@ -27,6 +27,14 @@ import {
 } from "./design-system";
 import { usePodeGerenciarMarcas } from "./design-system/usePodeGerenciarMarcas";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import type {
+  TemplateApresentacao,
+  TemplateCompleto,
+} from "@/services/api/templates";
+import { TemplatesLista } from "./templates/TemplatesLista";
+import { TemplateEditorInline } from "./templates/TemplateEditorInline";
+import { MENSAGENS_EXCLUIR_TEMPLATE } from "./templates/mensagens";
+import { mensagemDeErro, useTemplates } from "./templates/useTemplates";
 
 // ----------------------------------------------------------------------
 // Configurações › Geral › Aparência.
@@ -41,6 +49,10 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 //
 // Identidade visual é uma aba, e não um item novo na navegação lateral, porque
 // responde à mesma pergunta que Aparência: com que cara as coisas aparecem.
+//
+//   • Templates — apresentações de referência que orientam a ESTRUTURA do que
+//     o AI Studio gera. Complementa a identidade visual (que manda na
+//     aparência) e nunca a substitui.
 // ----------------------------------------------------------------------
 
 const ABAS = [
@@ -48,6 +60,7 @@ const ABAS = [
   // `id` segue "marca": é o valor que vai para a URL (?aba=marca) e o que o
   // resto da tela usa para se localizar. Só o rótulo mudou.
   { id: "marca", titulo: "Identidade visual" },
+  { id: "templates", titulo: "Templates" },
 ] as const;
 
 type AbaId = (typeof ABAS)[number]["id"];
@@ -80,13 +93,28 @@ export function AparenciaSection() {
   const [searchParams, setSearchParams] = useSearchParams();
   const aba = resolverAba(searchParams.get("aba"));
   const marcaEditando = searchParams.get("marca");
+  // ?template=<id>|novo abre o formulário; &ver=1, a visualização só-leitura.
+  const templateAberto = searchParams.get("template");
+  const templateSoVer = searchParams.get("ver") === "1";
 
   const irPara = (proxima: AbaId) => {
     const p = new URLSearchParams(searchParams);
     p.set("aba", proxima);
     p.delete("marca");
+    p.delete("template");
+    p.delete("ver");
     // Trocar de aba não merece uma entrada no histórico; abrir uma marca, sim.
     setSearchParams(p, { replace: true });
+  };
+
+  const abrirTemplate = (id: string | null, soVer = false) => {
+    const p = new URLSearchParams(searchParams);
+    p.set("aba", "templates");
+    if (id) p.set("template", id);
+    else p.delete("template");
+    if (id && soVer) p.set("ver", "1");
+    else p.delete("ver");
+    setSearchParams(p);
   };
 
   const abrirMarca = (id: string | null) => {
@@ -105,9 +133,9 @@ export function AparenciaSection() {
       // A descrição segue as abas: com a de preferências fora do ar, falar em
       // "ajustes do painel" descreveria algo que não está na tela.
       descricao={
-        visiveis.length > 1
-          ? "Ajustes visuais do painel e as identidades visuais da organização. As preferências de exibição ficam neste navegador; as identidades visuais valem para toda a organização."
-          : "Preferências visuais da organização."
+        visiveis.some((a) => a.id === "aparencia")
+          ? "Ajustes visuais do painel, as identidades visuais e os templates da organização. As preferências de exibição ficam neste navegador; identidades visuais e templates valem para toda a organização."
+          : "Identidades visuais e templates de apresentação da organização."
       }
     >
       {/* Uma aba só não é uma escolha: a barra some junto. */}
@@ -118,12 +146,18 @@ export function AparenciaSection() {
         id={`painel-aparencia-${aba}`}
         aria-labelledby={`aba-aparencia-${aba}`}
       >
-        {aba === "aparencia" ? (
-          <AbaPainel />
-        ) : (
+        {aba === "aparencia" && <AbaPainel />}
+        {aba === "marca" && (
           <AbaGuiaDeMarca
             marcaEditando={marcaEditando}
             onAbrirMarca={abrirMarca}
+          />
+        )}
+        {aba === "templates" && (
+          <AbaTemplates
+            aberto={templateAberto}
+            soVer={templateSoVer}
+            onAbrir={abrirTemplate}
           />
         )}
       </div>
@@ -429,6 +463,118 @@ function AbaGuiaDeMarca({
         state={estadoConfirm}
         messages={MENSAGENS_EXCLUIR_MARCA(aExcluir?.ds.marca.nome ?? "")}
       />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------- Templates
+
+function AbaTemplates({
+  aberto,
+  soVer,
+  onAbrir,
+}: {
+  aberto: string | null;
+  soVer: boolean;
+  onAbrir: (id: string | null, soVer?: boolean) => void;
+}) {
+  const { itens, carregando, erro, recarregar, aplicar, alternarAtivo, remover } =
+    useTemplates();
+  // Mesma regra de escrita das marcas: `configuracoes.gerenciar`.
+  const { pode, resolvendo } = usePodeGerenciarMarcas();
+  const podeGerenciar = pode && !resolvendo;
+
+  const [aExcluir, setAExcluir] = useState<TemplateApresentacao | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+  const [estadoConfirm, setEstadoConfirm] = useState<ModalState>("pending");
+
+  const confirmarExclusao = async () => {
+    if (!aExcluir) return;
+    setExcluindo(true);
+    try {
+      await remover(aExcluir.id);
+      setEstadoConfirm("success");
+      if (aberto === aExcluir.id) onAbrir(null);
+    } catch (e) {
+      setEstadoConfirm("error");
+      toast.error(mensagemDeErro(e, "Não foi possível excluir o template."));
+    } finally {
+      setExcluindo(false);
+    }
+  };
+
+  const alternar = async (t: TemplateApresentacao) => {
+    try {
+      await alternarAtivo(t);
+      toast.success(t.ativo ? "Template desativado" : "Template ativado");
+    } catch (e) {
+      toast.error(mensagemDeErro(e, "Não foi possível alterar o status."));
+    }
+  };
+
+  const confirmModal = (
+    <ConfirmModal
+      show={aExcluir != null}
+      onClose={() => {
+        setAExcluir(null);
+        setEstadoConfirm("pending");
+      }}
+      onOk={() => void confirmarExclusao()}
+      confirmLoading={excluindo}
+      state={estadoConfirm}
+      messages={MENSAGENS_EXCLUIR_TEMPLATE(aExcluir?.nome ?? "")}
+    />
+  );
+
+  if (aberto && !resolvendo) {
+    const novo = aberto === "novo";
+    // "novo" sem permissão (link copiado) volta para a lista.
+    if (!(novo && !podeGerenciar)) {
+      return (
+        <>
+          <TemplateEditorInline
+            key={aberto}
+            templateId={novo ? null : aberto}
+            somenteLeitura={soVer || !podeGerenciar}
+            onVoltar={() => onAbrir(null)}
+            onSalvo={(t: TemplateCompleto) => {
+              aplicar(t);
+              onAbrir(null);
+            }}
+            onExcluir={podeGerenciar ? setAExcluir : undefined}
+          />
+          {confirmModal}
+        </>
+      );
+    }
+  }
+
+  return (
+    <>
+      <div className="mb-5">
+        <h4 className="dark:text-dark-50 text-base font-semibold text-gray-800">
+          Templates
+        </h4>
+        <p className="dark:text-dark-300 mt-0.5 text-sm text-gray-500">
+          Gerencie apresentações de referência para orientar a estrutura e a
+          composição visual dos conteúdos gerados pela IA.
+        </p>
+      </div>
+
+      <TemplatesLista
+        templates={itens}
+        carregando={carregando || resolvendo}
+        erro={erro}
+        podeGerenciar={podeGerenciar}
+        onRecarregar={() => void recarregar()}
+        onCriar={() => onAbrir("novo")}
+        onVisualizar={(t) => onAbrir(t.id, true)}
+        onEditar={(t) => onAbrir(t.id)}
+        onAlternarAtivo={(t) => void alternar(t)}
+        onExcluir={setAExcluir}
+      />
+
+      {confirmModal}
     </>
   );
 }

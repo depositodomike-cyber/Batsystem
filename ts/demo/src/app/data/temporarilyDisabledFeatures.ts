@@ -115,22 +115,26 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // (`insightsPages` em ceoRoutes.tsx); nos demais o caminho cai no
     // Placeholder.
     insights: false,
-    // Notas, E-mail, Slack e Agenda REATIVADOS: os quatro itens do PAINEL
-    // voltam a ficar clicáveis na sidebar. O corte é um só, em
-    // `isNavItemTemporarilyDisabled` (mais abaixo), que resolve pelo último
-    // segmento do caminho — `notas`, `email`, `slack` e `agenda`. Com `true`
-    // eles voltam a ficar visíveis, opacos e sem clique.
+    // Do PAINEL, só Insights, E-mail e Slack ficam clicáveis. Notas e Agenda
+    // saem: visíveis, opacas e sem clique, o padrão da casa. O corte é um só,
+    // em `isNavItemTemporarilyDisabled` (mais abaixo), que resolve pelo último
+    // segmento do caminho — `notas`, `email`, `slack` e `agenda`.
     //
     // As ROTAS nunca estiveram bloqueadas: as flags de navegação decidem o
     // que é clicável, não o que existe. Para valer também em link direto, o
     // lugar é uma guarda em ceoRoutes.tsx.
     //
     // Notas, E-mail e Slack têm tela própria (`pageBySlug` em ceoRoutes.tsx);
-    // Agenda nunca teve e cai no `Placeholder` ("em construção").
-    notes: false,
+    // Agenda nunca teve e cai no `Placeholder` ("em construção") — mais uma
+    // razão para ela ser uma das que saem.
+    //
+    // O Repositório NÃO entra nesta conta: apesar de estar declarado dentro do
+    // grupo em ceoOs.ts, o `Group` o pula e ele é desenhado numa seção própria
+    // acima do PAINEL (ver ContextSection).
+    notes: true,
     email: false,
     slack: false,
-    calendar: false,
+    calendar: true,
     // Conectores REATIVADO. O ponto de entrada agora é Configurações de
     // usuário (menu de perfil) › Conectores; /:produto/conectores redireciona
     // para lá preservando a query (retorno do OAuth). Com a flag em true o

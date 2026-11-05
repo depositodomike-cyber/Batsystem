@@ -133,8 +133,9 @@ export default function Configuracoes() {
                   <p>
                     <strong>Configurações</strong> é onde a plataforma e a
                     organização se configuram, em quatro grupos:{" "}
-                    <strong>Geral</strong> (aparência, as identidades visuais da
-                    organização, voz e o Repositório, a base de conhecimento
+                    <strong>Geral</strong> (aparência, as identidades visuais e
+                    os templates de apresentação da organização, voz e o
+                    Repositório, a base de conhecimento
                     compartilhada da organização),{" "}
                     <strong>IA</strong> (as orientações que a IA segue nas
                     respostas, os agentes da organização chamados por
@@ -147,8 +148,8 @@ export default function Configuracoes() {
                   </p>
                   <p>
                     As preferências de aparência e voz ficam salvas só neste
-                    navegador. As identidades visuais e os documentos do
-                    Repositório são a exceção: pertencem à organização e valem
+                    navegador. As identidades visuais, os templates e os
+                    documentos do Repositório são a exceção: pertencem à organização e valem
                     para todo mundo nela.
                   </p>
                 </>

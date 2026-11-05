@@ -41,6 +41,7 @@ import { buildPptx } from './apresentacao/build-pptx';
 import { extrairTexto } from './analise/extrair-texto';
 import { buildBookHtml, buildSlidesHtml } from './apresentacao/build-html';
 import { designBrief, parseDesign, type DesignSystemDto } from './design/design';
+import { parseTemplateEstrutura, templateBrief } from '@/templates/processar';
 import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -71,6 +72,28 @@ interface RoteiroBody {
   referencia?: string;
   /** Design system da marca escolhida no AI Studio. */
   design?: DesignSystemDto;
+  /**
+   * Estrutura do template escolhido — a CÓPIA guardada na criação, para que
+   * editar ou excluir o template não mude o que uma criação já planejou.
+   */
+  template?: unknown;
+  templateNome?: string;
+}
+
+/**
+ * Bloco de prompt do template. Vazio sem template e no book-html (um guia de
+ * leitura não tem slides para compor). Vem DEPOIS do designBrief: a marca
+ * continua sendo a fonte de verdade da aparência.
+ */
+function blocoTemplate(
+  body: { template?: unknown; templateNome?: string },
+  formato?: Formato,
+): string {
+  if (formato === 'book-html') return '';
+  return templateBrief(
+    parseTemplateEstrutura(body.template),
+    typeof body.templateNome === 'string' ? body.templateNome : undefined,
+  );
 }
 
 /**
@@ -96,6 +119,8 @@ interface AjustarBody {
   indice?: number | string;
   instrucao?: string;
   design?: DesignSystemDto;
+  template?: unknown;
+  templateNome?: string;
 }
 
 interface SlidesBody {
@@ -106,6 +131,8 @@ interface SlidesBody {
   tom?: string;
   idioma?: string;
   design?: DesignSystemDto;
+  template?: unknown;
+  templateNome?: string;
 }
 
 /**
@@ -289,6 +316,7 @@ export class ApresentacaoController {
     const design = parseDesign(body.design);
     const userPrompt =
       designBrief(design) +
+      blocoTemplate(body, formato) +
       buildPlanoUser({
         tema,
         formato,
@@ -345,7 +373,9 @@ export class ApresentacaoController {
       user.empresaId,
       user.id,
       SYSTEM_AJUSTE,
-      designBrief(design) + buildAjusteUser(plano, indice, instrucao),
+      designBrief(design) +
+        blocoTemplate(body) +
+        buildAjusteUser(plano, indice, instrucao),
       2000,
       'apresentacao-ajuste',
     );
@@ -380,6 +410,7 @@ export class ApresentacaoController {
     const design = parseDesign(body.design);
     const userPrompt =
       designBrief(design) +
+      blocoTemplate(body, formato) +
       buildSlidesDoPlanoUser(plano, {
         formato,
         nSlides: plano.slides.length,

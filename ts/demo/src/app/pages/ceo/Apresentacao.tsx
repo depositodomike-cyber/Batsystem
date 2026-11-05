@@ -62,7 +62,11 @@ import {
   type FontesUsadas,
   type Plano,
   type Roteiro,
+  type TemplateSelecionado,
 } from "@/services/api/apresentacao";
+import type { CriacaoStatus } from "@/services/api/criacoes";
+import { useCriacao } from "./criacoes/useCriacao";
+import { TemplateSeletor } from "./templates/TemplateSeletor";
 import { takeIaPrefill } from "@/utils/iaPrefill";
 import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
 import { EnviarParaGrupoButton } from "./EnviarParaGrupo";
@@ -86,7 +90,15 @@ import {
 //
 // O usuário não edita o texto dos slides: ele dirige, a IA executa. Por isso
 // não há input de conteúdo no plano — só instrução em linguagem natural.
-// Sem persistência: sair da tela descarta o plano, como fechar o modal fazia.
+//
+// Persistida como uma Criação (`useCriacao`, mesmo mecanismo da Planilha):
+// configuração, marca, TEMPLATE (cópia da estrutura usada), plano e roteiro
+// vão para `Criacao.dados`, e `?criacao=<id>` retoma de onde parou. O arquivo
+// não é guardado — ele é remontado do roteiro quando a pessoa pede.
+//
+// Template × identidade visual: a marca manda na APARÊNCIA (cores, fontes,
+// logo); o template, na ESTRUTURA (sequência, layouts, composição). Os dois
+// vão em toda chamada de IA — plano, ajuste e escrita final.
 // ----------------------------------------------------------------------
 
 // Classe canônica de campo do app (Insights, Documentos, Conectores, FeedDetail).
@@ -230,6 +242,8 @@ interface ResumoParams {
   rotuloQtd: string;
   rotuloTom: string;
   marca: string;
+  /** Nome do template de estrutura, ou null quando a IA decide. */
+  template: string | null;
   fontesUsadas?: FontesUsadas;
   conexoes: string;
   /** Gerou sem passar pela revisão — muda a frase de fechamento. */
@@ -258,6 +272,7 @@ function resumoParaAssistente(p: ResumoParams): string {
     "**Configuração**",
     `- Formato: ${p.rotuloFormato} · Quantidade: ${p.rotuloQtd} · Tom: ${p.rotuloTom}`,
     `- Identidade visual: ${p.marca}`,
+    `- Template: ${p.template ?? "a IA decide"}`,
     "",
     "**Plano da apresentação**",
     ...p.titulos.map((t, i) => `${i + 1}. ${t.trim() || "(sem título)"}`),
@@ -346,8 +361,14 @@ export default function Apresentacao() {
   // Marca/design system ativo — vale para o roteiro e para o arquivo gerado
   // (cores, fontes e logo do .pptx / HTML saem daqui).
   const design = useActiveDesignSystem();
-  const { brands } = useDesignSystems();
+  const { brands, activeId, setActive, hidratado } = useDesignSystems();
   const temMarcas = brands.length > 0;
+  /**
+   * Template de ESTRUTURA escolhido (null = a IA decide). É a cópia da
+   * estrutura no momento da escolha — e é ela que vai para a IA e para o
+   * registro, então editar/excluir o template depois não muda esta criação.
+   */
+  const [template, setTemplate] = useState<TemplateSelecionado | null>(null);
   /**
    * Usar a identidade da organização (a marca ativa). Marcado por padrão — é o
    * comportamento que a tela sempre teve. Desmarcado, a apresentação sai no
@@ -378,12 +399,17 @@ export default function Apresentacao() {
 
   // Resultado (etapa 3) — o arquivo fica em memória até o usuário pedir.
   // Gerar não baixa: baixar é uma decisão dele.
+  // `blob` null = criação retomada: o arquivo é remontado do roteiro quando a
+  // pessoa pede (baixar, abrir, salvar no Repositório).
   const [resultado, setResultado] = useState<{
     roteiro: Roteiro;
-    blob: Blob;
+    blob: Blob | null;
     nome: string;
     quantos: number;
   } | null>(null);
+  const [remontando, setRemontando] = useState(false);
+
+  const criacao = useCriacao("apresentacao");
 
   // Prefill vindo de outra tela (ex.: ação de IA de uma nota). Uso único: quem
   // navega para cá grava em sessionStorage e esta leitura consome.
@@ -408,6 +434,8 @@ export default function Apresentacao() {
   const cardsRef = useRef<Partial<Record<EtapaId, HTMLDivElement | null>>>({});
 
   const isBook = formato === "book-html";
+  // Um guia de leitura não tem slides para compor: o template não se aplica.
+  const templateEnviado = isBook ? null : template;
   const unidade = isBook ? "capítulos" : "slides";
   const unidadeSingular = isBook ? "capítulo" : "slide";
   const busy = step === "planejando" || step === "gerando";
@@ -472,7 +500,13 @@ export default function Apresentacao() {
       : "Visual neutro";
 
   const resumos: Record<EtapaId, string> = {
-    sobre: [tema.trim() || "A definir", rotuloIdentidade].join(" · "),
+    sobre: [
+      tema.trim() || "A definir",
+      rotuloIdentidade,
+      template ? `Template: ${template.nome}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
     formato: [rotuloFormato, rotuloQtd, rotuloTom].join(" · "),
     geracao: pularRevisao
       ? "Gerar sem revisar o plano"
@@ -481,6 +515,157 @@ export default function Apresentacao() {
 
   const temTema = !!tema.trim();
   const faltaResolver = ETAPAS.some((e) => !resolvidas.has(e.id));
+
+  // ---- Persistência (mesmo contrato da Planilha) ----
+  // Status DERIVADO da tela: nunca discorda do que a pessoa vê.
+  const statusAtual: CriacaoStatus = erro
+    ? "erro"
+    : step === "pronta"
+      ? "concluido"
+      : step === "gerando"
+        ? "gerando"
+        : step === "plano"
+          ? "plano_pronto"
+          : step === "planejando"
+            ? "planejando"
+            : "rascunho";
+
+  const etapaAtual = plano
+    ? step === "pronta"
+      ? "resultado"
+      : "plano"
+    : "configuracao";
+
+  /** Abrir a tela e olhar não cria nada; escrever o pedido ou planejar, sim. */
+  const trabalhoRelevante = tema.trim().length >= 20 || plano !== null;
+
+  /**
+   * O documento que vai para o banco. A marca vai como referência (id/nome) e
+   * como cópia do design SEM logos (os data URLs passariam do limite de
+   * `dados`); o template vai como a cópia inteira da estrutura usada.
+   */
+  const montarDados = (sobre: {
+    plano?: Plano | null;
+    roteiro?: Roteiro | null;
+  } = {}): Record<string, unknown> => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { logos: _logos, ...designSemLogos } = designEnviado;
+    const p = sobre.plano !== undefined ? sobre.plano : plano;
+    const r = sobre.roteiro !== undefined ? sobre.roteiro : (resultado?.roteiro ?? null);
+    return {
+      tema,
+      formato,
+      nSlides,
+      tom,
+      pularRevisao,
+      usarIdentidadeDaOrg,
+      identidade,
+      marca: usandoMarca ? { id: activeId, nome: design.marca.nome } : null,
+      design: designSemLogos,
+      template,
+      plano: p,
+      roteiro: r,
+    };
+  };
+
+  const retrato = (
+    sobre: { plano?: Plano | null; roteiro?: Roteiro | null; status?: CriacaoStatus; etapa?: string } = {},
+  ) => {
+    const p = sobre.plano !== undefined ? sobre.plano : plano;
+    return {
+      relevante: trabalhoRelevante || !!p,
+      titulo: (p?.titulo || tema.trim().slice(0, 80)).trim(),
+      status: sobre.status ?? statusAtual,
+      etapa: sobre.etapa ?? etapaAtual,
+      dados: montarDados(sobre),
+    };
+  };
+
+  // Autosave com debounce; `retrato()` é lido na hora da gravação.
+  const sincronizar = criacao.sincronizar;
+  useEffect(() => {
+    if (criacao.carregando) return;
+    sincronizar(retrato());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    sincronizar,
+    criacao.carregando,
+    tema,
+    formato,
+    nSlides,
+    tom,
+    pularRevisao,
+    usarIdentidadeDaOrg,
+    identidade,
+    activeId,
+    template,
+    plano,
+    resultado,
+    statusAtual,
+    etapaAtual,
+  ]);
+
+  // ---- Retomar ----
+  // Restaura uma vez, quando a criação chega do servidor, e devolve a pessoa
+  // à etapa certa sem gerar nada de novo.
+  const marcaARestaurar = useRef<string | null>(null);
+  const carregada = criacao.carregada;
+  useEffect(() => {
+    if (!carregada) return;
+    const d = (carregada.dados ?? {}) as Record<string, unknown>;
+    const texto = (v: unknown, padrao = "") => (typeof v === "string" ? v : padrao);
+
+    setTema(texto(d.tema));
+    if (FORMATOS.some((f) => f.id === d.formato)) setFormato(d.formato as Formato);
+    if (typeof d.nSlides === "number") setNSlides(d.nSlides);
+    setTom(texto(d.tom, "executivo"));
+    setPularRevisao(Boolean(d.pularRevisao));
+    if (typeof d.usarIdentidadeDaOrg === "boolean") setUsarIdentidadeDaOrg(d.usarIdentidadeDaOrg);
+    setIdentidade((d.identidade ?? null) as typeof identidade);
+    setTemplate((d.template ?? null) as TemplateSelecionado | null);
+    const marca = d.marca as { id?: string } | null;
+    marcaARestaurar.current = marca?.id ?? null;
+
+    const planoSalvo = (d.plano ?? null) as Plano | null;
+    const roteiroSalvo = (d.roteiro ?? null) as Roteiro | null;
+    setPlano(planoSalvo);
+    if (planoSalvo) setResolvidas(new Set(ETAPAS.map((e) => e.id)));
+
+    if (carregada.status === "concluido" && roteiroSalvo) {
+      const fmt = (d.formato as Formato) ?? "pptx";
+      setResultado({
+        roteiro: roteiroSalvo,
+        blob: null,
+        nome:
+          (roteiroSalvo.titulo || "apresentacao")
+            .replace(/[^\p{L}\p{N}\-_ ]/gu, "")
+            .slice(0, 60) || "apresentacao",
+        quantos:
+          (fmt === "book-html" ? roteiroSalvo.capitulos : roteiroSalvo.slides)
+            ?.length ?? 0,
+      });
+      setStep("pronta");
+    } else if (planoSalvo) {
+      // "gerando" interrompido volta à revisão: o plano sobrevive, a geração não.
+      setStep("plano");
+    } else {
+      setStep("form");
+      setEtapaAtiva("sobre");
+    }
+  }, [carregada]);
+
+  // A marca usada volta a ser a selecionada quando ainda existe. A escolha de
+  // marca é por navegador, então só dá para restaurá-la depois da hidratação.
+  useEffect(() => {
+    const id = marcaARestaurar.current;
+    if (!id || !hidratado) return;
+    marcaARestaurar.current = null;
+    if (brands.some((b) => b.id === id) && id !== activeId) setActive(id);
+  }, [hidratado, brands, activeId, setActive]);
+
+  useEffect(() => {
+    if (criacao.erroAoCarregar) toast.error(criacao.erroAoCarregar);
+  }, [criacao.erroAoCarregar]);
 
   /** "Decidir por mim"/"Deixar o restante com a IA": não inventa valores —
       devolve os campos ao estado vazio, que o backend já trata como decisão da
@@ -555,6 +740,8 @@ export default function Apresentacao() {
   };
 
   const resetTudo = () => {
+    // A criação concluída fica como está; o que vier agora é um registro novo.
+    criacao.reiniciar();
     setStep("form");
     setErro("");
     setErroTema("");
@@ -595,10 +782,19 @@ export default function Apresentacao() {
         // mensagem do assistente lista.
         fontes: ["memoria"],
         design: designEnviado,
+        // Estrutura de referência. "Refazer" passa por aqui de novo e leva a
+        // MESMA seleção — ela só muda se a pessoa trocar no wizard.
+        template: templateEnviado,
       });
       setPlano(novo);
       setErrosAjuste({});
       setResultado(null);
+      // Marco: o plano vale por si, com ou sem arquivo depois.
+      if (!direto) {
+        void criacao.gravarAgora(
+          retrato({ plano: novo, roteiro: null, status: "plano_pronto", etapa: "plano" }),
+        );
+      }
 
       // No caminho direto o aviso sai DEPOIS do arquivo: anunciar "plano
       // pronto" enquanto a geração corre descreveria um estado que a pessoa
@@ -620,6 +816,7 @@ export default function Apresentacao() {
           rotuloQtd,
           rotuloTom,
           marca: rotuloIdentidade,
+          template: template?.nome ?? null,
           fontesUsadas,
           conexoes: novo.conexoes || "",
           direto: gerou,
@@ -651,6 +848,7 @@ export default function Apresentacao() {
         indice,
         instrucao,
         design: designEnviado,
+        template: templateEnviado,
       });
       setPlano((p) =>
         p
@@ -701,6 +899,7 @@ export default function Apresentacao() {
         formato,
         tom,
         design: designEnviado,
+        template: templateEnviado,
       });
       const nome =
         (roteiro.titulo || "apresentacao")
@@ -719,6 +918,10 @@ export default function Apresentacao() {
         quantos: (isBook ? roteiro.capitulos : roteiro.slides)?.length ?? 0,
       });
       setStep("pronta");
+      // Marco: quem fecha a aba agora espera "Concluído" em Minhas criações.
+      void criacao.gravarAgora(
+        retrato({ plano: p, roteiro, status: "concluido", etapa: "resultado" }),
+      );
       return true;
     } catch (err) {
       // O plano e os ajustes continuam de pé: dá para tentar de novo sem
@@ -736,10 +939,39 @@ export default function Apresentacao() {
     void executarPlano(plano);
   };
 
-  const baixarArquivo = () => {
+  /**
+   * O arquivo da apresentação. Numa criação retomada ele não está em memória:
+   * é remontado do roteiro salvo pelo renderizador determinístico — sem IA,
+   * mesmo conteúdo, mesmas variantes de layout.
+   */
+  const obterBlob = async (): Promise<Blob | null> => {
+    if (!resultado) return null;
+    if (resultado.blob) return resultado.blob;
+    setRemontando(true);
+    try {
+      const blob =
+        formato === "pptx"
+          ? await gerarPptxApi(resultado.roteiro, designEnviado)
+          : new Blob(
+              [await gerarHtmlApi(formato, resultado.roteiro, designEnviado)],
+              { type: "text/html" },
+            );
+      setResultado((r) => (r ? { ...r, blob } : r));
+      return blob;
+    } catch (err) {
+      toast.error(errMessage(err));
+      return null;
+    } finally {
+      setRemontando(false);
+    }
+  };
+
+  const baixarArquivo = async () => {
     if (!resultado) return;
+    const blob = await obterBlob();
+    if (!blob) return;
     const ext = formato === "pptx" ? "pptx" : "html";
-    const url = URL.createObjectURL(resultado.blob);
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `${resultado.nome}.${ext}`;
@@ -748,9 +980,11 @@ export default function Apresentacao() {
     toast("Download iniciado", { description: `${resultado.nome}.${ext}` });
   };
 
-  const abrirNoNavegador = () => {
+  const abrirNoNavegador = async () => {
     if (!resultado || formato === "pptx") return;
-    const url = URL.createObjectURL(resultado.blob);
+    const blob = await obterBlob();
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
     window.open(url, "_blank", "noopener,noreferrer");
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
@@ -760,7 +994,8 @@ export default function Apresentacao() {
   // já gerado — o mesmo que o usuário baixa, sem uma segunda geração.
   const prepararMemoria = async () => {
     if (!resultado) return { conteudo: "" };
-    const { roteiro, blob } = resultado;
+    const { roteiro } = resultado;
+    const blob = await obterBlob();
     const corpo = isBook
       ? (roteiro.capitulos ?? [])
           .map(
@@ -788,12 +1023,14 @@ export default function Apresentacao() {
         cabecalho +
         corpo +
         (roteiro.conexoes?.trim() ? `\n\n${roteiro.conexoes.trim()}\n` : ""),
-      anexos: [
-        {
-          nome: formato === "pptx" ? "deck.pptx" : "deck.html",
-          dados: blob,
-        },
-      ],
+      anexos: blob
+        ? [
+            {
+              nome: formato === "pptx" ? "deck.pptx" : "deck.html",
+              dados: blob,
+            },
+          ]
+        : [],
     };
   };
 
@@ -1018,6 +1255,19 @@ export default function Apresentacao() {
                         </div>
                       )}
                     </div>
+
+                    {/* Template de ESTRUTURA, logo abaixo da identidade: os
+                        dois se combinam — a marca dá a aparência, o template
+                        a composição. Opcional; o padrão é "A IA decide". */}
+                    {!isBook && (
+                      <div className="dark:border-dark-600 mt-4 border-t border-gray-200 pt-4">
+                        <TemplateSeletor
+                          value={template}
+                          onChange={setTemplate}
+                          classeSelect={CAMPO_SELECT}
+                        />
+                      </div>
+                    )}
 
                     <AcoesEtapa
                       onContinuar={() => {
@@ -1264,6 +1514,7 @@ export default function Apresentacao() {
                     <FaixaIdentidade
                       design={designEnviado}
                       rotulo={rotuloIdentidade}
+                      template={isBook ? null : (template?.nome ?? null)}
                     />
 
                     <span className="dark:text-dark-300 text-tiny-plus font-medium tracking-wider text-gray-500 uppercase">
@@ -1382,7 +1633,8 @@ export default function Apresentacao() {
                     {formato !== "pptx" && (
                       <Button
                         variant="outlined"
-                        onClick={abrirNoNavegador}
+                        onClick={() => void abrirNoNavegador()}
+                        disabled={remontando}
                         className="h-10 gap-2 px-5"
                       >
                         <ArrowTopRightOnSquareIcon className="size-5" />
@@ -1391,7 +1643,8 @@ export default function Apresentacao() {
                     )}
                     <Button
                       color="primary"
-                      onClick={baixarArquivo}
+                      onClick={() => void baixarArquivo()}
+                      disabled={remontando}
                       className="h-10 gap-2 px-5"
                     >
                       <ArrowDownTrayIcon className="size-5" />
@@ -1420,9 +1673,12 @@ export default function Apresentacao() {
 function FaixaIdentidade({
   design,
   rotulo,
+  template,
 }: {
   design: DesignSystem;
   rotulo: string;
+  /** Template de estrutura em uso; null = a IA decide. */
+  template: string | null;
 }) {
   return (
     <div className="dark:border-dark-600 dark:bg-dark-800/40 rounded-xl border border-gray-200 p-3">
@@ -1447,6 +1703,16 @@ function FaixaIdentidade({
             />
           ))}
         </span>
+        {template && (
+          <>
+            <span className="dark:text-dark-300 text-tiny-plus ms-2 font-medium tracking-wider text-gray-500 uppercase">
+              Template
+            </span>
+            <span className="dark:text-dark-100 text-sm font-medium text-gray-800">
+              {template}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

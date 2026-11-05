@@ -60,6 +60,13 @@ export interface UsoCriacao {
   sincronizar: (estado: EstadoCriacao) => void;
   /** Grava agora, sem esperar o debounce. Para marcos. */
   gravarAgora: (estado: EstadoCriacao) => Promise<void>;
+  /**
+   * Desliga a tela da criação atual SEM apagá-la: a próxima gravação
+   * relevante cria um registro novo. Para "Nova apresentação" na mesma tela —
+   * sem isto, recomeçar sobrescreveria a criação anterior. O que estava
+   * pendente é gravado antes, na criação antiga.
+   */
+  reiniciar: () => void;
 }
 
 export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
@@ -228,6 +235,29 @@ export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
     );
   }, [id, searchParams, setSearchParams]);
 
+  const reiniciar = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const pendente = pendenteRef.current;
+    pendenteRef.current = null;
+    // Sem escrita no ar, `gravar` monta a requisição de forma síncrona — com o
+    // id antigo, antes de ele ser zerado logo abaixo. Com uma escrita no ar, a
+    // pendente iria para a fila e acabaria criando um registro novo com o
+    // estado velho; aí é melhor descartá-la (perde-se no máximo o último
+    // segundo e meio de digitação da criação anterior).
+    if (pendente && idRef.current && !gravandoRef.current) void gravar(pendente);
+    idRef.current = null;
+    setId(null);
+    setCarregada(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("criacao");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [gravar, setSearchParams]);
+
   return {
     id,
     carregando,
@@ -235,5 +265,6 @@ export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
     erroAoCarregar,
     sincronizar,
     gravarAgora,
+    reiniciar,
   };
 }

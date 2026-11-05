@@ -46,6 +46,34 @@ export const TIPOS_SLIDE: TipoSlide[] = [
 ];
 
 /**
+ * Variações de composição dentro de um tipo, usadas quando o usuário escolhe
+ * um TEMPLATE (ts/api/src/templates). Opcional: sem variante, cada tipo é
+ * desenhado exatamente como antes. Combinações que não fazem sentido para o
+ * tipo são ignoradas pelos renderizadores (caem no desenho padrão).
+ *
+ *   painel-esquerda / painel-direita — conteudo/secao: bloco na cor da marca
+ *     de um lado (com a frase-chave de `subtitulo`) e o texto do outro;
+ *   cards — conteudo: tópicos em cards; destaque: KPIs em cards;
+ *     comparacao: colunas em cards;
+ *   declaracao — conteudo: frase de impacto grande (`subtitulo`);
+ *   centralizado — secao: texto centralizado.
+ */
+export type VarianteLayout =
+  | 'painel-esquerda'
+  | 'painel-direita'
+  | 'cards'
+  | 'declaracao'
+  | 'centralizado';
+
+export const VARIANTES_LAYOUT: VarianteLayout[] = [
+  'painel-esquerda',
+  'painel-direita',
+  'cards',
+  'declaracao',
+  'centralizado',
+];
+
+/**
  * Especificação semântica de um slide: o que ele precisa FAZER, não o texto
  * final. É o que o usuário revisa antes de aprovar a geração.
  */
@@ -64,6 +92,8 @@ export interface PlanoSlide {
   narrativa?: string;
   /** Como deve aparecer. Coerente com `tipo`. */
   direcaoVisual?: string;
+  /** Composição vinda do template escolhido. Ausente = desenho padrão. */
+  variante?: VarianteLayout;
 }
 
 export interface Plano {
@@ -77,8 +107,10 @@ export interface Plano {
 export interface SlideItem {
   /** Ausente = `conteudo`: arquivo gerado antes dos layouts segue válido. */
   tipo?: TipoSlide;
+  /** Composição vinda do template. Ausente = desenho padrão do tipo. */
+  variante?: VarianteLayout;
   titulo: string;
-  /** capa e secao. */
+  /** capa e secao; nas variantes painel-* e declaracao, a frase-chave. */
   subtitulo?: string;
   /** conteudo. */
   bullets?: string[];
@@ -161,6 +193,16 @@ const CATALOGO_TIPOS = `Tipos de slide disponíveis (use SOMENTE estes):
 - "destaque": até 3 números/indicadores grandes com rótulo. Use quando houver métrica que mereça protagonismo.
 - "comparacao": duas colunas (ex.: antes/depois, atual/desejado). Use quando o ponto for o contraste.`;
 
+/**
+ * Regra das variantes. Só tem efeito quando o prompt traz o bloco
+ * "## TEMPLATE ESTRUTURAL" (templates/processar/brief.ts); sem ele, a IA não
+ * preenche "variante" e tudo sai como antes.
+ */
+const REGRA_VARIANTE = `Campo "variante" (OPCIONAL):
+- Só preencha se a mensagem trouxer um bloco "## TEMPLATE ESTRUTURAL". Sem esse bloco, omita o campo.
+- Valores aceitos: "painel-esquerda", "painel-direita", "cards", "declaracao", "centralizado". Use a variante indicada pelo template para o arquétipo de slide equivalente.
+- O template orienta só a COMPOSIÇÃO. Cores, fontes e logotipo são SEMPRE os da marca; nunca descreva em "direcaoVisual" cores ou fontes vindas do template.`;
+
 export const SYSTEM_PLANO = `Você é um estrategista sênior de apresentações executivas, escrevendo em português do Brasil (salvo se outro idioma for pedido).
 Sua tarefa é PLANEJAR uma apresentação: definir o que cada slide precisa fazer. Você NÃO escreve o texto final dos slides agora.
 
@@ -175,6 +217,8 @@ Princípios:
 - Em "direcaoVisual", descreva como o slide deve aparecer, COERENTE com o tipo escolhido.
 - Respeite público, objetivo e tom. Se houver REFERÊNCIAS, baseie-se nelas; não invente dados.
 
+${REGRA_VARIANTE}
+
 Responda SOMENTE com JSON válido (sem cercas de código, sem texto fora do JSON):
 {
   "titulo": "Título da apresentação",
@@ -182,6 +226,7 @@ Responda SOMENTE com JSON válido (sem cercas de código, sem texto fora do JSON
   "slides": [
     {
       "tipo": "conteudo",
+      "variante": "(opcional — só com template)",
       "titulo": "Título do slide",
       "objetivo": "O que este slide precisa alcançar",
       "conteudo": ["ponto que vai cobrir", "outro ponto"],
@@ -205,9 +250,12 @@ Regras:
 - Preserve o que a instrução não pediu para mudar.
 - Mantenha o "id" do slide exatamente como veio.
 - Continue sendo um PLANO: resumo da intenção, não o texto final do slide.
+- Se o slide já tem "variante", preserve-a, a menos que a instrução mude o tipo ou a composição.
+
+${REGRA_VARIANTE}
 
 Responda SOMENTE com o JSON do slide (sem cercas, sem texto fora do JSON):
-{ "id": "...", "tipo": "...", "titulo": "...", "objetivo": "...", "conteudo": ["..."], "narrativa": "...", "direcaoVisual": "..." }`;
+{ "id": "...", "tipo": "...", "variante": "(opcional)", "titulo": "...", "objetivo": "...", "conteudo": ["..."], "narrativa": "...", "direcaoVisual": "..." }`;
 
 export const SYSTEM_SLIDES_DO_PLANO = `Você é um redator sênior de apresentações executivas, escrevendo em português do Brasil (salvo se outro idioma for pedido).
 Você recebe um PLANO aprovado pelo usuário e deve EXECUTÁ-LO: escrever o conteúdo final de cada slide.
@@ -220,6 +268,11 @@ Regras:
   - "conteudo": 3 a 5 bullets objetivos e autossuficientes.
   - "destaque": até 3 itens em "destaques", cada um { "valor": "38%", "rotulo": "o que esse número é" }. O valor é curto.
   - "comparacao": exatamente 2 itens em "colunas", cada um { "titulo": "...", "itens": ["...", "..."] }.
+- Se o slide do plano tem "variante", COPIE-A para o slide e escreva de acordo:
+  - "painel-esquerda"/"painel-direita": "subtitulo" com uma frase-chave curta (até ~12 palavras) + 2 a 4 bullets.
+  - "declaracao": "subtitulo" com uma frase de impacto (até ~20 palavras); bullets opcionais (no máximo 3).
+  - "cards" em "conteudo": 3 a 6 bullets curtos, cada um vira um card.
+  - Sem "variante" no plano, não invente uma.
 - Use "objetivo", "narrativa" e "direcaoVisual" do plano como direção de escrita.
 - Em "notas", 1 a 3 frases de apoio ao apresentador.
 - Não invente dados. Se o plano pede um número que você não tem, escreva o indicador sem forjar o valor.
@@ -229,7 +282,7 @@ Responda SOMENTE com JSON válido:
   "titulo": "...",
   "subtitulo": "...",
   "slides": [
-    { "tipo": "conteudo", "titulo": "...", "bullets": ["..."], "notas": "..." }
+    { "tipo": "conteudo", "variante": "(só se o plano tiver)", "titulo": "...", "bullets": ["..."], "notas": "..." }
   ],
   "conexoes": ""
 }`;
@@ -407,6 +460,12 @@ function parseTipo(v: unknown): TipoSlide {
   return (TIPOS_SLIDE as string[]).includes(s) ? (s as TipoSlide) : 'conteudo';
 }
 
+/** Variante desconhecida (ou o placeholder do exemplo) vira "sem variante". */
+function parseVariante(v: unknown): VarianteLayout | undefined {
+  const s = String(v ?? '').trim().toLowerCase();
+  return (VARIANTES_LAYOUT as string[]).includes(s) ? (s as VarianteLayout) : undefined;
+}
+
 /** Um slide do roteiro final, com os campos de cada layout. */
 function parseSlideItem(s: unknown): SlideItem {
   const so = (s ?? {}) as Record<string, unknown>;
@@ -434,8 +493,10 @@ function parseSlideItem(s: unknown): SlideItem {
         .filter((c) => c.titulo || c.itens.length)
         .slice(0, 2)
     : [];
+  const variante = parseVariante(so.variante);
   return {
     tipo: parseTipo(so.tipo),
+    ...(variante ? { variante } : {}),
     titulo: String(so.titulo ?? '').trim().slice(0, 200),
     subtitulo: textoOpcional(so.subtitulo, 300),
     bullets: listaDeTexto(so.bullets),
@@ -491,9 +552,11 @@ export function parsePlano(raw: string): Plano {
 export function parsePlanoSlide(s: unknown, i = 0): PlanoSlide {
   const so = (s ?? {}) as Record<string, unknown>;
   const id = String(so.id ?? '').trim();
+  const variante = parseVariante(so.variante);
   return {
     id: id || idDoPlano(i),
     tipo: parseTipo(so.tipo),
+    ...(variante ? { variante } : {}),
     titulo: String(so.titulo ?? '').trim().slice(0, 200),
     subtitulo: textoOpcional(so.subtitulo, 300),
     objetivo: textoOpcional(so.objetivo, 400),

@@ -154,6 +154,7 @@ model Empresa {
   areas                  Area[]
   cargos                 Cargo[]
   marcas                 Marca[]
+  templatesApresentacao  TemplateApresentacao[]
   assinatura             Assinatura?
   aiCredentials          AiCredential[]
   aiConnections          AiConnection[]
@@ -681,6 +682,62 @@ model Marca {
   @@unique([empresaId, nome])
   @@index([empresaId])
   @@map("marcas")
+}
+
+/// Template de apresentação — apresentação de referência (.pptx, .html ou .zip
+/// com HTML + recursos) que orienta a ESTRUTURA dos slides gerados pelo AI
+/// Studio. Configurações › Geral › Aparência › Templates.
+///
+/// Divisão de responsabilidades: a Marca manda na APARÊNCIA (cores, fontes,
+/// logo); o template manda na COMPOSIÇÃO (sequência, layouts, distribuição dos
+/// elementos). As cores e fontes do arquivo são deliberadamente ignoradas.
+///
+/// O arquivo original fica no próprio Postgres (`arquivo`, bytea) porque o
+/// projeto não tem storage de objetos e a API roda serverless — o limite de
+/// 4 MB vem do corpo de requisição da Vercel. A geração NUNCA relê o arquivo:
+/// usa `estrutura`, extraída uma vez no upload.
+///
+/// Só existe registro com processamento bem-sucedido: o upload processa
+/// ANTES de gravar e devolve 422 se falhar. Na troca de arquivo, o novo é
+/// processado primeiro; só com sucesso arquivo+estrutura são trocados e
+/// `versao` sobe — o anterior nunca é perdido por uma falha.
+///
+/// Excluir é hard-delete: as criações guardam uma CÓPIA de `estrutura` (+ id,
+/// nome e versao) em `Criacao.dados`, então nada histórico depende do registro.
+model TemplateApresentacao {
+  id        String @id @default(cuid())
+  empresaId String
+
+  nome      String
+  descricao String?
+  /// Texto livre (ex.: "Reunião de board"). Sem regra de classificação na V1.
+  contexto  String?
+
+  /// 'pptx' | 'html' (zip conta como html).
+  formato String
+
+  arquivoNome    String
+  arquivoMime    String
+  arquivoTamanho Int
+  arquivo        Bytes
+
+  /// TemplateEstrutura — ver ts/api/src/templates/processar/tipos.ts.
+  estrutura Json
+
+  /// Templates inativos não aparecem no seletor do AI Studio.
+  ativo Boolean @default(true)
+
+  /// Sobe a cada troca de arquivo. As criações guardam a versão usada.
+  versao Int @default(1)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, nome])
+  @@index([empresaId])
+  @@map("templates_apresentacao")
 }
 
 /// Assinatura/cobrança da empresa (1:1). Snapshot de preços no momento.

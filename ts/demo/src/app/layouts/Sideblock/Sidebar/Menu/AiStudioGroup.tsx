@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { NavLink } from "react-router";
 import clsx from "clsx";
 import { useTranslation } from "react-i18next";
+import { RectangleStackIcon } from "@heroicons/react/24/outline";
 
 // Local Imports
 import { Collapse } from "@/components/ui";
@@ -15,6 +16,7 @@ import {
   FUNCTIONS,
   aiFunctionScreenPath,
   isAiStudioFunctionDisabled,
+  sortAiFunctionsActiveFirst,
 } from "@/app/pages/ceo/ia-functions";
 import { GroupChevron } from "./GroupChevron";
 
@@ -86,11 +88,11 @@ export function AiStudioGroup({ product }: { product: string }) {
 
   const items = useMemo(
     () =>
-      [...FUNCTIONS].sort((a, b) => {
-        const la = t(`ai.${a.id}`, { defaultValue: a.label });
-        const lb = t(`ai.${b.id}`, { defaultValue: b.label });
-        return la.localeCompare(lb, i18n.language, { sensitivity: "base" });
-      }),
+      sortAiFunctionsActiveFirst(
+        FUNCTIONS,
+        (fn) => t(`ai.${fn.id}`, { defaultValue: fn.label }),
+        i18n.language,
+      ),
     [t, i18n.language],
   );
 
@@ -135,6 +137,40 @@ export function AiStudioGroup({ product }: { product: string }) {
 
       <Collapse in={isOpened}>
         <div className="flex flex-col space-y-0.5">
+          {/* Minhas criações: a lista de criações que antes ficava na tela /ia.
+              Único item do grupo com destaque de ativo — é uma página fixa, não
+              uma função que abre modal. */}
+          <div className="relative flex px-3">
+            <NavLink
+              to={`/${product}/ia/criacoes`}
+              onClick={handleItemClick}
+              className={({ isActive }) =>
+                clsx(
+                  "group min-w-0 flex-1 rounded-md px-3 py-1 font-medium outline-hidden transition-colors ease-in-out",
+                  isActive
+                    ? "text-primary-600 dark:text-primary-400"
+                    : "dark:text-dark-200 dark:hover:bg-dark-300/10 dark:hover:text-dark-50 dark:focus:bg-dark-300/10 text-gray-800 hover:bg-gray-100 hover:text-gray-950 focus:bg-gray-100 focus:text-gray-950",
+                )
+              }
+            >
+              {({ isActive }) => (
+                <div
+                  data-menu-active={isActive}
+                  className="flex min-w-0 items-center gap-2.5 text-xs tracking-wide"
+                >
+                  <RectangleStackIcon
+                    className={clsx(
+                      "size-4.5 shrink-0 stroke-[1.5]",
+                      isActive
+                        ? "opacity-100"
+                        : "opacity-80 group-hover:opacity-100",
+                    )}
+                  />
+                  <span className="truncate">{t("ai.myCreations")}</span>
+                </div>
+              )}
+            </NavLink>
+          </div>
           {items.map((item) => (
             <AiStudioItem
               key={item.id}

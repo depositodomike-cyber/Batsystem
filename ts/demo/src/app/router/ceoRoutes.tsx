@@ -17,6 +17,7 @@ import Slack from "@/app/pages/ceo/Slack";
 import Ia from "@/app/pages/ceo/Ia";
 import Apresentacao from "@/app/pages/ceo/Apresentacao";
 import Planilha from "@/app/pages/ceo/Planilha";
+import MinhasCriacoes from "@/app/pages/ceo/MinhasCriacoes";
 import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
 import MemoriaGrafo from "@/app/pages/ceo/MemoriaGrafo";
@@ -252,6 +253,8 @@ const memoriaRedirects: RouteObject[] = products.map((p) => ({
 const iaFuncaoRoutes: RouteObject[] = products.flatMap((p) => [
   { path: `${p.code}/ia/apresentacao`, Component: Apresentacao },
   { path: `${p.code}/ia/planilha`, Component: Planilha },
+  // Subitem "Minhas criações" do collapse AI Studio (lista de criações).
+  { path: `${p.code}/ia/criacoes`, Component: MinhasCriacoes },
 ]);
 
 // Detalhe de um documento gerado pelo upload de IA (Memória category documentos).

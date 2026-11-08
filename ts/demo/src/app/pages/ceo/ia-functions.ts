@@ -64,6 +64,26 @@ export function isAiStudioFunctionDisabled(id: string): boolean {
 }
 
 /**
+ * Ordena as funções com as ATIVAS no topo e, dentro de cada bloco (ativas,
+ * desabilitadas), por rótulo traduzido. Usada no collapse AI Studio da sidebar e
+ * na grade de /ia, para as duas listas terem a mesma ordem.
+ */
+export function sortAiFunctionsActiveFirst(
+  fns: readonly AiFunction[],
+  labelOf: (fn: AiFunction) => string,
+  locale: string,
+): AiFunction[] {
+  return [...fns].sort((a, b) => {
+    const da = isAiStudioFunctionDisabled(a.id);
+    const db = isAiStudioFunctionDisabled(b.id);
+    if (da !== db) return da ? 1 : -1;
+    return labelOf(a).localeCompare(labelOf(b), locale, {
+      sensitivity: "base",
+    });
+  });
+}
+
+/**
  * Funções do AI Studio que abrem uma TELA própria, e não um modal: id → caminho
  * relativo ao produto.
  *

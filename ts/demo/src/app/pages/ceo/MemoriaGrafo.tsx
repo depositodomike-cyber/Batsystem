@@ -49,7 +49,6 @@ import {
   temContexto,
   pesoDoKind,
   raio,
-  repousoDoLink,
   unirCamadas,
   type GNode,
   type Graph,
@@ -133,6 +132,21 @@ const CAMADA_POR_KIND = {
   pasta: "conteudos",
   "tag-hub": "conteudos",
 } satisfies Record<Kind, keyof Filtros>;
+
+/**
+ * Hash estável (FNV-1a) do par origem→destino. Dá a cada relação uma fase e uma
+ * velocidade próprias para o marcador que corre pela aresta, sem guardar estado
+ * e sem mudar quando as camadas são filtradas.
+ */
+function hashAresta(origem: string, destino: string): number {
+  let h = 0x811c9dc5;
+  const s = `${origem}>${destino}`;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
 
 /** O nó está numa camada ligada? */
 function visivelPor(kind: Kind, f: Filtros): boolean {
@@ -580,6 +594,10 @@ export default function MemoriaGrafo() {
     let dpr = 1;
     let raf = 0;
     let t = 0;
+    // Quem pediu menos movimento no sistema vê os marcadores das relações
+    // parados no meio da aresta (ver `draw`).
+    const movimentoReduzido =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     // Sincronizando / buscando: espelha animandoRef a cada quadro (o loop lê o
     // ref uma vez e física e desenho consultam esta cópia).
     let buscando = false;
@@ -632,6 +650,194 @@ export default function MemoriaGrafo() {
         if (visiveis.has(l.source) && visiveis.has(l.target))
           arestasVisiveis.push(l);
       }
+      recalcularImportancia();
+    }
+
+    // ---- Importância (grau visível) ----
+    // Dita o layout radial (hubs no meio, folhas na borda), o tamanho, a
+    // opacidade e quem ganha rótulo. Conta só as arestas VISÍVEIS: o `grau` do
+    // modelo inclui camadas desligadas e não refletiria o que está na tela.
+    const importancia = new Map<GNode, number>();
+    const rotulados = new Set<GNode>();
+    function recalcularImportancia() {
+      const grau = new Map<GNode, number>();
+      for (const n of nosVisiveis) grau.set(n, 0);
+      for (const l of arestasVisiveis) {
+        grau.set(l.source, (grau.get(l.source) ?? 0) + 1);
+        grau.set(l.target, (grau.get(l.target) ?? 0) + 1);
+      }
+      let max = 1;
+      for (const g of grau.values()) if (g > max) max = g;
+      // Escala log: um hub com 40 conexões não pode achatar todos os de 8 a 15.
+      const den = Math.log(1 + max);
+      importancia.clear();
+      for (const [n, g] of grau) importancia.set(n, Math.log(1 + g) / den);
+      // Rótulo só para os mais conectados (como no mapa de referência);
+      // grafos pequenos rotulam tudo.
+      rotulados.clear();
+      const ordem = [...nosVisiveis].sort(
+        (a, b) => (grau.get(b) ?? 0) - (grau.get(a) ?? 0),
+      );
+      const quantos =
+        ordem.length <= 15
+          ? ordem.length
+          : Math.max(8, Math.min(18, Math.round(ordem.length * 0.12)));
+      for (const n of ordem.slice(0, quantos)) rotulados.add(n);
+
+      // Anéis concêntricos: o mais conectado no centro, os hubs rotulados no
+      // anel interno e o resto no externo. Raio por anel (e não contínuo) é o
+      // que fecha o desenho num círculo em vez de uma mancha.
+      anel.clear();
+      let internos = 0;
+      ordem.forEach((n, i) => {
+        const a = i === 0 && ordem.length > 2 ? 0 : rotulados.has(n) ? 1 : 2;
+        anel.set(n, a);
+        if (a === 1) internos++;
+      });
+      const externos = Math.max(0, ordem.length - internos - 1);
+      const raioExterno = Math.max(240, (externos * 22) / (2 * Math.PI));
+      // Hubs a ~metade do raio, como no mapa de referência: o miolo respira e
+      // os leques de folhas têm comprimento para abrir.
+      const raioInterno = Math.max(
+        130,
+        raioExterno * 0.5,
+        (internos * 70) / (2 * Math.PI),
+      );
+
+      // ---- Posição-alvo de cada nó (layout radial em setores) ----
+      // Molas não servem aqui: a componente tangencial delas arrasta hubs e
+      // folhas para o mesmo lado e o círculo vira um arco. Cada folha vai para
+      // o setor do seu hub — o vizinho mais conectado do anel interno (ou o
+      // centro) —, e o setor tem largura proporcional ao número de folhas.
+      alvos.clear();
+      const vizinhos = new Map<GNode, GNode[]>();
+      for (const l of arestasVisiveis) {
+        (vizinhos.get(l.source) ?? vizinhos.set(l.source, []).get(l.source)!).push(l.target);
+        (vizinhos.get(l.target) ?? vizinhos.set(l.target, []).get(l.target)!).push(l.source);
+      }
+      const centro = ordem.find((n) => anel.get(n) === 0) ?? null;
+      const hubs = ordem.filter((n) => anel.get(n) === 1);
+      const filhos = new Map<GNode | null, GNode[]>();
+      for (const h of hubs) filhos.set(h, []);
+      if (centro) filhos.set(centro, []);
+      for (const n of ordem) {
+        if (anel.get(n) !== 2) continue;
+        let pai: GNode | null = null;
+        for (const v of vizinhos.get(n) ?? []) {
+          if (anel.get(v) === 2) continue;
+          // Prefere hub do anel interno ao centro: o centro liga a quase tudo
+          // e, se ganhasse, levaria todas as folhas para um setor só.
+          const melhor =
+            !pai ||
+            (anel.get(pai) === 0 && anel.get(v) === 1) ||
+            (anel.get(pai) === anel.get(v) && imp(v) > imp(pai));
+          if (melhor) pai = v;
+        }
+        // Sem hub vizinho: vai para o setor dos soltos (chave null).
+        (filhos.get(pai) ?? filhos.set(pai, []).get(pai)!).push(n);
+      }
+      // Ordem dos setores: hubs na ordem de importância, intercalando grandes
+      // e pequenos para que dois leques enormes não fiquem colados.
+      const setores: (GNode | null)[] = [];
+      const porTamanho = [...filhos.keys()]
+        .filter((k) => k !== centro || filhos.get(k)!.length > 0)
+        .sort((a, b) => filhos.get(b)!.length - filhos.get(a)!.length);
+      while (porTamanho.length) {
+        setores.push(porTamanho.shift()!);
+        if (porTamanho.length) setores.push(porTamanho.pop()!);
+      }
+      // Anel externo: círculo perfeito. Todas as folhas no MESMO raio e com o
+      // MESMO passo angular na volta inteira, agrupadas por setor (a ordem de
+      // `setores`). Nada de raio por importância nem folga entre setores — era
+      // isso que deixava o contorno irregular.
+      const PASSO = (Math.PI * 2) / Math.max(1, externos);
+      const INICIO = -Math.PI / 2;
+      let k = 0;
+      const angHub = new Map<GNode, number>();
+      for (const s of setores) {
+        const fs = filhos.get(s)!;
+        const primeiro = k;
+        for (const f of fs) {
+          const a = INICIO + PASSO * (k + 0.5);
+          alvos.set(f, {
+            x: Math.cos(a) * raioExterno,
+            y: Math.sin(a) * raioExterno,
+          });
+          k++;
+        }
+        // Hub no meio do próprio leque; sem folhas, na fronteira em que caiu.
+        if (s && s !== centro)
+          angHub.set(
+            s,
+            INICIO + PASSO * (fs.length ? (primeiro + k) / 2 : primeiro),
+          );
+      }
+
+      // Anel interno: hubs alinhados aos seus leques, mas com uma distância
+      // angular mínima entre vizinhos — leques pequenos lado a lado
+      // amontoariam os hubs num canto.
+      const ordemHubs = [...angHub.entries()].sort((a, b) => a[1] - b[1]);
+      if (ordemHubs.length > 1) {
+        const minGap = ((Math.PI * 2) / ordemHubs.length) * 0.6;
+        for (let it = 0; it < 60; it++) {
+          let mexeu = false;
+          for (let i = 0; i < ordemHubs.length; i++) {
+            const a = ordemHubs[i];
+            const b = ordemHubs[(i + 1) % ordemHubs.length];
+            let gap = b[1] - a[1];
+            if (i === ordemHubs.length - 1) gap += Math.PI * 2;
+            if (gap < minGap) {
+              const ajuste = (minGap - gap) / 2;
+              a[1] -= ajuste;
+              b[1] += ajuste;
+              mexeu = true;
+            }
+          }
+          if (!mexeu) break;
+        }
+      }
+      for (const [h, a] of ordemHubs)
+        alvos.set(h, {
+          x: Math.cos(a) * raioInterno,
+          y: Math.sin(a) * raioInterno,
+        });
+      if (centro) alvos.set(centro, { x: 0, y: 0 });
+    }
+    const anel = new Map<GNode, number>();
+    /** Posição-alvo relativa ao centro da cena. */
+    const alvos = new Map<GNode, { x: number; y: number }>();
+    const imp = (n: GNode) => importancia.get(n) ?? 0;
+    /**
+     * Raio na tela: pontos compactos com glow, como no mapa de referência. A
+     * importância (conexões) manda; o raio do modelo (acervo) só desempata.
+     */
+    const raioDe = (n: GNode) =>
+      (2.5 + 6.5 * imp(n) ** 1.1 + Math.min(raio(n), 24) * 0.08) *
+      // Grafo grande enquadrado de longe: compensa parte do zoom para os nós
+      // não virarem poeira (o círculo cresce com o número de nós).
+      Math.max(1, (0.8 / view.scale) ** 0.6);
+
+    // Arestas levemente curvas: ponto de controle no meio, deslocado na
+    // perpendicular. O sentido sai da ordem dos ids, então é estável entre
+    // quadros e duas arestas opostas não se sobrepõem.
+    function controle(l: Aresta) {
+      const ax = l.source.x!;
+      const ay = l.source.y!;
+      const bx = l.target.x!;
+      const by = l.target.y!;
+      const s = l.source.id < l.target.id ? 1 : -1;
+      const k = 0.18 * s;
+      return {
+        x: (ax + bx) / 2 - (by - ay) * k,
+        y: (ay + by) / 2 + (bx - ax) * k,
+      };
+    }
+    function pontoNaCurva(l: Aresta, f: number, c = controle(l)) {
+      const u = 1 - f;
+      return {
+        x: u * u * l.source.x! + 2 * u * f * c.x + f * f * l.target.x!,
+        y: u * u * l.source.y! + 2 * u * f * c.y + f * f * l.target.y!,
+      };
     }
     aplicarFiltros(filtrosRef.current);
     filtrosAplicados = filtrosRef.current;
@@ -674,7 +880,7 @@ export default function MemoriaGrafo() {
       let maxX = -Infinity;
       let maxY = -Infinity;
       for (const n of nosVisiveis) {
-        const r = raio(n) + 24; // inclui glow + rótulo
+        const r = raioDe(n) + 40; // inclui glow + rótulo
         if (n.x! - r < minX) minX = n.x! - r;
         if (n.y! - r < minY) minY = n.y! - r;
         if (n.x! + r > maxX) maxX = n.x! + r;
@@ -713,45 +919,19 @@ export default function MemoriaGrafo() {
     }
 
     function step(): number {
-      // Repulsão adaptativa: grafos grandes precisam espalhar mais.
-      const C = 3600 + nosVisiveis.length * 12;
-      const K = 0.013;
-      const G = 0.009;
-      const DAMP = 0.9;
-      const VMAX = 14;
-
-      for (let i = 0; i < nosVisiveis.length; i++) {
-        const a = nosVisiveis[i];
-        for (let j = i + 1; j < nosVisiveis.length; j++) {
-          const b = nosVisiveis[j];
-          const dx = a.x! - b.x!;
-          const dy = a.y! - b.y!;
-          const d2 = dx * dx + dy * dy || 0.01;
-          const f = (C / d2) * (a._peso || 1) * (b._peso || 1);
-          const d = Math.sqrt(d2);
-          a.vx! += (dx / d) * f;
-          a.vy! += (dy / d) * f;
-          b.vx! -= (dx / d) * f;
-          b.vy! -= (dy / d) * f;
-        }
-      }
-      for (const l of arestasVisiveis) {
-        const dx = l.target.x! - l.source.x!;
-        const dy = l.target.y! - l.source.y!;
-        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        const rest = repousoDoLink(l.tipo);
-        const f = (d - rest) * K;
-        l.source.vx! += (dx / d) * f;
-        l.source.vy! += (dy / d) * f;
-        l.target.vx! -= (dx / d) * f;
-        l.target.vy! -= (dy / d) * f;
-      }
+      // Layout radial determinístico: cada nó desliza até a posição-alvo do
+      // seu setor (ver `recalcularImportancia`). Sem molas nem repulsão — elas
+      // deformavam o círculo — a física fica só como animação de chegada.
+      const PUXAO = 0.08;
+      const DAMP = 0.78;
+      const VMAX = 40;
       const cx = W / 2;
       const cy = H / 2;
       let maxMov = 0;
       for (const n of nosVisiveis) {
-        n.vx! += (cx - n.x!) * G;
-        n.vy! += (cy - n.y!) * G;
+        const alvo = alvos.get(n) ?? { x: 0, y: 0 };
+        n.vx! += (cx + alvo.x - n.x!) * PUXAO;
+        n.vy! += (cy + alvo.y - n.y!) * PUXAO;
         // Agitação durante a busca/sync: o grafo nunca assenta enquanto pensa.
         if (buscando) {
           n.vx! += (Math.random() - 0.5) * 0.9;
@@ -773,7 +953,6 @@ export default function MemoriaGrafo() {
         }
         const x0 = n.x!;
         const y0 = n.y!;
-        // Sem clamp nas bordas: o grafo cresce livre e a câmera reenquadra.
         n.x! += n.vx!;
         n.y! += n.vy!;
         maxMov = Math.max(maxMov, Math.abs(n.x! - x0), Math.abs(n.y! - y0));
@@ -830,8 +1009,13 @@ export default function MemoriaGrafo() {
           l.source === hover ||
           l.target === hover;
         const dim = l.tipo === "wikilink" ? 0.18 : 0.12;
+        // Aresta que chega numa folha apaga junto com ela.
+        const pesoAresta =
+          0.3 + 0.7 * Math.max(imp(l.source), imp(l.target)) ** 1.5;
         // No fundo claro as arestas somem: reforça a opacidade quando inativas.
-        const base = ativo ? 0.6 : isDark ? dim : dim * 1.7;
+        const base = ativo
+          ? 0.6
+          : (isDark ? dim : dim * 1.7) * pesoAresta * (highlighted.size ? 0.5 : 1);
         ctx.strokeStyle = corLink(l.tipo, Math.min(base + brilho, 0.85));
         // Espessura constante, como sempre foi. O peso da relação existe (ver
         // `espessura`), mas fica fora do traço: aplicá-lo aqui engrossava todas
@@ -845,12 +1029,59 @@ export default function MemoriaGrafo() {
               ? [5 * inv, 4 * inv]
               : [],
         );
+        const c = controle(l);
         ctx.beginPath();
         ctx.moveTo(l.source.x!, l.source.y!);
-        ctx.lineTo(l.target.x!, l.target.y!);
+        ctx.quadraticCurveTo(c.x, c.y, l.target.x!, l.target.y!);
         ctx.stroke();
       }
       ctx.setLineDash([]);
+
+      // Marcador de cada relação entre entidades. Em vez de parado no meio, ele
+      // percorre a conexão da origem para o destino, como um impulso nervoso:
+      // cada aresta tem fase e velocidade próprias (derivadas dos ids, então
+      // não mudam entre quadros nem ao filtrar camadas), um rastro curto e
+      // fade nas pontas para não "piscar" ao reiniciar. Com
+      // prefers-reduced-motion o marcador fica parado no meio, como antes.
+      for (const l of arestasVisiveis) {
+        if (l.tipo !== "relacao") continue;
+        const ativo =
+          l === arestaSelecionada ||
+          l === arestaHover ||
+          highlighted.has(l.source.id) ||
+          highlighted.has(l.target.id);
+        const a = ativo
+          ? 0.95
+          : (0.25 + 0.6 * Math.max(imp(l.source), imp(l.target)) ** 1.5) *
+            (highlighted.size ? 0.4 : 1);
+        const raio = (ativo ? 2.6 : 1.9) * inv;
+        if (movimentoReduzido) {
+          const m = pontoNaCurva(l, 0.5);
+          ctx.fillStyle = `rgba(245,158,11,${a})`;
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, raio, 0, Math.PI * 2);
+          ctx.fill();
+          continue;
+        }
+        const h = hashAresta(l.source.id, l.target.id);
+        const fase = (h % 1000) / 1000;
+        // ~3 a 5,5 s por travessia; relação selecionada corre um pouco mais.
+        const vel = (0.18 + ((h >>> 10) % 100) / 1000) * (ativo ? 1.4 : 1);
+        const f = (t * vel + fase) % 1;
+        // Rastro: o ponto principal e dois "ecos" logo atrás, menores e
+        // mais transparentes.
+        for (let e = 2; e >= 0; e--) {
+          const fe = f - e * 0.035;
+          if (fe <= 0) continue;
+          const borda = Math.sin(Math.PI * fe); // 0 nas pontas, 1 no meio
+          const ae = a * borda * (e === 0 ? 1 : e === 1 ? 0.45 : 0.2);
+          const p = pontoNaCurva(l, fe);
+          ctx.fillStyle = `rgba(245,158,11,${ae})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, raio * (1 - e * 0.22), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
       // Pulsos de "dados" percorrendo as conexões enquanto o grafo pensa.
       if (buscando) {
@@ -860,10 +1091,11 @@ export default function MemoriaGrafo() {
         for (let k = 0; k < arestasVisiveis.length; k++) {
           const l = arestasVisiveis[k];
           const f = (t * 0.55 + k * 0.17) % 1;
+          const p = pontoNaCurva(l, f);
           ctx.beginPath();
           ctx.arc(
-            l.source.x! + (l.target.x! - l.source.x!) * f,
-            l.source.y! + (l.target.y! - l.source.y!) * f,
+            p.x,
+            p.y,
             2.2 * inv,
             0,
             Math.PI * 2,
@@ -875,16 +1107,25 @@ export default function MemoriaGrafo() {
 
       for (const n of nosVisiveis) {
         const cor = nodeColor(n);
-        const r = raio(n);
+        const r = raioDe(n);
+        const i = imp(n);
         const destaque = highlighted.has(n.id) || n === hover;
         ctx.shadowColor = cor;
-        let blur = destaque ? 22 : highlighted.size ? 4 : 12;
+        // Glow proporcional à importância: hubs brilham, folhas quase não.
+        let blur = destaque ? 22 : highlighted.size ? 4 : 4 + 18 * i;
         // Respiração dos nós: forte (e defasada) durante a busca, discreta fora.
         blur += buscando
           ? 9 + Math.sin(t * 4 + (n._fase || 0)) * 7
           : Math.sin(t * 1.4 + (n._fase || 0)) * 2.2;
         ctx.shadowBlur = Math.max(0, blur) * view.scale;
-        ctx.globalAlpha = highlighted.size && !destaque ? 0.35 : 1;
+        // Poucas conexões = opaco/apagado. Com seleção ativa, o que está fora
+        // dela apaga ainda mais.
+        const alfa = 0.22 + 0.78 * i ** 1.2;
+        ctx.globalAlpha = destaque
+          ? 1
+          : highlighted.size
+            ? Math.min(alfa, 0.3)
+            : alfa;
         ctx.beginPath();
         ctx.arc(n.x!, n.y!, r, 0, Math.PI * 2);
         if (n.kind === "pasta" || n.kind === "projeto") {
@@ -900,12 +1141,15 @@ export default function MemoriaGrafo() {
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
 
-        // Entidades e hubs sempre rotulados: são o mapa que o usuário lê.
+        // Rótulo só nos mais conectados (o mapa que o usuário lê) e no que
+        // está em foco; o resto aparece no hover.
         const hub = n.kind !== "nota";
-        if (hub || poucos || destaque) {
+        if (rotulados.has(n) || destaque || (poucos && !hub)) {
+          ctx.globalAlpha = destaque || !highlighted.size ? 1 : 0.4;
           ctx.fillStyle = destaque ? LABEL_HL : hub ? cor : LABEL;
           ctx.font =
-            (hub ? "600 " : "") + `${11 * inv}px Inter, system-ui, sans-serif`;
+            (hub ? "500 " : "") +
+            `${(11 + 2 * i) * inv}px Inter, system-ui, sans-serif`;
           ctx.textAlign = "center";
           // Reticências ao cortar: sem elas, dois nomes longos de mesmo prefixo
           // ficam com rótulos idênticos e não há como saber que foram cortados.
@@ -915,6 +1159,7 @@ export default function MemoriaGrafo() {
             n.x!,
             n.y! + r + 13 * inv,
           );
+          ctx.globalAlpha = 1;
         }
       }
 
@@ -998,7 +1243,7 @@ export default function MemoriaGrafo() {
         const n = nosVisiveis[i];
         const dx = n.x! - wx;
         const dy = n.y! - wy;
-        if (dx * dx + dy * dy <= (raio(n) + tol) ** 2) return n;
+        if (dx * dx + dy * dy <= (raioDe(n) + tol) ** 2) return n;
       }
       return null;
     }
@@ -1011,21 +1256,30 @@ export default function MemoriaGrafo() {
       const tol = 6 / view.scale;
       let melhor: Aresta | null = null;
       let melhorD = Infinity;
+      // A aresta é curva: aproxima a quadrática por segmentos e mede a
+      // distância ao mais próximo.
+      const PARTES = 10;
       for (const l of arestasVisiveis) {
+        const c = controle(l);
+        let d = Infinity;
+        let p0 = { x: l.source.x!, y: l.source.y! };
+        for (let s = 1; s <= PARTES; s++) {
+          const p1 = pontoNaCurva(l, s / PARTES, c);
+          const dx = p1.x - p0.x;
+          const dy = p1.y - p0.y;
+          const len2 = dx * dx + dy * dy;
+          let u = len2 < 1e-9 ? 0 : ((wx - p0.x) * dx + (wy - p0.y) * dy) / len2;
+          u = u < 0 ? 0 : u > 1 ? 1 : u; // clamp: é segmento, não reta infinita
+          d = Math.min(d, Math.hypot(wx - (p0.x + dx * u), wy - (p0.y + dy * u)));
+          p0 = p1;
+        }
         const ax = l.source.x!;
         const ay = l.source.y!;
         const bx = l.target.x!;
         const by = l.target.y!;
-        const dx = bx - ax;
-        const dy = by - ay;
-        const len2 = dx * dx + dy * dy;
-        if (len2 < 1e-6) continue;
-        let u = ((wx - ax) * dx + (wy - ay) * dy) / len2;
-        u = u < 0 ? 0 : u > 1 ? 1 : u; // clamp: é segmento, não reta infinita
-        const d = Math.hypot(wx - (ax + dx * u), wy - (ay + dy * u));
         if (d > tol + espessura(l) * 0.5 * (1 / view.scale)) continue;
-        if (Math.hypot(wx - ax, wy - ay) < raio(l.source) + tol) continue;
-        if (Math.hypot(wx - bx, wy - by) < raio(l.target) + tol) continue;
+        if (Math.hypot(wx - ax, wy - ay) < raioDe(l.source) + tol) continue;
+        if (Math.hypot(wx - bx, wy - by) < raioDe(l.target) + tol) continue;
         if (d < melhorD) {
           melhorD = d;
           melhor = l;
@@ -1298,6 +1552,7 @@ export default function MemoriaGrafo() {
         a.grau += 1;
         b.grau += 1;
         if (visiveis.has(a) && visiveis.has(b)) arestasVisiveis.push(nova);
+        recalcularImportancia();
         acordar();
       },
       desligar(aId: string, bId: string) {
@@ -1316,6 +1571,7 @@ export default function MemoriaGrafo() {
         if (b) b.grau = Math.max(0, b.grau - 1);
         if (arestaSelecionada && casa(arestaSelecionada))
           arestaSelecionada = null;
+        recalcularImportancia();
         acordar();
       },
     };
@@ -1353,7 +1609,7 @@ export default function MemoriaGrafo() {
       {/* Grafo solto na página, em tela cheia (abaixo do header de 65px) */}
       <div
         ref={wrapRef}
-        className="relative h-[calc(100dvh-var(--header-h))] w-full overflow-hidden bg-slate-50 dark:bg-[#0b1220]"
+        className="relative h-[calc(100dvh-var(--header-h))] w-full overflow-hidden bg-slate-50 bg-[radial-gradient(rgba(100,116,139,.22)_1px,transparent_1px)] bg-[length:22px_22px] dark:bg-[#0b1220] dark:bg-[radial-gradient(rgba(148,163,184,.12)_1px,transparent_1px)]"
       >
         {/* `touch-none`: sem isso o navegador consome o gesto para rolar/dar
             zoom na página e o pan/pinça do grafo nunca recebe os eventos. */}

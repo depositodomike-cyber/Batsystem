@@ -8,23 +8,27 @@ import {
   Transition,
   TransitionChild,
 } from "@headlessui/react";
+import { toast } from "sonner";
 import { SparklesIcon } from "@heroicons/react/24/outline";
+import clsx from "clsx";
 import { useTranslation } from "react-i18next";
 
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
-import { CriacoesLista } from "./CriacoesLista";
 import { Button } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useIaModals } from "@/app/contexts/ia-modals/context";
 import { IA_MODALS_BY_ID } from "@/app/contexts/ia-modals/registry";
 import {
+  AiFunction,
   AI_STUDIO_DISABLED,
+  FUNCTIONS,
   aiFunctionScreenPath,
   isAiStudioFunction,
   isAiStudioFunctionDisabled,
   isUploadFunction,
+  sortAiFunctionsActiveFirst,
 } from "./ia-functions";
 import {
   isFeatureTemporarilyDisabled,
@@ -33,10 +37,54 @@ import {
 
 // ----------------------------------------------------------------------
 
-// O card da grade de funções saía daqui. A grade foi removida da Home (o
-// collapse AI STUDIO do sidebar é o catálogo), e com ela o card que só ela
-// usava. As FUNÇÕES continuam todas no produto: o sidebar as lança e o deep
-// link `?fn=` segue funcionando — quem some é a segunda vitrine.
+// Card da grade de funções. A grade voltou para esta tela quando as criações
+// recentes ganharam página própria (Minhas criações, `/:produto/ia/criacoes`).
+function AiCard({
+  item,
+  onRun,
+  disabled,
+}: {
+  item: AiFunction;
+  onRun: (item: AiFunction) => void;
+  disabled: boolean;
+}) {
+  const { t } = useTranslation();
+  const { Icon, tint, id } = item;
+  const label = t(`ai.${id}`, { defaultValue: item.label });
+  const desc = t(`ai.${id}Desc`, { defaultValue: item.desc });
+
+  return (
+    <button
+      type="button"
+      onClick={() => onRun(item)}
+      disabled={disabled}
+      title={disabled ? t("ai.unavailable") : undefined}
+      className={clsx(
+        "dark:border-dark-600 dark:bg-dark-700 group flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-start transition-colors",
+        disabled
+          ? "cursor-not-allowed opacity-40"
+          : "dark:hover:border-dark-400 cursor-pointer hover:border-gray-300",
+      )}
+    >
+      <span
+        className={clsx(
+          "grid size-11 shrink-0 place-items-center rounded-lg bg-current/10",
+          tint,
+        )}
+      >
+        <Icon className={clsx("size-6 stroke-[1.5]", tint)} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="dark:text-dark-100 block truncate text-sm font-medium text-gray-700">
+          {label}
+        </span>
+        <span className="dark:text-dark-300 text-xs-plus mt-0.5 block text-gray-400">
+          {desc}
+        </span>
+      </span>
+    </button>
+  );
+}
 
 /**
  * Aviso de lançamento ("Em breve") bloqueando a tela do AI Studio. Ficou
@@ -128,7 +176,7 @@ function AiStudioComingSoonModal({
 // ----------------------------------------------------------------------
 
 export default function Ia() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -137,6 +185,23 @@ export default function Ia() {
   const grafoPath = isFeatureTemporarilyDisabled("memoryGraph")
     ? `/${product.code}/memoria-lista`
     : `/${product.code}/memoria-grafo`;
+
+  const run = (fn: AiFunction) => {
+    if (isAiStudioFunctionDisabled(fn.id)) return;
+    // Funções que viraram tela navegam; as demais seguem abrindo modal aqui.
+    const tela = aiFunctionScreenPath(fn.id, product.code);
+    if (tela) {
+      navigate(tela);
+      return;
+    }
+    if (IA_MODALS_BY_ID[fn.id]) {
+      open(fn.id);
+      return;
+    }
+    toast(t(`ai.${fn.id}`, { defaultValue: fn.label }), {
+      description: t("ai.unavailable"),
+    });
+  };
 
   const fnParam = searchParams.get("fn");
   useEffect(() => {
@@ -213,15 +278,26 @@ export default function Ia() {
           </div>
         </div>
 
-        {/* A grade de funções SAIU daqui: ela dizia "o que a IA pode criar?",
-            que é exatamente o que o collapse AI STUDIO do sidebar já responde.
-            Dois catálogos para a mesma pergunta, e nenhum lugar para a outra —
-            "no que eu estou trabalhando?". A Home passou a responder essa. */}
+        {/* As criações recentes saíram daqui para Minhas criações
+            (`/:produto/ia/criacoes`); esta tela volta a ser o catálogo. */}
         <section className="mt-6">
           <h3 className="dark:text-dark-200 text-tiny-plus mb-3 font-semibold tracking-wider text-gray-500 uppercase">
-            {t("ai.recent")}
+            {t("ai.functions")}
           </h3>
-          <CriacoesLista produto={product.code} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {sortAiFunctionsActiveFirst(
+              FUNCTIONS,
+              (fn) => t(`ai.${fn.id}`, { defaultValue: fn.label }),
+              i18n.language,
+            ).map((fn) => (
+              <AiCard
+                key={fn.id}
+                item={fn}
+                onRun={run}
+                disabled={isAiStudioFunctionDisabled(fn.id)}
+              />
+            ))}
+          </div>
         </section>
       </div>
 

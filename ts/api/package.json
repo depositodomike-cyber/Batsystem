@@ -1,5 +1,5 @@
 {
-  "name": "beculture-api",
+  "name": "batsystem-api",
   "version": "0.1.0",
   "description": "Backend (NestJS + Prisma) do beculture — auth, multi-tenant e billing.",
   "private": true,

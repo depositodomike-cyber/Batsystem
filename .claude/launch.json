@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "becultureai-web",
+      "name": "batsystem-web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "cwd": "ts/demo",
@@ -10,7 +10,7 @@
       "autoPort": true
     },
     {
-      "name": "beculture-api",
+      "name": "batsystem-api",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "start:dev"],
       "cwd": "ts/api",

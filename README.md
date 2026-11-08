@@ -1,4 +1,27 @@
-# beculture-product
+# Batsystem
+
+Projeto derivado do `beculture-product` (histórico preservado até `11cec2a`),
+agora independente e **só para uso local**. Diferenças em relação à origem:
+
+- **Sem deploy.** Os links `.vercel/` e o `ts/api/.env.local` (credenciais do
+  Neon de produção do beculture, que os seeds carregam com prioridade) foram
+  removidos. `ts/demo/.env.production` aponta para `http://localhost:3001`.
+  Os `vercel.json` e o script `vercel-build` ficaram, mas estão inertes.
+- **Banco próprio.** `ts/api/docker-compose.yml` sobe o projeto compose
+  `batsystem`: container `batsystem-db`, volume `batsystem-pgdata`, porta
+  **5433**, usuário/senha/banco `batsystem`. Convive com o `beculture-db` (5432).
+- **Mesmas portas de app** (API 3001, web 5173), porque os redirects OAuth de
+  Slack, Google e Microsoft estão cadastrados com `localhost:3001`. Por isso
+  Batsystem e beculture não rodam ao mesmo tempo.
+- Pacotes renomeados para `batsystem-api` e `batsystem-web`. A marca
+  "beculture" na interface e no código ainda não foi trocada.
+
+O restante deste README descreve a origem e continua válido para a parte local;
+as seções de deploy são histórico.
+
+---
+
+# beculture-product (origem)
 
 Monorepo por convivência, não por ferramenta: cinco projetos npm independentes
 dividindo um repositório Git. **Não há `package.json` na raiz**, nem workspaces,

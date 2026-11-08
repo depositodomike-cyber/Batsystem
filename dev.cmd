@@ -11,15 +11,15 @@ rem `cmd /k` mantém a janela aberta depois de o processo terminar — sem isso,
 rem um crash fecharia a janela junto e levaria a mensagem de erro com ela.
 rem
 rem Requisitos: `npm install` já feito nas duas pastas e o Postgres local no ar
-rem (ts/api: npm run db:up).
+rem (ts/api: npm run db:up — container batsystem-db, porta 5433).
 rem ---------------------------------------------------------------------
 
-start "beculture API  :3001" cmd /k "cd /d "%~dp0ts\api" && npm run start:dev"
-start "beculture Web  :5173" cmd /k "cd /d "%~dp0ts\demo" && npm run dev"
+start "Batsystem API  :3001" cmd /k "cd /d "%~dp0ts\api" && npm run start:dev"
+start "Batsystem Web  :5173" cmd /k "cd /d "%~dp0ts\demo" && npm run dev"
 
 echo.
-echo   API  http://localhost:3001   (janela "beculture API")
-echo   Web  http://localhost:5173   (janela "beculture Web")
+echo   API  http://localhost:3001   (janela "Batsystem API")
+echo   Web  http://localhost:5173   (janela "Batsystem Web")
 echo.
 echo   A API leva ~2s para compilar e abrir a porta.
 echo   Para conferir se esta viva:  curl -s -o nul -w "%%{http_code}" http://localhost:3001/uso/tokens

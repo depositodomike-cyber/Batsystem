@@ -1,22 +1,27 @@
+# Nome explícito do projeto compose: sem ele o Docker usa o nome da pasta
+# ("api"), o mesmo do beculture-product, e os dois disputariam container e volume.
+name: batsystem
+
 services:
   db:
     image: postgres:16-alpine
-    container_name: beculture-db
+    container_name: batsystem-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: beculture
-      POSTGRES_PASSWORD: beculture
-      POSTGRES_DB: beculture
+      POSTGRES_USER: batsystem
+      POSTGRES_PASSWORD: batsystem
+      POSTGRES_DB: batsystem
     ports:
       # Só na interface local: evita expor o Postgres (senha de dev) na rede.
-      - "127.0.0.1:5432:5432"
+      # 5433 para conviver com o beculture-db, que ocupa a 5432.
+      - "127.0.0.1:5433:5432"
     volumes:
-      - beculture-pgdata:/var/lib/postgresql/data
+      - batsystem-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U beculture -d beculture"]
+      test: ["CMD-SHELL", "pg_isready -U batsystem -d batsystem"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  beculture-pgdata:
+  batsystem-pgdata:

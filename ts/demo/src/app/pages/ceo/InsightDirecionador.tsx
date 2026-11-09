@@ -238,10 +238,10 @@ export function DirecionadorDeInsights({
             Nenhuma orientação ainda
           </h3>
           <p className="dark:text-dark-300 mt-1 max-w-md text-sm text-gray-500">
-            Diga à IA quais assuntos importam para você — por exemplo, “Turnover
-            em Produto” — ou o que não deve ser considerado relevante.
+            Diga à IA quais assuntos importam para você — por exemplo, “Prazos
+            dos meus projetos” — ou o que não deve ser considerado relevante.
             {!podeGerenciar &&
-              " Fale com um administrador para criar uma orientação."}
+              " Sua conta não tem permissão para criar orientações."}
           </p>
         </div>
       ) : (
@@ -528,7 +528,7 @@ function DirecionamentoModal({
   const opcoesSelect = useMemo(() => {
     const lista: { label: string; value: string }[] = [];
     if (opcoes?.podeTodaOrganizacao)
-      lista.push({ label: "Toda a organização", value: TODA_ORG });
+      lista.push({ label: "Geral", value: TODA_ORG });
     for (const a of opcoes?.areas ?? [])
       lista.push({ label: a.nome, value: a.id });
     // Editando um item cuja área saiu das opções (desativada): mantém visível.
@@ -618,7 +618,7 @@ function DirecionamentoModal({
                   value={nome}
                   maxLength={DIRECIONAMENTO_MAX_NOME}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Ex.: Turnover em Produto"
+                  placeholder="Ex.: Prazos dos meus projetos"
                   description="Use um nome que facilite identificar esta orientação."
                 />
 
@@ -643,8 +643,8 @@ function DirecionamentoModal({
                     edição, os dois ficam como já estavam. */}
                 {semFoco && (
                   <p className="dark:border-dark-500 dark:bg-dark-800 dark:text-dark-200 text-xs-plus rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-600">
-                    Você ainda não está vinculado a uma área. Fale com um
-                    administrador da organização.
+                    Não foi possível definir o escopo desta orientação. Tente
+                    novamente em instantes.
                   </p>
                 )}
 

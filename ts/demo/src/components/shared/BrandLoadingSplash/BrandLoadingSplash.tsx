@@ -3,8 +3,8 @@
 // nem fundo — quem usa decide o que aparece ao redor.
 
 // Local Imports
-import becultureLogo from "@/assets/branding/beculture-logo.svg";
-import becultureLogoDark from "@/assets/branding/beculture-logo-dark.svg";
+import oracleLogo from "@/assets/branding/oracle-logo.svg";
+import oracleLogoDark from "@/assets/branding/oracle-logo-dark.svg";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import "./BrandLoadingSplash.css";
 
@@ -45,7 +45,7 @@ export function BrandLoadingSplash({
 }: BrandLoadingSplashProps) {
   const { isDark } = useThemeContext();
   const onDark = background ? background === "black" : isDark;
-  const src = onDark ? becultureLogoDark : becultureLogo;
+  const src = onDark ? oracleLogoDark : oracleLogo;
 
   return (
     <div

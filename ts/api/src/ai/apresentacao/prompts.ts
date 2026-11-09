@@ -1,5 +1,5 @@
 // Prompts do "Criar apresentação" — etapa 1 (roteiro editável). Portado, em
-// espírito, do beculture/Confi (lib/claude.js). A IA devolve um roteiro em JSON
+// espírito, do Oracle/Confi (lib/claude.js). A IA devolve um roteiro em JSON
 // estrito (slides ou capítulos), que o usuário edita antes de gerar o arquivo.
 // O campo `conexoes` traz o bloco "## 🔗 Conexões no Vault" (conexoes-vault.ts),
 // anexado à nota quando a apresentação é salva na Memória.

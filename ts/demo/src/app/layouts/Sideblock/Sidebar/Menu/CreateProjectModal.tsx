@@ -244,7 +244,7 @@ function CreateProjectForm({
 
         <Section
           title="Fontes"
-          description="De onde este grupo pode buscar conhecimento: conectores corporativos, links e arquivos."
+          description="De onde este grupo pode buscar conhecimento: conectores, links e arquivos."
         >
           <div className="space-y-4">
             {/* Conectores */}

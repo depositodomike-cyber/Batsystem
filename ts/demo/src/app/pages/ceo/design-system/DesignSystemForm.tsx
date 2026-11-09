@@ -250,7 +250,7 @@ export function DesignSystemForm({
               className={areaCls}
               rows={2}
               value={ds.marca.proposito}
-              placeholder="Ex.: Transformar cultura organizacional em performance de negócio."
+              placeholder="Ex.: Centralizar conhecimento e operações pessoais com IA."
               onChange={(e) => set("marca", { proposito: e.target.value })}
             />
           </Campo>
@@ -269,7 +269,7 @@ export function DesignSystemForm({
               <input
                 className={inputCls}
                 value={ds.marca.publico}
-                placeholder="Ex.: C-level, líderes de RH e gestores de times"
+                placeholder="Ex.: Uso pessoal, parceiros de projeto"
                 onChange={(e) => set("marca", { publico: e.target.value })}
               />
             </Campo>

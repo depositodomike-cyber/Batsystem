@@ -131,8 +131,7 @@ export function RepositorioArquivos({ onVoltar }: { onVoltar: () => void }) {
             Repositório
           </h3>
           <p className="dark:text-dark-300 mt-0.5 text-sm text-gray-500">
-            Documentos compartilhados que fazem parte da base de conhecimento
-            da organização.
+            Documentos que fazem parte da sua base de conhecimento.
           </p>
         </div>
         {podeGerenciar && (
@@ -218,7 +217,7 @@ export function RepositorioArquivos({ onVoltar }: { onVoltar: () => void }) {
         messages={{
           pending: {
             title: "Remover este documento?",
-            description: `“${removendo?.nome ?? ""}” sai do repositório da organização e deixa de ser usado como contexto pela IA.`,
+            description: `“${removendo?.nome ?? ""}” sai do seu repositório e deixa de ser usado como contexto pela IA.`,
             actionText: "Remover",
           },
           success: {
@@ -401,7 +400,7 @@ function EstadoVazio({
         <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
           {buscando
             ? "Ajuste a busca para encontrar o que procura."
-            : "Adicione documentos para começar a construir a base de conhecimento compartilhada da organização."}
+            : "Adicione documentos para começar a construir a sua base de conhecimento."}
         </p>
         {!buscando && podeGerenciar && (
           <div className="mt-4 flex justify-center">

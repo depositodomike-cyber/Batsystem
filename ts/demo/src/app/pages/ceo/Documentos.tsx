@@ -80,7 +80,7 @@ function kindFor(file: File): NodeKind {
 }
 
 // Chave de persistência da biblioteca (frontend-only por ora), por conta.
-const STORAGE_BASE = "beculture.documentos.v1";
+const STORAGE_BASE = "oracle.documentos.v1";
 function storageKey(): string {
   return chaveConta(STORAGE_BASE);
 }
@@ -198,7 +198,7 @@ const SEED_NODES: FsNode[] = [
   },
   {
     id: nextId("file"),
-    name: "Logo-Beculture.png",
+    name: "Logo-Oracle.png",
     kind: "image",
     parentId: null,
     ext: "png",
@@ -488,7 +488,7 @@ export default function Documentos() {
                   <>
                     <p>
                       <strong>Documentos</strong> é a biblioteca de arquivos e
-                      imagens da sua empresa. Organize o conteúdo em pastas,
+                      imagens do Oracle. Organize o conteúdo em pastas,
                       envie novos arquivos (pelo botão ou arrastando para a
                       área), visualize imagens e faça o download quando
                       precisar.
@@ -506,7 +506,7 @@ export default function Documentos() {
               Documentos
             </PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-              Centralize e gerencie os arquivos e imagens da sua empresa.
+              Centralize e gerencie os seus arquivos e imagens.
               Organize em pastas, envie, visualize e baixe — tudo em um só
               lugar.
             </p>

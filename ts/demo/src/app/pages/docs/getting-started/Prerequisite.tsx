@@ -14,8 +14,8 @@ export function Prerequisite() {
       <div className="text-sm-plus mt-5">
         <div className="space-y-3">
           <p>
-            beculture is built using <strong>ReactJS</strong> and{" "}
-            <strong>Tailwind CSS</strong>. To work effectively with beculture, its
+            Oracle is built using <strong>ReactJS</strong> and{" "}
+            <strong>Tailwind CSS</strong>. To work effectively with Oracle, its
             important to have a foundational understanding of these
             technologies. ReactJS enables you to build dynamic and interactive
             web applications, while Tailwind CSS allows for rapid styling using
@@ -24,7 +24,7 @@ export function Prerequisite() {
           <p>
             In addition to ReactJS and Tailwind CSS, knowledge of HTML, CSS, and
             JavaScript is highly recommended. These core web development skills
-            will help you understand and modify beculture structure, design, and
+            will help you understand and modify Oracle structure, design, and
             interactivity as needed.
           </p>
           <p>
@@ -36,7 +36,7 @@ export function Prerequisite() {
             To get started, ensure <strong>Node.js</strong> is installed on your
             machine. We recommend using the Node.js LTS version. You will also
             need a dependency manager like npm or yarn, with{" "}
-            <strong>yarn</strong> being the preferred choice for beculture.
+            <strong>yarn</strong> being the preferred choice for Oracle.
           </p>
         </div>
         <div className="mt-8">
@@ -52,7 +52,7 @@ export function Prerequisite() {
             To ensure you are always using the latest features, bug fixes, and
             security updates, its important to stay up to date with the
             changelogs and new releases for the core technologies used in
-            beculture:
+            Oracle:
           </p>
           <ul className="space-y-3">
             <li>
@@ -77,7 +77,7 @@ export function Prerequisite() {
               and plugins.
             </li>
             <li>
-              <strong>beculture:</strong> Monitor the official beculture{" "}
+              <strong>Oracle:</strong> Monitor the official Oracle{" "}
               <a
                 href="/docs/changelogs"
                 className="text-primary-600 dark:text-primary-400 hover:underline"

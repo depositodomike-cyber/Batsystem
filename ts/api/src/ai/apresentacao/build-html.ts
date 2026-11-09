@@ -1,10 +1,10 @@
 // Renderizadores HTML autônomos do roteiro. Portado, em espírito, do
-// beculture/Confi (lib/slides-html.js, lib/book-html.js).
+// Oracle/Confi (lib/slides-html.js, lib/book-html.js).
 // - slides-html: passador de página (setas/clique), 16:9.
 // - book-html: documento de leitura com menu lateral de capítulos.
 //
 // As cores, fontes e o raio saem do design system da marca escolhida no AI
-// Studio; sem design system, cai no tema beculture (âmbar sobre grafite).
+// Studio; sem design system, cai no tema Oracle (âmbar sobre grafite).
 import type { Roteiro, SlideItem } from './prompts';
 import { designTheme, type DesignSystemDto } from '../design/design';
 

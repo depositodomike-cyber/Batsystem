@@ -35,8 +35,8 @@ import { HandThumbUpIcon as HandThumbUpSolidIcon } from "@heroicons/react/24/sol
 import clsx from "clsx";
 
 // Local Imports
-import becultureLogo from "@/assets/branding/beculture-logo.svg";
-import becultureLogoDark from "@/assets/branding/beculture-logo-dark.svg";
+import oracleLogo from "@/assets/branding/oracle-logo.svg";
+import oracleLogoDark from "@/assets/branding/oracle-logo-dark.svg";
 import { Page } from "@/components/shared/Page";
 import { Button, Card, Textarea } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
@@ -906,7 +906,7 @@ function ShareModal({
                   Compartilhar via
                 </p>
                 <div className="-mx-1 max-h-72 space-y-0.5 overflow-y-auto px-1">
-                  {/* Chat da plataforma (beculture) — abre o seletor de pessoa/conversa. */}
+                  {/* Chat da plataforma (Oracle) — abre o seletor de pessoa/conversa. */}
                   {(() => {
                     const platformShared = sharedIds.has("platform-chat");
                     return (
@@ -917,13 +917,13 @@ function ShareModal({
                       >
                         <span className="dark:bg-dark-600 grid size-9 shrink-0 place-items-center rounded-lg bg-gray-100">
                           <img
-                            src={becultureLogo}
-                            alt="beculture"
+                            src={oracleLogo}
+                            alt="Oracle"
                             className="size-6 dark:hidden"
                           />
                           <img
-                            src={becultureLogoDark}
-                            alt="beculture"
+                            src={oracleLogoDark}
+                            alt="Oracle"
                             className="hidden size-6 dark:block"
                           />
                         </span>

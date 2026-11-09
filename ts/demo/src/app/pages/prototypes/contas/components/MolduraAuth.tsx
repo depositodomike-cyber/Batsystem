@@ -12,7 +12,7 @@ import { Page } from "@/components/shared/Page";
 import { PageTitle, type PageHelp } from "@/components/shared/PageTitle";
 import { Card } from "@/components/ui";
 
-import { LogoBeculture } from "./LogoBeculture";
+import { LogoOracle } from "./LogoOracle";
 
 interface MolduraAuthProps {
   /** Título do documento (aba do navegador). */
@@ -47,7 +47,7 @@ export function MolduraAuth({
       <main className="min-h-100vh grid w-full grow grid-cols-1 place-items-center py-8">
         <div className={clsx("mx-auto w-full", largura, "p-4 sm:px-5")}>
           <div className="flex flex-col items-center text-center">
-            <LogoBeculture />
+            <LogoOracle />
             <div className="mt-4 w-full">
               {kicker && (
                 <p className="text-tiny-plus font-semibold tracking-wider text-primary-600 uppercase dark:text-primary-400">

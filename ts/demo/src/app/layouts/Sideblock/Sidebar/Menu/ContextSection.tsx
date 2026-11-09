@@ -29,6 +29,15 @@ export function ContextSection({ product }: { product: string }) {
     icon: "ceo.home",
   };
 
+  const resumoItem: NavigationTree = {
+    id: `${product}.resumo-matinal`,
+    type: "item",
+    path: `/${product}/resumo-matinal`,
+    title: "Resumo Matinal",
+    transKey: "nav.ceo.morningBriefing",
+    icon: "ceo.resumo",
+  };
+
   return (
     <section className="pt-3">
       <div
@@ -53,6 +62,10 @@ export function ContextSection({ product }: { product: string }) {
       <div className="flex flex-col space-y-0.5">
         <ContextoSelect />
         <MenuItem data={homeItem} active={ehPaginaRepositorio(pathname)} />
+        <MenuItem
+          data={resumoItem}
+          active={pathname.endsWith("/resumo-matinal")}
+        />
       </div>
     </section>
   );

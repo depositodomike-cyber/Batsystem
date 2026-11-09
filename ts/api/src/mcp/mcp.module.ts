@@ -8,7 +8,7 @@ import { McpKeysService } from './mcp-keys.service';
 import { McpServerFactory } from './mcp-server.factory';
 
 /**
- * Servidor MCP do beculture (endpoint /mcp) + gestão das API keys
+ * Servidor MCP do Oracle (endpoint /mcp) + gestão das API keys
  * que os clientes externos usam para se conectar (/mcp/keys).
  */
 @Module({

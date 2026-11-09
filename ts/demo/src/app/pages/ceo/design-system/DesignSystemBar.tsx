@@ -1,5 +1,5 @@
 // Import Dependencies
-import { Link, useLocation } from "react-router";
+import { Link, useInRouterContext, useLocation } from "react-router";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
@@ -37,7 +37,15 @@ export function DesignSystemBar({ className, plain = false }: Props) {
   const { brands, activeId, setActive, carregando, hidratado } =
     useDesignSystems();
   const ds = useActiveDesignSystem();
-  const { pathname } = useLocation();
+  // A barra também aparece nas janelas do Lab, que o IaModalsHostProvider
+  // desenha FORA do <RouterProvider> (ele mora em AccountScopedProviders, acima
+  // do router). Lá `useLocation` lançaria e derrubaria o app inteiro; por isso
+  // o caminho vem do router quando houver e, fora dele, do próprio navegador.
+  const dentroDoRouter = useInRouterContext();
+  const pathname = dentroDoRouter
+    ? // eslint-disable-next-line react-hooks/rules-of-hooks -- o contexto não muda durante a vida do componente
+      useLocation().pathname
+    : window.location.pathname;
 
   // Computada aqui, e não recebida por prop: a barra só é montada sob
   // /:produto/…, e passá-la por prop obrigaria cada tela a repetir a expressão.
@@ -85,18 +93,28 @@ export function DesignSystemBar({ className, plain = false }: Props) {
         ) : vazioExplicado ? (
           <div className="dark:border-dark-600 dark:bg-dark-800/40 rounded-lg border border-dashed border-gray-300 px-3 py-3">
             <p className="dark:text-dark-200 text-sm text-gray-600">
-              Nenhuma identidade visual disponível nesta organização.
+              Nenhuma identidade visual disponível.
             </p>
             <p className="dark:text-dark-300 mt-0.5 text-xs text-gray-400">
               O conteúdo será gerado no estilo padrão da plataforma.
             </p>
-            <Link
-              to={urlGuiaDeMarca}
-              className="text-primary-600 dark:text-primary-400 text-xs-plus mt-2 inline-flex items-center gap-1 font-medium"
-            >
-              Ir para Identidade visual
-              <ArrowRightIcon className="size-3.5" />
-            </Link>
+            {dentroDoRouter ? (
+              <Link
+                to={urlGuiaDeMarca}
+                className="text-primary-600 dark:text-primary-400 text-xs-plus mt-2 inline-flex items-center gap-1 font-medium"
+              >
+                Ir para Identidade visual
+                <ArrowRightIcon className="size-3.5" />
+              </Link>
+            ) : (
+              <a
+                href={urlGuiaDeMarca}
+                className="text-primary-600 dark:text-primary-400 text-xs-plus mt-2 inline-flex items-center gap-1 font-medium"
+              >
+                Ir para Identidade visual
+                <ArrowRightIcon className="size-3.5" />
+              </a>
+            )}
           </div>
         ) : (
           <select

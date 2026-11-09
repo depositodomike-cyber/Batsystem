@@ -1,5 +1,5 @@
 // Editor de cortes — motor de vídeo 100% no navegador (ffmpeg.wasm), portado do
-// beculture/Confi (que usa ffmpeg local). Sem servidor: o vídeo é processado na
+// Oracle/Confi (que usa ffmpeg local). Sem servidor: o vídeo é processado na
 // própria máquina do usuário via WebAssembly.
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";

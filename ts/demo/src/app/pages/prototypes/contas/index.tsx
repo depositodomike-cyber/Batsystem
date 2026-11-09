@@ -2,7 +2,7 @@
  * Rota-host do protótipo de contas / organizações / contextos.
  *
  * O estado vive em `PrototipoContasProvider` na raiz da app (`App.tsx`), para
- * o menu de perfil da BeCulture listar as mesmas organizações após o login.
+ * o menu de perfil do Oracle listar as mesmas organizações após o login.
  */
 
 import { Outlet } from "react-router";

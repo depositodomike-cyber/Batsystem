@@ -13,6 +13,7 @@ import {
   getConnector,
 } from './catalog';
 import { camposDoConector, exigeCredenciais } from './credenciais-spec';
+import { OauthProviderService } from './oauth-provider.service';
 
 /**
  * Teto por campo. Nenhuma credencial de provedor chega perto disso — o maior
@@ -53,6 +54,7 @@ export class ConectoresService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly crypto: CryptoService,
+    private readonly oauth: OauthProviderService,
   ) {}
 
   categories(): ConnectorCategory[] {
@@ -122,6 +124,21 @@ export class ConectoresService {
     connectorId: string,
   ): Promise<ConnectorWithStatus> {
     this.requireFromCatalog(connectorId);
+    // Google: Gmail, Calendar e Drive dividem a mesma concessão; revogar
+    // derruba as três. Só revoga no Google quando este é o último conector
+    // Google conectado — senão apenas esquece o vínculo local.
+    if (OauthProviderService.ehGoogle(connectorId)) {
+      const outros = await this.prisma.empresaConector.count({
+        where: {
+          empresaId,
+          connectorId: {
+            in: OauthProviderService.idsGoogle().filter((id) => id !== connectorId),
+          },
+          accessTokenEncrypted: { not: null },
+        },
+      });
+      if (outros === 0) await this.oauth.revogarGoogle(empresaId, connectorId);
+    }
     await this.prisma.empresaConector.deleteMany({
       where: { empresaId, connectorId },
     });

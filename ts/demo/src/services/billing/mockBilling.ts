@@ -14,7 +14,7 @@ import type {
  * real acontece). É o ponto exato onde, na Fase 2, entra a `IuguBilling`.
  */
 
-const STORAGE_KEY = "beculture:billing";
+const STORAGE_KEY = "oracle:billing";
 
 function loadAll(): Record<string, Assinatura> {
   try {

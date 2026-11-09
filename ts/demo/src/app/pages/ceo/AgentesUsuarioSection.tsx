@@ -88,10 +88,10 @@ const COPIA: Record<
   },
   organizacao: {
     descricao:
-      "Crie e configure especialistas para toda a organização usar em tarefas específicas nas conversas com o Assistente.",
+      "Crie e configure especialistas do Oracle para tarefas específicas nas conversas com o Assistente.",
     vazio:
-      "A organização ainda não tem agentes. Use “Criar agente” para montar um especialista que todos possam chamar com @menção no Assistente.",
-    vazioLeitura: "A organização ainda não tem agentes.",
+      "Ainda não há agentes gerais. Use “Criar agente” para montar um especialista e chamá-lo com @menção no Assistente.",
+    vazioLeitura: "Ainda não há agentes gerais.",
   },
 };
 
@@ -346,7 +346,7 @@ export function AgentesUsuarioSection({
           pending: {
             title: "Excluir este agente?",
             description: excluindo?.sistemaId
-              ? `@${excluindo.mencao} deixa de estar disponível nesta organização. As outras organizações não são afetadas, e as conversas em que “${excluindo.titulo}” já respondeu continuam como estão.`
+              ? `@${excluindo.mencao} deixa de estar disponível, e as conversas em que “${excluindo.titulo}” já respondeu continuam como estão.`
               : `@${excluindo?.mencao ?? ""} deixa de poder ser mencionado. As conversas em que “${excluindo?.titulo ?? ""}” já respondeu continuam como estão.`,
             actionText: "Excluir",
           },
@@ -372,7 +372,7 @@ export function AgentesUsuarioSection({
 function BadgeTipo({ escopo }: { escopo: Escopo }) {
   return escopo === "organizacao" ? (
     <Badge color="info" variant="soft" className="rounded-full">
-      Organização
+      Geral
     </Badge>
   ) : (
     <Badge color="success" variant="soft" className="rounded-full">

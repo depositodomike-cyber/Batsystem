@@ -41,9 +41,11 @@ const COLOR_SCHEME_QUERY = "(prefers-color-scheme: dark)";
 
 const _html = document?.documentElement;
 
-// Rotas (login + funil de cadastro/onboarding) onde as configurações de tema
-// (light/dark) NÃO devem ser aplicadas — elas valem só dentro da aplicação.
-const NO_THEME_ROUTES = ["/login", "/cadastro", "/onboarding"];
+// Rotas onde as configurações de tema (light/dark) NÃO são aplicadas e a tela
+// fica sempre light. No Oracle a lista está vazia de propósito: login, cadastro
+// e onboarding seguem o tema como o resto do sistema (padrão: dark, black,
+// vermelho). Antes eram ["/login", "/cadastro", "/onboarding"].
+const NO_THEME_ROUTES: string[] = [];
 const isNoThemeRoute = (pathname: string) =>
   NO_THEME_ROUTES.some((route) => pathname.startsWith(route));
 
@@ -58,7 +60,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
   const skipTheme = isNoThemeRoute(activePathname);
 
-  const [settings, setSettings] = useLocalStorage<ThemeConfig>("settings", {
+  const [settings, setSettings] = useLocalStorage<ThemeConfig>("oracle:settings", {
     themeMode: initialState.themeMode,
     themeLayout: initialState.themeLayout,
     cardSkin: initialState.cardSkin,

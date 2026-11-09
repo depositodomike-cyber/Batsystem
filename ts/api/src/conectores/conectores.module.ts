@@ -8,6 +8,8 @@ import { EmailController } from './email.controller';
 import { EmailApiService } from './email-api.service';
 import { AgendaController } from './agenda.controller';
 import { AgendaApiService } from './agenda-api.service';
+import { DriveController } from './drive.controller';
+import { DriveApiService } from './drive-api.service';
 import { OauthProviderService } from './oauth-provider.service';
 import { OauthStateService } from './oauth-state.service';
 import { CryptoService } from '@/ai/crypto';
@@ -18,6 +20,7 @@ import { CryptoService } from '@/ai/crypto';
     SlackController,
     EmailController,
     AgendaController,
+    DriveController,
   ],
   providers: [
     ConectoresService,
@@ -26,6 +29,7 @@ import { CryptoService } from '@/ai/crypto';
     OauthProviderService,
     EmailApiService,
     AgendaApiService,
+    DriveApiService,
     OauthStateService,
     CryptoService,
   ],
@@ -35,6 +39,7 @@ import { CryptoService } from '@/ai/crypto';
     OauthProviderService,
     EmailApiService,
     AgendaApiService,
+    DriveApiService,
   ],
 })
 export class ConectoresModule {}

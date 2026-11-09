@@ -23,7 +23,7 @@ import { ContextSection } from "./ContextSection";
 
 // Produtos que exibem o grupo "Agrupamentos" na sidebar. O histórico de
 // conversas vive na aba Histórico do painel do assistente (bolinha).
-const PRODUCTS_WITH_GROUPINGS = ["behuman"];
+const PRODUCTS_WITH_GROUPINGS = ["oracle"];
 
 // ----------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ export function Menu() {
   const contextNav = navigation
     .flatMap((group) => group.childs ?? [])
     .find((item) => item.id.endsWith(".memoria-grafo"));
-  const showContextSections = productCode === "behuman" && !!contextNav;
+  const showContextSections = productCode === "oracle" && !!contextNav;
 
   const activeGroup = navigation.find((item) => {
     if (item.path) return isRouteActive(item.path, pathname);

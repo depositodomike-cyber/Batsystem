@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Memória da IA — base de conhecimento de longo prazo do BeHuman.
+// Memória da IA — base de conhecimento de longo prazo do Oracle.
 // É o que a IA "lembra" sobre a empresa entre as conversas: fatos, contexto,
 // decisões e preferências aprendidos nos chats e squads. Cada memória ativa é
 // injetada no contexto das respostas para personalizá-las. Este arquivo define

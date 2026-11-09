@@ -5,18 +5,19 @@ import {
   FilmIcon,
   SparklesIcon,
   ArrowTopRightOnSquareIcon,
+  ArrowPathIcon,
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
 // Local Imports
-import { Button, Checkbox, Spinner } from "@/components/ui";
-import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
+import { Accordion, Button, Checkbox, Spinner } from "@/components/ui";
 import {
   MemoriaTextarea,
   MemoriaInput,
 } from "@/components/shared/MemoriaMentions";
 import { IaModalShell } from "@/app/contexts/ia-modals/IaModalShell";
+import type { IaModalOpenPayload } from "@/app/contexts/ia-modals/context";
 import { DesignSystemBar, useActiveDesignSystem } from "./design-system";
 import {
   getVideoConfig,
@@ -31,32 +32,68 @@ import {
 import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
 import { EnviarParaGrupoButton } from "./EnviarParaGrupo";
 import { PASTA_MEMORIA } from "./memoria-pastas";
+import {
+  AcoesEtapa,
+  CAIXA_ERRO,
+  CAMPO,
+  CAMPO_SELECT,
+  CAMPO_TEXTAREA,
+  errMessage as errMessageLab,
+  LabCarregando,
+  LabEtapa,
+  LabResultado,
+  PerguntaEtapa,
+  ROTULO_CAMPO,
+  useCriacaoLab,
+  useEtapasLab,
+  type PassoLab,
+} from "./lab";
 
 // ----------------------------------------------------------------------
-// Criar vídeo (IA · HeyGen) — portado do beculture/Confi. Roteiro (opcional via
-// IA) → avatar + voz → gera na nuvem HeyGen → poll → MP4. Requer HEYGEN_API_KEY
-// no servidor.
+// Criar vídeo (Lab · HeyGen). Continua JANELA, de propósito: a renderização
+// no HeyGen leva minutos e o acompanhamento (poll) segue rodando enquanto a
+// pessoa navega ou minimiza. Dentro da janela, o mesmo padrão de etapas das
+// páginas do Lab: Roteiro → Avatar e voz → Formato e acabamento → render →
+// MP4. Salva em Minhas criações (inclusive o id da renderização, para retomar
+// o acompanhamento ao reabrir). Requer HEYGEN_API_KEY no servidor.
 // ----------------------------------------------------------------------
 
 const FORMATOS = ["16:9", "9:16", "1:1", "4:5"];
+const FALHA = "Falha ao gerar o vídeo. Tente novamente.";
+const errMessage = (err: unknown) => errMessageLab(err, FALHA);
 
-function errMessage(err: unknown): string {
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object") {
-    const o = err as { message?: unknown };
-    if (typeof o.message === "string") return o.message;
-  }
-  return "Falha ao gerar o vídeo. Tente novamente.";
-}
+type EtapaId = "roteiro" | "avatar" | "formato";
+const ETAPAS = [
+  { id: "roteiro" as const, numero: "01", titulo: "Roteiro" },
+  { id: "avatar" as const, numero: "02", titulo: "Avatar e voz" },
+  { id: "formato" as const, numero: "03", titulo: "Formato e acabamento" },
+];
 
 interface Props {
   isOpen: boolean;
   close: () => void;
   /** Recolhe a janela para o dock do rodapé (host global). */
   onMinimize?: () => void;
+  /** `{ criacao: id }` ao reabrir pela lista de Minhas criações. */
+  payload?: IaModalOpenPayload;
 }
 
-export function VideoModal({ isOpen, close, onMinimize }: Props) {
+/**
+ * Reabrir a janela com OUTRA criação remonta o conteúdo (estado limpo e
+ * retomada certa). Minimizar e restaurar não muda o payload, então não remonta.
+ */
+export function VideoModal(props: Props) {
+  const criacaoId =
+    typeof props.payload?.criacao === "string" ? props.payload.criacao : null;
+  return <VideoJanela key={criacaoId ?? "nova"} {...props} criacaoId={criacaoId} />;
+}
+
+function VideoJanela({
+  isOpen,
+  close,
+  onMinimize,
+  criacaoId,
+}: Props & { criacaoId: string | null }) {
   const [config, setConfig] = useState<{ configurado: boolean } | null>(null);
   const [avatares, setAvatares] = useState<Avatar[]>([]);
   const [vozes, setVozes] = useState<Voz[]>([]);
@@ -70,17 +107,35 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
   const [formato, setFormato] = useState("16:9");
   const [speed, setSpeed] = useState(1);
   const [usarFundo, setUsarFundo] = useState(false);
-  const [fundo, setFundo] = useState("#0b1220");
+  const [fundo, setFundo] = useState("#000000");
   const [teste, setTeste] = useState(true);
 
   const [gerandoRoteiro, setGerandoRoteiro] = useState(false);
-  const [gerando, setGerando] = useState(false);
+  const [passo, setPasso] = useState<PassoLab>("form");
   const [statusText, setStatusText] = useState("");
   const [erro, setErro] = useState("");
+  const [videoId, setVideoId] = useState("");
   const [resultUrl, setResultUrl] = useState("");
 
-  // Marca/design system ativo — enviado junto com a geração.
   const design = useActiveDesignSystem();
+  const gerando = passo === "gerando";
+
+  const avatarNome = avatares.find((a) => a.id === avatarId)?.nome;
+  const vozNome = vozes.find((v) => v.id === voiceId)?.nome;
+  const etapas = useEtapasLab<EtapaId>(ETAPAS, {
+    roteiro: script.trim()
+      ? `${script.trim().split(/\s+/).length} palavras`
+      : undefined,
+    avatar: [avatarNome, vozNome].filter(Boolean).join(" · ") || undefined,
+    formato: [
+      formato,
+      `${speed}×`,
+      usarFundo ? `fundo ${fundo}` : null,
+      teste ? "modo teste" : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  });
 
   const pollRef = useRef<number | null>(null);
   const stopPoll = () => {
@@ -90,6 +145,91 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
     }
   };
   useEffect(() => () => stopPoll(), []);
+
+  const startPoll = (id: string) => {
+    stopPoll();
+    setStatusText("Na fila do HeyGen…");
+    pollRef.current = window.setInterval(async () => {
+      try {
+        const s = await getVideoStatusApi(id);
+        if (s.status === "completed" && s.url) {
+          stopPoll();
+          setResultUrl(s.url);
+          setPasso("pronta");
+          toast("Vídeo pronto", {
+            description: "Seu MP4 foi gerado no HeyGen.",
+          });
+        } else if (s.status === "failed") {
+          stopPoll();
+          setErro(s.erro || "O HeyGen falhou ao gerar o vídeo.");
+          setVideoId("");
+          setPasso("form");
+        } else {
+          setStatusText(
+            s.status === "processing"
+              ? "Renderizando no HeyGen…"
+              : `Status: ${s.status}`,
+          );
+        }
+      } catch (err) {
+        stopPoll();
+        setErro(errMessage(err));
+        setPasso("form");
+      }
+    }, 5000);
+  };
+
+  const criacao = useCriacaoLab({
+    tipo: "video",
+    idInicial: criacaoId,
+    passo,
+    erro: Boolean(erro) && !resultUrl,
+    relevante: tema.trim().length >= 20 || script.trim().length >= 20 || Boolean(videoId),
+    titulo: tema.trim().slice(0, 80) || script.trim().slice(0, 60),
+    dados: {
+      tema,
+      contexto,
+      script,
+      avatarId,
+      voiceId,
+      formato,
+      speed,
+      usarFundo,
+      fundo,
+      teste,
+      videoId,
+      resultUrl,
+    },
+    restaurar: (d) => {
+      setTema(d.tema ?? "");
+      setContexto(d.contexto ?? "");
+      setScript(d.script ?? "");
+      if (d.avatarId) setAvatarId(d.avatarId);
+      if (d.voiceId) setVoiceId(d.voiceId);
+      if (d.formato) setFormato(d.formato);
+      if (typeof d.speed === "number") setSpeed(d.speed);
+      setUsarFundo(Boolean(d.usarFundo));
+      if (d.fundo) setFundo(d.fundo);
+      setTeste(d.teste !== false);
+      if (d.resultUrl) {
+        setResultUrl(d.resultUrl);
+        setPasso("pronta");
+      } else if (d.videoId) {
+        // Renderização em andamento quando a criação foi salva: retoma o poll.
+        setVideoId(d.videoId);
+        setPasso("gerando");
+        startPoll(d.videoId);
+      } else {
+        etapas.resolverTodas();
+      }
+    },
+  });
+
+  // O id da renderização é um marco: grava na hora, para dar para retomar.
+  useEffect(() => {
+    if (videoId) void criacao.gravarJa();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoId]);
 
   // Carrega config + avatares/vozes ao abrir.
   useEffect(() => {
@@ -138,38 +278,6 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
     }
   };
 
-  const startPoll = (videoId: string) => {
-    stopPoll();
-    setStatusText("Na fila do HeyGen…");
-    pollRef.current = window.setInterval(async () => {
-      try {
-        const s = await getVideoStatusApi(videoId);
-        if (s.status === "completed" && s.url) {
-          stopPoll();
-          setResultUrl(s.url);
-          setGerando(false);
-          toast("Vídeo pronto", {
-            description: "Seu MP4 foi gerado no HeyGen.",
-          });
-        } else if (s.status === "failed") {
-          stopPoll();
-          setErro(s.erro || "O HeyGen falhou ao gerar o vídeo.");
-          setGerando(false);
-        } else {
-          setStatusText(
-            s.status === "processing"
-              ? "Renderizando no HeyGen…"
-              : `Status: ${s.status}`,
-          );
-        }
-      } catch (err) {
-        stopPoll();
-        setErro(errMessage(err));
-        setGerando(false);
-      }
-    }, 5000);
-  };
-
   const gerar = async () => {
     setErro("");
     setResultUrl("");
@@ -177,10 +285,10 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
       return setErro("Escreva (ou gere) o texto que o avatar vai falar.");
     if (!avatarId) return setErro("Escolha um avatar.");
     if (!voiceId) return setErro("Escolha uma voz.");
-    setGerando(true);
+    setPasso("gerando");
     setStatusText("Enviando ao HeyGen…");
     try {
-      const { videoId } = await gerarVideoApi({
+      const { videoId: id } = await gerarVideoApi({
         script: script.trim(),
         avatarId,
         voiceId,
@@ -191,10 +299,11 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
         teste,
         design,
       });
-      startPoll(videoId);
+      setVideoId(id);
+      startPoll(id);
     } catch (err) {
       setErro(errMessage(err));
-      setGerando(false);
+      setPasso("form");
     }
   };
 
@@ -205,9 +314,16 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
   };
 
   const novo = () => {
+    criacao.reiniciar();
     setResultUrl("");
+    setVideoId("");
     setErro("");
     setStatusText("");
+    setTema("");
+    setContexto("");
+    setScript("");
+    setPasso("form");
+    etapas.reiniciar();
   };
 
   // O MP4 fica no CDN do HeyGen: tentamos baixá-lo para a pasta do Repositório e,
@@ -234,20 +350,21 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
       closeDisabled={gerando}
       title={
         <>
-          IA · Criar vídeo{" "}
+          Lab · Criar vídeo{" "}
           <span className="dark:text-dark-300 text-xs font-normal text-gray-400">
             · HeyGen
           </span>
         </>
       }
       icon={FilmIcon}
+      size="4xl"
     >
       <div>
-        {config === null ? (
+        {config === null && !criacao.carregando ? (
           <div className="grid place-items-center py-10">
             <Spinner className="size-6" />
           </div>
-        ) : !config.configurado ? (
+        ) : config && !config.configurado ? (
           <div className="dark:border-dark-600 rounded-xl border border-dashed border-gray-300 p-6 text-center">
             <FilmIcon className="mx-auto size-8 text-gray-400" />
             <p className="dark:text-dark-100 mt-3 text-sm font-medium text-gray-700">
@@ -258,259 +375,278 @@ export function VideoModal({ isOpen, close, onMinimize }: Props) {
               servidor (ts/api) para gerar vídeos com avatar falante.
             </p>
           </div>
-        ) : resultUrl ? (
-          <div className="flex flex-col gap-3">
+        ) : passo === "pronta" && resultUrl ? (
+          <LabResultado
+            semCard
+            titulo="Vídeo pronto"
+            descricao={tema.trim() || undefined}
+            detalhe={
+              teste
+                ? "Modo teste: o vídeo tem marca d’água do HeyGen. Desmarque “Modo teste” para gastar créditos e gerar sem marca."
+                : undefined
+            }
+            acoesSecundarias={
+              <Button variant="flat" onClick={novo} className="gap-1.5">
+                <ArrowPathIcon className="size-4" /> Novo vídeo
+              </Button>
+            }
+            acoesPrincipais={
+              <>
+                <SalvarNaMemoriaButton
+                  pasta={PASTA_MEMORIA.video}
+                  titulo={tema.trim() || "Vídeo com avatar"}
+                  tags={["vídeo"]}
+                  versao={resultUrl}
+                  preparar={prepararMemoria}
+                  rotulo="Salvar no Repositório"
+                  rotuloSalvo="Salvo no Repositório"
+                  semSeletorDePasta
+                  className="h-10 px-5"
+                />
+                <EnviarParaGrupoButton
+                  funcao="video"
+                  titulo={tema.trim() || "Vídeo com avatar"}
+                  versao={resultUrl}
+                  preparar={prepararMemoria}
+                  className="h-10 px-5"
+                />
+                <Button
+                  component="a"
+                  href={resultUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  color="primary"
+                  className="h-10 gap-2 px-5"
+                >
+                  <ArrowTopRightOnSquareIcon className="size-5" /> Abrir /
+                  baixar MP4
+                </Button>
+              </>
+            }
+          >
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video
               src={resultUrl}
               controls
               className="max-h-[52vh] w-full rounded-xl bg-black"
             />
-            <div className="flex gap-2">
-              <Button
-                component="a"
-                href={resultUrl}
-                target="_blank"
-                rel="noreferrer"
-                color="primary"
-                className="gap-2"
-              >
-                <ArrowTopRightOnSquareIcon className="size-5" /> Abrir / baixar
-                MP4
-              </Button>
-              <SalvarNaMemoriaButton
-                pasta={PASTA_MEMORIA.video}
-                titulo={tema.trim() || "Vídeo com avatar"}
-                tags={["vídeo"]}
-                versao={resultUrl}
-                preparar={prepararMemoria}
-                className="h-auto"
-              />
-              <EnviarParaGrupoButton
-                funcao="video"
-                titulo={tema.trim() || "Vídeo com avatar"}
-                versao={resultUrl}
-                preparar={prepararMemoria}
-                className="h-auto"
-              />
-              <Button variant="outlined" onClick={novo}>
-                Novo vídeo
-              </Button>
-            </div>
-            {teste && (
-              <p className="dark:text-dark-300 text-xs text-gray-400">
-                Modo teste: o vídeo tem marca d’água do HeyGen. Desmarque “Modo
-                teste” para gastar créditos e gerar sem marca.
-              </p>
-            )}
-          </div>
+          </LabResultado>
         ) : gerando ? (
-          <div className="grid place-items-center py-10">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <BrandLoadingSplash label={null} />
-              <p className="dark:text-dark-200 text-sm text-gray-600">
-                {statusText || "Processando…"}
-              </p>
-              <p className="dark:text-dark-300 text-xs text-gray-400">
-                Vídeos de avatar podem levar de 1 a alguns minutos.
-              </p>
-            </div>
-          </div>
+          <LabCarregando
+            semCard
+            titulo={statusText || "Processando…"}
+            descricao="Vídeos de avatar podem levar de 1 a alguns minutos. Você pode minimizar a janela e continuar navegando."
+          />
         ) : (
-          <div className="flex flex-col gap-4">
-            <DesignSystemBar />
-
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void gerar();
+            }}
+          >
             {loadErro && (
-              <div className="text-xs-plus rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
-                {loadErro}
+              <div className={`${CAIXA_ERRO} mb-3`}>{loadErro}</div>
+            )}
+            {criacao.erroAoCarregar && (
+              <div className={`${CAIXA_ERRO} mb-3`}>
+                {criacao.erroAoCarregar}
               </div>
             )}
 
-            {/* Roteiro */}
-            <div className="flex flex-col gap-2">
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-                <MemoriaInput
-                  value={tema}
-                  onChange={(e) => setTema(e.target.value)}
-                  placeholder="Assunto do vídeo (para a IA escrever o roteiro)"
-                  className="form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
-                />
-                <Button
-                  onClick={escreverComIA}
-                  variant="outlined"
-                  disabled={gerandoRoteiro || !tema.trim()}
-                  className="gap-1.5"
-                >
-                  {gerandoRoteiro ? (
-                    <Spinner className="size-4" />
-                  ) : (
-                    <SparklesIcon className="size-4" />
-                  )}
-                  Escrever com IA
-                </Button>
-              </div>
-              <MemoriaInput
-                value={contexto}
-                onChange={(e) => setContexto(e.target.value)}
-                placeholder="Contexto p/ a IA (opcional): público, tom, o que não pode faltar…"
-                className="form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
-              />
-              <MemoriaTextarea
-                value={script}
-                onChange={(e) => setScript(e.target.value)}
-                rows={5}
-                placeholder="Texto que o avatar vai falar (digite ou gere com a IA acima)…"
-                className="form-textarea dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
-              />
-            </div>
-
-            {/* Avatares */}
-            <div>
-              <label className="dark:text-dark-200 text-xs-plus mb-1.5 block font-medium text-gray-600">
-                Avatar ({avatares.length})
-              </label>
-              {avatares.length === 0 ? (
-                <p className="dark:text-dark-300 text-xs text-gray-400">
-                  Nenhum avatar disponível na conta.
-                </p>
-              ) : (
-                <div className="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
-                  {avatares.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => setAvatarId(a.id)}
-                      className={clsx(
-                        "relative overflow-hidden rounded-lg border-2 transition-colors",
-                        avatarId === a.id
-                          ? "border-primary-500"
-                          : "dark:border-dark-600 border-transparent hover:border-gray-300",
-                      )}
-                      title={a.nome}
-                    >
-                      {a.preview ? (
-                        <img
-                          src={a.preview}
-                          alt={a.nome}
-                          className="aspect-square w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="dark:bg-dark-600 text-tiny grid aspect-square w-full place-items-center bg-gray-100 text-gray-400">
-                          {a.nome.slice(0, 12)}
-                        </div>
-                      )}
-                      {avatarId === a.id && (
-                        <span className="text-primary-500 absolute top-1 right-1">
-                          <CheckCircleIcon className="size-5" />
-                        </span>
-                      )}
-                      <span className="dark:bg-dark-800/80 dark:text-dark-100 text-tiny absolute inset-x-0 bottom-0 truncate bg-white/80 px-1 py-0.5 text-gray-700">
-                        {a.nome}
-                      </span>
-                    </button>
-                  ))}
+            <Accordion {...etapas.accordion} className="flex flex-col gap-3">
+              <LabEtapa {...etapas.etapa("roteiro")}>
+                <PerguntaEtapa>O que o avatar vai falar?</PerguntaEtapa>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+                  <MemoriaInput
+                    value={tema}
+                    onChange={(e) => setTema(e.target.value)}
+                    placeholder="Assunto do vídeo (para a IA escrever o roteiro)"
+                    className={`${CAMPO} rounded-lg`}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => void escreverComIA()}
+                    variant="outlined"
+                    disabled={gerandoRoteiro || !tema.trim()}
+                    className="h-10 gap-1.5"
+                  >
+                    {gerandoRoteiro ? (
+                      <Spinner className="size-4" />
+                    ) : (
+                      <SparklesIcon className="size-4" />
+                    )}
+                    Escrever com IA
+                  </Button>
                 </div>
-              )}
-            </div>
-
-            {/* Voz + formato + velocidade */}
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <div>
-                <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
-                  Voz
-                </label>
-                <select
-                  value={voiceId}
-                  onChange={(e) => setVoiceId(e.target.value)}
-                  className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm"
-                >
-                  {vozes.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.nome} {v.idioma ? `· ${v.idioma}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
-                  Formato
-                </label>
-                <select
-                  value={formato}
-                  onChange={(e) => setFormato(e.target.value)}
-                  className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm"
-                >
-                  {FORMATOS.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
-                  Velocidade: {speed}×
-                </label>
-                <input
-                  type="range"
-                  min={0.5}
-                  max={1.5}
-                  step={0.1}
-                  value={speed}
-                  onChange={(e) => setSpeed(Number(e.target.value))}
-                  className="accent-primary-600 mt-2 w-full"
+                <MemoriaInput
+                  value={contexto}
+                  onChange={(e) => setContexto(e.target.value)}
+                  placeholder="Contexto para a IA (opcional): público, tom, o que não pode faltar…"
+                  className={`${CAMPO} mt-2 rounded-lg`}
                 />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4">
-              <label className="dark:text-dark-200 text-xs-plus flex cursor-pointer items-center gap-2 text-gray-600">
-                <Checkbox
-                  checked={usarFundo}
-                  onChange={(e) => setUsarFundo(e.target.checked)}
-                  className="size-4"
+                <MemoriaTextarea
+                  value={script}
+                  onChange={(e) => setScript(e.target.value)}
+                  rows={6}
+                  placeholder="Texto que o avatar vai falar (digite ou gere com a IA acima)…"
+                  className={`${CAMPO_TEXTAREA} mt-2 rounded-lg`}
                 />
-                Cor de fundo
-              </label>
-              {usarFundo && (
-                <input
-                  type="color"
-                  value={fundo}
-                  onChange={(e) => setFundo(e.target.value)}
-                  className="dark:border-dark-500 h-8 w-12 cursor-pointer rounded border border-gray-300"
+                <div className="dark:border-dark-600 mt-5 border-t border-gray-100 pt-5">
+                  <DesignSystemBar plain />
+                </div>
+                <AcoesEtapa
+                  onContinuar={() => etapas.concluirEtapa("roteiro")}
+                  desabilitado={!script.trim()}
                 />
-              )}
-              <label className="dark:text-dark-200 text-xs-plus flex cursor-pointer items-center gap-2 text-gray-600">
-                <Checkbox
-                  checked={teste}
-                  onChange={(e) => setTeste(e.target.checked)}
-                  className="size-4"
+              </LabEtapa>
+
+              <LabEtapa {...etapas.etapa("avatar")}>
+                <PerguntaEtapa>
+                  Quem apresenta e com qual voz? ({avatares.length} avatares)
+                </PerguntaEtapa>
+                {avatares.length === 0 ? (
+                  <p className="dark:text-dark-300 text-xs text-gray-400">
+                    Nenhum avatar disponível na conta.
+                  </p>
+                ) : (
+                  <div className="grid max-h-64 grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-5">
+                    {avatares.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        onClick={() => setAvatarId(a.id)}
+                        className={clsx(
+                          "relative overflow-hidden rounded-lg border-2 transition-colors",
+                          avatarId === a.id
+                            ? "border-primary-500"
+                            : "dark:border-dark-600 border-transparent hover:border-gray-300",
+                        )}
+                        title={a.nome}
+                      >
+                        {a.preview ? (
+                          <img
+                            src={a.preview}
+                            alt={a.nome}
+                            className="aspect-square w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="dark:bg-dark-600 text-tiny grid aspect-square w-full place-items-center bg-gray-100 text-gray-400">
+                            {a.nome.slice(0, 12)}
+                          </div>
+                        )}
+                        {avatarId === a.id && (
+                          <span className="text-primary-500 absolute top-1 right-1">
+                            <CheckCircleIcon className="size-5" />
+                          </span>
+                        )}
+                        <span className="dark:bg-dark-800/80 dark:text-dark-100 text-tiny absolute inset-x-0 bottom-0 truncate bg-white/80 px-1 py-0.5 text-gray-700">
+                          {a.nome}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-5 max-w-sm">
+                  <label className={ROTULO_CAMPO}>Voz</label>
+                  <select
+                    value={voiceId}
+                    onChange={(e) => setVoiceId(e.target.value)}
+                    className={`${CAMPO_SELECT} rounded-lg`}
+                  >
+                    {vozes.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.nome} {v.idioma ? `· ${v.idioma}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <AcoesEtapa
+                  onContinuar={() => etapas.concluirEtapa("avatar")}
+                  desabilitado={!avatarId || !voiceId}
                 />
-                Modo teste{" "}
-                <span className="text-gray-400">
-                  (marca d’água, sem gastar créditos)
-                </span>
-              </label>
-            </div>
+              </LabEtapa>
 
-            {erro && (
-              <div className="text-xs-plus rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
-                {erro}
-              </div>
-            )}
+              <LabEtapa {...etapas.etapa("formato")}>
+                <PerguntaEtapa>Formato e acabamento</PerguntaEtapa>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={ROTULO_CAMPO}>Formato</label>
+                    <select
+                      value={formato}
+                      onChange={(e) => setFormato(e.target.value)}
+                      className={`${CAMPO_SELECT} rounded-lg`}
+                    >
+                      {FORMATOS.map((f) => (
+                        <option key={f} value={f}>
+                          {f}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={ROTULO_CAMPO}>
+                      Velocidade: {speed}×
+                    </label>
+                    <input
+                      type="range"
+                      min={0.5}
+                      max={1.5}
+                      step={0.1}
+                      value={speed}
+                      onChange={(e) => setSpeed(Number(e.target.value))}
+                      className="accent-primary-600 mt-3 w-full"
+                    />
+                  </div>
+                </div>
 
-            <div className="flex justify-end">
+                <div className="mt-5 flex flex-wrap items-center gap-4">
+                  <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                    <Checkbox
+                      checked={usarFundo}
+                      onChange={(e) => setUsarFundo(e.target.checked)}
+                      className="size-4"
+                    />
+                    Cor de fundo
+                  </label>
+                  {usarFundo && (
+                    <input
+                      type="color"
+                      value={fundo}
+                      onChange={(e) => setFundo(e.target.value)}
+                      className="dark:border-dark-500 h-8 w-12 cursor-pointer rounded border border-gray-300"
+                    />
+                  )}
+                  <label className="dark:text-dark-100 flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                    <Checkbox
+                      checked={teste}
+                      onChange={(e) => setTeste(e.target.checked)}
+                      className="size-4"
+                    />
+                    Modo teste
+                    <span className="dark:text-dark-300 text-gray-400">
+                      (marca d’água, sem gastar créditos)
+                    </span>
+                  </label>
+                </div>
+                <AcoesEtapa onContinuar={() => etapas.concluirEtapa("formato")} />
+              </LabEtapa>
+            </Accordion>
+
+            {erro && <div className={`${CAIXA_ERRO} mt-4`}>{erro}</div>}
+
+            <div className="mt-5 flex justify-end">
               <Button
-                onClick={gerar}
+                type="submit"
                 color="primary"
                 disabled={!script.trim() || !avatarId || !voiceId}
-                className="gap-2"
+                className="h-10 gap-2 px-5"
               >
                 <FilmIcon className="size-5" /> Gerar vídeo
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </div>
     </IaModalShell>

@@ -1,6 +1,6 @@
 // Local Imports
 import { Card } from "@/components/ui";
-import Logo from "@/assets/branding/beculture-logo.svg?react";
+import Logo from "@/assets/branding/oracle-logo.svg?react";
 import TailwindIcon from "@/assets/tailwind.svg?react";
 import ReactIcon from "@/assets/react.svg?react";
 import HeadlessIcon from "@/assets/headlessui.svg?react";
@@ -44,14 +44,14 @@ export function Hero() {
         <div className="flex items-center gap-3">
           <Logo className="size-10" />
           <span className="dark:text-dark-50 text-xl font-semibold lowercase text-gray-800">
-            beculture
+            Oracle
           </span>
         </div>
         <p className="mt-4">
-          beculture is a versatile Admin and Webapp UI Kit built on React (JavaScript and TypeScript) and the
+          Oracle is a versatile Admin and Webapp UI Kit built on React (JavaScript and TypeScript) and the
           TailwindCSS Framework. It features a wide range of reusable
           components, layouts, forms, dashboards, fully functional datatables,
-          and web app templates. beculture is a robust, ultra-responsive, modern,
+          and web app templates. Oracle is a robust, ultra-responsive, modern,
           and highly flexible UI Kit designed for building cutting-edge web
           applications. Whether you&apos;re developing a SaaS platform, custom
           admin panels, dashboards, CRMs, CMSs, LMSs, AI-powered apps, crypto

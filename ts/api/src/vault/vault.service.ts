@@ -110,6 +110,21 @@ export class VaultService {
    * notas de todos os outros repositórios da empresa — cujos caminhos nunca
    * estarão na lista da pasta que está sendo sincronizada.
    */
+  async removerPorPaths(
+    empresaId: string,
+    repositorioId: string | null,
+    paths: string[],
+    /** Só remove caminhos que começam com este prefixo (proteção). */
+    prefixo: string,
+  ): Promise<{ removidas: number }> {
+    const alvo = paths.filter((p) => p.startsWith(prefixo));
+    if (!repositorioId || alvo.length === 0) return { removidas: 0 };
+    const del = await this.prisma.vaultNota.deleteMany({
+      where: { empresaId, repositorioId, path: { in: alvo } },
+    });
+    return { removidas: del.count };
+  }
+
   async finalize(
     empresaId: string,
     repositorioId: string | null,

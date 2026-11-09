@@ -117,7 +117,7 @@ export default function Relatorios() {
                   <>
                     <p>
                       Os <strong>Relatórios</strong> mostram como o seu time usa
-                      o BeHuman: acessos, grupos criados, documentos gerados,
+                      o Oracle: acessos, grupos criados, documentos gerados,
                       performance dos squads e ações executadas.
                     </p>
                     <p>
@@ -132,7 +132,7 @@ export default function Relatorios() {
               Relatórios
             </PageTitle>
             <p className="dark:text-dark-300 max-w-2xl text-sm text-gray-500">
-              Acompanhe como o seu time usa o BeHuman: acessos, grupos criados,
+              Acompanhe como o seu time usa o Oracle: acessos, grupos criados,
               documentos gerados, performance dos squads e ações executadas.
               Filtre por categoria ou status e acesse o relatório completo.
             </p>

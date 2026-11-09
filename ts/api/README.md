@@ -1,6 +1,6 @@
-# beculture API
+# Oracle API
 
-Backend do beculture — **NestJS + Prisma + PostgreSQL**.
+Backend do Oracle — **NestJS + Prisma + PostgreSQL**.
 
 Milestone 1 (fundação): autenticação JWT, multi-tenant (empresas/usuários/convites)
 e billing (trial de 14 dias, pronto para integrar a Iugu). A IA/squads entra numa
@@ -76,7 +76,7 @@ hash SHA-256 — a chave crua só aparece uma vez, na criação.
 Exemplo de configuração no cliente (Claude Code):
 
 ```bash
-claude mcp add --transport http beculture https://api.suaempresa.com.br/mcp \
+claude mcp add --transport http Oracle https://api.suaempresa.com.br/mcp \
   --header "Authorization: Bearer bcl_mcp_SUACHAVE"
 ```
 
@@ -85,7 +85,7 @@ Ou no `mcpServers` de outros clientes:
 ```json
 {
   "mcpServers": {
-    "beculture": {
+    "oracle": {
       "type": "http",
       "url": "https://api.suaempresa.com.br/mcp",
       "headers": { "Authorization": "Bearer bcl_mcp_SUACHAVE" }

@@ -340,7 +340,7 @@ export default function ProjectDetail() {
           onOpenChat={(c) => navigate(`/${product.code}/historico/${c.id}`)}
           onOpenDocument={(d) => setPreviewDoc(d)}
           emptyChatsText="As conversas deste grupo aparecem aqui."
-          emptyDocsText="Os documentos deste grupo aparecem aqui — salve uma resposta da conversa ou use “Enviar para o grupo” no AI Studio."
+          emptyDocsText="Os documentos deste grupo aparecem aqui — salve uma resposta da conversa ou use “Enviar para o grupo” no Lab."
           renderChatItem={(c) => (
             <SidebarListItem
               to={`/${product.code}/historico/${c.id}`}

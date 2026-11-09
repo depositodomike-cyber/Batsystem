@@ -11,6 +11,7 @@ import { CollapsibleItem } from "./CollapsibleItem";
 import { MenuItem } from "./MenuItem";
 import { GroupChevron } from "../GroupChevron";
 import { type NavigationTree } from "@/@types/navigation";
+import { isNavItemHiddenByOracle } from "@/configs/oracleModules";
 
 // ----------------------------------------------------------------------
 
@@ -54,6 +55,9 @@ export function Group({ data }: { data: NavigationTree }) {
             {data.childs.map((item) => {
               // O Repositório é renderizado numa seção própria pela raiz do menu.
               if (item.id.endsWith(".memoria-grafo")) return null;
+              // Itens de módulos ocultos do Oracle (configs/oracleModules.ts),
+              // ex.: Slack.
+              if (isNavItemHiddenByOracle(item.path)) return null;
 
               switch (item.type) {
                 case "collapse":

@@ -1,6 +1,5 @@
 // Import Dependencies
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router";
 import { toast } from "sonner";
 import {
   PresentationChartBarIcon,
@@ -10,7 +9,6 @@ import {
   ArrowUpTrayIcon,
   CircleStackIcon,
   XMarkIcon,
-  ArrowRightIcon,
   ArrowLeftIcon,
   ArrowDownTrayIcon,
   ArrowTopRightOnSquareIcon,
@@ -22,8 +20,6 @@ import { reorderWithEdge } from "@atlaskit/pragmatic-drag-and-drop-hitbox/util/r
 import clsx from "clsx";
 
 // Local Imports
-import { Page } from "@/components/shared/Page";
-import { PageTitle } from "@/components/shared/PageTitle";
 import {
   Menu,
   MenuButton,
@@ -32,7 +28,6 @@ import {
   Transition,
 } from "@headlessui/react";
 import { Accordion, Button, Checkbox, Spinner } from "@/components/ui";
-import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { ApresentacaoEtapa, type EtapaStatus } from "./ApresentacaoEtapa";
 import {
   ApresentacaoSlideCard,
@@ -40,7 +35,6 @@ import {
   type ModoItem,
 } from "./ApresentacaoSlideCard";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
-import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useAssistente } from "@/app/contexts/assistente/context";
 import { RotuloCampo } from "./RotuloCampo";
 import {
@@ -72,12 +66,22 @@ import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
 import { EnviarParaGrupoButton } from "./EnviarParaGrupo";
 import { PASTA_MEMORIA } from "./memoria-pastas";
 import {
+  AcoesEtapa,
+  CAIXA_ERRO,
+  CAMPO_SELECT,
+  CAMPO_TEXTAREA,
+  errMessage,
+  LabCarregando,
+  LabPagina,
+  PerguntaEtapa,
+} from "./lab";
+import {
   DISABLED_MENU_CLASS,
   isFeatureTemporarilyDisabled,
 } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
-// Criar apresentação — tela do AI Studio (`/:produto/ia/apresentacao`). Era uma
+// Criar apresentação — tela do Lab (`/:produto/ia/apresentacao`). Era uma
 // janela do host global de modais de IA; virou tela porque o fluxo não cabe numa
 // janela.
 //
@@ -108,14 +112,8 @@ import {
 // `dark:text-dark-100` precisa estar AQUI, mesmo a classe `form-input` já
 // trazendo: ela vive em `@layer components` e perde para o `text-gray-800` da
 // camada utilities — sem este par o texto digitado some no tema escuro.
-const CAMPO =
-  "form-input dark:border-dark-450 dark:bg-dark-800 dark:text-dark-100 dark:placeholder:text-dark-300 dark:hover:border-dark-400 focus:border-primary-500 w-full border border-gray-300 bg-white text-sm text-gray-800 placeholder:text-gray-400 hover:border-gray-400 focus:ring-0";
-const CAMPO_SELECT = CAMPO.replace("form-input", "form-select");
-// `resize-y` anula de propósito o `resize-none` que vem de `form-textarea`.
-const CAMPO_TEXTAREA = `${CAMPO.replace("form-input", "form-textarea")} resize-y`;
-// Caixa de erro com os tokens semânticos do tema (o app usa `text-error`).
-const CAIXA_ERRO =
-  "text-xs-plus dark:text-error-lighter border-error/30 bg-error/10 text-error rounded-lg border px-3 py-2";
+// As classes CAMPO, CAMPO_SELECT, CAMPO_TEXTAREA e CAIXA_ERRO moram em
+// ./lab/estilos (compartilhadas com as demais telas do Lab).
 
 const FORMATOS: { id: Formato; label: string; desc: string }[] = [
   {
@@ -338,19 +336,8 @@ function resumoParaAssistente(p: ResumoParams): string {
   return linhas.join("\n");
 }
 
-function errMessage(err: unknown): string {
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object") {
-    const o = err as { message?: unknown };
-    if (typeof o.message === "string") return o.message;
-  }
-  return "Falha ao gerar. Tente novamente.";
-}
 
 export default function Apresentacao() {
-  const { pathname } = useLocation();
-  const product = getCurrentProduct(pathname);
-
   const [step, setStep] = useState<Step>("form");
   const [erro, setErro] = useState("");
   // Validação da etapa 01. Separada de `erro` (falha da API) porque cada erro
@@ -484,7 +471,7 @@ export default function Apresentacao() {
    * Marcado, vale a marca ativa da organização — e ela SOBREPÕE o que estiver
    * descrito no campo de "Sobre". Desmarcado (ou marcado sem nenhuma marca
    * cadastrada), vale o NEUTRO: a tela dizia "estilo padrão da plataforma"
-   * enquanto mandava a marca beculture inteira para o prompt, e esta é a linha
+   * enquanto mandava a marca Oracle inteira para o prompt, e esta é a linha
    * que conserta isso.
    */
   const usandoMarca = usarIdentidadeDaOrg && temMarcas;
@@ -1076,65 +1063,33 @@ export default function Apresentacao() {
   );
 
   return (
-    <Page title={`Criar apresentação · ${product.name}`}>
-      <div className="transition-content w-full px-(--margin-x) py-6">
-        <div className="mx-auto max-w-4xl">
-          <div>
-            <Link
-              to={`/${product.code}/ia`}
-              className="dark:text-dark-300 dark:hover:text-dark-100 mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800"
-            >
-              <ArrowLeftIcon className="size-4" />
-              Voltar ao AI Studio
-            </Link>
-
-            {/* O ícone é apoio, não protagonista: quem abre a leitura é o título
-              (`PageTitle`, text-2xl). Por isso size-9 e não size-11. */}
-            <div className="mb-8 flex items-center gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-orange-500/10 text-orange-500">
-                <PresentationChartBarIcon className="size-5 stroke-[1.5]" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <PageTitle
-                    help={{
-                      description: (
-                        <>
-                          <p>
-                            A IA monta um <strong>plano</strong>: o que cada
-                            slide precisa fazer, a narrativa e a direção visual.
-                            Você revisa antes de existir arquivo nenhum.
-                          </p>
-                          <p>
-                            Para mudar um slide, use{" "}
-                            <strong>Ajustar com IA</strong> e diga o que quer em
-                            português — o conteúdo é da IA, a direção é sua.
-                            Reordenar e remover continuam na sua mão.
-                          </p>
-                          <p>
-                            Com o plano aprovado, a IA escreve os slides e gera
-                            o arquivo: um{" "}
-                            <span className="font-mono">.pptx</span> para
-                            PowerPoint/Keynote/Slides, slides HTML ou um book de
-                            leitura — que você baixa e/ou salva no Repositório.
-                          </p>
-                        </>
-                      ),
-                    }}
-                  >
-                    Criar apresentação
-                  </PageTitle>
-                  {step === "plano" && (
-                    <span className="dark:bg-dark-600 dark:text-dark-200 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500">
-                      Revisar o plano
-                    </span>
-                  )}
-                </div>
-                <p className="dark:text-dark-300 text-sm text-gray-500">
-                  A IA planeja, você revisa e orienta, a IA executa.
-                </p>
-              </div>
-            </div>
+    <LabPagina
+      titulo="Criar apresentação"
+      subtitulo="A IA planeja, você revisa e orienta, a IA executa."
+      Icone={PresentationChartBarIcon}
+      tint="bg-orange-500/10 text-orange-500"
+      selo={step === "plano" ? "Revisar o plano" : null}
+      ajuda={
+        <>
+          <p>
+            A IA monta um <strong>plano</strong>: o que cada slide precisa
+            fazer, a narrativa e a direção visual. Você revisa antes de existir
+            arquivo nenhum.
+          </p>
+          <p>
+            Para mudar um slide, use <strong>Ajustar com IA</strong> e diga o
+            que quer em português — o conteúdo é da IA, a direção é sua.
+            Reordenar e remover continuam na sua mão.
+          </p>
+          <p>
+            Com o plano aprovado, a IA escreve os slides e gera o arquivo: um{" "}
+            <span className="font-mono">.pptx</span> para
+            PowerPoint/Keynote/Slides, slides HTML ou um book de leitura — que
+            você baixa e/ou salva no Repositório.
+          </p>
+        </>
+      }
+    >
 
             {/* Etapa 1 — wizard de configuração. Uma etapa por vez: a ativa
               mostra os campos, as concluídas viram resumo editável e as
@@ -1186,7 +1141,7 @@ export default function Apresentacao() {
                         if (erroTema) setErroTema("");
                       }}
                       rows={5}
-                      placeholder="Ex.: Crie uma apresentação sobre o planejamento estratégico de 2027 para o conselho de administração, com o objetivo de aprovar o orçamento — destacando resultados, riscos e próximos passos."
+                      placeholder="Ex.: Crie uma apresentação sobre os meus objetivos para 2027, com o plano de cada frente — destacando resultados, riscos e próximos passos."
                       className={CAMPO_TEXTAREA}
                     />
                     {erroTema ? (
@@ -1473,26 +1428,18 @@ export default function Apresentacao() {
                 servidor não informa progresso, e inventar "8 de 12" seria
                 encenação. */}
             {busy && (
-              <div className="dark:border-dark-600 dark:bg-dark-700 rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
-                <div
-                  aria-live="polite"
-                  className="grid place-items-center py-10"
-                >
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <BrandLoadingSplash label={null} />
-                    <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                      {step === "planejando"
-                        ? "Planejando a apresentação…"
-                        : "Gerando apresentação…"}
-                    </p>
-                    <p className="dark:text-dark-300 text-sm text-gray-500">
-                      {step === "planejando"
-                        ? "A IA está definindo o que cada slide vai fazer."
-                        : "Estamos transformando o plano em slides."}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <LabCarregando
+                titulo={
+                  step === "planejando"
+                    ? "Planejando a apresentação…"
+                    : "Gerando apresentação…"
+                }
+                descricao={
+                  step === "planejando"
+                    ? "A IA está definindo o que cada slide vai fazer."
+                    : "Estamos transformando o plano em slides."
+                }
+              />
             )}
 
             {/* Etapa 2 — revisar o plano */}
@@ -1654,10 +1601,7 @@ export default function Apresentacao() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
-    </Page>
+    </LabPagina>
   );
 }
 
@@ -1714,72 +1658,6 @@ function FaixaIdentidade({
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-/** A pergunta que abre uma etapa do wizard — o que o usuário está decidindo. */
-function PerguntaEtapa({
-  children,
-  className = "mb-3",
-}: {
-  children: React.ReactNode;
-  /** Sobrescreve a margem inferior. `""` para a pergunta dividir a linha com
-      outro controle, onde o espaçamento passa a ser do contêiner. */
-  className?: string;
-}) {
-  return (
-    <p
-      className={clsx(
-        "dark:text-dark-100 text-sm font-medium text-gray-700",
-        className,
-      )}
-    >
-      {children}
-    </p>
-  );
-}
-
-/**
- * Rodapé de uma etapa.
- *
- * `onDecidirPorMim` só é passado onde a IA realmente resolve sozinha — não
- * existe endpoint que preencha campos, então a ação devolve os campos ao estado
- * vazio, que o backend já lê como "você decide". Em Contexto e Identidade a
- * ação não aparece: escolher Repositório ou criar marca não é decisão da IA.
- */
-function AcoesEtapa({
-  onContinuar,
-  onDecidirPorMim,
-  rotulo = "Continuar",
-}: {
-  onContinuar: () => void;
-  onDecidirPorMim?: () => void;
-  rotulo?: string;
-}) {
-  return (
-    <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-      {onDecidirPorMim && (
-        // `type="button"` obrigatório: dentro de um <form>, o default é submit.
-        <Button
-          type="button"
-          variant="outlined"
-          onClick={onDecidirPorMim}
-          className="h-9 gap-1.5"
-        >
-          <SparklesIcon className="size-4" />
-          Decidir por mim
-        </Button>
-      )}
-      <Button
-        type="button"
-        color="primary"
-        onClick={onContinuar}
-        className="h-9 gap-1.5"
-      >
-        {rotulo}
-        {rotulo === "Continuar" && <ArrowRightIcon className="size-4" />}
-      </Button>
     </div>
   );
 }

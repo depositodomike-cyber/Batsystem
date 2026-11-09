@@ -278,7 +278,7 @@ export default function Insights() {
                     <>
                       <p>
                         <strong>Insights</strong> são sinais identificados pela
-                        IA nos dados das suas áreas. Cada card destaca algo que
+                        IA nas suas informações. Cada card destaca algo que
                         merece atenção, com contexto e nível de relevância
                         avaliados.
                       </p>
@@ -302,7 +302,7 @@ export default function Insights() {
                 Insights
               </PageTitle>
               <p className="dark:text-dark-300 max-w-2xl text-sm text-gray-500">
-                Sinais identificados pela IA nos dados das suas áreas. Abra um
+                Padrões, alertas e oportunidades que a IA identificou nas suas informações. Abra um
                 insight para entender o que foi observado e explorar as
                 evidências. Se quiser aprofundar, converse com o assistente.
               </p>
@@ -1379,8 +1379,8 @@ function NoInsightsState() {
         Nenhum insight ainda
       </p>
       <p className="dark:text-dark-300 text-xs-plus mt-1 max-w-sm text-gray-400">
-        Os insights aparecem aqui quando a IA os gera a partir dos dados das
-        suas áreas.
+        Os insights aparecem aqui quando a IA os gera a partir das suas
+        informações.
       </p>
     </div>
   );

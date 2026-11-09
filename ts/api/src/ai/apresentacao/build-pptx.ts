@@ -1,8 +1,8 @@
 // Monta o .pptx (16:9) a partir do roteiro editado. Determinístico (sem IA),
-// usando pptxgenjs. Portado, em espírito, do beculture/Confi (lib/apresentacao.js).
+// usando pptxgenjs. Portado, em espírito, do Oracle/Confi (lib/apresentacao.js).
 //
 // Cores, fontes e logo saem do design system da marca escolhida no AI Studio;
-// sem design system, cai na paleta beculture (âmbar sobre grafite).
+// sem design system, cai na paleta Oracle (âmbar sobre grafite).
 import PptxGenJS from 'pptxgenjs';
 import type { Roteiro } from './prompts';
 import { designTheme, type DesignSystemDto } from '../design/design';

@@ -2,7 +2,7 @@ import axios from "@/utils/axios";
 import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
 
 // Criar artigo (IA) — chama o backend ts/api (POST /ai/artigo). Geração direta
-// com refino iterativo (ajuste sobre a versão anterior). Portado do beculture/Confi.
+// com refino iterativo (ajuste sobre a versão anterior). Portado do Oracle/Confi.
 
 export interface Artigo {
   titulo: string;

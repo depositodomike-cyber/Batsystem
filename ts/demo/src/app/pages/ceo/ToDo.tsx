@@ -34,7 +34,7 @@ import { AddBoard } from "@/app/pages/apps/kanban/Modals/AddBoard";
 import type { Board, Priority, Task } from "@/app/pages/apps/kanban/data";
 
 // ----------------------------------------------------------------------
-// To Do — quadros Kanban (migrado do beculture-dist). Cada quadro tem etapas
+// To Do — quadros Kanban (migrado do oracle-dist). Cada quadro tem etapas
 // ("A fazer", "Em andamento", "Concluído"), atividades com arrastar-e-soltar,
 // filtro por texto e por prioridade, e visão em Lista. O estado é persistido
 // no navegador (localStorage, via store do Kanban) e é o mesmo do app.

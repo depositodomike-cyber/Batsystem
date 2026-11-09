@@ -5,7 +5,7 @@
 // centraliza a leitura/escrita dos quadros no localStorage, permitindo que:
 //   1. o Kanban persista o estado entre sessões (BoardProvider hidrata daqui);
 //   2. outras telas (ex.: To Do do Painel) leiam os quadros/etapas e criem
-//      atividades diretamente numa etapa — como fazia o widget do beculture.
+//      atividades diretamente numa etapa — como fazia o widget do Oracle.
 //
 // Observações de serialização:
 //   • Column.Icon é um componente React (não serializável) — o JSON.stringify

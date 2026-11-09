@@ -1,15 +1,15 @@
 // Gerador da apresentação para o fornecedor (CEIA).
-// Fonte de verdade do conteúdo: Especificacao-Tecnica-beculture-CEIA.docx (gen-spec.js).
+// Fonte de verdade do conteúdo: Especificacao-Tecnica-oracle-CEIA.docx (gen-spec.js).
 // Rodar: NODE_PATH="$(npm root -g)" node gen-deck.js
 const pptxgen = require("pptxgenjs");
 
 const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE"; // 13.33 x 7.5 in
-pres.author = "beculture";
-pres.company = "beculture";
-pres.title = "beculture — Especificação para Desenvolvimento (CEIA)";
+pres.author = "Oracle";
+pres.company = "Oracle";
+pres.title = "Oracle — Especificação para Desenvolvimento (CEIA)";
 
-// ---- Paleta oficial beculture (Brand Guidelines · amber + slate + branco) ----
+// ---- Paleta oficial Oracle (Brand Guidelines · amber + slate + branco) ----
 // Amber 400 é a primária; texto pequeno sobre fundo claro fica em slate (contraste),
 // o amber entra como preenchimento/bloco e como texto sobre fundo escuro (combo-herói).
 const SLATE9 = "0F172B"; // Slate 900 — estrutura / fundo escuro
@@ -52,7 +52,7 @@ const shadow = () => ({ type: "outer", color: SLATE9, blur: 9, offset: 3, angle:
 // ---------- helpers ----------
 function footer(slide, n, dark) {
   const c = dark ? SUB : SUB;
-  slide.addText("beculture · Especificação para Desenvolvimento — CEIA", {
+  slide.addText("Oracle · Especificação para Desenvolvimento — CEIA", {
     x: M, y: H - 0.42, w: 9, h: 0.3, fontFace: BF, fontSize: 9, color: c, align: "left",
   });
   slide.addText(String(n).padStart(2, "0"), {
@@ -137,7 +137,7 @@ function accentCard(slide, x, y, w, h, accent) {
   s.addText([
     { text: "Não é um produto isolado. É a ", options: { color: WHITE } },
     { text: "plataforma-base de IA", options: { color: ACC } },
-    { text: " da beculture.", options: { color: WHITE } },
+    { text: " do Oracle.", options: { color: WHITE } },
   ], { x: M, y: 1.55, w: 12.0, h: 1.7, fontFace: HF, fontSize: 40, bold: true, lineSpacingMultiple: 1.0 });
 
   s.addText([
@@ -157,10 +157,10 @@ function accentCard(slide, x, y, w, h, accent) {
 })();
 
 // =====================================================================
-// 3. O QUE É O BECULTURE
+// 3. O QUE É O ORACLE
 // =====================================================================
 (function whatIs() {
-  const s = lightSlide("Visão de produto", "O que é o beculture");
+  const s = lightSlide("Visão de produto", "O que é o Oracle");
   s.addText("Um “business partner” de IA para empresas: um ambiente web onde líderes e equipes conversam com squads de especialistas de IA, recebem insights, consultam relatórios, conectam suas ferramentas e acumulam uma memória organizacional de longo prazo. Vendido como SaaS B2B multi-tenant, por assinatura de módulos, com trial self-service.", {
     x: M, y: 1.7, w: W - 2 * M, h: 0.95, fontFace: BF, fontSize: 15, color: MIST, lineSpacingMultiple: 1.05,
   });
@@ -420,7 +420,7 @@ function accentCard(slide, x, y, w, h, accent) {
     s.addShape(pres.shapes.LINE, { x: x + 0.3, y: y + 2.05, w: cw - 0.6, h: 0, line: { color: LINE, width: 1 } });
     s.addText(d, { x: x + 0.3, y: y + 2.2, w: cw - 0.55, h: 2.0, fontFace: BF, fontSize: 12.5, color: MIST, lineSpacingMultiple: 1.08 });
   });
-  s.addText("O MCP é um produto vendável: a beculture se torna uma plataforma de integrações, não apenas um app.", {
+  s.addText("O MCP é um produto vendável: o Oracle se torna uma plataforma de integrações, não apenas um app.", {
     x: M, y: 6.5, w: W - 2 * M, h: 0.4, fontFace: BF, fontSize: 13, italic: true, color: ACC_D, align: "center",
   });
   footer(s, 10, false);
@@ -599,9 +599,9 @@ function accentCard(slide, x, y, w, h, accent) {
     { text: "2. Alinhamento de dúvidas e premissas    ", options: { color: WHITE } },
     { text: "3. Proposta de plano e cronograma por fase", options: { color: WHITE } },
   ], { x: M, y: 5.6, w: 12, h: 0.5, fontFace: BF, fontSize: 14 });
-  s.addText("beculture · A plataforma-base de IA sobre a qual tudo o mais é construído.", {
+  s.addText("Oracle · A plataforma-base de IA sobre a qual tudo o mais é construído.", {
     x: M, y: 6.55, w: 12, h: 0.4, fontFace: BF, fontSize: 13, italic: true, color: SUB,
   });
 })();
 
-pres.writeFile({ fileName: "Apresentacao-beculture-CEIA.pptx" }).then((f) => console.log("OK:", f));
+pres.writeFile({ fileName: "Apresentacao-oracle-CEIA.pptx" }).then((f) => console.log("OK:", f));

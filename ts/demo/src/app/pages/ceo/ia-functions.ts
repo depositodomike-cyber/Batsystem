@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Catálogo das funções de IA (widget migrado do beculture/Confi).
+// Catálogo das funções de IA (widget migrado do Oracle/Confi).
 // Fonte única de verdade compartilhada entre a tela de IA (Ia.tsx) e o bloco
 // "AI Studio" da sidebar (AiStudioGroup) — assim os dois nunca ficam fora de
 // sincronia.
@@ -46,15 +46,17 @@ export const AI_STUDIO_DISABLED = isFeatureTemporarilyDisabled("aiStudio");
  * - `null` → todas as funções da grade liberadas (quando `AI_STUDIO_DISABLED` é false)
  * - `Set([...])` → só esses ids ficam clicáveis; o restante permanece opaco
  *
- * Hoje só "Criar apresentação". É uma lista de PERMITIDOS, e não de bloqueados,
+ * Hoje `null`: todas as ferramentas do Lab liberadas no Oracle. Antes eram só
+ * "apresentacao" e "planilha" — para restringir de novo, volte a um `Set`.
+ *
+ * É uma lista de PERMITIDOS, e não de bloqueados,
  * pelo mesmo motivo de `CONECTORES_HABILITADOS`: uma função nova no catálogo
  * entra desabilitada por padrão, em vez de ser liberada em silêncio.
  *
  * Para liberar outra, acrescente o id (os ids estão em `FUNCTIONS`, abaixo);
  * para devolver a grade inteira, volte a `null`.
  */
-export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null =
-  new Set(["apresentacao", "planilha"]);
+export const AI_STUDIO_ENABLED_FUNCTION_IDS: ReadonlySet<string> | null = null;
 
 /** Indica se uma função da grade do AI Studio está temporariamente desabilitada. */
 export function isAiStudioFunctionDisabled(id: string): boolean {
@@ -95,6 +97,13 @@ export function sortAiFunctionsActiveFirst(
 const AI_STUDIO_FUNCTION_SCREENS: Record<string, string> = {
   apresentacao: "ia/apresentacao",
   planilha: "ia/planilha",
+  analise: "ia/analise",
+  artigo: "ia/artigo",
+  ata: "ia/ata",
+  carrossel: "ia/carrossel",
+  dashboard: "ia/dashboard",
+  imagem: "ia/imagem",
+  melhorar: "ia/melhorar",
 };
 
 /** Caminho da tela de uma função, ou `null` se ela ainda for um modal. */

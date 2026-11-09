@@ -36,7 +36,7 @@ import {
 
 // ----------------------------------------------------------------------
 // Botão "Enviar para o grupo" — irmão do "Salvar na memória", presente em todo
-// resultado do AI Studio. Abre um seletor de grupo (agrupamento) e grava o
+// resultado do Lab. Abre um seletor de grupo (agrupamento) e grava o
 // conteúdo como documento daquele grupo, que passa a aparecer na aba
 // "Documentos" do painel lateral direito da tela do grupo.
 //
@@ -49,7 +49,7 @@ import {
 const MAX_ANEXO_BYTES = 25 * 1024 * 1024;
 
 interface Props {
-  /** Id da ação do AI Studio (ver ia-functions.ts) — vira o rótulo de origem. */
+  /** Id da ação do Lab (ver ia-functions.ts) — vira o rótulo de origem. */
   funcao: string;
   titulo: string;
   /** Conteúdo pronto em Markdown. Ignorado quando `preparar` é passado. */
@@ -86,7 +86,7 @@ export function EnviarParaGrupoButton({
   const { addDocument } = useDocumentsContext();
 
   const [aberto, setAberto] = useState(false);
-  // Desligado temporariamente em TODAS as telas do AI Studio. O corte fica aqui,
+  // Desligado temporariamente em TODAS as telas do Lab. O corte fica aqui,
   // e não nos 15 pontos de uso: cada tela segue passando as props, e reativar é
   // só a flag. Depois dos hooks porque a ordem deles não pode variar.
   const desligado = isFeatureTemporarilyDisabled("sendToGroup");
@@ -127,10 +127,10 @@ export function EnviarParaGrupoButton({
 
       addDocument({
         product,
-        // Prefixo próprio: mantém os documentos do AI Studio fora dos painéis de
+        // Prefixo próprio: mantém os documentos do Lab fora dos painéis de
         // squad (que filtram por squadId).
         squadId: `ai-studio:${funcao}`,
-        squadName: "AI Studio",
+        squadName: "Lab",
         agentReference: aiFunctionLabel(funcao),
         projectId,
         title: titulo.trim() || aiFunctionLabel(funcao),
@@ -147,7 +147,7 @@ export function EnviarParaGrupoButton({
           grupo: projectTitle,
           titulo: titulo.trim() || aiFunctionLabel(funcao),
           conteudo: pronto.conteudo,
-          origem: `AI Studio · ${aiFunctionLabel(funcao)}`,
+          origem: `Lab · ${aiFunctionLabel(funcao)}`,
           anexos: pronto.anexos,
           original: pronto.original,
         });

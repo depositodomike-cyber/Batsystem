@@ -1,13 +1,13 @@
 // Base compartilhada dos documentos Fluxo-*.docx.
 //
 // Junta as duas convenções que o repositório já tinha: a apresentação da marca
-// beculture (capa, cabeçalho/rodapé paginado, âmbar + slate, tabelas zebradas)
+// Oracle (capa, cabeçalho/rodapé paginado, âmbar + slate, tabelas zebradas)
 // de docs/generate-menu-patterns-docx.mjs, e a estrutura de conteúdo dos
 // Fluxo-*.docx (A4, seções numeradas de "1. Visão geral" a "N. Resumo do
 // percurso", H2 sem número, linguagem de negócio).
 //
 // Especificações visuais não entram nos documentos gerados por aqui — cores,
-// espaçamento e estilos são assunto do Padroes-Visuais-Menu-beculture.docx.
+// espaçamento e estilos são assunto do Padroes-Visuais-Menu-oracle.docx.
 //
 // A lib `docx` não está em nenhum package.json do repo (igual a gen-deck.js):
 //   npm install -g docx
@@ -233,7 +233,7 @@ function cabecalho(nomeDoDocumento) {
         tabStops: [{ type: "right", position: CONTENT_W }],
         children: [
           new TextRun({
-            text: "beculture  ·  Documentação de Produto",
+            text: "Oracle  ·  Documentação de Produto",
             font: "Calibri",
             size: 16,
             color: GRAY,
@@ -279,7 +279,7 @@ function rodape() {
 
 /** Linha de fecho, igual em todos os documentos da série. */
 function fecho() {
-  return p("Documento funcional · beculture · Agosto 2026", {
+  return p("Documento funcional · Oracle · Agosto 2026", {
     color: GRAY,
     size: 18,
   });

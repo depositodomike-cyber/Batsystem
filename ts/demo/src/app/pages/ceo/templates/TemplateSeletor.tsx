@@ -125,7 +125,7 @@ export function TemplateSeletor({
         <p className="dark:text-dark-300 mt-1.5 text-xs text-gray-400">
           {erroLista
             ? "Não foi possível carregar os templates agora — a IA decide a estrutura."
-            : "Nenhum template cadastrado na organização."}{" "}
+            : "Nenhum template cadastrado."}{" "}
           {!erroLista && (
             <Link
               to={urlTemplates}

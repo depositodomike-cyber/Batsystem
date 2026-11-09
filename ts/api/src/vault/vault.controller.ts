@@ -5,7 +5,12 @@ import {
   type CategoriasDoVault,
   type ResultadoClassificacao,
 } from './categorias.service';
-import { FinalizeVaultDto, SyncVaultBatchDto } from './dto/sync-vault.dto';
+import {
+  FinalizeVaultDto,
+  RemoverNotasVaultDto,
+  SyncVaultBatchDto,
+} from './dto/sync-vault.dto';
+import { PASTA_PERFIL } from '@/perfil/perfil.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
@@ -109,5 +114,24 @@ export class VaultController {
     @Body() body: FinalizeVaultDto,
   ): Promise<{ total: number; removidas: number }> {
     return this.vault.finalize(user.empresaId, repositorioId, body.paths);
+  }
+
+  /**
+   * POST /ai/vault/remover → tira notas do índice da IA. Restrito aos
+   * arquivos gerados pelo Perfil Pessoal (Personal/Profile/), usado quando o
+   * usuário exclui o perfil: nenhuma outra nota pode ser apagada por aqui.
+   */
+  @Post('remover')
+  async remover(
+    @CurrentUser() user: AuthenticatedUser,
+    @RepositorioAtual() repositorioId: string | null,
+    @Body() body: RemoverNotasVaultDto,
+  ): Promise<{ removidas: number }> {
+    return this.vault.removerPorPaths(
+      user.empresaId,
+      repositorioId,
+      body.paths,
+      `${PASTA_PERFIL}/`,
+    );
   }
 }

@@ -13,7 +13,7 @@ export function Layouts() {
       </h3>
       <div className="text-sm-plus mt-5 space-y-3">
         <p className="inline-code">
-          beculture provides two distinct layouts: <code>main-layout</code> and{" "}
+          Oracle provides two distinct layouts: <code>main-layout</code> and{" "}
           <code>sideblock</code>.
         </p>
         <ul className="mt-5 list-outside list-disc space-y-8">

@@ -23,11 +23,7 @@ export interface CampoCredencialSpec {
  * Meta), para o valor colado do painel do provedor ir no campo certo.
  */
 export const CREDENCIAIS_POR_CONECTOR: Record<string, CampoCredencialSpec[]> = {
-  'google-drive': [
-    { id: 'clientId', obrigatorio: true },
-    { id: 'clientSecret', obrigatorio: true },
-    { id: 'pastaRaizId', obrigatorio: false },
-  ],
+  // 'google-drive' saiu daqui: conecta por OAuth (oauth-provider.service).
   teams: [
     { id: 'tenantId', obrigatorio: true },
     { id: 'clientId', obrigatorio: true },

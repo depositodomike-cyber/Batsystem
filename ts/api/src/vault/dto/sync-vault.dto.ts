@@ -41,3 +41,11 @@ export class FinalizeVaultDto {
   @IsString({ each: true })
   paths!: string[];
 }
+
+/** Remoção pontual de notas do índice (hoje só as do Perfil Pessoal). */
+export class RemoverNotasVaultDto {
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsString({ each: true })
+  paths!: string[];
+}

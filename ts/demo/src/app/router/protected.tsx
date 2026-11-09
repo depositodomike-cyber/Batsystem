@@ -1,6 +1,7 @@
 import { Navigate, RouteObject } from "react-router";
 
 import AuthGuard from "@/middleware/AuthGuard";
+import OracleModuleGuard from "@/middleware/OracleModuleGuard";
 import { DynamicLayout } from "../layouts/DynamicLayout";
 import { AppLayout } from "../layouts/AppLayout";
 import { ceoRoutes } from "./ceoRoutes";
@@ -23,7 +24,9 @@ const protectedRoutes: RouteObject = {
           index: true,
           element: <Navigate to={`/${DEFAULT_PRODUCT_CODE}`} />,
         },
-        ...ceoRoutes,
+        // Rotas do produto atrás do guard dos módulos ocultos do Oracle
+        // (configs/oracleModules.ts). Rota sem path: não muda nenhuma URL.
+        { Component: OracleModuleGuard, children: ceoRoutes },
         {
           path: "/components",
           children: [

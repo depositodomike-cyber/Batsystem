@@ -1,4 +1,4 @@
-# Backend beculture (NestJS + Prisma) — imagem única, serve Railway e Render.
+# Backend Oracle (NestJS + Prisma) — imagem única, serve Railway e Render.
 FROM node:20-slim
 
 # openssl é exigido pelo engine do Prisma (debian-openssl-3.0.x).

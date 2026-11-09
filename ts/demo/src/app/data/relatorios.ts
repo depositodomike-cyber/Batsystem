@@ -280,7 +280,7 @@ export const RELATORIO_DASHBOARDS: Record<string, RelatorioDashboard> = {
   // 1 ----------------------------------------------------------------
   "acessos-a-plataforma": {
     resumo:
-      "Visão de acessos, sessões e usuários ativos no módulo BeHuman nos últimos meses.",
+      "Visão de acessos, sessões e usuários ativos no módulo Oracle nos últimos meses.",
     kpis: [
       { label: "Acessos no período", value: "8.420", delta: "+12,4%", trend: "up", hint: "vs. mês anterior" },
       { label: "Usuários ativos", value: "312", delta: "+5,1%", trend: "up", hint: "MAU" },

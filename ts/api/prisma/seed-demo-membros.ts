@@ -26,7 +26,7 @@ import {
  * no topo do módulo, então importar a constante de lá rodaria o seed da conta
  * como efeito colateral. Extrair para um módulo comum seria refatoração.
  */
-const DEMO_EMAIL = "demo@beculture.ai";
+const DEMO_EMAIL = "demo@oracle.ai";
 
 interface MembroDemo {
   nome: string;

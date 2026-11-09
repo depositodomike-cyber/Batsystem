@@ -110,7 +110,7 @@ export class SlackOauthService {
     const base = this.config
       .get<string>('FRONT_URL', 'http://localhost:5173')
       .replace(/\/$/, '');
-    return `${base}/behuman/conectores`;
+    return `${base}/oracle/conectores`;
   }
 
   buildAuthorizeUrl(empresaId: string): string {

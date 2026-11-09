@@ -1,4 +1,4 @@
-// Prompt "Pergunte à sua Memória" — portado do beculture/Confi (public/app.js +
+// Prompt "Pergunte à sua Memória" — portado do Oracle/Confi (public/app.js +
 // lib/claude.js). Três modos: Memória (vault), Web e Auto. A "Memória" aqui são
 // as notas .md do tenant, cruzadas com as Notas/Insights/To-do's que o cliente
 // envia como referência.
@@ -6,11 +6,6 @@
 // As DIRETRIZES não entram por aqui: o AiService anexa o bloco de regras ao fim
 // do system prompt de TODA chamada de IA (ver memorias/diretrizes.ts).
 
-import {
-  blocoTitulosVault,
-  REGRA_CONEXOES_VAULT,
-  TITULO_CONEXOES_VAULT,
-} from '../conexoes-vault';
 import { cortarSeguro } from '../texto-seguro';
 
 export type ModoBusca = 'vault' | 'web' | 'auto';
@@ -115,13 +110,13 @@ export interface HistoricoTurno {
 
 export const SYSTEM_ROTA = `Você é um roteador de perguntas. Decida a melhor fonte para responder à pergunta do usuário.
 Responda APENAS com uma palavra:
-- "vault" quando a pergunta puder ser respondida com o conhecimento interno da empresa (diretrizes, decisões, notas, contexto do negócio) ou for reflexão/estratégia sobre a própria operação.
+- "vault" quando a pergunta puder ser respondida com a base de conhecimento pessoal do dono (diretrizes, decisões, notas, investigações, projetos e contexto pessoal) ou for reflexão/estratégia sobre a própria vida, rotina ou trabalho dele.
 - "web" quando a pergunta exigir informação atual, pública ou externa (notícias, cotações, dados de mercado, fatos gerais, algo que muda no tempo).
 Não explique. Responda só "vault" ou "web".`;
 
 // ---------- Modo Memória (vault) ----------
 
-export const SYSTEM_VAULT = `Você é a inteligência da Memória de um líder/CEO dentro do beculture, uma plataforma de inteligência de pessoas.
+export const SYSTEM_VAULT = `Você é a inteligência da Memória dentro do Oracle, o sistema pessoal de inteligência do seu dono — o guardião do conhecimento, das investigações e do contexto de uma única pessoa.
 Você recebe duas fontes de contexto:
 - MEMÓRIA: as notas do próprio usuário (os arquivos da base de conhecimento dele). É a fonte principal de fatos.
 - REFERÊNCIAS: recortes atuais que o usuário trouxe (Notas rápidas, To-do). Contexto complementar.
@@ -131,10 +126,9 @@ Como responder:
 - Baseie-se PRIMEIRO no conteúdo da MEMÓRIA e das REFERÊNCIAS. Não invente fatos, métricas ou decisões que não estejam ali.
 - Se a MEMÓRIA não cobrir a pergunta, diga com franqueza o que falta e responda com o melhor raciocínio possível, deixando claro o que é suposição.
 - Quando fizer sentido, termine com recomendações acionáveis e próximos passos.
+- Não acrescente seção de "Conexões no Vault", lista de [[wikilinks]] nem notas relacionadas ao final.
 
-${REGRA_CONEXOES_VAULT.trim()}
-
-Depois do bloco de Conexões — e só depois dele —, acrescente a ÚLTIMA linha da resposta, isolada, no formato exato:
+Ao final da resposta, acrescente a ÚLTIMA linha, isolada, no formato exato:
 FONTES: <títulos das notas da MEMÓRIA que você realmente usou, separados por " | ">
 Use apenas títulos que apareceram no bloco MEMÓRIA. Se não usou nenhum, escreva "FONTES:" sem nada depois. Essa linha é lida pelo sistema e será removida antes de mostrar ao usuário.`;
 
@@ -154,8 +148,6 @@ export function buildVaultUser(p: {
   anexo?: string;
   anexoNome?: string;
   historico?: HistoricoTurno[];
-  /** Títulos das notas do vault — alvos possíveis dos [[wikilinks]]. */
-  titulosVault?: string[];
 }): string {
   const partes: string[] = [];
 
@@ -175,7 +167,6 @@ export function buildVaultUser(p: {
     );
   }
 
-  partes.push(blocoTitulosVault(p.titulosVault ?? []).trim());
   partes.push(blocoHistorico(p.historico ?? []).trim());
   partes.push(`## PERGUNTA\n${p.texto.trim()}`);
 
@@ -209,23 +200,23 @@ export function extrairFontesVault(text: string): {
 
 // ---------- Modo Web ----------
 
-export const SYSTEM_WEB = `Você é um assistente de pesquisa dentro do beculture, uma plataforma para líderes e CEOs.
+export const SYSTEM_WEB = `Você é o assistente de pesquisa do Oracle, o sistema pessoal de inteligência do seu dono, encarregado de levantar e verificar informação externa para ele.
 Use a busca na web para responder com informação atual e confiável.
 Responda em português do Brasil, de forma direta e objetiva, citando os dados encontrados.
 Não invente fontes: baseie-se apenas no que a busca retornou. Se a busca não trouxer algo confiável, diga isso.
-${REGRA_CONEXOES_VAULT.trim()}
-
-Aqui o bloco "${TITULO_CONEXOES_VAULT}" liga o que a busca trouxe aos assuntos que o usuário já tem na Memória — é a última coisa da resposta.`;
+Não acrescente seção de "Conexões no Vault", lista de [[wikilinks]] nem notas relacionadas ao final.`;
 
 export function buildWebUser(p: {
   texto: string;
   historico?: HistoricoTurno[];
-  /** Títulos das notas do vault — alvos possíveis dos [[wikilinks]]. */
-  titulosVault?: string[];
+  /** Fatos do Perfil Pessoal relevantes à pergunta (já recortados). */
+  perfil?: string;
 }): string {
   return [
     blocoHistorico(p.historico ?? []).trim(),
-    blocoTitulosVault(p.titulosVault ?? []).trim(),
+    p.perfil?.trim()
+      ? `## CONTEXTO PESSOAL DO USUÁRIO (Perfil Pessoal — use se for relevante)\n${p.perfil.trim()}`
+      : '',
     `## PERGUNTA\n${p.texto.trim()}`,
   ]
     .filter(Boolean)

@@ -1,0 +1,7 @@
+Modelo de voz da ativação por voz ("Oracle") — fica nesta pasta:
+
+  vosk-model-small-en-us-0.15.tar.gz    modelo do Vosk (alphacephei.com/vosk/models),
+                                        reempacotado de .zip para .tar.gz
+
+O arquivo .tar.gz não vai para o git (ver ts/demo/.gitignore).
+Passo a passo completo: docs/ativacao-por-voz.md

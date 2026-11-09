@@ -35,6 +35,8 @@ import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context
 import { syncVault } from "@/services/api/vault";
 import { NotaMemoriaModal } from "./NotaMemoriaModal";
 import { RepositorioViewSelect } from "./RepositorioViewSelect";
+import { AdicionarAoRepositorio } from "./drive/AdicionarAoRepositorio";
+import { EVENTO_REPOSITORIO_ATUALIZADO } from "./drive/importacao";
 import {
   escolherPastaContexto,
   filtrarInventario,
@@ -177,6 +179,19 @@ export default function MemoriaLista() {
     await carregar(handle, { indexar: true });
   }, [carregar, escolherPasta]);
 
+  // Conteúdo novo gravado por fora (importação do Google Drive): relê a pasta
+  // sem reenviar ao índice (quem gravou já indexou).
+  useEffect(() => {
+    const recarregar = async () => {
+      const handle = await pastaContextoSalva();
+      if (!handle || pastaEhCopia(handle) || !(await permissaoDeLeitura(handle))) return;
+      await carregar(handle, { indexar: false });
+    };
+    const ouvir = () => void recarregar();
+    window.addEventListener(EVENTO_REPOSITORIO_ATUALIZADO, ouvir);
+    return () => window.removeEventListener(EVENTO_REPOSITORIO_ATUALIZADO, ouvir);
+  }, [carregar]);
+
   // Restaura a pasta do repositório ativo. Ao trocar de repositório, limpa o
   // inventário (após await) e tenta carregar a pasta (ou fica vazio).
   useEffect(() => {
@@ -238,6 +253,7 @@ export default function MemoriaLista() {
 
           <div className="flex shrink-0 items-center gap-2">
             <RepositorioViewSelect compact />
+            <AdicionarAoRepositorio />
             <Button
               onClick={sincronizar}
               color="primary"

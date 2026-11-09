@@ -1,4 +1,4 @@
-// Prompts do "Criar artigo" — portado do beculture/Confi (lib/claude.js, tipo
+// Prompts do "Criar artigo" — portado do Oracle/Confi (lib/claude.js, tipo
 // "artigo"). Geração direta (single-shot) com refino iterativo (ajuste da versão
 // anterior). A IA devolve JSON { titulo, subtitulo, conteudo(markdown), conexoes }.
 //

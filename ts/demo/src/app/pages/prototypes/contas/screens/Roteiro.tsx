@@ -17,7 +17,7 @@ import { Link } from "react-router";
 import { Page } from "@/components/shared/Page";
 import { Card } from "@/components/ui";
 
-import { LogoBeculture } from "../components/LogoBeculture";
+import { LogoOracle } from "../components/LogoOracle";
 
 const TELAS = [
   {
@@ -65,7 +65,7 @@ export default function Roteiro() {
       <main className="min-h-100vh grid w-full grow grid-cols-1 place-items-center py-8">
         <div className="w-full max-w-[52rem] p-4 sm:px-5">
           <div className="text-center">
-            <LogoBeculture />
+            <LogoOracle />
             <div className="mt-4">
               <p className="text-tiny-plus font-semibold tracking-wider text-primary-600 uppercase dark:text-primary-400">
                 Protótipo navegável

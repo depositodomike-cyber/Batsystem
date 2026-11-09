@@ -97,7 +97,7 @@ export function AgenteSelect({ disabled }: { disabled?: boolean }) {
         >
           {/* Pré-programados e criados pelos admins: um grupo só. */}
           {(organizacao.length > 0 || sistema.length > 0) &&
-            cabecalho("Agentes da organização")}
+            cabecalho("Agentes do Oracle")}
           {organizacao.map(item)}
           {sistema.map(item)}
           {meus.length > 0 && cabecalho("Meus agentes")}

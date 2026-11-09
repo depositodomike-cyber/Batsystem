@@ -33,8 +33,8 @@ export function configureApp(app: INestApplication): void {
    * Sufixo das URLs da Vercel do time, liberado ALÉM da lista fixa.
    *
    * Cada deploy ganha uma URL própria e efêmera
-   * (`beculture-<hash>-beculture.vercel.app`), e o projeto ainda tem aliases
-   * como `beculture-web-beculture.vercel.app`. Nenhuma delas cabe numa lista
+   * (`Oracle-<hash>-oracle.vercel.app`), e o projeto ainda tem aliases
+   * como `oracle-web-oracle.vercel.app`. Nenhuma delas cabe numa lista
    * estática, e abrir a app por qualquer uma derrubava TODAS as chamadas no
    * preflight: sem `Access-Control-Allow-Origin` o browser bloqueia a resposta,
    * o axios não recebe resposta nenhuma e o front conclui "servidor
@@ -44,7 +44,7 @@ export function configureApp(app: INestApplication): void {
    * para deploys de terceiros. Ponha string vazia para desligar a regra.
    */
   const sufixoVercel = config
-    .get<string>('CORS_VERCEL_SUFFIX', '-beculture.vercel.app')
+    .get<string>('CORS_VERCEL_SUFFIX', '-oracle.vercel.app')
     .trim();
 
   /**

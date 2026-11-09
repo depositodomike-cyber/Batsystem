@@ -6,7 +6,7 @@ const colors = {
     150: "#EBEDF0",
   },
   slate: {
-    // Neutros beculture (structure): 900 = Slate 900 da marca #0F172B. §4.1.
+    // Neutros Oracle (structure): 900 = Slate 900 da marca #0F172B. §4.1.
     50: "#F8FAFC",
     100: "#F1F5F9",
     150: "#E9EEF5",
@@ -81,7 +81,7 @@ const colors = {
     900: "#0A1014",
   },
   cinder: {
-    // Dark scheme beculture: fundo Slate 900 #0F172B com superfícies navy.
+    // Dark scheme Oracle: fundo Slate 900 #0F172B com superfícies navy.
     50: "#E2E8F0",
     100: "#CBD5E1",
     200: "#94A3B8",
@@ -99,7 +99,7 @@ const colors = {
   blue: twColors.blue,
   green: twColors.green,
   amber: {
-    // Amber oficial beculture (primary). 400 = #FFCA28 (assinatura). §4.1/4.2.
+    // Amber oficial Oracle (primary). 400 = #FFCA28 (assinatura). §4.1/4.2.
     50: "#FFF8E1",
     100: "#FFECB3",
     200: "#FFE082",

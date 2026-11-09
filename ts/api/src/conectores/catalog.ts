@@ -49,11 +49,11 @@ export const connectors: Connector[] = [
   { id: 'instagram', rank: 53, name: 'Instagram', category: 'comunicacao', objective: 'Publicação em redes sociais', permissions: ['Publicar posts', 'Publicar stories', 'Enviar mensagens diretas'] },
 
   // E-mail (OAuth real — ver oauth-provider.service.ts)
-  { id: 'gmail', rank: 54, name: 'Gmail', category: 'email', objective: 'E-mail corporativo (Google)', permissions: ['Ler e-mails', 'Enviar e-mails', 'Acessar a conta autorizada'] },
-  { id: 'outlook', rank: 55, name: 'Outlook', category: 'email', objective: 'E-mail corporativo (Microsoft 365)', permissions: ['Ler e-mails', 'Enviar e-mails', 'Acessar a conta autorizada'] },
+  { id: 'gmail', rank: 54, name: 'Gmail', category: 'email', objective: 'E-mail corporativo (Google)', permissions: ['Ler e-mails (somente leitura)', 'Salvar e-mails no Repositório', 'Acessar a conta autorizada'] },
+  { id: 'outlook', rank: 55, name: 'Outlook', category: 'email', objective: 'E-mail corporativo (Microsoft 365)', permissions: ['Ler e-mails (somente leitura)', 'Salvar e-mails no Repositório', 'Acessar a conta autorizada'] },
 
   // Agenda (OAuth real — ver oauth-provider.service.ts)
-  { id: 'google-calendar', rank: 56, name: 'Google Calendar', category: 'agenda', objective: 'Agenda e reuniões', permissions: ['Acessar agenda', 'Criar eventos', 'Convidar participantes', 'Ler disponibilidade'] },
+  { id: 'google-calendar', rank: 56, name: 'Google Calendar', category: 'agenda', objective: 'Agenda e reuniões', permissions: ['Ler agenda e eventos (somente leitura)', 'Salvar eventos no Repositório'] },
 
   // Identidade & Acessos
   { id: 'azure-ad', rank: 6, name: 'Azure AD', category: 'identidade', objective: 'Gestão de acessos', permissions: ['Autenticar usuários', 'Sincronizar usuários', 'Acessar grupos', 'Provisionar contas'] },
@@ -82,7 +82,7 @@ export const connectors: Connector[] = [
 
   // Produtividade & Projetos
   { id: 'google-workspace', rank: 3, name: 'Google Workspace', category: 'produtividade', objective: 'Produtividade e colaboração', permissions: ['Login SSO', 'Acessar agenda', 'Criar eventos', 'Ler diretório', 'Acessar Drive'] },
-  { id: 'google-drive', rank: 57, name: 'Google Drive', category: 'produtividade', objective: 'Arquivos e documentos', permissions: ['Listar arquivos', 'Ler arquivos', 'Enviar arquivos', 'Acessar pastas compartilhadas'] },
+  { id: 'google-drive', rank: 57, name: 'Google Drive', category: 'produtividade', objective: 'Arquivos e documentos', permissions: ['Listar e buscar arquivos (somente leitura)', 'Importar arquivos para o Repositório'] },
   { id: 'onedrive', rank: 58, name: 'OneDrive', category: 'produtividade', objective: 'Arquivos corporativos (Microsoft 365)', permissions: ['Listar arquivos', 'Ler arquivos', 'Enviar arquivos', 'Acessar bibliotecas do SharePoint'] },
   { id: 'clickup', rank: 25, name: 'ClickUp', category: 'produtividade', objective: 'Produtividade', permissions: ['Criar tarefas', 'Atualizar status', 'Ler projetos'] },
   { id: 'jira', rank: 26, name: 'Jira', category: 'produtividade', objective: 'Gestão ágil', permissions: ['Criar issues', 'Acessar backlog', 'Sincronizar sprint'] },

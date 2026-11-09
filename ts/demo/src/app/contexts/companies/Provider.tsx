@@ -18,8 +18,8 @@ import {
   type Usuario,
 } from "./context";
 
-const STORAGE_KEY = "beculture:companies";
-const SESSAO_KEY = "beculture:sessao";
+const STORAGE_KEY = "oracle:companies";
+const SESSAO_KEY = "oracle:sessao";
 
 interface PersistedState {
   empresas: Empresa[];

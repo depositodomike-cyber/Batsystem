@@ -31,6 +31,7 @@ import {
 import { VaultService } from '@/vault/vault.service';
 import { RepositorioOrgService } from '@/repositorio-org/repositorio-org.service';
 import { ConversasService } from '@/conversas/conversas.service';
+import { PerfilService, PASTA_PERFIL } from '@/perfil/perfil.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
@@ -146,10 +147,11 @@ export class PromptController {
     private readonly vault: VaultService,
     private readonly repositorioOrg: RepositorioOrgService,
     private readonly conversas: ConversasService,
+    private readonly perfil: PerfilService,
   ) {}
 
   /**
-   * POST /ai/prompt → "Pergunte à sua Memória" (portado do beculture/Confi).
+   * POST /ai/prompt → "Pergunte à sua Memória" (portado do Oracle/Confi).
    * Aceita JSON ou multipart (com `arquivo`). Campos: texto (obrigatório),
    * modo ('vault'|'web'|'auto'), historico (JSON), referencia (texto do cliente).
    * Retorna { tipo:'resposta', resposta, fontes, origem }.
@@ -245,15 +247,6 @@ export class PromptController {
       }
     }
 
-    // Títulos das notas do vault: alvos dos [[wikilinks]] do bloco "Conexões no
-    // Vault" que fecha a resposta (vale para os dois modos).
-    let titulosVault: string[] = [];
-    try {
-      titulosVault = await this.vault.titulos(user.empresaId, repositorioId ?? null, texto, 40);
-    } catch (err) {
-      this.logger.warn(`Falha ao carregar títulos do Vault: ${String(err)}`);
-    }
-
     // Modo Web: busca na internet com fontes citadas. Anexo é ignorado no Web
     // (igual ao Confi).
     if (modo === 'web') {
@@ -261,7 +254,13 @@ export class PromptController {
         user.empresaId,
         user.id,
         comAgente(SYSTEM_WEB),
-        buildWebUser({ texto, historico, titulosVault }),
+        buildWebUser({
+          texto,
+          historico,
+          perfil: (await this.perfil.trechosRelevantes(user.id, texto))
+            .map((h) => h.conteudo)
+            .join('\n'),
+        }),
         4000,
       );
       const separado = separarArquivos(text.trim());
@@ -317,7 +316,10 @@ export class PromptController {
     let titulosNotas: string[] = [];
     try {
       // Busca uma margem além do teto para o orçamento poder escolher.
-      const [daOrganizacao, doVault] = await Promise.all([
+      const [doPerfil, daOrganizacao, doVault] = await Promise.all([
+        // Perfil Pessoal: do USUÁRIO (vale em qualquer organização), só os
+        // fatos que casam com a pergunta — nunca o perfil inteiro.
+        this.perfil.trechosRelevantes(user.id, texto),
         this.repositorioOrg
           .search(user.empresaId, organizacaoId, texto)
           .catch((err: unknown) => {
@@ -333,7 +335,13 @@ export class PromptController {
           MEMORIA_MAX_NOTAS + 2,
         ),
       ]);
-      const hits = [...daOrganizacao, ...doVault];
+      // As cópias dos .md do perfil no índice saem: o perfil já entrou acima,
+      // recortado, direto da fonte da verdade.
+      const hits = [
+        ...doPerfil,
+        ...daOrganizacao,
+        ...doVault.filter((n) => !n.path.startsWith(`${PASTA_PERFIL}/`)),
+      ];
       const { bloco, titulos } = montarBlocoMemoria(hits, texto);
       notasBloco = bloco;
       titulosNotas = titulos;
@@ -348,7 +356,6 @@ export class PromptController {
       anexo,
       anexoNome: arquivo?.originalname,
       historico,
-      titulosVault,
     });
 
     const { text, truncated } = await this.ai.completar(

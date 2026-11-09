@@ -143,6 +143,6 @@
   }
 }
 
-/* Skin de marca beculture — por último p/ sobrescrever o @theme inline acima.
+/* Skin de marca Oracle — por último p/ sobrescrever o @theme inline acima.
    (Tailwind v4 inlina @import; a posição final garante a vitória na cascata.) */
-@import "./beculture-theme.css";
+@import "./oracle-theme.css";

@@ -463,7 +463,7 @@ export function TemplateEditorInline({
         <div className="dark:border-dark-600 mt-4 rounded-xl border border-gray-200 px-4">
           <ToggleRow
             nome="Template ativo"
-            descricao="Templates inativos não aparecem na criação de apresentações do AI Studio."
+            descricao="Templates inativos não aparecem na criação de apresentações do Lab."
             checked={ativo}
             onChange={setAtivo}
           />

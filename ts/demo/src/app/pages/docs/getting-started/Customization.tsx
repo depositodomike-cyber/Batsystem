@@ -18,7 +18,7 @@ export function Customization() {
       </h3>
       <div className="text-sm-plus mt-5 space-y-4">
         <p>
-          beculture has modular architecture that allows you to customize various
+          Oracle has modular architecture that allows you to customize various
           configuration, including: theme, app, colors, layout, and more.
         </p>
         <p className="inline-code">

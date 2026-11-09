@@ -12,7 +12,7 @@ function jsonResult(data: unknown) {
 }
 
 /**
- * Monta uma instância do servidor MCP do beculture com as ferramentas
+ * Monta uma instância do servidor MCP do Oracle com as ferramentas
  * escopadas à empresa autenticada. Uma instância nova é criada por request
  * (transporte Streamable HTTP sem sessão — stateless e escalável
  * horizontalmente); a montagem é barata, só registra os handlers.
@@ -26,11 +26,11 @@ export class McpServerFactory {
 
   build(empresaId: string): McpServer {
     const server = new McpServer(
-      { name: 'beculture', version: '0.1.0' },
+      { name: 'Oracle', version: '0.1.0' },
       {
         instructions:
-          'Servidor MCP do beculture. Gerencia os conectores (integrações) ' +
-          'da empresa: liste o catálogo por categoria, consulte detalhes e ' +
+          'Servidor MCP do Oracle. Gerencia os conectores (integrações) ' +
+          'da conta pessoal do dono: liste o catálogo por categoria, consulte detalhes e ' +
           'permissões de cada conector e ative ou desative integrações. ' +
           'Quando o Slack está autorizado via OAuth (Conectores → Slack → ' +
           'Conectar no app), as ferramentas slack_* operam no workspace real.',
@@ -53,7 +53,7 @@ export class McpServerFactory {
       {
         title: 'Listar conectores',
         description:
-          'Lista os conectores do catálogo com o estado de conexão da empresa ' +
+          'Lista os conectores do catálogo com o estado de conexão da conta pessoal ' +
           '(connected/connectedAt). Pode filtrar por categoria ou listar só os conectados.',
         inputSchema: {
           categoria: z
@@ -93,7 +93,7 @@ export class McpServerFactory {
       {
         title: 'Conectar conector',
         description:
-          'Ativa um conector para a empresa. Idempotente: conectar um conector ' +
+          'Ativa um conector na conta pessoal. Idempotente: conectar um conector ' +
           'já ativo não tem efeito.',
         inputSchema: {
           id: z.string().describe('Id do conector a ativar.'),
@@ -108,7 +108,7 @@ export class McpServerFactory {
       {
         title: 'Desconectar conector',
         description:
-          'Desativa um conector da empresa. Idempotente: desconectar um conector ' +
+          'Desativa um conector da conta pessoal. Idempotente: desconectar um conector ' +
           'já inativo não tem efeito.',
         inputSchema: {
           id: z.string().describe('Id do conector a desativar.'),
@@ -125,8 +125,8 @@ export class McpServerFactory {
       {
         title: 'Slack: listar canais',
         description:
-          'Lista os canais públicos do workspace Slack autorizado pela empresa. ' +
-          'Requer o Slack conectado via OAuth no app beculture.',
+          'Lista os canais públicos do workspace Slack autorizado pelo dono. ' +
+          'Requer o Slack conectado via OAuth no app Oracle.',
         inputSchema: {},
       },
       async () => jsonResult(await this.slack.listChannels(empresaId)),
@@ -138,7 +138,7 @@ export class McpServerFactory {
         title: 'Slack: enviar mensagem',
         description:
           'Envia uma mensagem em um canal do workspace Slack autorizado. ' +
-          'A mensagem aparece como o app beculture.',
+          'A mensagem aparece como o app Oracle.',
         inputSchema: {
           canal: z
             .string()

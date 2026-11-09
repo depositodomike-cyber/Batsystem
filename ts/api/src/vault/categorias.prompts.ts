@@ -53,7 +53,7 @@ export function slugCategoria(texto: string): string {
  * duplicaria nós.
  */
 const REGRAS_COMUNS = `REGRAS:
-- Categoria é TEMA MACRO, do tipo que classifica dezenas de documentos ao longo do tempo. Ex.: "Produto", "Estratégia", "Gestão de Pessoas", "Comunicação", "Administrativo", "Produtividade".
+- Categoria é TEMA MACRO, do tipo que classifica dezenas de documentos ao longo do tempo. Ex.: "Projetos", "Finanças", "Saúde", "Estudos", "Investigações", "Automações", "Produtividade".
 - NUNCA use nome de pessoa (ex.: "Michael Silva"). Pessoas são outra camada.
 - NUNCA use nome de produto, projeto, versão ou funcionalidade (ex.: "Plataforma V1", "Design Tokens"). Assuntos específicos são outra camada.
 - NUNCA use rótulo de FORMATO do arquivo (ex.: "Documento", "Reunião", "Ata", "E-mail", "Transcrição").
@@ -61,7 +61,7 @@ const REGRAS_COMUNS = `REGRAS:
 
 // ---------- 1) Vocabulário ----------
 
-export const SYSTEM_VOCABULARIO = `Você organiza o acervo de conhecimento de uma empresa. Recebe uma amostra dos documentos e devolve o conjunto de CATEGORIAS MACRO que descreve esse acervo.
+export const SYSTEM_VOCABULARIO = `Você organiza a base de conhecimento pessoal do dono do Oracle. Recebe uma amostra dos documentos e devolve o conjunto de CATEGORIAS MACRO que descreve esse acervo.
 
 ${REGRAS_COMUNS}
 - Devolva de 6 a ${MAX_VOCABULARIO} categorias, das mais abrangentes para as menos.

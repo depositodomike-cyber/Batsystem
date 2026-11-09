@@ -74,7 +74,7 @@ export default function ConfirmarEmail() {
         </p>
         <p className="dark:text-dark-300 text-xs-plus text-gray-500">
           Acesse o e-mail, confirme o endereço e, em seguida, continue o
-          cadastro para criar sua organização.
+          cadastro para preparar o seu Oracle.
         </p>
       </div>
     </MolduraAuth>

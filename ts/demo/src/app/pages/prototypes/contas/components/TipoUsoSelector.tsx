@@ -30,7 +30,7 @@ export function TipoUsoSelector({
   return (
     <div
       role="radiogroup"
-      aria-label="Como você quer usar a beculture"
+      aria-label="Como você quer usar o Oracle"
       className="space-y-2.5"
     >
       {TIPO_USO_OPTIONS.map((opcao) => {

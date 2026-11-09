@@ -67,6 +67,7 @@ const OAUTH_BASE: Record<string, string> = {
   gmail: "/conectores/email/gmail",
   outlook: "/conectores/email/outlook",
   "google-calendar": "/conectores/agenda/google-calendar",
+  "google-drive": "/conectores/drive/google-drive",
 };
 
 /**
@@ -87,7 +88,12 @@ export async function getOauthAuthorizeUrlApi(
 
 // Conectores que sabem confirmar a conta autorizada contra a API do provedor
 // (o Slack não expõe essa rota).
-const CONTA_SUPORTADA = ["gmail", "outlook", "google-calendar"];
+const CONTA_SUPORTADA = [
+  "gmail",
+  "outlook",
+  "google-calendar",
+  "google-drive",
+];
 
 /** True quando o conector oferece o botão "Testar conexão". */
 export function suportaTesteDeConexao(connectorId: string): boolean {

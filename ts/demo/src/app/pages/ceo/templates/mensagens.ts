@@ -7,12 +7,12 @@ import type { ConfirmMessages } from "@/components/shared/ConfirmModal";
 export const MENSAGENS_EXCLUIR_TEMPLATE = (nome: string): ConfirmMessages => ({
   pending: {
     title: "Excluir template?",
-    description: `"${nome || "Sem nome"}" sai da organização para todo mundo. Apresentações já criadas com ele não mudam.`,
+    description: `"${nome || "Sem nome"}" é excluído. Apresentações já criadas com ele não mudam.`,
     actionText: "Excluir",
   },
   success: {
     title: "Template excluído",
-    description: "Ele não aparece mais na criação de apresentações do AI Studio.",
+    description: "Ele não aparece mais na criação de apresentações do Lab.",
     actionText: "Ok",
   },
   error: {

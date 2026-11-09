@@ -13,7 +13,7 @@ export function CSS() {
       </h3>
       <div className="text-sm-plus mt-5 space-y-4">
         <p>
-          beculture leverages the Tailwind CSS framework for styling its
+          Oracle leverages the Tailwind CSS framework for styling its
           components, ensuring a modern and consistent design system.
           Additionally, it includes custom CSS classes tailored for specific
           components and third-party libraries.

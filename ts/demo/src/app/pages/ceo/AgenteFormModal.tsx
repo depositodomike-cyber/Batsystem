@@ -288,7 +288,7 @@ export function AgenteFormModal({
           </DialogTitle>
           <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
             {escopo === "organizacao"
-              ? "Crie um especialista para ajudar em tarefas específicas. Todos da organização podem chamá-lo com uma @menção nas conversas com o Assistente."
+              ? "Crie um especialista para ajudar em tarefas específicas. Chame-o com uma @menção nas conversas com o Assistente."
               : "Crie um especialista para ajudar em tarefas específicas. Você pode chamá-lo com uma @menção nas conversas com o Assistente. Este agente é visível apenas para você."}
           </p>
         </div>

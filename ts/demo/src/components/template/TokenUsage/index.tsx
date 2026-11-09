@@ -6,7 +6,7 @@ import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 
 // ----------------------------------------------------------------------
 // Contador de tokens da IA no header (janelas de 1h/24h/7d/30d), portado do
-// beculture/Confi. Consulta GET /uso/tokens do usuário logado e atualiza a cada
+// Oracle/Confi. Consulta GET /uso/tokens do usuário logado e atualiza a cada
 // minuto. Em erro (ex.: offline) mantém os últimos valores exibidos.
 // ----------------------------------------------------------------------
 

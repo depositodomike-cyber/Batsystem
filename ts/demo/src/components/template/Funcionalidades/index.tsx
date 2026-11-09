@@ -46,9 +46,9 @@ interface Feature {
 }
 
 // Funcionalidades disponíveis no menu "Funcionalidades" (ordem definida pelo
-// produto). Os conectores migrados do beculture/Confi (CRM, WhatsApp) ficam no
+// produto). Os conectores migrados do Oracle/Confi (CRM, WhatsApp) ficam no
 // topo da lista para aparecerem agrupados no menu superior. Email e Slack saíram
-// daqui: agora vivem no bloco "Painel" do menu esquerdo (ver ceoOs.behumanHome).
+// daqui: agora vivem no bloco "Painel" do menu esquerdo (ver ceoOs.oracleHome).
 const FEATURES: Feature[] = [
   { slug: "crm", label: "CRM", Icon: ChartBarIcon, tint: "text-amber-500" },
   { slug: "whatsapp", label: "WhatsApp", Icon: ChatBubbleBottomCenterTextIcon, tint: "text-green-500" },

@@ -3,7 +3,7 @@ import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
 
 // Criar vídeo (IA · HeyGen) — chama o backend ts/api. Fluxo: (roteiro via IA) →
 // escolher avatar/voz → gerar (nuvem HeyGen) → poll status → MP4. Portado do
-// beculture/Confi (lib/heygen.js). A chave HeyGen fica no servidor.
+// Oracle/Confi (lib/heygen.js). A chave HeyGen fica no servidor.
 
 export interface Avatar {
   id: string;

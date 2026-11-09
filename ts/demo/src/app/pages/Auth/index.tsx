@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import clsx from "clsx";
 
 // Local Imports
-import BecultureSignatureDark from "@/assets/branding/beculture-signature-dark.svg?react";
+import OracleSignatureDark from "@/assets/branding/oracle-signature-dark.svg?react";
 import { Button, Card, Checkbox, Input, InputErrorMsg } from "@/components/ui";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import {
@@ -143,11 +143,11 @@ export default function SignIn() {
         <div className="w-full max-w-[31rem] p-4 sm:px-5">
           <div className="text-center">
             <img
-              src="/images/logos/beculture-login-logo.svg"
-              alt="beculture"
+              src="/images/logos/oracle-login-logo.svg"
+              alt="Oracle"
               className="mx-auto h-12 w-auto dark:hidden"
             />
-            <BecultureSignatureDark className="mx-auto hidden h-12 w-auto dark:block" />
+            <OracleSignatureDark className="mx-auto hidden h-12 w-auto dark:block" />
             <div className="mt-4">
               <h2 className="text-2xl font-semibold text-gray-600 dark:text-dark-100">
                 Bem-vindo de volta
@@ -162,7 +162,7 @@ export default function SignIn() {
               <div className="space-y-4">
                 <Input
                   label="E-mail"
-                  placeholder="voce@empresa.com"
+                  placeholder="voce@email.com"
                   autoComplete="email"
                   prefix={
                     <EnvelopeIcon
@@ -209,7 +209,7 @@ export default function SignIn() {
             </div>
             <div className="dark:border-dark-600 dark:bg-dark-800 mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2.5 text-left">
               <p className="dark:text-dark-200 text-xs font-medium text-gray-600">
-                Conta do time (já no servidor)
+                Conta de demonstração (já no servidor)
               </p>
               <p className="dark:text-dark-300 mt-0.5 text-tiny-plus text-gray-400">
                 {DEMO_LOGIN.email} · {DEMO_LOGIN.senha}

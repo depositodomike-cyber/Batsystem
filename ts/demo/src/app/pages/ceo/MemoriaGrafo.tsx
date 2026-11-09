@@ -11,6 +11,8 @@ import { Button, Spinner } from "@/components/ui";
 import { SugerirPosUploadModal } from "./SugerirPosUpload";
 import { NotaMemoriaModal } from "./NotaMemoriaModal";
 import { RepositorioViewSelect } from "./RepositorioViewSelect";
+import { AdicionarAoRepositorio } from "./drive/AdicionarAoRepositorio";
+import { EVENTO_REPOSITORIO_ATUALIZADO } from "./drive/importacao";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useThemeContext } from "@/app/contexts/theme/context";
 import { useRepositorioAtivo } from "@/app/pages/prototypes/contas/model/context";
@@ -62,10 +64,10 @@ import {
 } from "./GrafoPainelContexto";
 
 // ----------------------------------------------------------------------
-// Memória — grafo force-directed migrado do beculture/Confi (graph.js + a
+// Memória — grafo force-directed migrado do Oracle/Confi (graph.js + a
 // função grafo() de lib/vault.js). O grafo é construído a partir da pasta que
 // o usuário seleciona: lê os arquivos .md, extrai [[wikilinks]], tags e pastas
-// e monta nós/arestas com a MESMA lógica do beculture. Roda 100% no navegador
+// e monta nós/arestas com a MESMA lógica do Oracle. Roda 100% no navegador
 // (File System Access API), sem backend.
 //
 // A leitura da pasta (handle, permissão, varredura dos .md, frontmatter) vem de
@@ -394,7 +396,15 @@ export default function MemoriaGrafo() {
       // `obsoleto` deixa quem chamou abortar a escrita do resultado. Ler uma
       // pasta grande demora, e sem isso a troca de repositório no meio da
       // leitura faria o grafo do repositório anterior aparecer no novo.
-      opts?: { fromUpload?: boolean; obsoleto?: () => boolean },
+      opts?: {
+        fromUpload?: boolean;
+        obsoleto?: () => boolean;
+        /**
+         * false = só redesenha a partir da pasta, sem reenviar o vault ao
+         * índice da IA (quem gravou — ex.: a importação do Drive — já indexou).
+         */
+        sincronizar?: boolean;
+      },
     ) => {
       setLoading(true);
       setCopiaSomenteLeitura(pastaEhCopia(handle));
@@ -436,7 +446,7 @@ export default function MemoriaGrafo() {
               ? `${entidades.nodes.length} entidades · ${entidades.links.length} relações · ${inv.length} notas`
               : `${inv.length} notas · ${conteudos.links.length} conexões`,
           });
-          void syncToBackend(files);
+          if (opts?.sincronizar !== false) void syncToBackend(files);
           // Só pergunta quando o carregamento veio de um upload do usuário.
           if (opts?.fromUpload) {
             setSugerirTitulo(handle.name);
@@ -486,6 +496,19 @@ export default function MemoriaGrafo() {
     }
     await loadFromHandle(handle);
   }, [loadFromHandle, pickFolder]);
+
+  // Conteúdo novo gravado por fora (importação do Google Drive): redesenha a
+  // partir da pasta, sem pedir permissão nem reenviar o vault ao índice.
+  useEffect(() => {
+    const recarregar = async () => {
+      const handle = await pastaContextoSalva();
+      if (!handle || pastaEhCopia(handle) || !(await permissaoDeLeitura(handle))) return;
+      await loadFromHandle(handle, { sincronizar: false });
+    };
+    const ouvir = () => void recarregar();
+    window.addEventListener(EVENTO_REPOSITORIO_ATUALIZADO, ouvir);
+    return () => window.removeEventListener(EVENTO_REPOSITORIO_ATUALIZADO, ouvir);
+  }, [loadFromHandle]);
 
   // Ao abrir, mostra quantas notas já estão no servidor (sync anterior), para
   // o usuário saber que a IA já tem contexto mesmo sem re-selecionar a pasta.
@@ -1609,7 +1632,7 @@ export default function MemoriaGrafo() {
       {/* Grafo solto na página, em tela cheia (abaixo do header de 65px) */}
       <div
         ref={wrapRef}
-        className="relative h-[calc(100dvh-var(--header-h))] w-full overflow-hidden bg-slate-50 bg-[radial-gradient(rgba(100,116,139,.22)_1px,transparent_1px)] bg-[length:22px_22px] dark:bg-[#0b1220] dark:bg-[radial-gradient(rgba(148,163,184,.12)_1px,transparent_1px)]"
+        className="relative h-[calc(100dvh-var(--header-h))] w-full overflow-hidden bg-slate-50 bg-[radial-gradient(rgba(100,116,139,.22)_1px,transparent_1px)] bg-[length:22px_22px] dark:bg-dark-900 dark:bg-[radial-gradient(rgba(148,163,184,.12)_1px,transparent_1px)]"
       >
         {/* `touch-none`: sem isso o navegador consome o gesto para rolar/dar
             zoom na página e o pan/pinça do grafo nunca recebe os eventos. */}
@@ -1624,6 +1647,7 @@ export default function MemoriaGrafo() {
         <div className="absolute end-2 top-2 z-10 flex max-w-[calc(100%-1rem)] flex-col items-end gap-1.5 sm:end-4 sm:top-4 sm:max-w-none">
           <div className="flex items-center gap-2">
             <RepositorioViewSelect compact />
+            <AdicionarAoRepositorio />
             <Button
               onClick={sincronizar}
               color="primary"
@@ -1749,7 +1773,7 @@ export default function MemoriaGrafo() {
 
         {/* Estados: carregando / vazio */}
         {loading && (
-          <div className="absolute inset-0 z-[5] grid place-items-center bg-slate-50/60 dark:bg-[#0b1220]/60">
+          <div className="absolute inset-0 z-[5] grid place-items-center bg-slate-50/60 dark:bg-dark-900/60">
             <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-slate-200">
               <Spinner className="size-5" />
               Lendo a pasta…

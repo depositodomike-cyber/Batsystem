@@ -19,6 +19,7 @@ import { blocoTitulosVault, REGRA_CONEXOES_VAULT } from './conexoes-vault';
 import { VaultService } from '@/vault/vault.service';
 import { UsoTokensService } from '@/uso/uso-tokens.service';
 import { MemoriasService } from '@/memorias/memorias.service';
+import { PerfilService } from '@/perfil/perfil.service';
 
 export interface ChatTurn {
   role: 'user' | 'assistant';
@@ -46,7 +47,7 @@ interface CandidatoIa {
 }
 
 /** Enquadramento da plataforma, anexado ao prompt da persona. */
-const PLATFORM_FRAMING = `Você atua dentro do beculture, uma plataforma de inteligência de pessoas para líderes e CEOs.
+const PLATFORM_FRAMING = `Você atua dentro do Oracle, o sistema pessoal de inteligência do seu dono — uma central que reúne conhecimento, investigações, automações, monitoramento e produtividade pessoal de uma única pessoa.
 Responda em português do Brasil, de forma prática, estruturada e objetiva.
 Quando fizer sentido, finalize com recomendações acionáveis e próximos passos.
 Não invente métricas, dados de conectores ou fatos que não tenham sido fornecidos no contexto.`;
@@ -62,6 +63,7 @@ export class AiService {
     private readonly uso: UsoTokensService,
     private readonly vault: VaultService,
     private readonly memorias: MemoriasService,
+    private readonly perfil: PerfilService,
   ) {}
 
   /**
@@ -76,14 +78,20 @@ export class AiService {
    */
   private async comDiretrizes(
     empresaId: string,
+    usuarioId: string,
     system: string,
   ): Promise<string> {
+    // Preferências de comunicação do Perfil Pessoal (do USUÁRIO, valem em
+    // qualquer organização). Vêm antes das diretrizes: as regras da
+    // organização continuam sendo a última palavra.
+    const preferencias = await this.perfil.blocoPreferencias(usuarioId);
+    const comPerfil = preferencias ? `${system}\n\n${preferencias}` : system;
     try {
       const bloco = await this.memorias.blocoSystem(empresaId);
-      return bloco ? `${system}\n\n${bloco}` : system;
+      return bloco ? `${comPerfil}\n\n${bloco}` : comPerfil;
     } catch (err) {
       this.logger.warn(`Falha ao carregar Diretrizes: ${String(err)}`);
-      return system;
+      return comPerfil;
     }
   }
 
@@ -142,13 +150,13 @@ export class AiService {
         });
         if (original) {
           const partes = [
-            `Você é o agente "${pessoal.nome}", configurado pela organização a partir de um agente pré-programado.`,
+            `Você é o agente "${pessoal.nome}", configurado pelo dono do sistema a partir de um agente pré-programado.`,
             textoDoSquad(
               pessoal.descricao || original.description,
               original.agents,
             ),
             pessoal.instrucoes &&
-              `Instruções da organização para este agente (siga-as ao responder):\n${pessoal.instrucoes}`,
+              `Instruções do dono do sistema para este agente (siga-as ao responder):\n${pessoal.instrucoes}`,
           ].filter(Boolean);
           return {
             id: pessoal.id,
@@ -158,10 +166,10 @@ export class AiService {
         }
       }
 
-      const autor = pessoal.organizacaoId ? 'da organização' : 'do usuário';
+      const autor = pessoal.organizacaoId ? 'do espaço do dono' : 'do dono do sistema';
       const partes = [
         `Você é o agente "${pessoal.nome}", um especialista configurado ${
-          pessoal.organizacaoId ? 'pela organização' : 'pelo próprio usuário'
+          pessoal.organizacaoId ? 'no espaço do dono' : 'pelo próprio dono do sistema'
         }.`,
         pessoal.descricao && `Especialidade: ${pessoal.descricao}`,
         pessoal.instrucoes &&
@@ -332,6 +340,7 @@ ${PLATFORM_FRAMING}${conexoes}`;
 
     const system = await this.comDiretrizes(
       input.empresaId,
+      input.usuarioId,
       await this.buildSystem(input),
     );
     const candidatos = await this.resolveCandidatos(input.empresaId);
@@ -420,7 +429,7 @@ ${PLATFORM_FRAMING}${conexoes}`;
   ): Promise<{ text: string; truncated: boolean }> {
     const systemFinal = opts.semDiretrizes
       ? system
-      : await this.comDiretrizes(empresaId, system);
+      : await this.comDiretrizes(empresaId, usuarioId, system);
     const result = await this.comFailover(empresaId, (candidato) =>
       getProvider(candidato.provider).complete({
         apiKey: candidato.apiKey,
@@ -454,7 +463,7 @@ ${PLATFORM_FRAMING}${conexoes}`;
     user: string,
     maxTokens = 4000,
   ): Promise<LlmWebResult> {
-    const systemFinal = await this.comDiretrizes(empresaId, system);
+    const systemFinal = await this.comDiretrizes(empresaId, usuarioId, system);
     const result = await this.comFailover(empresaId, (candidato) => {
       const provider = getProvider(candidato.provider);
       const params = {

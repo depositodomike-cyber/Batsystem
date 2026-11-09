@@ -16,7 +16,7 @@ const LARGURA = 300;
 
 // Os pré-programados são agentes da organização: o mesmo grupo.
 const GRUPO: Record<AgenteMencionavel["tipo"], string> = {
-  sistema: "Agentes da organização",
+  sistema: "Agentes do Oracle",
   organizacao: "Agentes da organização",
   pessoal: "Meus agentes",
 };

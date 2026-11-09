@@ -14,7 +14,7 @@ import { MemoryProvider } from "@/app/contexts/memory/Provider";
 import { DocumentoUploadProvider } from "@/app/contexts/documento-upload/Provider";
 import { IaModalsHostProvider } from "@/app/contexts/ia-modals/Provider";
 import { AssistenteHostProvider } from "@/app/contexts/assistente/Provider";
-import { applyAppearancePrefs } from "@/utils/beculturePrefs";
+import { applyAppearancePrefs } from "@/utils/oraclePrefs";
 
 /**
  * Providers com dados de conta. Remontam quando o usuário muda (login/logout

@@ -7,6 +7,9 @@
 // organização.
 //
 // As seções reaproveitam as telas que já existiam, sem cópia:
+//   • Perfil Pessoal — dados do USUÁRIO (não da organização) usados como
+//     contexto pela IA e espelhados em Markdown no Repositório
+//     (perfil-pessoal/).
 //   • Orientador de insights — o `DirecionadorDeInsights`, que antes era a 2ª
 //     aba da página de Insights. A tela de Insights (os cards) continua onde
 //     estava.
@@ -24,6 +27,7 @@ import {
   AdjustmentsHorizontalIcon,
   LinkIcon,
   SparklesIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
 
 // Local Imports
@@ -39,6 +43,7 @@ import { NavegacaoSecoes, type GrupoNavegacao } from "./NavegacaoSecoes";
 import { DirecionadorDeInsights } from "./InsightDirecionador";
 import Conectores from "./Conectores";
 import { AgentesUsuarioSection } from "./AgentesUsuarioSection";
+import { PerfilPessoalSection } from "./perfil-pessoal/PerfilPessoalSection";
 
 // ----------------------------------------------------------------------
 
@@ -49,6 +54,11 @@ const GRUPOS: GrupoNavegacao[] = [
     id: "usuario",
     titulo: "Geral",
     itens: [
+      {
+        id: "perfil",
+        titulo: "Perfil Pessoal",
+        icon: UserCircleIcon,
+      },
       {
         id: "orientador",
         titulo: "Orientador de insights",
@@ -130,9 +140,16 @@ export default function ConfiguracoesUsuario() {
                 <>
                   <p>
                     <strong>Configurações de usuário</strong> reúnem os
-                    recursos ligados à sua experiência na plataforma — diferente
-                    das Configurações da organização, que tratam da estrutura e
-                    da administração da organização.
+                    recursos ligados à sua experiência no Oracle — diferente das
+                    Configurações gerais, que tratam de aparência, Repositório e
+                    IA.
+                  </p>
+                  <p>
+                    Em <strong>Perfil Pessoal</strong>, você conta ao Oracle
+                    quem é, o que sabe, do que gosta, como prefere ser atendido
+                    e o que quer alcançar. O perfil é só seu, vale em qualquer
+                    organização, vira arquivos no Repositório e ajuda a IA a
+                    responder com mais contexto.
                   </p>
                   <p>
                     Em <strong>Orientador de insights</strong>, você indica à IA
@@ -166,6 +183,7 @@ export default function ConfiguracoesUsuario() {
 
           {/* Painel da seção ativa */}
           <div className="min-w-0 flex-1">
+            {ativo === "perfil" && <PerfilPessoalSection />}
             {ativo === "orientador" && (
               <DirecionadorDeInsights sugestao={sugestao} />
             )}

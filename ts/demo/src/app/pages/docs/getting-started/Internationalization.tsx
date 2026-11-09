@@ -13,7 +13,7 @@ export function Internationalization() {
       </h3>
       <div className="text-sm-plus mt-5 space-y-4">
         <p className="inline-code">
-          beculture supports multilingual applications and allows customization of
+          Oracle supports multilingual applications and allows customization of
           internationalization through the <code>src/i18n/config.ta</code> file.
           Translation files can be added or updated in the{" "}
           <code>src/i18n/locales/</code> directory. Additionally, the

@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { useLocaleContext } from "@/app/contexts/locale/context";
 import { getProductCodeFromPath, userSettingsPath } from "@/app/navigation/ceoOs";
+import { isOracleModuleVisible } from "@/configs/oracleModules";
 import {
   useGruposDeRepositorios,
   useOrganizacaoAtiva,
@@ -176,6 +177,10 @@ export function ProfileMenu({
                 </div>
               </div>
 
+              {/* Bloco de organizações (trocar, excluir e criar): oculto no
+                  Oracle pessoal pelo módulo `organizations`
+                  (configs/oracleModules.ts). */}
+              {isOracleModuleVisible("organizations") && (
               <div className="max-h-[min(22rem,65vh)] overflow-y-auto px-2 py-3">
                 <p className="text-tiny-plus dark:text-dark-300 px-2 pb-1.5 font-semibold tracking-wider text-gray-400 uppercase">
                   Organizações
@@ -287,6 +292,7 @@ export function ProfileMenu({
                   </span>
                 </button>
               </div>
+              )}
 
               {/* Configurações de usuário: Orientador de insights e Conectores.
                   Mesmo desenho de linha de "Criar organização". */}

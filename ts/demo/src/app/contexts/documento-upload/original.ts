@@ -21,7 +21,7 @@ interface OriginalGuardado {
 }
 
 function chave(memoriaId: string): string {
-  return chaveConta(`beculture.documento-original.v1:${memoriaId}`);
+  return chaveConta(`oracle.documento-original.v1:${memoriaId}`);
 }
 
 /**

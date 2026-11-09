@@ -24,7 +24,7 @@ const router = createBrowserRouter(
     },
   ],
   {
-    // Subpasta do deploy (ex.: "/behuman"). Vite injeta BASE_URL a partir do
+    // Subpasta do deploy (ex.: "/oracle"). Vite injeta BASE_URL a partir do
     // `base` do build; em dev é "/" (raiz). O basename precisa começar com "/".
     basename: import.meta.env.BASE_URL.replace(/\/$/, "") || "/",
   },

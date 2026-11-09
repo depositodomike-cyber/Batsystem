@@ -27,9 +27,9 @@ const corpo = [
     eyebrow: "GUIA FUNCIONAL DO PRODUTO",
     titulo: NOME,
     escopo:
-      "Este documento descreve a funcionalidade de Chat com IA na beculture. O foco é o comportamento do produto e as regras de negócio, organizados por tópicos. São descritos apenas os fluxos habilitados e acessíveis hoje.",
+      "Este documento descreve a funcionalidade de Chat com IA no Oracle. O foco é o comportamento do produto e as regras de negócio, organizados por tópicos. São descritos apenas os fluxos habilitados e acessíveis hoje.",
     metadados: [
-      ["Produto", "beculture"],
+      ["Produto", "Oracle"],
       ["Funcionalidade", "Chat com IA (Assistente)"],
       ["Onde vive", "Barra de pergunta no topo e painel do Assistente"],
       ["Público deste documento", "Produto, Tech, Suporte e Onboarding"],
@@ -43,7 +43,7 @@ const corpo = [
   // ------------------------------------------------------------ 1. VISÃO
   h1("1. Visão geral"),
   p(
-    "O Assistente é o chat com inteligência artificial da beculture. A pessoa pergunta em linguagem natural e recebe uma resposta construída a partir do conteúdo do próprio Repositório ou da web, conforme o modo escolhido.",
+    "O Assistente é o chat com inteligência artificial do Oracle. A pessoa pergunta em linguagem natural e recebe uma resposta construída a partir do conteúdo do próprio Repositório ou da web, conforme o modo escolhido.",
   ),
   bullet(
     "Há dois pontos de entrada para a mesma conversa: a barra de pergunta no topo da tela e o painel do Assistente, aberto pela bolinha no canto inferior direito.",

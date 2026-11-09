@@ -3,7 +3,7 @@ import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
 
 // Criar Carrossel (IA) — chama o backend ts/api (POST /ai/carrossel). Devolve o
 // roteiro (cards + legenda + hashtags), editável no cliente. Refino iterativo.
-// Portado do beculture/Confi.
+// Portado do Oracle/Confi.
 
 export interface CardItem {
   titulo: string;

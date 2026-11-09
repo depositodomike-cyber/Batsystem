@@ -322,7 +322,7 @@ export function conteudoDoRepositorioAtivo(
  * se espera de "a organização selecionada no perfil". Com dois literais, mudar
  * um deles faria os dois discordarem em silêncio.
  */
-export const ROTULO_ESCOPO_PESSOAL = "Organização pessoal";
+export const ROTULO_ESCOPO_PESSOAL = "Pessoal";
 
 /** Rótulo do escopo do repositório ativo, para o badge de contexto. */
 export function rotuloEscopoAtivo(s: EstadoPrototipo): string {

@@ -34,37 +34,8 @@ export const CREDENCIAIS_POR_CONECTOR: Record<
   string,
   EspecificacaoCredenciais
 > = {
-  "google-drive": {
-    origem:
-      "Crie um cliente OAuth 2.0 (tipo aplicativo Web) em Google Cloud → APIs e serviços → Credenciais, com a API do Drive habilitada.",
-    campos: [
-      {
-        id: "clientId",
-        label: "Client ID",
-        tipo: "texto",
-        obrigatorio: true,
-        placeholder: "000000000000-xxxxxxxx.apps.googleusercontent.com",
-        ajuda: "ID do cliente OAuth do projeto no Google Cloud.",
-      },
-      {
-        id: "clientSecret",
-        label: "Client Secret",
-        tipo: "senha",
-        obrigatorio: true,
-        placeholder: "GOCSPX-••••••••••••",
-        ajuda: "Segredo do mesmo cliente OAuth.",
-      },
-      {
-        id: "pastaRaizId",
-        label: "ID da pasta raiz",
-        tipo: "texto",
-        obrigatorio: false,
-        placeholder: "1a2B3cD4eF5gH6iJ7kL8",
-        ajuda:
-          "Opcional: limita a integração a uma pasta. É o trecho final da URL da pasta no Drive.",
-      },
-    ],
-  },
+  // "google-drive" saiu daqui: o Drive conecta por OAuth (consentimento na
+  // conta Google), com o app único do servidor — ver docs/conectores-google.md.
 
   teams: {
     origem:

@@ -6,7 +6,7 @@
 import type { MemoryItem } from "@/app/data/memoria";
 import { chaveConta, escopoConta } from "@/utils/escopoConta";
 
-const CHAVE_PREFIXO = "beculture:memorias:v1";
+const CHAVE_PREFIXO = "oracle:memorias:v1";
 
 export function escopoMemoriasLocal(): string {
   return escopoConta();

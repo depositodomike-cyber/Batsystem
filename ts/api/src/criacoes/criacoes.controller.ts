@@ -28,7 +28,18 @@ import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
-const TIPOS = ['apresentacao', 'planilha'] as const;
+const TIPOS = [
+  'apresentacao',
+  'planilha',
+  'analise',
+  'artigo',
+  'ata',
+  'carrossel',
+  'dashboard',
+  'imagem',
+  'melhorar',
+  'video',
+] as const;
 const STATUS = [
   'rascunho',
   'planejando',

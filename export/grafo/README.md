@@ -1,6 +1,6 @@
 # Grafo: componente standalone
 
-Grafo *force-directed* em `<canvas>` 2D, extraído da tela **Repositório** do beculture
+Grafo *force-directed* em `<canvas>` 2D, extraído da tela **Repositório** do Oracle
 (`ts/demo/src/app/pages/ceo/MemoriaGrafo.tsx`). Este pacote traz **só o motor visual**:
 física, câmera (zoom/pan/pinça), desenho, hit-test de nós e arestas, tooltip e seleção.
 
@@ -43,7 +43,7 @@ npx esbuild Grafo.tsx --outfile=Grafo.js --jsx=automatic --format=esm
 ```
 
 **Fonte:** os rótulos usam `Inter, system-ui, sans-serif`. Carregue a Inter no app se
-quiser o visual idêntico ao do beculture. Sem ela, cai na fonte do sistema.
+quiser o visual idêntico ao do Oracle. Sem ela, cai na fonte do sistema.
 
 ---
 
@@ -127,7 +127,7 @@ Comandos que alteram o canvas **sem** re-semear o layout:
 
 > ⚠️ `ligar`/`desligar` mexem só no estado interno do canvas. Se `graph` ou `dark`
 > mudarem depois, a simulação é reconstruída a partir de `graph` e essas mudanças
-> **somem**. Grave a relação na sua fonte de verdade (no beculture, o `.md` em `Tags/`)
+> **somem**. Grave a relação na sua fonte de verdade (no Oracle, o `.md` em `Tags/`)
 > e inclua-a no `graph` da próxima carga.
 
 ### 3.3 Tipos de dados
@@ -292,7 +292,7 @@ Assim o grafo já aparece assentado.
 glow). Ela acorda com arrasto, `animando`, troca de filtro, `ligar`/`desligar`/`selecionar`.
 
 **Escala recomendada:** fluido até ~300–500 nós visíveis. Acima disso a repulsão
-O(n²) pesa. Use `kindsOcultos` ou pode o grafo antes (o beculture limita a 25 tags
+O(n²) pesa. Use `kindsOcultos` ou pode o grafo antes (o Oracle limita a 25 tags
 e 800 arestas, no máximo 8 por nó).
 
 ### 6.2 Câmera
@@ -327,12 +327,12 @@ entre 0,03× e 1,4×. Qualquer zoom/pan manual desliga o auto-enquadramento. Dup
 ### 6.5 Acessibilidade
 
 O canvas não tem semântica: nós não são focáveis nem lidos por leitor de tela. Se for
-requisito, ofereça uma visão alternativa em lista (no beculture é a **Lista do
+requisito, ofereça uma visão alternativa em lista (no Oracle é a **Lista do
 Repositório**) e use `ref.selecionar(id)` para sincronizar as duas.
 
 ---
 
-## 7. De onde vêm os dados no beculture
+## 7. De onde vêm os dados no Oracle
 
 O componente só desenha. No app original, o `graph` é montado assim (arquivos em
 `ts/demo/src/app/pages/ceo/`, **não** incluídos aqui porque dependem do app):

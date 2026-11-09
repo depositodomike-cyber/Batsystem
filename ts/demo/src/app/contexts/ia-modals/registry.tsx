@@ -1,15 +1,8 @@
 import { ComponentType } from "react";
 
 import { ALL_AI_FUNCTIONS } from "@/app/pages/ceo/ia-functions";
-import { AnaliseModal } from "@/app/pages/ceo/AnaliseModal";
-import { ArtigoModal } from "@/app/pages/ceo/ArtigoModal";
-import { AtaModal } from "@/app/pages/ceo/AtaModal";
-import { CarrosselModal } from "@/app/pages/ceo/CarrosselModal";
 import { CortesModal } from "@/app/pages/ceo/CortesModal";
-import { ImagemModal } from "@/app/pages/ceo/ImagemModal";
 import { VideoModal } from "@/app/pages/ceo/VideoModal";
-import { MelhorarModal } from "@/app/pages/ceo/MelhorarModal";
-import { DashboardModal } from "@/app/pages/ceo/DashboardModal";
 import { UploadModal } from "@/app/pages/ceo/UploadModal";
 
 import { IaModalMeta, IaModalOpenPayload } from "./context";
@@ -44,15 +37,11 @@ const fn = (id: string): IaModalMeta => {
 };
 
 export const IA_MODALS: IaModalEntry[] = [
-  { ...fn("analise"), Component: AnaliseModal },
-  { ...fn("artigo"), Component: ArtigoModal },
-  { ...fn("ata"), Component: AtaModal },
-  { ...fn("carrossel"), Component: CarrosselModal },
+  // Análise, Artigo, Ata, Carrossel, Dashboard, Imagem e Melhorar viraram
+  // PÁGINAS do Lab (ver AI_STUDIO_FUNCTION_SCREENS em ia-functions.ts). Vídeo e
+  // Cortes seguem janelas: a renderização/exportação continua ao navegar.
   { ...fn("cortes"), Component: CortesModal },
-  { ...fn("imagem"), Component: ImagemModal },
   { ...fn("video"), Component: VideoModal },
-  { ...fn("melhorar"), Component: MelhorarModal },
-  { ...fn("dashboard"), Component: DashboardModal },
   // Modal único de Upload (Documento / Áudio / Transcrições) — topbar.
   { ...fn("upload"), Component: UploadModal },
 ];

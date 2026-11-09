@@ -29,6 +29,8 @@ import { RepositorioOrgController } from '@/repositorio-org/repositorio-org.cont
 import { RepositorioOrgService } from '@/repositorio-org/repositorio-org.service';
 import { AgentesController } from '@/agentes/agentes.controller';
 import { AgentesService } from '@/agentes/agentes.service';
+import { PerfilController } from '@/perfil/perfil.controller';
+import { PerfilService } from '@/perfil/perfil.service';
 import { AiService } from './ai.service';
 import { AiConnectionsService } from './connections.service';
 import { AiCredentialsService } from './credentials.service';
@@ -38,9 +40,13 @@ import { AuthModule } from '@/auth/auth.module';
 import { ConversasModule } from '@/conversas/conversas.module';
 import { MemoriasModule } from '@/memorias/memorias.module';
 import { UsoModule } from '@/uso/uso.module';
+import { ConectoresModule } from '@/conectores/conectores.module';
+import { BriefingController } from '@/briefing/briefing.controller';
+import { BriefingService } from '@/briefing/briefing.service';
+import { BriefingFontesService } from '@/briefing/briefing-fontes.service';
 
 @Module({
-  imports: [AuthModule, AcessoModule, ConversasModule, MemoriasModule, UsoModule],
+  imports: [AuthModule, AcessoModule, ConversasModule, MemoriasModule, UsoModule, ConectoresModule],
   controllers: [
     AiController,
     AiConnectionsController,
@@ -67,6 +73,8 @@ import { UsoModule } from '@/uso/uso.module';
     VaultController,
     RepositorioOrgController,
     AgentesController,
+    PerfilController,
+    BriefingController,
   ],
   providers: [
     AiService,
@@ -80,6 +88,9 @@ import { UsoModule } from '@/uso/uso.module';
     VaultCategoriasService,
     RepositorioOrgService,
     AgentesService,
+    PerfilService,
+    BriefingService,
+    BriefingFontesService,
   ],
 })
 export class AiModule {}

@@ -1,5 +1,5 @@
 // Geração de imagens por IA (OpenAI gpt-image-1 / DALL·E). Portado do
-// beculture/Confi (lib/imagem.js, provedor "openai" — o motor completo).
+// Oracle/Confi (lib/imagem.js, provedor "openai" — o motor completo).
 // O provedor HeyGen (foto de pessoas) fica para depois.
 import OpenAI from 'openai';
 

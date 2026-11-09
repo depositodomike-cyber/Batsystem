@@ -1,5 +1,5 @@
 // Extração de texto de um arquivo enviado (buffer + nome original) e de links.
-// Portado do beculture/Confi (lib/extrair-texto.js), adaptado para buffers em
+// Portado do Oracle/Confi (lib/extrair-texto.js), adaptado para buffers em
 // memória (o multer do NestJS entrega file.buffer).
 import { extname } from 'node:path';
 import mammoth from 'mammoth';
@@ -45,7 +45,7 @@ export async function textoDeLink(url: string): Promise<string> {
   let res: Response;
   try {
     res = await fetch(url, {
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; BecultureBot/1.0)' },
+      headers: { 'user-agent': 'Mozilla/5.0 (compatible; OracleBot/1.0)' },
       redirect: 'follow',
     });
   } catch {

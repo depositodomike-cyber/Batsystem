@@ -137,8 +137,8 @@ export function InsightDetalheModal({
   const contexto: { termo: string; valor: string; nota?: string }[] = [];
   if (alvo?.liderado)
     contexto.push({
-      termo: pessoa ? "Pessoa" : "Time",
-      valor: pessoa ?? "Time inteiro",
+      termo: pessoa ? "Pessoa" : "Escopo",
+      valor: pessoa ?? "Geral",
     });
   if (alvo?.origem) contexto.push({ termo: "Origem", valor: alvo.origem });
   if (alvo?.direcionamento)

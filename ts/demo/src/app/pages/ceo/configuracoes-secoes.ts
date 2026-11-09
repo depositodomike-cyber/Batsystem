@@ -18,6 +18,7 @@ import {
   isFeatureTemporarilyDisabled,
   type TemporarilyDisabledFeature,
 } from "@/app/data/temporarilyDisabledFeatures";
+import { isSecaoHiddenByOracle } from "@/configs/oracleModules";
 
 // ----------------------------------------------------------------------
 // As seções de Configurações, agrupadas — fonte única do menu e do painel.
@@ -216,8 +217,16 @@ const FEATURE_QUE_OCULTA: Partial<Record<SecaoId, TemporarilyDisabledFeature>> =
     hierarquia: "settingsHierarchy",
   };
 
-/** A seção não deve ser renderizada em lugar nenhum? */
+/**
+ * A seção não deve ser renderizada em lugar nenhum?
+ *
+ * Duas origens: a flag fina (`FEATURE_QUE_OCULTA`) e o módulo do Oracle a que a
+ * seção pertence (`configs/oracleModules.ts`, ex.: Estrutura e Acesso no
+ * sistema pessoal). As duas usam a mesma mecânica de oculta: somem de
+ * `gruposVisiveis` e `resolverSecao` manda o link salvo para o padrão.
+ */
 export function secaoEstaOculta(secao: Secao): boolean {
+  if (isSecaoHiddenByOracle(secao.id)) return true;
   const feature = FEATURE_QUE_OCULTA[secao.id];
   return feature != null && isFeatureTemporarilyDisabled(feature);
 }

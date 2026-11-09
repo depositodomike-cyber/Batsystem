@@ -1,4 +1,4 @@
-// Transcrição de áudio por STT. No beculture/Confi roda o Whisper local; no web
+// Transcrição de áudio por STT. No Oracle/Confi roda o Whisper local; no web
 // usamos a API de transcrição da OpenAI (whisper-1). Nada roda no host.
 import OpenAI, { toFile } from 'openai';
 

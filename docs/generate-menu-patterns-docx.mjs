@@ -225,7 +225,7 @@ const doc = new Document({
               spacing: { after: 80 },
               children: [
                 new TextRun({
-                  text: "beculture  ·  Design System",
+                  text: "Oracle  ·  Design System",
                   font: "Calibri",
                   size: 16,
                   color: GRAY,
@@ -329,7 +329,7 @@ const doc = new Document({
         table(
           ["Campo", "Valor"],
           [
-            ["Produto", "beculture"],
+            ["Produto", "Oracle"],
             ["Layout padrão", "Menu lateral único (Sideblock)"],
             ["Layout alternativo", "Rail de ícones + painel de texto (Main Layout)"],
             ["Cor principal", "Âmbar #FFB300 (ativo) / #FFCA28 (dark)"],
@@ -780,7 +780,7 @@ const doc = new Document({
         }),
         spacer(280),
         p(
-          "Documento para o time de frontend · beculture · Agosto 2026",
+          "Documento para o time de frontend · Oracle · Agosto 2026",
           { color: GRAY, size: 18 },
         ),
       ],
@@ -788,7 +788,7 @@ const doc = new Document({
   ],
 });
 
-const outPath = path.join(__dirname, "Padroes-Visuais-Menu-beculture.docx");
+const outPath = path.join(__dirname, "Padroes-Visuais-Menu-oracle.docx");
 const buffer = await Packer.toBuffer(doc);
 fs.writeFileSync(outPath, buffer);
 console.log("Updated:", outPath);

@@ -1,4 +1,10 @@
-# Batsystem
+# Oracle (repositório Batsystem)
+
+Produto **Oracle**: rebranding completo de beculture/BeHuman (código,
+interface, rotas `/oracle/...`, chaves de armazenamento, logos, documentos e
+dados do `batsystem-db`). As menções a "beculture" que restam neste README e no
+`docker-compose.yml` são de propósito: apontam para o projeto de origem e para
+a infraestrutura dele, que convive nesta máquina.
 
 Projeto derivado do `beculture-product` (histórico preservado até `11cec2a`),
 agora independente e **só para uso local**. Diferenças em relação à origem:
@@ -13,8 +19,8 @@ agora independente e **só para uso local**. Diferenças em relação à origem:
 - **Mesmas portas de app** (API 3001, web 5173), porque os redirects OAuth de
   Slack, Google e Microsoft estão cadastrados com `localhost:3001`. Por isso
   Batsystem e beculture não rodam ao mesmo tempo.
-- Pacotes renomeados para `batsystem-api` e `batsystem-web`. A marca
-  "beculture" na interface e no código ainda não foi trocada.
+- Pacotes renomeados para `batsystem-api` e `batsystem-web`.
+- Conta demo: `demo@oracle.ai` (senha em `ts/demo/src/constants/demoLogin.ts`).
 
 O restante deste README descreve a origem e continua válido para a parte local;
 as seções de deploy são histórico.

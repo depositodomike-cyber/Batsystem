@@ -17,6 +17,13 @@ import Slack from "@/app/pages/ceo/Slack";
 import Ia from "@/app/pages/ceo/Ia";
 import Apresentacao from "@/app/pages/ceo/Apresentacao";
 import Planilha from "@/app/pages/ceo/Planilha";
+import Analise from "@/app/pages/ceo/Analise";
+import Artigo from "@/app/pages/ceo/Artigo";
+import Ata from "@/app/pages/ceo/Ata";
+import Carrossel from "@/app/pages/ceo/Carrossel";
+import Dashboard from "@/app/pages/ceo/Dashboard";
+import Imagem from "@/app/pages/ceo/Imagem";
+import Melhorar from "@/app/pages/ceo/Melhorar";
 import MinhasCriacoes from "@/app/pages/ceo/MinhasCriacoes";
 import Notas from "@/app/pages/ceo/Notas";
 import ToDo from "@/app/pages/ceo/ToDo";
@@ -31,6 +38,9 @@ import Feed from "@/app/pages/ceo/Feed";
 import FeedDetail from "@/app/pages/ceo/FeedDetail";
 import BusinessPartnerInsights from "@/app/pages/ceo/Insights";
 import BusinessPartnerRelatorios from "@/app/pages/ceo/Relatorios";
+import Agenda from "@/app/pages/ceo/Agenda";
+import Drive from "@/app/pages/ceo/Drive";
+import ResumoMatinal from "@/app/pages/ceo/resumo-matinal";
 import RelatorioDetail from "@/app/pages/ceo/RelatorioDetail";
 import {
   allCeoPaths,
@@ -49,13 +59,13 @@ const REPOSITORIO_HOME = GRAFO_DESABILITADO ? "memoria-lista" : "memoria-grafo";
 // Feed). Aqui só o Business Partner tem página dedicada; os demais caem no
 // Placeholder até ganharem a sua.
 const insightsPages: Record<string, RouteObject["Component"]> = {
-  behuman: BusinessPartnerInsights,
+  oracle: BusinessPartnerInsights,
 };
 
 // Relatórios também é por produto. Só o Business Partner tem página dedicada;
 // os demais caem no Placeholder até ganharem a sua.
 const relatoriosPages: Record<string, RouteObject["Component"]> = {
-  behuman: BusinessPartnerRelatorios,
+  oracle: BusinessPartnerRelatorios,
 };
 
 // Páginas dedicadas por slug (último segmento do caminho). O lookup é por
@@ -65,6 +75,10 @@ const pageBySlug: Record<string, RouteObject["Component"]> = {
   // Área de sistema "Agentes" (era Placeholder): o catálogo de agentes, alvo
   // de "Gerenciar agentes" no sidebar e no Assistente.
   agentes: AgentesCatalogo,
+  // Agenda: eventos reais do Google Calendar (era Placeholder).
+  agenda: Agenda,
+  // Google Drive: explorador dos arquivos da conta conectada (Painel).
+  drive: Drive,
   configuracoes: Configuracoes,
   "configuracoes-usuario": ConfiguracoesUsuario,
   documentos: Documentos,
@@ -84,7 +98,7 @@ const leafRoutes: RouteObject[] = allCeoPaths().map((p) => {
   const productCode = p.split("/")[1] ?? "";
   // Conectores mora em Configurações de usuário. A rota antiga continua viva
   // como redirect QUE PRESERVA A QUERY: é para ela que o backend devolve o
-  // fluxo OAuth (`/behuman/conectores?conector=…&status=…`, fixo em
+  // fluxo OAuth (`/oracle/conectores?conector=…&status=…`, fixo em
   // oauth-provider.service / slack-oauth.service), além de links salvos e do
   // FeedDetail. Nada de OAuth, token ou backend muda.
   if (slug === "conectores") {
@@ -138,7 +152,7 @@ function ParaConfiguracoesUsuario({
   );
 }
 
-// Rota dinâmica de squad: `behuman/:squadSlug`. O catálogo é carregado da API
+// Rota dinâmica de squad: `oracle/:squadSlug`. O catálogo é carregado da API
 // (SquadsProvider), então não há mais uma rota estática por squad. As rotas
 // estáticas acima (feed, insights, relatórios, conectores e áreas de sistema)
 // têm prioridade na correspondência do React Router por serem mais específicas;
@@ -148,10 +162,10 @@ const squadRoute: RouteObject = {
   Component: SquadDetail,
 };
 
-// Acessar a raiz de um produto redireciona para a sua página inicial. No behuman
+// Acessar a raiz de um produto redireciona para a sua página inicial. No oracle
 // a home é o Repositório; nos demais produtos continua sendo o Insights.
 const productHome: Record<string, string> = {
-  behuman: REPOSITORIO_HOME,
+  oracle: REPOSITORIO_HOME,
 };
 const productRedirects: RouteObject[] = products.map((p) => ({
   path: p.code,
@@ -164,6 +178,13 @@ const productRedirects: RouteObject[] = products.map((p) => ({
 // árvore de navegação, logo já coberto por leafRoutes) e a Lista, que a seção
 // Context da sidebar renderiza à parte — por não estar na árvore, a rota dela é
 // declarada aqui.
+// Resumo Matinal: fora da árvore do menu (fica logo abaixo do Home, na seção
+// Repositório), então precisa de rota própria antes do squadRoute.
+const resumoMatinalRoutes: RouteObject[] = products.map((p) => ({
+  path: `${p.code}/resumo-matinal`,
+  Component: ResumoMatinal,
+}));
+
 const memoriaListaRoutes: RouteObject[] = products.map((p) => ({
   path: `${p.code}/memoria-lista`,
   Component: MemoriaLista,
@@ -253,6 +274,13 @@ const memoriaRedirects: RouteObject[] = products.map((p) => ({
 const iaFuncaoRoutes: RouteObject[] = products.flatMap((p) => [
   { path: `${p.code}/ia/apresentacao`, Component: Apresentacao },
   { path: `${p.code}/ia/planilha`, Component: Planilha },
+  { path: `${p.code}/ia/analise`, Component: Analise },
+  { path: `${p.code}/ia/artigo`, Component: Artigo },
+  { path: `${p.code}/ia/ata`, Component: Ata },
+  { path: `${p.code}/ia/carrossel`, Component: Carrossel },
+  { path: `${p.code}/ia/dashboard`, Component: Dashboard },
+  { path: `${p.code}/ia/imagem`, Component: Imagem },
+  { path: `${p.code}/ia/melhorar`, Component: Melhorar },
   // Subitem "Minhas criações" do collapse AI Studio (lista de criações).
   { path: `${p.code}/ia/criacoes`, Component: MinhasCriacoes },
 ]);
@@ -289,13 +317,13 @@ const relatorioDetailRoutes: RouteObject[] = Object.keys(relatoriosPages).map(
   }),
 );
 
-// Redireciona URLs antigas do slug "business-partner" para o novo "behuman",
-// preservando o restante do caminho (ex.: /business-partner/feed → /behuman/feed).
+// Redireciona URLs antigas do slug "business-partner" para o novo "oracle",
+// preservando o restante do caminho (ex.: /business-partner/feed → /oracle/feed).
 function LegacyProductRedirect() {
   const rest = useParams()["*"] ?? "";
   return (
     <Navigate
-      to={`/behuman${rest ? `/${rest}` : `/${REPOSITORIO_HOME}`}`}
+      to={`/oracle${rest ? `/${rest}` : `/${REPOSITORIO_HOME}`}`}
       replace
     />
   );
@@ -310,6 +338,7 @@ export const ceoRoutes: RouteObject[] = [
   ...legacyRedirects,
   ...productRedirects,
   ...memoriaListaRoutes,
+  ...resumoMatinalRoutes,
   ...conversasHistoricoRoutes,
   ...conversasRoutes,
   ...conversasDetailRoutes,

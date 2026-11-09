@@ -10,8 +10,18 @@ import axios from "@/utils/axios";
 // O proprietário NUNCA viaja no corpo: o servidor o lê do token. É por isso que
 // nenhuma função daqui recebe um id de usuário.
 
-/** Geradores que persistem trabalho hoje. */
-export type CriacaoTipo = "apresentacao" | "planilha";
+/** Geradores do Lab que persistem trabalho em Minhas criações. */
+export type CriacaoTipo =
+  | "apresentacao"
+  | "planilha"
+  | "analise"
+  | "artigo"
+  | "ata"
+  | "carrossel"
+  | "dashboard"
+  | "imagem"
+  | "melhorar"
+  | "video";
 
 export type CriacaoStatus =
   | "rascunho"

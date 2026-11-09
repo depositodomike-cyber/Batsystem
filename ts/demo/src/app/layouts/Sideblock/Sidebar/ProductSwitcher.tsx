@@ -12,13 +12,15 @@ import clsx from "clsx";
 
 // Local Imports
 import { products, getCurrentProduct } from "@/app/navigation/ceoOs";
-import becultureLogo from "@/assets/branding/beculture-logo.svg";
-import becultureLogoDark from "@/assets/branding/beculture-logo-dark.svg";
+import oracleLogo from "@/assets/branding/oracle-logo.svg";
+import oracleLogoDark from "@/assets/branding/oracle-logo-dark.svg";
 import { useTranslation } from "react-i18next";
+import { isProductVisible } from "@/configs/oracleModules";
 
 // ----------------------------------------------------------------------
 
-const switcherItems = products;
+// Produtos ocultos pelo Oracle (módulo `hrProducts`) saem da lista.
+const switcherItems = products.filter((p) => isProductVisible(p.code));
 
 export function ProductSwitcher() {
   const { pathname } = useLocation();
@@ -27,6 +29,28 @@ export function ProductSwitcher() {
   const { t } = useTranslation();
 
   const goTo = (code: string) => navigate(`/${code}`);
+
+  // Com um produto só não há o que trocar: o mesmo cabeçalho (logo + nome),
+  // sem o chevron e sem abrir menu. Reativar um produto traz o seletor de volta.
+  if (switcherItems.length <= 1) {
+    return (
+      <div className="flex w-full items-center gap-0.5 rounded-lg px-2 py-2">
+        <img
+          src={oracleLogo}
+          alt="Oracle"
+          className="size-8 shrink-0 dark:hidden"
+        />
+        <img
+          src={oracleLogoDark}
+          alt="Oracle"
+          className="hidden size-8 shrink-0 dark:block"
+        />
+        <span className="dark:text-dark-50 ml-1 min-w-0 flex-1 truncate text-xs-plus font-semibold text-gray-800">
+          {current.name}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <Menu as="div" className="relative inline-flex w-full">
@@ -37,13 +61,13 @@ export function ProductSwitcher() {
         )}
       >
         <img
-          src={becultureLogo}
-          alt="beculture"
+          src={oracleLogo}
+          alt="Oracle"
           className="size-8 shrink-0 dark:hidden"
         />
         <img
-          src={becultureLogoDark}
-          alt="beculture"
+          src={oracleLogoDark}
+          alt="Oracle"
           className="hidden size-8 shrink-0 dark:block"
         />
         <span className="dark:text-dark-50 ml-1 min-w-0 flex-1 truncate text-xs-plus font-semibold text-gray-800">

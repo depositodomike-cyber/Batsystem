@@ -10,7 +10,7 @@
 // domínios.
 // ----------------------------------------------------------------------
 
-const IDB_NAME = "beculture";
+const IDB_NAME = "Oracle";
 const IDB_STORE = "kv";
 
 export function idbOpen(): Promise<IDBDatabase> {

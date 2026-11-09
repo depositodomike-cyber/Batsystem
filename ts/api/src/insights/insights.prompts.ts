@@ -1,9 +1,9 @@
 // Prompt de geração de INSIGHTS. A partir de um material já consolidado — uma
 // ata/resumo de reunião salvo na Memória, um documento etc. — a IA destaca até
-// `max` sinais estratégicos que merecem a atenção do líder. O teto varia por
+// `max` sinais que merecem a atenção do dono do sistema. O teto varia por
 // origem: uma reunião rende mais sinais que um documento de referência.
 // Cada insight tem severidade (cor do card) e, quando o material aponta
-// claramente para uma pessoa, o nome dela em `liderado`. Devolve JSON
+// claramente para uma pessoa, o nome dela em `liderado` (nome legado do campo). Devolve JSON
 // { insights: [...] }.
 
 /** Uma das quatro severidades aceitas (espelha o enum InsightSeveridade). */
@@ -65,7 +65,7 @@ export interface DirecionamentoNoPrompt {
   tipo: 'priorizar_assunto' | 'ajustar_insights';
   instrucao: string;
   prioridade: 'normal' | 'alta';
-  /** Nome da área; null = toda a organização. */
+  /** Nome da área/contexto; null = contexto geral. */
   area: string | null;
 }
 
@@ -84,12 +84,12 @@ function blocoDirecionadores(itens: DirecionamentoNoPrompt[]): string {
   const linhas = itens.map((d, i) => {
     const tipo =
       d.tipo === 'priorizar_assunto' ? 'Priorizar assunto' : 'Ajustar insights';
-    const foco = d.area ? `área ${d.area}` : 'toda a organização';
+    const foco = d.area ? `área ${d.area}` : 'contexto geral';
     return `${refDirecionamento(i)}. [${tipo} · prioridade ${d.prioridade} · foco: ${foco}] ${d.nome}: ${d.instrucao}`;
   });
   return `
 
-DIRECIONADORES DE INSIGHTS (orientações da organização sobre o que observar e como tratar os insights):
+DIRECIONADORES DE INSIGHTS (orientações do dono do sistema sobre o que observar e como tratar os insights):
 ${linhas.join('\n')}
 
 Como usar os direcionadores:
@@ -121,20 +121,20 @@ export function buildInsightsSystem(
 ): string {
   const exemploDirecionamento =
     direcionamentos.length > 0 ? ', "direcionamento": "D1 (opcional)"' : '';
-  return `Você é um Business Partner sênior de gestão de pessoas e estratégia. A partir do MATERIAL fornecido (ata/resumo de reunião, documento ou anotações), destaque os INSIGHTS estratégicos que merecem a atenção do líder — em português do Brasil.
+  return `Você é o analista de inteligência pessoal do Oracle, o sistema de inteligência de uma única pessoa (o dono). A partir do MATERIAL fornecido (ata/resumo de reunião, documento, anotações ou registros), destaque os INSIGHTS que merecem a atenção do dono — padrões, oportunidades, alertas e acontecimentos relevantes no contexto dele — em português do Brasil.
 
-Um insight NÃO é um resumo nem uma tarefa: é um SINAL — algo relevante que se depreende do material (um risco, um padrão, uma conquista, um ponto a refletir) e a sua implicação para a gestão/negócio.
+Um insight NÃO é um resumo nem uma tarefa: é um SINAL — algo relevante que se depreende do material (um risco, um padrão, uma conquista, um ponto a refletir) e a sua implicação para os objetivos, projetos, rotina ou decisões do dono.
 
 Para CADA insight defina:
 - "titulo": frase curta e específica (máx. 10 palavras, sem aspas).
-- "descricao": 1 a 2 frases explicando o sinal e a implicação para o líder.
-- "tipo": rótulo curto do tema (ex.: "Rotatividade", "Engajamento", "Prazo", "Reconhecimento", "Processo").
+- "descricao": 1 a 2 frases explicando o sinal e a implicação para o dono.
+- "tipo": rótulo curto do tema (ex.: "Oportunidade", "Alerta", "Padrão", "Prazo", "Finanças", "Saúde", "Investigação", "Automação").
 - "severidade": UMA de exatamente estas quatro:
     - "secondary" = Ação necessária (algo que exige providência agora);
     - "warning"   = Atenção (sinal de alerta a acompanhar);
     - "success"   = Sucesso (algo positivo a reforçar/reconhecer);
     - "light"     = Para refletir (observação sem urgência).
-- "liderado": OPCIONAL — nome da pessoa a que o insight se refere, EXATAMENTE como aparece no material; use "Todos" quando for sobre o time inteiro; OMITA o campo se for um insight geral do líder ou se não houver pessoa clara. Nunca invente nomes.
+- "liderado": OPCIONAL — nome da pessoa (contato, parte envolvida) a que o insight se refere, EXATAMENTE como aparece no material; use "Todos" quando o sinal disser respeito ao contexto geral ou a todas as pessoas envolvidas; OMITA o campo se for um insight sobre o próprio dono ou se não houver pessoa clara. Nunca invente nomes.
 - "analise": OPCIONAL — a análise completa, em 1 a 3 parágrafos curtos (separe parágrafos com uma linha em branco): o padrão identificado, o que mudou, quem está envolvido, possíveis relações e as LIMITAÇÕES da análise. Use só o que está no material; se não houver nada a acrescentar ao que a descrição já diz, OMITA o campo.
 - "evidencias": OPCIONAL — até ${MAX_EVIDENCIAS} trechos curtos COPIADOS LITERALMENTE do material (palavra por palavra, sem parafrasear, sem reticências) que sustentam o insight. Trecho que não estiver no material será descartado. OMITA se não houver trecho claro.
 

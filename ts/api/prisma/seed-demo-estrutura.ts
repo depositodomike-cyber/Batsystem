@@ -26,7 +26,7 @@ import { resolve } from "node:path";
 import { PrismaClient } from "@prisma/client";
 
 /** Mesma duplicação consciente de `seed-demo-membros.ts` (aquele módulo roda no import). */
-const DEMO_EMAIL = "demo@beculture.ai";
+const DEMO_EMAIL = "demo@oracle.ai";
 
 /**
  * Área da organização. `codigoLegado` é o valor que ficou em `membros.area`
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
     const areaId = m.area ? areaIdPorCodigo.get(m.area) : undefined;
     const cargoId = m.cargo ? cargoIdPorCodigo.get(m.cargo) : undefined;
 
-    // O dono da conta ("Time BeCulture") não tem área/cargo legados — fica de
+    // O dono da conta ("Time Oracle") não tem área/cargo legados — fica de
     // fora de propósito, e não é um erro.
     if (!areaId && !cargoId) continue;
     if ((m.area && !areaId) || (m.cargo && !cargoId)) semDePara.push(m.nome);

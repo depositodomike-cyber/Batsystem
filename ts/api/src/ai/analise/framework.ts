@@ -1,4 +1,4 @@
-// Framework de "Análise de conteúdo" — portado do beculture/Confi (lib/claude.js).
+// Framework de "Análise de conteúdo" — portado do Oracle/Confi (lib/claude.js).
 // Um analista sênior conduz a análise em até 17 seções, segundo as variáveis
 // imputadas pelo usuário (objetivo, descrição, viés e fontes para cruzamento).
 // O relatório fecha com o bloco "## 🔗 Conexões no Vault" (conexoes-vault.ts),

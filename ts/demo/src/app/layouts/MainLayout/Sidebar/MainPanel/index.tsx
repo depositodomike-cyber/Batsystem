@@ -4,8 +4,8 @@ import clsx from "clsx";
 import { SetStateAction, Dispatch } from "react";
 
 // Local Imports
-import becultureLogo from "@/assets/branding/beculture-logo.svg";
-import becultureLogoDark from "@/assets/branding/beculture-logo-dark.svg";
+import oracleLogo from "@/assets/branding/oracle-logo.svg";
+import oracleLogoDark from "@/assets/branding/oracle-logo-dark.svg";
 import { Menu } from "./Menu";
 import { Item } from "./Menu/item";
 import { Profile } from "../../Profile";
@@ -42,13 +42,13 @@ export function MainPanel({
         <div className="flex pt-3.5">
           <Link to="/">
             <img
-              src={becultureLogo}
-              alt="beculture"
+              src={oracleLogo}
+              alt="Oracle"
               className="size-10 dark:hidden"
             />
             <img
-              src={becultureLogoDark}
-              alt="beculture"
+              src={oracleLogoDark}
+              alt="Oracle"
               className="hidden size-10 dark:block"
             />
           </Link>

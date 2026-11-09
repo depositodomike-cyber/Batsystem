@@ -63,7 +63,7 @@ import {
 // Só o Business Partner tem página de Insights (ver `insightsPages` em
 // ceoRoutes.tsx) — o clique leva sempre para lá, qualquer que seja o produto
 // aberto.
-const INSIGHTS_PATH = "/behuman/insights";
+const INSIGHTS_PATH = "/oracle/insights";
 
 // Intervalo de atualização do sino enquanto a página está aberta.
 const POLL_MS = 60_000;

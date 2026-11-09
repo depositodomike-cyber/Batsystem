@@ -111,7 +111,7 @@ export default function CriarConta() {
           />
           <Input
             label="E-mail"
-            placeholder="voce@empresa.com"
+            placeholder="voce@email.com"
             autoComplete="email"
             prefix={
               <EnvelopeIcon

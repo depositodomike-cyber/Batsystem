@@ -13,17 +13,17 @@
 //
 // Quatro chaves de localStorage, quatro papéis distintos:
 //
-//   beculture.designSystems:<conta>    LEGADO. Só é lido — pela migração e pelo
+//   oracle.designSystems:<conta>    LEGADO. Só é lido — pela migração e pelo
 //                                      modo offline, que é o único que ainda
 //                                      escreve nele.
-//   beculture.marcas.cache:<conta>     Cache de rede: só recebe o que o GET
+//   oracle.marcas.cache:<conta>     Cache de rede: só recebe o que o GET
 //                                      devolveu. Serve à primeira pintura.
-//   beculture.marcaAtiva:<conta>       Preferência do USUÁRIO neste navegador.
+//   oracle.marcaAtiva:<conta>       Preferência do USUÁRIO neste navegador.
 //                                      Nunca vai ao servidor — dois membros da
 //                                      mesma organização podem ter marcas
 //                                      ativas diferentes, e os dois estão
 //                                      certos.
-//   beculture.marcas.migradoEm:<conta> Marcador ISO da migração concluída.
+//   oracle.marcas.migradoEm:<conta> Marcador ISO da migração concluída.
 // ----------------------------------------------------------------------
 
 import {
@@ -42,11 +42,11 @@ import {
   type Marca,
 } from "@/services/api/marcas";
 
-const LEGADO_UNICO = "beculture.designSystem"; // legado: um único design system
-const LEGADO_MULTI = "beculture.designSystems"; // legado: { brands, activeId }
-const CACHE = "beculture.marcas.cache";
-const ATIVA = "beculture.marcaAtiva";
-const MIGRADO = "beculture.marcas.migradoEm";
+const LEGADO_UNICO = "oracle.designSystem"; // legado: um único design system
+const LEGADO_MULTI = "oracle.designSystems"; // legado: { brands, activeId }
+const CACHE = "oracle.marcas.cache";
+const ATIVA = "oracle.marcaAtiva";
+const MIGRADO = "oracle.marcas.migradoEm";
 
 /** Marca no cache local — o `Brand` do store mais os carimbos do servidor. */
 export interface MarcaLocal extends Brand {
@@ -426,7 +426,7 @@ export function getMarca(id: string): MarcaLocal | undefined {
   return estado.marcas.find((m) => m.id === id);
 }
 
-/** Resumo de uma linha, para chips e títulos ("beculture · Moderno e premium"). */
+/** Resumo de uma linha, para chips e títulos ("Oracle · Moderno e premium"). */
 export function resumo(id?: string): string {
   const d = id ? getById(id) : getActive();
   return `${d.marca.nome} · ${d.marca.tom}`;

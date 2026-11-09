@@ -1,7 +1,7 @@
 import axios from "@/utils/axios";
 
 // Prompt "Pergunte ao seu Repositório" — chama o backend ts/api (POST /ai/prompt),
-// portado do beculture/Confi. Três modos: Memória (vault), Web e Auto.
+// portado do Oracle/Confi. Três modos: Memória (vault), Web e Auto.
 
 export type ModoBusca = "vault" | "web" | "auto";
 

@@ -2,7 +2,7 @@ import axios from "@/utils/axios";
 import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
 
 // Melhorar texto (IA) — chama o backend ts/api (POST /ai/melhorar). Reescreve o
-// texto mais claro/forte sem mudar o sentido. Portado do beculture/Confi.
+// texto mais claro/forte sem mudar o sentido. Portado do Oracle/Confi.
 
 export interface Melhorado {
   texto: string;

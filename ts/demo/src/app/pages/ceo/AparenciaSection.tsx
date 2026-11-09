@@ -16,7 +16,7 @@ import {
   getVinhetaAtiva,
   setGrafoAtivo,
   setVinhetaAtiva,
-} from "@/utils/beculturePrefs";
+} from "@/utils/oraclePrefs";
 import { SectionCard, ToggleRow } from "./configuracoes-ui";
 import { MarcasLista } from "./MarcasLista";
 import { MarcaEditorInline } from "./MarcaEditorInline";
@@ -134,8 +134,8 @@ export function AparenciaSection() {
       // "ajustes do painel" descreveria algo que não está na tela.
       descricao={
         visiveis.some((a) => a.id === "aparencia")
-          ? "Ajustes visuais do painel, as identidades visuais e os templates da organização. As preferências de exibição ficam neste navegador; identidades visuais e templates valem para toda a organização."
-          : "Identidades visuais e templates de apresentação da organização."
+          ? "Ajustes visuais do painel, as identidades visuais e os templates. As preferências de exibição ficam neste navegador; identidades visuais e templates ficam na sua conta."
+          : "Identidades visuais e templates de apresentação."
       }
     >
       {/* Uma aba só não é uma escolha: a barra some junto. */}
@@ -344,14 +344,14 @@ function AbaGuiaDeMarca({
     try {
       const r = await migrarLocais();
       if (r.bloqueada) {
-        toast.error("A sua role não permite enviar marcas para a organização.");
+        toast.error("Sua conta não tem permissão para enviar marcas.");
       } else if (r.falhas) {
         toast.error(`${r.falhas} marca(s) não puderam ser enviadas.`);
       } else {
         toast(
           r.migradas === 1
-            ? "1 marca enviada para a organização"
-            : `${r.migradas} marcas enviadas para a organização`,
+            ? "1 marca enviada para a sua conta"
+            : `${r.migradas} marcas enviadas para a sua conta`,
         );
       }
     } finally {
@@ -416,8 +416,8 @@ function AbaGuiaDeMarca({
         <div className="dark:border-dark-600 dark:bg-dark-800/40 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5">
           <p className="dark:text-dark-200 text-xs-plus min-w-0 text-gray-600">
             {legadoPendente === 1
-              ? "1 marca deste navegador ainda não foi enviada para a organização."
-              : `${legadoPendente} marcas deste navegador ainda não foram enviadas para a organização.`}
+              ? "1 marca deste navegador ainda não foi enviada para a sua conta."
+              : `${legadoPendente} marcas deste navegador ainda não foram enviadas para a sua conta.`}
             {migracaoBloqueada &&
               " A sua role não permite enviá-las — fale com um administrador."}
           </p>
@@ -586,7 +586,7 @@ function Avisos({ offline }: { offline: boolean }) {
     <div className="text-xs-plus dark:text-warning-lighter border-warning/30 bg-warning/10 text-warning mb-4 rounded-lg border px-3 py-2">
       Sem conexão com o servidor: as marcas e as alterações estão ficando só
       neste navegador. Entre de novo para voltar a sincronizar com a
-      organização.
+      sua conta.
     </div>
   );
 }

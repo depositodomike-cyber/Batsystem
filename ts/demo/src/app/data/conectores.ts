@@ -68,11 +68,11 @@ const connectorCatalog: Connector[] = [
   { id: "instagram", rank: 53, name: "Instagram", category: "comunicacao", objective: "Publicação em redes sociais", permissions: ["Publicar posts", "Publicar stories", "Enviar mensagens diretas"], brand: "#e4405f", initials: "Ig", isNew: true },
 
   // E-mail — conectam de verdade via OAuth (backend: src/conectores).
-  { id: "gmail", rank: 54, name: "Gmail", category: "email", objective: "E-mail corporativo (Google)", permissions: ["Ler e-mails", "Enviar e-mails", "Acessar a conta autorizada"], brand: "#ea4335", initials: "M", oauth: true, isNew: true },
-  { id: "outlook", rank: 55, name: "Outlook", category: "email", objective: "E-mail corporativo (Microsoft 365)", permissions: ["Ler e-mails", "Enviar e-mails", "Acessar a conta autorizada"], brand: "#0072c6", initials: "O", oauth: true, isNew: true },
+  { id: "gmail", rank: 54, name: "Gmail", category: "email", objective: "E-mail corporativo (Google)", permissions: ["Ler e-mails (somente leitura)", "Salvar e-mails no Repositório", "Acessar a conta autorizada"], brand: "#ea4335", initials: "M", oauth: true, isNew: true },
+  { id: "outlook", rank: 55, name: "Outlook", category: "email", objective: "E-mail corporativo (Microsoft 365)", permissions: ["Ler e-mails (somente leitura)", "Salvar e-mails no Repositório", "Acessar a conta autorizada"], brand: "#0072c6", initials: "O", oauth: true, isNew: true },
 
   // Agenda — OAuth real (backend: src/conectores/agenda.controller.ts).
-  { id: "google-calendar", rank: 56, name: "Google Calendar", category: "agenda", objective: "Agenda e reuniões", permissions: ["Acessar agenda", "Criar eventos", "Convidar participantes", "Ler disponibilidade"], brand: "#1a73e8", initials: "GC", oauth: true, isNew: true },
+  { id: "google-calendar", rank: 56, name: "Google Calendar", category: "agenda", objective: "Agenda e reuniões", permissions: ["Ler agenda e eventos (somente leitura)", "Salvar eventos no Repositório"], brand: "#1a73e8", initials: "GC", oauth: true, isNew: true },
 
   // Identidade & Acessos
   { id: "azure-ad", rank: 6, name: "Azure AD", category: "identidade", objective: "Gestão de acessos", permissions: ["Autenticar usuários", "Sincronizar usuários", "Acessar grupos", "Provisionar contas"], brand: "#0078d4", initials: "AD" },
@@ -101,7 +101,7 @@ const connectorCatalog: Connector[] = [
 
   // Produtividade & Projetos
   { id: "google-workspace", rank: 3, name: "Google Workspace", category: "produtividade", objective: "Produtividade e colaboração", permissions: ["Login SSO", "Acessar agenda", "Criar eventos", "Ler diretório", "Acessar Drive"], brand: "#1a73e8", initials: "G", connectedByDefault: true },
-  { id: "google-drive", rank: 57, name: "Google Drive", category: "produtividade", objective: "Arquivos e documentos", permissions: ["Listar arquivos", "Ler arquivos", "Enviar arquivos", "Acessar pastas compartilhadas"], brand: "#1fa463", initials: "GD", isNew: true },
+  { id: "google-drive", rank: 57, name: "Google Drive", category: "produtividade", objective: "Arquivos e documentos", permissions: ["Listar e buscar arquivos (somente leitura)", "Importar arquivos para o Repositório"], brand: "#1fa463", initials: "GD", oauth: true, isNew: true },
   { id: "onedrive", rank: 58, name: "OneDrive", category: "produtividade", objective: "Arquivos corporativos (Microsoft 365)", permissions: ["Listar arquivos", "Ler arquivos", "Enviar arquivos", "Acessar bibliotecas do SharePoint"], brand: "#0078d4", initials: "OD", isNew: true },
   { id: "clickup", rank: 25, name: "ClickUp", category: "produtividade", objective: "Produtividade", permissions: ["Criar tarefas", "Atualizar status", "Ler projetos"], brand: "#7b68ee", initials: "CU" },
   { id: "jira", rank: 26, name: "Jira", category: "produtividade", objective: "Gestão ágil", permissions: ["Criar issues", "Acessar backlog", "Sincronizar sprint"], brand: "#0052cc", initials: "J" },

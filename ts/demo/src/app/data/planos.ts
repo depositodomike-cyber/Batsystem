@@ -1,5 +1,5 @@
 /**
- * Planos do beculture.ai. A PRECIFICAÇÃO vive em `precificacao.ts` (tabela por
+ * Planos do oracle.ai. A PRECIFICAÇÃO vive em `precificacao.ts` (tabela por
  * módulo × contrato × plano × faixa de quantidade). Aqui ficam só os metadados
  * de exibição (nome, descrição, destaque).
  */

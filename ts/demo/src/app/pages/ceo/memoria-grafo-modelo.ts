@@ -94,7 +94,7 @@ export interface Graph {
   links: GLink[];
 }
 
-// ---- Cores (paleta de marca beculture) ----
+// ---- Cores (paleta de marca Oracle) ----
 export const PASTA_COR: Record<string, string> = {
   Reuniões: "#FFCA28",
   Insights: "#C084FC",
@@ -164,7 +164,7 @@ export function temContexto(kind: Kind): kind is KindComContexto {
   return ehEntidade(kind) || kind === "categoria";
 }
 
-// Mapa pasta→cor único (mesma lógica de montarCoresPastas do beculture).
+// Mapa pasta→cor único (mesma lógica de montarCoresPastas do Oracle).
 export function montarCores(pastas: string[]): Map<string, string> {
   const map = new Map<string, string>();
   const usados = new Set<string>();

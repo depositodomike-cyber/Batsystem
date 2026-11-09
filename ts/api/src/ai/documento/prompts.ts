@@ -1,4 +1,4 @@
-// Prompt do "Upload Documento" — portado do beculture/Confi (criarNotaIA, tarefa
+// Prompt do "Upload Documento" — portado do Oracle/Confi (criarNotaIA, tarefa
 // 'documento'). Organiza um conteúdo bruto num DOCUMENTO de referência bem
 // estruturado, formatado para a Memória. Devolve JSON { titulo, conteudo, resumo }.
 // A nota fecha com o bloco "## 🔗 Conexões no Vault" (conexoes-vault.ts).

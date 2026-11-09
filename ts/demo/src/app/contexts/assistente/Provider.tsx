@@ -240,7 +240,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
             };
             setConversa((c) => c.map((t) => (t === pendente ? pronto : t)));
             pendentes[i] = pronto;
-            if (!resultado.ok) resultado = { ok: true, origem: r.origem };
+            if (!resultado.ok) resultado = { ok: true, origem: r.origem, resposta: r.resposta };
           } catch (e) {
             const erro = msgErro(e, "Erro na busca.");
             const falha: Turno = {

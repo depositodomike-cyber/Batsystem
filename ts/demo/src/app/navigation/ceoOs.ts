@@ -15,21 +15,21 @@ export interface Product {
 }
 
 export const products: Product[] = [
-  { code: "behuman", name: "BeHuman" },
+  { code: "oracle", name: "Oracle" },
   { code: "learning", name: "Learning" },
   { code: "performance", name: "Performance" },
   { code: "project-management", name: "Project Management" },
   { code: "hiring", name: "Hiring" },
 ];
 
-export const DEFAULT_PRODUCT_CODE = "behuman";
+export const DEFAULT_PRODUCT_CODE = "oracle";
 
 // ----------------------------------------------------------------------
 // Squads — catálogo do produto Business Partner (IA).
 // ----------------------------------------------------------------------
 
 /** Produto ao qual os squads pertencem. */
-export const SQUADS_PRODUCT_CODE = "behuman";
+export const SQUADS_PRODUCT_CODE = "oracle";
 
 export interface Squad {
   id: string;
@@ -50,7 +50,7 @@ export function squadPath(squad: Pick<Squad, "slug">): string {
 
 const k = (key: string) => `nav.ceo.${key}`;
 
-// Seção "Home" — presente em todos os produtos (exceto behuman).
+// Seção "Home" — presente em todos os produtos (exceto oracle).
 const home = (base: string): NavigationTree => ({
   id: `${base}.home`,
   type: "root",
@@ -84,7 +84,7 @@ const home = (base: string): NavigationTree => ({
   ],
 });
 
-const behumanHome = (base: string): NavigationTree => ({
+const oracleHome = (base: string): NavigationTree => ({
   id: `${base}.home`,
   type: "root",
   title: "Painel",
@@ -164,11 +164,19 @@ const behumanHome = (base: string): NavigationTree => ({
       transKey: k("calendar"),
       icon: "ceo.agenda",
     },
+    {
+      id: `${base}.drive`,
+      type: "item",
+      path: `/${base}/drive`,
+      title: "Google Drive",
+      transKey: k("drive"),
+      icon: "ceo.drive",
+    },
   ],
 });
 
 const ceoNavigationSections: Record<string, NavigationTree[]> = {
-  behuman: [],
+  oracle: [],
 
   learning: [
     {
@@ -466,7 +474,7 @@ const ceoNavigationSections: Record<string, NavigationTree[]> = {
 export const ceoNavigation: Record<string, NavigationTree[]> = Object.fromEntries(
   Object.entries(ceoNavigationSections).map(([code, sections]) => [
     code,
-    [code === "behuman" ? behumanHome(code) : home(code), ...sections],
+    [code === "oracle" ? oracleHome(code) : home(code), ...sections],
   ]),
 );
 
@@ -513,7 +521,11 @@ export const systemAreas: SystemArea[] = [
 ];
 
 /** Seções de Configurações de usuário (`?secao=`). */
-export type SecaoConfiguracoesUsuario = "orientador" | "conectores" | "agentes";
+export type SecaoConfiguracoesUsuario =
+  | "perfil"
+  | "orientador"
+  | "conectores"
+  | "agentes";
 
 /** Caminho de Configurações de usuário, opcionalmente já numa seção. */
 export function userSettingsPath(

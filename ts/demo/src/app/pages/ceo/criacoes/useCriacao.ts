@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useInRouterContext, useSearchParams } from "react-router";
 import {
   criarCriacaoApi,
   obterCriacaoApi,
@@ -69,8 +69,28 @@ export interface UsoCriacao {
   reiniciar: () => void;
 }
 
-export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
-  const [searchParams, setSearchParams] = useSearchParams();
+export interface OpcoesCriacao {
+  /**
+   * Id a retomar, informado por quem abre a tela. Para as janelas do Lab
+   * (ex.: Vídeo), que rodam FORA do router e por isso não têm `?criacao=` na
+   * URL. Omitido = lê `?criacao=` da URL, como nas páginas.
+   */
+  idInicial?: string | null;
+}
+
+export function useCriacao(
+  tipo: CriacaoTipo,
+  opcoes: OpcoesCriacao = {},
+): UsoCriacao {
+  // As janelas do Lab são desenhadas pelo IaModalsHostProvider, acima do
+  // <RouterProvider>: lá não há URL para ler nem escrever. O contexto não muda
+  // durante a vida do componente, então o hook condicional é estável.
+  const dentroDoRouter = useInRouterContext();
+  const semUrl = !dentroDoRouter || opcoes.idInicial !== undefined;
+  const [searchParams, setSearchParams] = dentroDoRouter
+    ? // eslint-disable-next-line react-hooks/rules-of-hooks -- ver acima
+      useSearchParams()
+    : [null, null];
 
   /**
    * O id a retomar, lido só na montagem.
@@ -81,7 +101,11 @@ export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
    * servidor o que já está na tela.
    */
   const [idInicial] = useState<string | null>(() =>
-    new URLSearchParams(window.location.search).get("criacao"),
+    opcoes.idInicial !== undefined
+      ? opcoes.idInicial
+      : dentroDoRouter
+        ? new URLSearchParams(window.location.search).get("criacao")
+        : null,
   );
 
   const [id, setId] = useState<string | null>(idInicial);
@@ -224,6 +248,7 @@ export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
   // A URL passa a carregar o id assim que ele existe: recarregar a página, ou
   // voltar pelo histórico, cai na mesma criação em vez de numa tela em branco.
   useEffect(() => {
+    if (semUrl || !searchParams || !setSearchParams) return;
     if (!id || searchParams.get("criacao") === id) return;
     setSearchParams(
       (prev) => {
@@ -233,7 +258,7 @@ export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
       },
       { replace: true },
     );
-  }, [id, searchParams, setSearchParams]);
+  }, [id, semUrl, searchParams, setSearchParams]);
 
   const reiniciar = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -248,15 +273,17 @@ export function useCriacao(tipo: CriacaoTipo): UsoCriacao {
     idRef.current = null;
     setId(null);
     setCarregada(null);
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("criacao");
-        return next;
-      },
-      { replace: true },
-    );
-  }, [gravar, setSearchParams]);
+    if (!semUrl && setSearchParams) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("criacao");
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [gravar, semUrl, setSearchParams]);
 
   return {
     id,

@@ -6,6 +6,10 @@
  * altere a flag correspondente para `false`.
  *
  * Padrão visual: `cursor-not-allowed opacity-40`.
+ *
+ * Camada acima destas flags: `configs/oracleModules.ts` decide quais MÓDULOS
+ * o Oracle pessoal oferece (organizações, estrutura, roles, produtos de RH…).
+ * Estas flags continuam sendo o ajuste fino de cada funcionalidade.
  */
 
 export type TemporarilyDisabledFeature =
@@ -72,7 +76,7 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // Grupo AGENTES (o antigo "Squads") OCULTO na sidebar — some por inteiro,
     // em vez do padrão opaco. Agentes agora participam das conversas do
     // Assistente: o acesso é o "+ Adicionar agente" do campo de envio e o
-    // catálogo /behuman/agentes ("Gerenciar agentes"). Os agentes fixados
+    // catálogo /oracle/agentes ("Gerenciar agentes"). Os agentes fixados
     // continuam salvos; com `false` o grupo volta como estava. Ponto de corte
     // único, em Sidebar/Menu/index.tsx.
     sidebarAgents: true,
@@ -111,7 +115,7 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // NÃO é esse caminho: ele usa /ai/prompt em modo vault e só mostra o
     // texto num modal — nada é persistido.
     //
-    // Insights é por produto: só `behuman` tem página própria
+    // Insights é por produto: só `oracle` tem página própria
     // (`insightsPages` em ceoRoutes.tsx); nos demais o caminho cai no
     // Placeholder.
     insights: false,
@@ -131,10 +135,14 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // O Repositório NÃO entra nesta conta: apesar de estar declarado dentro do
     // grupo em ceoOs.ts, o `Group` o pula e ele é desenhado numa seção própria
     // acima do PAINEL (ver ContextSection).
-    notes: true,
+    //
+    // Oracle: Notas e Agenda REATIVADAS no Painel (o Slack saiu pelo módulo
+    // `slack` de configs/oracleModules.ts). Agenda segue sem tela própria e
+    // abre o Placeholder até ganhar uma.
+    notes: false,
     email: false,
     slack: false,
-    calendar: true,
+    calendar: false,
     // Conectores REATIVADO. O ponto de entrada agora é Configurações de
     // usuário (menu de perfil) › Conectores; /:produto/conectores redireciona
     // para lá preservando a query (retorno do OAuth). Com a flag em true o
@@ -146,7 +154,7 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // ainda não viu (GET /ai/insights/nao-lidos, leitura por usuário em
     // `InsightLeitura`), marcados com o badge [Insight]; outros tipos, quando
     // existirem, entram no mesmo formato sem o badge. Clicar num insight marca
-    // como lido e o abre em /behuman/insights. Com a flag em true o sino fica
+    // como lido e o abre em /oracle/insights. Com a flag em true o sino fica
     // opaco, sem clique, e não consulta a API.
     notifications: false,
     // Ícone de engrenagem ("settings") no topo do painel de Notificações
@@ -173,7 +181,7 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // vem, e estes dois toggles já existiam e funcionavam — anunciá-los como
     // novidade indisponível seria mentira.
     //
-    // Nada foi removido: `AbaPainel` e as preferências em `beculturePrefs`
+    // Nada foi removido: `AbaPainel` e as preferências em `oraclePrefs`
     // seguem intactas, e voltar a flag para `false` traz a aba de volta ao
     // mesmo lugar, com o mesmo id de `?aba=`.
     settingsAppearancePanel: true,
@@ -247,7 +255,9 @@ export const TEMPORARILY_DISABLED: Record<TemporarilyDisabledFeature, boolean> =
     // "Ajustar com IA" não tem relação com isto: é ação contextual na própria
     // tela, não o chat geral, e continua igual.
     aiStudioGenerationChat: true,
-    settingsVoice: true,
+    // Voz REATIVADA: abriga a ativação por voz (palavra de ativação local, via
+    // Vosk). Ver VozSection em Configuracoes.tsx.
+    settingsVoice: false,
     settingsMemory: false,
     // true = a seção Hierarquia de Configurações fica OCULTA — não renderizada.
     //
@@ -334,7 +344,7 @@ export const DISABLED_MENU_CLASS = "cursor-not-allowed opacity-40";
 // Conectores liberados
 //
 // Diferente das flags acima, aqui a lista é de quem ESTÁ habilitado, e não de
-// quem está desabilitado: a decisão do produto é "só estes três por enquanto".
+// quem está desabilitado: a decisão do produto é "só estes por enquanto".
 // Assim, um conector novo no catálogo entra desativado por padrão — o contrário
 // (lista de bloqueados) o liberaria em silêncio, que é o erro mais caro dos
 // dois.
@@ -344,6 +354,7 @@ export const DISABLED_MENU_CLASS = "cursor-not-allowed opacity-40";
 // produto vai integrar. Para liberar um, basta incluir o id aqui.
 
 export const CONECTORES_HABILITADOS: string[] = [
+  "gmail",
   "google-calendar",
   "google-drive",
   "slack",
@@ -362,7 +373,7 @@ export function isFeatureTemporarilyDisabled(
 
 /**
  * Resolve se um item de navegação (ceoOs) está temporariamente desabilitado,
- * a partir do `id` (ex.: "behuman.insights") ou do último segmento do `path`.
+ * a partir do `id` (ex.: "oracle.insights") ou do último segmento do `path`.
  */
 export function isNavItemTemporarilyDisabled(
   id: string,

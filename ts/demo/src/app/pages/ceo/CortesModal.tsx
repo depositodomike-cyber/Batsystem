@@ -14,7 +14,7 @@ import {
 import clsx from "clsx";
 
 // Local Imports
-import { Button, Spinner } from "@/components/ui";
+import { Accordion, Button } from "@/components/ui";
 import { IaModalShell } from "@/app/contexts/ia-modals/IaModalShell";
 import { DesignSystemBar } from "./design-system";
 import {
@@ -28,10 +28,29 @@ import {
 import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
 import { EnviarParaGrupoButton } from "./EnviarParaGrupo";
 import { PASTA_MEMORIA } from "./memoria-pastas";
+import {
+  AcoesEtapa,
+  CAIXA_ERRO,
+  CAMPO,
+  CAMPO_SELECT,
+  LabCarregando,
+  LabEtapa,
+  LabResultado,
+  PerguntaEtapa,
+  ROTULO_CAMPO,
+  useEtapasLab,
+} from "./lab";
+
+type EtapaCorte = "video" | "trechos" | "acabamento";
+const ETAPAS_CORTE = [
+  { id: "video" as const, numero: "01", titulo: "Vídeo" },
+  { id: "trechos" as const, numero: "02", titulo: "Trechos" },
+  { id: "acabamento" as const, numero: "03", titulo: "Formato e acabamento" },
+];
 
 // ----------------------------------------------------------------------
 // Criar cortes — editor de vídeo no navegador (ffmpeg.wasm). Portado do
-// beculture/Confi (que usa ffmpeg local). Upload → recorta trechos → formato,
+// Oracle/Confi (que usa ffmpeg local). Upload → recorta trechos → formato,
 // velocidade, volume e texto → exporta MP4. Tudo client-side.
 // ----------------------------------------------------------------------
 
@@ -236,6 +255,14 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
 
   const pct = (v: number) => (duration ? `${(v / duration) * 100}%` : "0%");
 
+  const etapas = useEtapasLab<EtapaCorte>(ETAPAS_CORTE, {
+    video: file ? `${file.name} · ${fmt(duration)}` : undefined,
+    trechos: trechos.length
+      ? `${trechos.length} ${trechos.length === 1 ? "trecho" : "trechos"}`
+      : "Vídeo inteiro",
+    acabamento: `${ASPECTOS.find(([id]) => id === aspecto)?.[1] ?? aspecto} · ${velocidade}× · volume ${Math.round(volume * 100)}%`,
+  });
+
   return (
     <IaModalShell
       isOpen={isOpen}
@@ -244,7 +271,7 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
       closeDisabled={exporting}
       title={
         <>
-          IA · Criar cortes
+          Lab · Criar cortes
           <span className="dark:bg-dark-600 dark:text-dark-200 ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500">
             no navegador
           </span>
@@ -253,176 +280,308 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
       icon={VideoCameraIcon}
       size="4xl"
     >
-      <div>
-        <DesignSystemBar className="mb-4" />
-
-        {!file ? (
-          /* Upload */
-          <div className="grid place-items-center py-10">
-            <label className="dark:border-dark-500 dark:hover:border-dark-400 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 px-10 py-12 text-center hover:border-gray-400">
-              <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-14 place-items-center rounded-2xl">
-                <ArrowUpTrayIcon className="size-7" />
-              </span>
-              <span className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                Carregar um vídeo
-              </span>
-              <span className="dark:text-dark-300 text-xs text-gray-400">
-                MP4, MOV, WebM… processado no seu navegador
-              </span>
-              <input
-                type="file"
-                accept="video/*"
-                hidden
-                onChange={(e) => escolher(e.target.files?.[0] ?? null)}
-              />
-            </label>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {/* Player + timeline */}
-            <div className="flex flex-col gap-3">
-              <div className="border-dark-600 overflow-hidden rounded-xl border bg-black">
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <video
-                  ref={videoRef}
-                  src={url}
-                  className="max-h-[42vh] w-full bg-black"
-                  onLoadedMetadata={onMeta}
-                  onTimeUpdate={() =>
-                    setCur(videoRef.current?.currentTime ?? 0)
-                  }
-                  onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={togglePlay}
-                  variant="outlined"
-                  isIcon
-                  className="size-9 rounded-lg"
-                >
-                  {playing ? (
-                    <PauseIcon className="size-5" />
-                  ) : (
-                    <PlayIcon className="size-5" />
-                  )}
-                </Button>
-                <span className="dark:text-dark-200 text-xs text-gray-500 tabular-nums">
-                  {fmt(cur)} / {fmt(duration)}
-                </span>
-              </div>
-
-              {/* Timeline */}
+      {/* Etapas no mesmo padrão das páginas do Lab. Continua janela: a
+          exportação roda no navegador (ffmpeg.wasm) e segue ao minimizar. */}
+      {exporting ? (
+        <LabCarregando
+          semCard
+          titulo={
+            fase === "carregando"
+              ? "Carregando o editor de vídeo…"
+              : `Renderizando… ${Math.round(progresso * 100)}%`
+          }
+          descricao="O corte é processado no seu navegador. Você pode minimizar a janela."
+        >
+          <div className="mt-2 w-full max-w-sm">
+            <div className="dark:bg-dark-500 h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
-                className="dark:bg-dark-500 relative h-8 w-full cursor-pointer rounded-lg bg-gray-200"
-                onClick={seekFromClick}
+                className="bg-primary-500 h-full rounded-lg transition-[width]"
+                style={{
+                  width:
+                    fase === "carregando"
+                      ? "15%"
+                      : `${Math.round(progresso * 100)}%`,
+                }}
+              />
+            </div>
+          </div>
+        </LabCarregando>
+      ) : resultUrl ? (
+        <LabResultado
+          semCard
+          titulo="Corte pronto"
+          descricao={tituloCorte}
+          detalhe={`${trechos.length || 1} ${trechos.length > 1 ? "trechos" : "trecho"} · ${
+            ASPECTOS.find(([id]) => id === aspecto)?.[1] ?? aspecto
+          } · ${velocidade}×`}
+          erro={erro}
+          acoesSecundarias={
+            <>
+              <Button
+                variant="flat"
+                onClick={() => setResultUrl("")}
+                className="gap-1.5"
               >
-                {/* trechos adicionados */}
-                {trechos.map((t, i) => (
-                  <div
-                    key={i}
-                    className="bg-primary-500/50 absolute inset-y-1 rounded"
-                    style={{
-                      left: pct(t.inicio),
-                      width: pct(t.fim - t.inicio),
+                <ArrowPathIcon className="size-4" /> Novo corte
+              </Button>
+              <Button
+                variant="flat"
+                onClick={() => {
+                  setResultUrl("");
+                  setFile(null);
+                  setUrl("");
+                  etapas.reiniciar();
+                }}
+                className="gap-1.5"
+              >
+                <ArrowUpTrayIcon className="size-4" /> Trocar vídeo
+              </Button>
+            </>
+          }
+          acoesPrincipais={
+            <>
+              <SalvarNaMemoriaButton
+                pasta={PASTA_MEMORIA.cortes}
+                titulo={tituloCorte}
+                tags={["corte", "vídeo"]}
+                versao={resultUrl}
+                preparar={prepararMemoria}
+                rotulo="Salvar no Repositório"
+                rotuloSalvo="Salvo no Repositório"
+                semSeletorDePasta
+                className="h-10 px-5"
+              />
+              <EnviarParaGrupoButton
+                funcao="cortes"
+                titulo={tituloCorte}
+                versao={resultUrl}
+                preparar={prepararMemoria}
+                className="h-10 px-5"
+              />
+              <Button
+                onClick={baixar}
+                color="primary"
+                className="h-10 gap-2 px-5"
+              >
+                <ArrowDownTrayIcon className="size-5" /> Baixar MP4
+              </Button>
+            </>
+          }
+        >
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <video
+            src={resultUrl}
+            controls
+            className="max-h-[48vh] w-full rounded-xl bg-black"
+          />
+        </LabResultado>
+      ) : (
+        <div>
+          <Accordion {...etapas.accordion} className="flex flex-col gap-3">
+            <LabEtapa {...etapas.etapa("video")}>
+              <PerguntaEtapa>Qual vídeo você quer cortar?</PerguntaEtapa>
+              {file ? (
+                <div className="dark:border-dark-600 dark:bg-dark-800/40 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2">
+                  <VideoCameraIcon className="dark:text-dark-300 size-4 shrink-0 text-gray-400" />
+                  <span className="dark:text-dark-100 text-xs-plus min-w-0 flex-1 truncate text-gray-700">
+                    {file.name} · {fmt(duration)}
+                  </span>
+                  <Button
+                    variant="flat"
+                    onClick={() => {
+                      setFile(null);
+                      setUrl("");
+                    }}
+                    className="h-8 gap-1.5 px-2.5 text-xs"
+                  >
+                    <ArrowUpTrayIcon className="size-4" /> Trocar vídeo
+                  </Button>
+                </div>
+              ) : (
+                <label className="dark:border-dark-450 dark:hover:border-dark-400 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 px-10 py-10 text-center hover:border-gray-400">
+                  <span className="bg-primary-600/10 text-primary-600 dark:bg-primary-400/10 dark:text-primary-400 grid size-14 place-items-center rounded-2xl">
+                    <ArrowUpTrayIcon className="size-7" />
+                  </span>
+                  <span className="dark:text-dark-100 text-sm font-medium text-gray-700">
+                    Carregar um vídeo
+                  </span>
+                  <span className="dark:text-dark-300 text-xs text-gray-400">
+                    MP4, MOV, WebM… processado no seu navegador
+                  </span>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] ?? null;
+                      escolher(f);
+                      if (f) etapas.concluirEtapa("video");
                     }}
                   />
-                ))}
-                {/* seleção atual */}
-                <div
-                  className="border-primary-500 bg-primary-500/20 absolute inset-y-0 rounded border"
-                  style={{
-                    left: pct(inicio),
-                    width: pct(Math.max(0, fim - inicio)),
-                  }}
-                />
-                {/* playhead */}
-                <div
-                  className="absolute inset-y-0 w-0.5 bg-rose-500"
-                  style={{ left: pct(cur) }}
-                />
-              </div>
-
-              {/* Seleção de trecho */}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  onClick={() => setInicio(cur)}
-                  variant="outlined"
-                  className="text-xs-plus h-8 gap-1.5 px-2.5"
-                >
-                  Início: {fmt(inicio)}
-                </Button>
-                <Button
-                  onClick={() => setFim(cur)}
-                  variant="outlined"
-                  className="text-xs-plus h-8 gap-1.5 px-2.5"
-                >
-                  Fim: {fmt(fim)}
-                </Button>
-                <Button
-                  onClick={adicionarTrecho}
-                  color="primary"
-                  className="text-xs-plus h-8 gap-1.5 px-2.5"
-                >
-                  <ScissorsIcon className="size-4" /> Adicionar trecho
-                </Button>
-              </div>
-
-              {trechos.length > 0 && (
-                <ul className="flex flex-col gap-1">
-                  {trechos.map((t, i) => (
-                    <li
-                      key={i}
-                      className="dark:border-dark-600 text-xs-plus flex items-center justify-between rounded-lg border border-gray-200 px-3 py-1.5"
-                    >
-                      <span className="dark:text-dark-200 text-gray-600">
-                        Trecho {i + 1}: {fmt(t.inicio)} → {fmt(t.fim)}{" "}
-                        <span className="text-gray-400">
-                          ({fmt(t.fim - t.inicio)})
-                        </span>
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => seek(t.inicio)}
-                          className="dark:hover:bg-dark-600 rounded px-2 py-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                        >
-                          ir
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setTrechos((x) => x.filter((_, k) => k !== i))
-                          }
-                          aria-label="Remover"
-                          className="grid size-6 place-items-center rounded text-gray-400 hover:text-rose-500"
-                        >
-                          <TrashIcon className="size-4" />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                </label>
               )}
-              <p className="dark:text-dark-300 text-tiny text-gray-400">
-                Sem trechos, o vídeo inteiro é exportado. Marque Início/Fim com
-                o playhead e clique em “Adicionar trecho”.
-              </p>
-            </div>
+              <div className="dark:border-dark-600 mt-5 border-t border-gray-100 pt-5">
+                <DesignSystemBar plain />
+              </div>
+              {file && (
+                <AcoesEtapa onContinuar={() => etapas.concluirEtapa("video")} />
+              )}
+            </LabEtapa>
 
-            {/* Controles + export */}
-            <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-2">
+            <LabEtapa
+              {...etapas.etapa("trechos")}
+              pendenteLabel={file ? "Opcional" : "Carregue um vídeo primeiro"}
+            >
+              {file ? (
+                <div className="flex flex-col gap-3">
+                  <PerguntaEtapa className="">
+                    Quais trechos entram no corte?
+                  </PerguntaEtapa>
+                  <div className="border-dark-600 overflow-hidden rounded-xl border bg-black">
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video
+                      ref={videoRef}
+                      src={url}
+                      className="max-h-[42vh] w-full bg-black"
+                      onLoadedMetadata={onMeta}
+                      onTimeUpdate={() =>
+                        setCur(videoRef.current?.currentTime ?? 0)
+                      }
+                      onPlay={() => setPlaying(true)}
+                      onPause={() => setPlaying(false)}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={togglePlay}
+                      variant="outlined"
+                      isIcon
+                      className="size-9 rounded-lg"
+                    >
+                      {playing ? (
+                        <PauseIcon className="size-5" />
+                      ) : (
+                        <PlayIcon className="size-5" />
+                      )}
+                    </Button>
+                    <span className="dark:text-dark-200 text-xs text-gray-500 tabular-nums">
+                      {fmt(cur)} / {fmt(duration)}
+                    </span>
+                  </div>
+
+                  {/* Timeline */}
+                  <div
+                    className="dark:bg-dark-500 relative h-8 w-full cursor-pointer rounded-lg bg-gray-200"
+                    onClick={seekFromClick}
+                  >
+                    {trechos.map((t, i) => (
+                      <div
+                        key={i}
+                        className="bg-primary-500/50 absolute inset-y-1 rounded"
+                        style={{
+                          left: pct(t.inicio),
+                          width: pct(t.fim - t.inicio),
+                        }}
+                      />
+                    ))}
+                    <div
+                      className="border-primary-500 bg-primary-500/20 absolute inset-y-0 rounded border"
+                      style={{
+                        left: pct(inicio),
+                        width: pct(Math.max(0, fim - inicio)),
+                      }}
+                    />
+                    <div
+                      className="absolute inset-y-0 w-0.5 bg-rose-500"
+                      style={{ left: pct(cur) }}
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      onClick={() => setInicio(cur)}
+                      variant="outlined"
+                      className="text-xs-plus h-8 gap-1.5 px-2.5"
+                    >
+                      Início: {fmt(inicio)}
+                    </Button>
+                    <Button
+                      onClick={() => setFim(cur)}
+                      variant="outlined"
+                      className="text-xs-plus h-8 gap-1.5 px-2.5"
+                    >
+                      Fim: {fmt(fim)}
+                    </Button>
+                    <Button
+                      onClick={adicionarTrecho}
+                      color="primary"
+                      className="text-xs-plus h-8 gap-1.5 px-2.5"
+                    >
+                      <ScissorsIcon className="size-4" /> Adicionar trecho
+                    </Button>
+                  </div>
+
+                  {trechos.length > 0 && (
+                    <ul className="flex flex-col gap-1">
+                      {trechos.map((t, i) => (
+                        <li
+                          key={i}
+                          className="dark:border-dark-600 text-xs-plus flex items-center justify-between rounded-lg border border-gray-200 px-3 py-1.5"
+                        >
+                          <span className="dark:text-dark-200 text-gray-600">
+                            Trecho {i + 1}: {fmt(t.inicio)} → {fmt(t.fim)}{" "}
+                            <span className="text-gray-400">
+                              ({fmt(t.fim - t.inicio)})
+                            </span>
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => seek(t.inicio)}
+                              className="dark:hover:bg-dark-600 rounded px-2 py-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            >
+                              ir
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setTrechos((x) => x.filter((_, k) => k !== i))
+                              }
+                              aria-label="Remover"
+                              className="grid size-6 place-items-center rounded text-gray-400 hover:text-rose-500"
+                            >
+                              <TrashIcon className="size-4" />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="dark:text-dark-300 text-xs text-gray-500">
+                    Sem trechos, o vídeo inteiro é exportado. Marque Início e
+                    Fim com o playhead e clique em “Adicionar trecho”.
+                  </p>
+                  <AcoesEtapa
+                    onContinuar={() => etapas.concluirEtapa("trechos")}
+                  />
+                </div>
+              ) : (
+                <p className="dark:text-dark-300 text-sm text-gray-500">
+                  Carregue um vídeo na etapa anterior.
+                </p>
+              )}
+            </LabEtapa>
+
+            <LabEtapa {...etapas.etapa("acabamento")}>
+              <PerguntaEtapa>Formato e acabamento</PerguntaEtapa>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
-                    Formato
-                  </label>
+                  <label className={ROTULO_CAMPO}>Formato</label>
                   <select
                     value={aspecto}
                     onChange={(e) => setAspecto(e.target.value as Aspecto)}
-                    className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                    className={`${CAMPO_SELECT} rounded-lg`}
                   >
                     {ASPECTOS.map(([id, nome]) => (
                       <option key={id} value={id}>
@@ -432,13 +591,11 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
-                    Velocidade
-                  </label>
+                  <label className={ROTULO_CAMPO}>Velocidade</label>
                   <select
                     value={velocidade}
                     onChange={(e) => setVelocidade(Number(e.target.value))}
-                    className="form-select dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                    className={`${CAMPO_SELECT} rounded-lg`}
                   >
                     {VELOCIDADES.map((v) => (
                       <option key={v} value={v}>
@@ -449,8 +606,8 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                 </div>
               </div>
 
-              <div>
-                <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
+              <div className="mt-5">
+                <label className={ROTULO_CAMPO}>
                   Volume: {Math.round(volume * 100)}%
                 </label>
                 <input
@@ -464,28 +621,31 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                 />
               </div>
 
-              <div>
-                <label className="dark:text-dark-200 text-xs-plus mb-1 block font-medium text-gray-600">
-                  Texto <span className="text-gray-400">(opcional)</span>
+              <div className="mt-5">
+                <label className={ROTULO_CAMPO}>
+                  Texto{" "}
+                  <span className="dark:text-dark-300 font-normal text-gray-400">
+                    (opcional)
+                  </span>
                 </label>
                 <input
                   value={texto}
                   onChange={(e) => setTexto(e.target.value)}
-                  placeholder="Legenda / chamada sobre o vídeo"
-                  className="form-input dark:border-dark-500 dark:bg-dark-800 dark:text-dark-100 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400"
+                  placeholder="Legenda ou chamada sobre o vídeo"
+                  className={`${CAMPO} rounded-lg`}
                 />
                 {texto.trim() && (
-                  <div className="mt-1.5 flex gap-1.5">
+                  <div className="mt-2 flex gap-1.5">
                     {POSICOES.map(([id, nome]) => (
                       <button
                         key={id}
                         type="button"
                         onClick={() => setTextoPos(id)}
                         className={clsx(
-                          "rounded-lg border px-2.5 py-0.5 text-xs transition-colors",
+                          "rounded-lg border px-2.5 py-1 text-xs transition-colors",
                           textoPos === id
                             ? "border-primary-500 bg-primary-500/10 text-primary-600 dark:text-primary-400"
-                            : "dark:border-dark-500 dark:text-dark-200 border-gray-300 text-gray-500",
+                            : "dark:border-dark-450 dark:text-dark-200 border-gray-300 text-gray-500",
                         )}
                       >
                         {nome}
@@ -494,96 +654,26 @@ export function CortesModal({ isOpen, close, onMinimize }: Props) {
                   </div>
                 )}
               </div>
-
-              {/* Export / progresso / resultado */}
-              {exporting ? (
-                <div className="dark:border-dark-600 rounded-xl border border-gray-200 p-3">
-                  <div className="dark:text-dark-200 mb-2 flex items-center gap-2 text-sm text-gray-600">
-                    <Spinner className="size-4" />
-                    {fase === "carregando"
-                      ? "Carregando o editor de vídeo…"
-                      : `Renderizando… ${Math.round(progresso * 100)}%`}
-                  </div>
-                  <div className="dark:bg-dark-500 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className="bg-primary-600 dark:bg-primary-500 h-full rounded-lg transition-[width]"
-                      style={{
-                        width:
-                          fase === "carregando"
-                            ? "15%"
-                            : `${Math.round(progresso * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : resultUrl ? (
-                <div className="dark:border-dark-600 flex flex-col gap-2 rounded-xl border border-gray-200 p-3">
-                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                  <video
-                    src={resultUrl}
-                    controls
-                    className="max-h-[30vh] w-full rounded-lg bg-black"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={baixar}
-                      color="primary"
-                      className="flex-1 gap-2"
-                    >
-                      <ArrowDownTrayIcon className="size-5" /> Baixar MP4
-                    </Button>
-                    <SalvarNaMemoriaButton
-                      pasta={PASTA_MEMORIA.cortes}
-                      titulo={tituloCorte}
-                      tags={["corte", "vídeo"]}
-                      versao={resultUrl}
-                      preparar={prepararMemoria}
-                      className="h-auto"
-                    />
-                    <EnviarParaGrupoButton
-                      funcao="cortes"
-                      titulo={tituloCorte}
-                      versao={resultUrl}
-                      preparar={prepararMemoria}
-                      className="h-auto"
-                    />
-                    <Button
-                      onClick={() => setResultUrl("")}
-                      variant="outlined"
-                      className="gap-1.5"
-                    >
-                      <ArrowPathIcon className="size-4" /> Novo
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button onClick={exportar} color="primary" className="gap-2">
-                  <ScissorsIcon className="size-5" /> Exportar corte
-                </Button>
-              )}
-
-              {erro && <p className="text-xs-plus text-rose-500">{erro}</p>}
-
-              <button
-                type="button"
-                onClick={() => escolher(null)}
-                className="hidden"
+              <AcoesEtapa
+                onContinuar={() => etapas.concluirEtapa("acabamento")}
               />
-              <Button
-                variant="flat"
-                onClick={() => {
-                  setFile(null);
-                  setUrl("");
-                }}
-                disabled={exporting}
-                className="gap-1.5 self-start"
-              >
-                <ArrowUpTrayIcon className="size-4" /> Trocar vídeo
-              </Button>
-            </div>
+            </LabEtapa>
+          </Accordion>
+
+          {erro && <div className={`${CAIXA_ERRO} mt-4`}>{erro}</div>}
+
+          <div className="mt-5 flex justify-end">
+            <Button
+              onClick={() => void exportar()}
+              color="primary"
+              disabled={!file}
+              className="h-10 gap-2 px-5"
+            >
+              <ScissorsIcon className="size-5" /> Exportar corte
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </IaModalShell>
   );
 }

@@ -56,7 +56,7 @@ export interface Board {
 }
 
 // ----------------------------------------------------------------------
-// Quadros padrão do beculture. Cada quadro nasce com as três etapas do fluxo
+// Quadros padrão do Oracle. Cada quadro nasce com as três etapas do fluxo
 // ("A fazer", "Em andamento", "Concluído"). O helper distribui as atividades
 // iniciais (se houver) nas etapas pelo slug.
 // ----------------------------------------------------------------------
@@ -116,7 +116,7 @@ export const fakeBoards: Board[] = [
     { col: "a-fazer", title: "Levantar requisitos" },
     { col: "em-andamento", title: "Integração da API" },
   ]),
-  makeBoard("b-beculture", "beculture", false, []),
+  makeBoard("b-oracle", "Oracle", false, []),
 ];
 
 export const allMembers: Member[] = [

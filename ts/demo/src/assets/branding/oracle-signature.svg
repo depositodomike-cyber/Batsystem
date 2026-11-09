@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 330 72" width="330" height="72" role="img" aria-label="Oracle">
+  <defs>
+    <linearGradient id="os-metal" x1="0" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#f0f0ed"/>
+      <stop offset=".22" stop-color="#777b7d"/>
+      <stop offset=".48" stop-color="#24282b"/>
+      <stop offset=".72" stop-color="#aeb0ae"/>
+      <stop offset="1" stop-color="#45494b"/>
+    </linearGradient>
+    <linearGradient id="os-edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f4f0" stop-opacity=".9"/>
+      <stop offset=".5" stop-color="#777b7d" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#d8d9d6" stop-opacity=".8"/>
+    </linearGradient>
+    <filter id="os-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+  <svg x="0" y="0" width="144" height="72" viewBox="152 300 720 360">
+  <!-- Bat wings and body -->
+  <path d="M512 645
+    C485 600 444 571 392 552
+    C346 535 315 509 286 477
+    C252 439 217 414 166 405
+    C208 389 254 378 300 382
+    C352 386 393 408 432 445
+    L456 350 L512 411 L568 350 L592 445
+    C631 408 672 386 724 382
+    C770 378 816 389 858 405
+    C807 414 772 439 738 477
+    C709 509 678 535 632 552
+    C580 571 539 600 512 645Z"
+    fill="url(#os-metal)" stroke="url(#os-edge)" stroke-width="5" stroke-linejoin="miter"/>
+
+  <!-- Wing cut-ins for a sharp, recognizable silhouette -->
+  <path d="M166 405 C225 413 267 440 300 482 C325 514 353 537 392 552
+    C350 536 322 518 300 494 C274 466 243 450 207 447
+    C244 468 267 496 286 527 C244 503 207 462 166 405Z" fill="#090b0d" opacity=".95"/>
+  <path d="M858 405 C799 413 757 440 724 482 C699 514 671 537 632 552
+    C674 536 702 518 724 494 C750 466 781 450 817 447
+    C780 468 757 496 738 527 C780 503 817 462 858 405Z" fill="#090b0d" opacity=".95"/>
+
+  <!-- Head, ears and central armor -->
+  <path d="M435 432 L455 315 L500 382 L512 399 L524 382 L569 315 L589 432
+    L560 477 L512 506 L464 477Z" fill="url(#os-metal)" stroke="url(#os-edge)" stroke-width="4" stroke-linejoin="miter"/>
+  <path d="M455 315 L487 405 L512 399 L500 382Z M569 315 L537 405 L512 399 L524 382Z" fill="#111518" opacity=".9"/>
+  <path d="M464 455 L496 469 L512 489 L528 469 L560 455 L545 486 L512 516 L479 486Z" fill="#080a0c" stroke="#777d80" stroke-width="2"/>
+
+  <!-- Eyes -->
+  <path d="M465 445 L497 454 L481 468 L458 460Z M559 445 L527 454 L543 468 L566 460Z" fill="#e8e9e5"/>
+  <path d="M465 445 L481 468 L458 460Z M559 445 L543 468 L566 460Z" fill="#fff" opacity=".65"/>
+
+  <!-- Lower center point and subtle armor facets -->
+  <path d="M464 477 L512 506 L560 477 L548 536 L512 645 L476 536Z" fill="#111518" opacity=".72" stroke="#85898a" stroke-width="2"/>
+  <path d="M512 506V620 M476 536L512 565L548 536" fill="none" stroke="#c6c8c5" stroke-opacity=".35" stroke-width="2"/>
+
+  <!-- Fine metallic highlights -->
+  <path d="M166 405 C254 378 352 386 432 445 M858 405 C770 378 672 386 592 445" fill="none" stroke="#f0f0ed" stroke-opacity=".55" stroke-width="2"/>
+  <path d="M455 315L464 432 M569 315L560 432" fill="none" stroke="#f0f0ed" stroke-opacity=".4" stroke-width="2"/>
+  </svg>
+  <text x="150" y="53" font-family="Poppins, 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="50" letter-spacing="-1.5" fill="#0D1829">Oracle</text>
+</svg>

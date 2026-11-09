@@ -7,7 +7,7 @@ import tailwindcss from "@tailwindcss/vite";
 /**
  * O código referencia assets estáticos com caminho absoluto a partir da raiz
  * (ex.: "/images/avatar/avatar-1.jpg"). Quando o app é servido numa subpasta
- * (base="/behuman/"), esses caminhos quebram (apontam para a raiz do domínio).
+ * (base="/oracle/"), esses caminhos quebram (apontam para a raiz do domínio).
  * Este plugin reescreve "/images/", "/videos/" e "/md/" para incluir o `base`
  * APENAS no build (em dev base="/", então é no-op). Mantém o código-fonte
  * intacto e o dev funcionando.

@@ -1,4 +1,4 @@
-// Prompt do "Melhorar texto" — portado do beculture/Confi (lib/claude.js,
+// Prompt do "Melhorar texto" — portado do Oracle/Confi (lib/claude.js,
 // melhorarTexto). Reescreve um texto para ficar mais claro e forte, sem mudar o
 // sentido. Devolve JSON { texto, resumo, conexoes }.
 //

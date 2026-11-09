@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+
+# Ativação por voz: palavra e modelo da Picovoice são locais (ver docs/ativacao-por-voz.md)
+public/wake/*.tar.gz

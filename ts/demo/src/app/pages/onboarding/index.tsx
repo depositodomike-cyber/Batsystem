@@ -15,8 +15,8 @@ import {
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
-import BecultureSignature from "@/assets/branding/beculture-signature.svg?react";
-import BecultureSignatureDark from "@/assets/branding/beculture-signature-dark.svg?react";
+import OracleSignature from "@/assets/branding/oracle-signature.svg?react";
+import OracleSignatureDark from "@/assets/branding/oracle-signature-dark.svg?react";
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { SplashScreen } from "@/components/template/SplashScreen";
@@ -122,8 +122,8 @@ export default function Onboarding() {
       <main className="min-h-100vh grid w-full grow grid-cols-1 place-items-center py-8">
         <div className="w-full max-w-[44rem] p-4 sm:px-5">
           <div className="text-center">
-            <BecultureSignature className="mx-auto h-11 w-auto dark:hidden" />
-            <BecultureSignatureDark className="mx-auto hidden h-11 w-auto dark:block" />
+            <OracleSignature className="mx-auto h-11 w-auto dark:hidden" />
+            <OracleSignatureDark className="mx-auto hidden h-11 w-auto dark:block" />
             <div className="mt-4">
               <PageTitle
                 className="text-2xl font-semibold text-gray-600 dark:text-dark-100"
@@ -133,7 +133,7 @@ export default function Onboarding() {
                   description: (
                     <>
                       <p>
-                        Estes são os últimos passos antes de entrar no beculture:
+                        Estes são os últimos passos antes de entrar no Oracle:
                         convide o seu time (opcional) e confira o resumo da sua
                         conta e do teste grátis.
                       </p>
@@ -149,7 +149,7 @@ export default function Onboarding() {
                 Vamos configurar sua conta
               </PageTitle>
               <p className="text-gray-400 dark:text-dark-300">
-                Só mais dois passos para começar com o beculture.
+                Só mais dois passos para começar com o Oracle.
               </p>
             </div>
           </div>
@@ -228,7 +228,7 @@ export default function Onboarding() {
                   onClick={finalizar}
                   disabled={entrando}
                 >
-                  {entrando ? "Entrando..." : "Entrar no beculture"}
+                  {entrando ? "Entrando..." : "Entrar no Oracle"}
                   <ArrowRightIcon className="size-4" />
                 </Button>
               )}
@@ -323,7 +323,7 @@ function EtapaTime({
       <p className="mt-1 text-sm text-gray-400 dark:text-dark-300">
         {isPF
           ? "Vai usar sozinho? Pode pular — dá para convidar gente depois."
-          : "Adicione os e-mails de quem vai usar o beculture com você."}
+          : "Adicione os e-mails de quem vai usar o Oracle com você."}
       </p>
 
       <div className="mt-5 flex items-start gap-2">

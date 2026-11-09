@@ -1,6 +1,5 @@
 // Import Dependencies
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router";
 import { toast } from "sonner";
 import {
   TableCellsIcon,
@@ -27,16 +26,12 @@ import {
 } from "@headlessui/react";
 
 // Local Imports
-import { Page } from "@/components/shared/Page";
-import { PageTitle } from "@/components/shared/PageTitle";
 import { ConfirmModal } from "@/components/shared/ConfirmModal";
 import { Accordion, Button, Checkbox, Spinner } from "@/components/ui";
-import { BrandLoadingSplash } from "@/components/shared/BrandLoadingSplash";
 import { ApresentacaoEtapa, type EtapaStatus } from "./ApresentacaoEtapa";
 import { PlanilhaAbaCard } from "./PlanilhaAbaCard";
 import { ehDragDoModo } from "./ApresentacaoSlideCard";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
-import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import { useAssistente } from "@/app/contexts/assistente/context";
 import { NEUTRO } from "./design-system/types";
 import {
@@ -54,10 +49,20 @@ import { useCriacao } from "./criacoes/useCriacao";
 import type { CriacaoStatus } from "@/services/api/criacoes";
 import { SalvarNaMemoriaButton } from "./SalvarNaMemoria";
 import { PASTA_MEMORIA } from "./memoria-pastas";
+import {
+  AcoesEtapa,
+  CAIXA_ERRO,
+  CAMPO,
+  CAMPO_TEXTAREA,
+  errMessage,
+  LabCarregando,
+  LabPagina,
+  PerguntaEtapa,
+} from "./lab";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 
 // ----------------------------------------------------------------------
-// Criar planilha — tela do AI Studio (`/:produto/ia/planilha`).
+// Criar planilha — tela do Lab (`/:produto/ia/planilha`).
 //
 // Segunda função-tela do Studio, e de propósito a mesma casa que "Criar
 // apresentação": mesmo wizard em accordion, mesmo card de plano, mesma sticky
@@ -83,12 +88,7 @@ import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeat
 // e Conectores). `dark:text-dark-100` precisa estar aqui mesmo vindo de
 // `form-input`: a classe vive em `@layer components` e perde para o
 // `text-gray-800` da camada utilities.
-const CAMPO =
-  "form-input dark:border-dark-450 dark:bg-dark-800 dark:text-dark-100 dark:placeholder:text-dark-300 dark:hover:border-dark-400 focus:border-primary-500 w-full border border-gray-300 bg-white text-sm text-gray-800 placeholder:text-gray-400 hover:border-gray-400 focus:ring-0";
-// `resize-y` anula de propósito o `resize-none` que vem de `form-textarea`.
-const CAMPO_TEXTAREA = `${CAMPO.replace("form-input", "form-textarea")} resize-y`;
-const CAIXA_ERRO =
-  "text-xs-plus dark:text-error-lighter border-error/30 bg-error/10 text-error rounded-lg border px-3 py-2";
+// (moram em ./lab/estilos, compartilhadas com as demais telas do Lab)
 
 // As sugestões de início (§8 do briefing) SAÍRAM: o campo já pede detalhe, e
 // seis atalhos que só plantam meia frase competiam com o pedido de descrever
@@ -166,22 +166,8 @@ function plural(n: number, singular: string, plural_: string): string {
   return `${n} ${n === 1 ? singular : plural_}`;
 }
 
-function errMessage(err: unknown): string {
-  if (typeof err === "string") return err;
-  if (err && typeof err === "object") {
-    const o = err as { message?: unknown; error?: unknown };
-    if (typeof o.message === "string") return o.message;
-    if (Array.isArray(o.message) && typeof o.message[0] === "string") {
-      return o.message[0];
-    }
-    if (typeof o.error === "string") return o.error;
-  }
-  return "Falha ao gerar. Tente novamente.";
-}
 
 export default function Planilha() {
-  const { pathname } = useLocation();
-  const product = getCurrentProduct(pathname);
 
   const [step, setStep] = useState<Step>("form");
   const [erro, setErro] = useState("");
@@ -855,64 +841,32 @@ export default function Planilha() {
     : "";
 
   return (
-    <Page title={`Criar planilha · ${product.name}`}>
-      <div className="transition-content w-full px-(--margin-x) py-6">
-        <div className="mx-auto max-w-4xl">
-          <div>
-            <Link
-              to={`/${product.code}/ia`}
-              className="dark:text-dark-300 dark:hover:text-dark-100 mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800"
-            >
-              <ArrowLeftIcon className="size-4" />
-              Voltar ao AI Studio
-            </Link>
-
-            <div className="mb-8 flex items-center gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-green-500/10 text-green-500">
-                <TableCellsIcon className="size-5 stroke-[1.5]" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <PageTitle
-                    help={{
-                      description: (
-                        <>
-                          <p>
-                            Você descreve o problema em português. A IA monta um{" "}
-                            <strong>plano</strong>: que abas existem, que
-                            colunas cada uma tem e que contas ela faz — antes de
-                            existir arquivo nenhum.
-                          </p>
-                          <p>
-                            Os cálculos aparecem primeiro como lógica de negócio
-                            (“Saldo = Orçamento − Realizado”). A fórmula de
-                            planilha fica em <strong>Ver detalhes</strong>, para
-                            quem quiser conferir. Você não precisa saber Excel
-                            para validar o plano.
-                          </p>
-                          <p>
-                            Para mudar uma aba, use{" "}
-                            <strong>Ajustar com IA</strong> e diga o que quer.
-                            Reordenar e excluir continuam na sua mão.
-                          </p>
-                        </>
-                      ),
-                    }}
-                  >
-                    Criar planilha
-                  </PageTitle>
-                  {step === "plano" && (
-                    <span className="dark:bg-dark-600 dark:text-dark-200 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-500">
-                      Revisar o plano
-                    </span>
-                  )}
-                </div>
-                <p className="dark:text-dark-300 text-sm text-gray-500">
-                  A IA planeja a estrutura, você revisa e dirige, e a IA
-                  constrói.
-                </p>
-              </div>
-            </div>
+    <LabPagina
+      titulo="Criar planilha"
+      subtitulo="A IA planeja a estrutura, você revisa e dirige, e a IA constrói."
+      Icone={TableCellsIcon}
+      tint="bg-green-500/10 text-green-500"
+      selo={step === "plano" ? "Revisar o plano" : null}
+      ajuda={
+        <>
+          <p>
+            Você descreve o problema em português. A IA monta um{" "}
+            <strong>plano</strong>: que abas existem, que colunas cada uma tem e
+            que contas ela faz — antes de existir arquivo nenhum.
+          </p>
+          <p>
+            Os cálculos aparecem primeiro como lógica de negócio (“Saldo =
+            Orçamento − Realizado”). A fórmula de planilha fica em{" "}
+            <strong>Ver detalhes</strong>, para quem quiser conferir. Você não
+            precisa saber Excel para validar o plano.
+          </p>
+          <p>
+            Para mudar uma aba, use <strong>Ajustar com IA</strong> e diga o que
+            quer. Reordenar e excluir continuam na sua mão.
+          </p>
+        </>
+      }
+    >
 
             {/* Etapa 1 — wizard de configuração. */}
             {step === "form" && (
@@ -958,7 +912,7 @@ export default function Planilha() {
                         if (erroNecessidade) setErroNecessidade("");
                       }}
                       rows={5}
-                      placeholder="Ex.: Crie uma planilha para acompanhar o orçamento anual das áreas, comparando planejado e realizado, com indicadores e uma visão executiva."
+                      placeholder="Ex.: Crie uma planilha para acompanhar o meu orçamento anual por categoria, comparando planejado e realizado, com indicadores e um resumo."
                       className={CAMPO_TEXTAREA}
                     />
                     {erroNecessidade ? (
@@ -1106,26 +1060,18 @@ export default function Planilha() {
             {/* Loading. Indeterminado de propósito: o servidor não informa
                 progresso, e inventar "8 de 12" seria encenação. */}
             {(planejando || gerando) && (
-              <div className="dark:border-dark-600 dark:bg-dark-700 rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
-                <div
-                  aria-live="polite"
-                  className="grid place-items-center py-10"
-                >
-                  <div className="flex flex-col items-center gap-3 text-center">
-                    <BrandLoadingSplash label={null} />
-                    <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                      {planejando
-                        ? "Planejando sua planilha…"
-                        : "Construindo sua planilha…"}
-                    </p>
-                    <p className="dark:text-dark-300 text-sm text-gray-500">
-                      {planejando
-                        ? "A IA está definindo as abas, as colunas e os cálculos."
-                        : "Estamos preenchendo as abas e aplicando os cálculos."}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <LabCarregando
+                titulo={
+                  planejando
+                    ? "Planejando sua planilha…"
+                    : "Construindo sua planilha…"
+                }
+                descricao={
+                  planejando
+                    ? "A IA está definindo as abas, as colunas e os cálculos."
+                    : "Estamos preenchendo as abas e aplicando os cálculos."
+                }
+              />
             )}
 
             {/* Etapa 2 — revisar o plano */}
@@ -1318,9 +1264,6 @@ export default function Planilha() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      </div>
 
       <ConfirmModal
         show={aExcluir != null}
@@ -1354,7 +1297,7 @@ export default function Planilha() {
           },
         }}
       />
-    </Page>
+    </LabPagina>
   );
 }
 
@@ -1444,47 +1387,3 @@ function MenuAdicionarDados({
   );
 }
 
-/** A pergunta que abre uma etapa do wizard — o que o usuário está decidindo. */
-function PerguntaEtapa({
-  children,
-  className = "mb-3",
-}: {
-  children: React.ReactNode;
-  /** `""` quando a pergunta divide a linha com outro controle — aí o
-      espaçamento é do contêiner. */
-  className?: string;
-}) {
-  return (
-    <p
-      className={clsx(
-        "dark:text-dark-100 text-sm font-medium text-gray-700",
-        className,
-      )}
-    >
-      {children}
-    </p>
-  );
-}
-
-/** Rodapé de uma etapa. */
-function AcoesEtapa({
-  onContinuar,
-  rotulo = "Continuar",
-}: {
-  onContinuar: () => void;
-  rotulo?: string;
-}) {
-  return (
-    <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-      {/* `type="button"` obrigatório: dentro de um <form>, o default é submit. */}
-      <Button
-        type="button"
-        color="primary"
-        onClick={onContinuar}
-        className="h-9 gap-1.5"
-      >
-        {rotulo}
-      </Button>
-    </div>
-  );
-}

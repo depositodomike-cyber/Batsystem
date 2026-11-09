@@ -223,7 +223,7 @@ export class SlackApiService {
     if (!vinculo?.accessTokenEncrypted) {
       throw new BadRequestException(
         'O Slack ainda não foi autorizado para esta empresa. ' +
-          'No app beculture, abra Conectores → Slack → Conectar e autorize o workspace.',
+          'No app Oracle, abra Conectores → Slack → Conectar e autorize o workspace.',
       );
     }
     if (comoUsuario) {

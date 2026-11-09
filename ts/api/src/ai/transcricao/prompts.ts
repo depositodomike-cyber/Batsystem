@@ -1,4 +1,4 @@
-// Prompt do "Upload Transcrição" — portado do beculture/Confi
+// Prompt do "Upload Transcrição" — portado do Oracle/Confi
 // (criarAtaEstrategicaVault). A partir de uma transcrição bruta, a IA gera uma
 // ATA ESTRATÉGICA E DETALHADA já formatada para a Memória (frontmatter +
 // [[wikilinks]] às diretrizes existentes). Devolve JSON { titulo, ata }.

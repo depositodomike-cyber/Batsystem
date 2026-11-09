@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 
 // Local Imports
-import Logo from "@/assets/branding/beculture-logo.svg?react";
+import Logo from "@/assets/branding/oracle-logo.svg?react";
 import { Button, Card, Checkbox, Input } from "@/components/ui";
 
 // ----------------------------------------------------------------------

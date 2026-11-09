@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
 // Design system da marca — enviado pelas ferramentas do AI Studio (ts/demo,
-// app/pages/ceo/design-system). Portado do beculture/Confi, onde cada ação de
+// app/pages/ceo/design-system). Portado do Oracle/Confi, onde cada ação de
 // IA lia `window.DesignSystem.get()` antes de gerar.
 //
 // Aqui ele vira: (a) um bloco de contexto para os prompts, e (b) um tema
 // (cores/fontes/raio/logo) para os geradores determinísticos — .pptx e HTML.
-// Tudo é opcional: sem design, tudo cai no padrão beculture de antes.
+// Tudo é opcional: sem design, tudo cai no padrão Oracle de antes.
 // ----------------------------------------------------------------------
 
 export interface DesignSystemDto {
@@ -172,7 +172,7 @@ export interface Tema {
 
 /**
  * Deriva o tema visual (cores, fontes, raio, logo) do design system. Sem design,
- * devolve a paleta beculture — o mesmo visual de antes.
+ * devolve a paleta Oracle — o mesmo visual de antes.
  */
 export function designTheme(design?: DesignSystemDto | null): Tema {
   const c = design?.cores ?? {};
@@ -200,7 +200,7 @@ export function designTheme(design?: DesignSystemDto | null): Tema {
     fonteTitulo: lim(t.fonteTitulo, 60) || 'Arial',
     fonteCorpo: lim(t.fonteCorpo, 60) || 'Arial',
     raioPx: Number(e.raio) > 0 ? Number(e.raio) : 16,
-    marca: lim(design?.marca?.nome, 80) || 'beculture · IA',
+    marca: lim(design?.marca?.nome, 80) || 'Oracle · IA',
     // Só aceitamos data URL de imagem — nada de URL remota indo para o deck.
     logo: /^data:image\//.test(logos.escuro ?? '') ? (logos.escuro as string) : '',
   };

@@ -26,6 +26,7 @@ interface FSDirHandle {
   kind?: "file" | "directory";
   getDirectoryHandle(name: string, opts?: { create?: boolean }): Promise<FSDirHandle>;
   getFileHandle(name: string, opts?: { create?: boolean }): Promise<FSFileHandle>;
+  removeEntry?: (name: string) => Promise<void>;
   entries?: () => AsyncIterableIterator<[string, { kind?: "file" | "directory" }]>;
   queryPermission?: (o: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
   requestPermission?: (o: { mode: "read" | "readwrite" }) => Promise<PermissionState>;
@@ -221,6 +222,54 @@ export async function salvarNotaMemoria(
     await w.close();
     return { ok: true };
   } catch {
+    return { ok: false, reason: "error" };
+  }
+}
+
+/**
+ * Grava um arquivo num caminho EXATO da Pasta do Repositório, criando as
+ * subpastas e o arquivo quando faltam e sobrescrevendo quando já existe.
+ * Diferente de `escreverNotaMemoria` (que deriva o nome do título e monta o
+ * frontmatter), aqui quem chama decide nome e conteúdo inteiros — usado pelos
+ * arquivos de nome fixo do Perfil Pessoal. Precisa partir de um clique.
+ */
+export async function gravarArquivoMemoria(
+  path: string,
+  conteudo: string,
+): Promise<{ ok: true } | { ok: false; reason: VaultFalha }> {
+  const pasta = await pastaComPermissao("readwrite");
+  if (!pasta.ok) return pasta;
+  try {
+    const fh = await arquivoDoCaminho(pasta.dir, path, true);
+    if (!fh) return { ok: false, reason: "error" };
+    const w = await fh.createWritable();
+    await w.write(conteudo);
+    await w.close();
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+}
+
+/**
+ * Apaga um arquivo da Pasta do Repositório pelo caminho exato. Arquivo que já
+ * não existe conta como sucesso. Precisa partir de um clique.
+ */
+export async function removerArquivoMemoria(
+  path: string,
+): Promise<{ ok: true } | { ok: false; reason: VaultFalha }> {
+  const pasta = await pastaComPermissao("readwrite");
+  if (!pasta.ok) return pasta;
+  const seg = path.split("/").filter(Boolean);
+  const nome = seg.pop();
+  if (!nome) return { ok: false, reason: "error" };
+  try {
+    const dir = await pastaDoCaminho(pasta.dir, seg.join("/"));
+    if (!dir.removeEntry) return { ok: false, reason: "unsupported" };
+    await dir.removeEntry(nome);
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "NotFoundError") return { ok: true };
     return { ok: false, reason: "error" };
   }
 }

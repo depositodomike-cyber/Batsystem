@@ -1,4 +1,4 @@
-// Checagem de contraste WCAG — portado do beculture/Confi (design-system.js).
+// Checagem de contraste WCAG — portado do Oracle/Confi (design-system.js).
 // Usada no editor para avisar quando um par de cores reprova.
 
 function luminancia(hex: string): number {

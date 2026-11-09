@@ -45,7 +45,7 @@ export class McpController {
           code: -32001,
           message:
             'Não autorizado: informe uma API key válida em "Authorization: Bearer <chave>". ' +
-            'Gere a chave no beculture (Configurações → MCP).',
+            'Gere a chave no Oracle (Configurações → MCP).',
         },
         id: null,
       });

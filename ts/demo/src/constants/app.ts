@@ -1,5 +1,5 @@
-export const APP_NAME = "beculture";
-export const APP_KEY = "beculture";
+export const APP_NAME = "Oracle";
+export const APP_KEY = "Oracle";
 
 // Redirect Paths
 export const REDIRECT_URL_KEY = "redirect";

@@ -13,12 +13,12 @@ export const MENSAGENS_EXCLUIR_MARCA = (nome: string): ConfirmMessages => ({
     title: "Excluir identidade visual?",
     // Diz o que NÃO acontece de propósito: o design fica embutido no arquivo
     // gerado, então nenhuma apresentação antiga muda por causa desta exclusão.
-    description: `"${nome || "Sem nome"}" sai da organização para todo mundo. O conteúdo já gerado não muda.`,
+    description: `"${nome || "Sem nome"}" é excluída. O conteúdo já gerado não muda.`,
     actionText: "Excluir",
   },
   success: {
     title: "Marca excluída",
-    description: "Ela não aparece mais no seletor de marca do AI Studio.",
+    description: "Ela não aparece mais no seletor de marca do Lab.",
     actionText: "Ok",
   },
   error: {

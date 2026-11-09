@@ -27,9 +27,9 @@ const corpo = [
     eyebrow: "GUIA FUNCIONAL DO PRODUTO",
     titulo: NOME,
     escopo:
-      "Este documento descreve a funcionalidade de Regras na beculture. O foco é o comportamento do produto e as regras de negócio, organizados por tópicos. São descritos apenas os fluxos habilitados e acessíveis hoje.",
+      "Este documento descreve a funcionalidade de Regras no Oracle. O foco é o comportamento do produto e as regras de negócio, organizados por tópicos. São descritos apenas os fluxos habilitados e acessíveis hoje.",
     metadados: [
-      ["Produto", "beculture"],
+      ["Produto", "Oracle"],
       ["Funcionalidade", "Regras (diretrizes da IA)"],
       ["Onde vive", "Configurações → Regras"],
       ["Público deste documento", "Produto, Suporte e Onboarding"],

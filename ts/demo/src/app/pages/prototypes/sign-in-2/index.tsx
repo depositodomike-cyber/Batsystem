@@ -3,7 +3,7 @@ import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 import { Link } from "react-router";
 
 // Import Dependencies
-import Logo from "@/assets/branding/beculture-logo.svg?react";
+import Logo from "@/assets/branding/oracle-logo.svg?react";
 import DashboardCheck from "@/assets/illustrations/dashboard-check.svg?react";
 import { Button, Checkbox, Input } from "@/components/ui";
 import { useThemeContext } from "@/app/contexts/theme/context";
@@ -25,7 +25,7 @@ export default function SignInV2() {
         <div className="flex items-center gap-2">
           <Logo className="size-12" />
           <p className="dark:text-dark-100 text-xl font-semibold text-gray-800 uppercase">
-            beculture
+            Oracle
           </p>
         </div>
       </div>

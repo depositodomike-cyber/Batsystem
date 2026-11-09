@@ -3,7 +3,7 @@ import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
 
 // Análise de conteúdo (IA) — chama o backend ts/api (POST /ai/analise), que
 // extrai o texto do arquivo/link, cruza com as fontes e roda o framework de
-// 17 seções no Claude. Portado do beculture/Confi.
+// 17 seções no Claude. Portado do Oracle/Confi.
 
 export interface AnaliseResult {
   titulo: string;

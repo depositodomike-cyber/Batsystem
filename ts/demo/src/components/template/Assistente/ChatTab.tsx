@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 
 import { MarkdownView } from "@/app/pages/ceo/MarkdownView";
+import { semConexoesVault } from "@/utils/semConexoesVault";
 import { useAssistente, type Turno } from "@/app/contexts/assistente/context";
 import { useAgentes } from "@/app/contexts/agentes/context";
 import { chaveMencao } from "@/services/api/agentes";
@@ -133,7 +134,7 @@ export function ChatTab() {
                     {t("chrome.assistantThinking")}
                   </p>
                 ) : (
-                  turno.resposta && <MarkdownView>{turno.resposta}</MarkdownView>
+                  turno.resposta && <MarkdownView>{semConexoesVault(turno.resposta)}</MarkdownView>
                 )}
               </div>
               {!turno.pendente &&

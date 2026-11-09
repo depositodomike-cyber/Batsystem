@@ -29,7 +29,7 @@ export function RepositorioSection({
   return (
     <SectionCard
       titulo="Repositório"
-      descricao="Gerencie os documentos compartilhados que fazem parte da base de conhecimento da organização."
+      descricao="Gerencie os documentos que fazem parte da sua base de conhecimento."
     >
       <div className="dark:border-dark-500 dark:bg-dark-600 flex flex-col gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-3">
@@ -44,7 +44,7 @@ export function RepositorioSection({
               </span>
             </p>
             <p className="dark:text-dark-300 text-xs-plus mt-0.5 truncate text-gray-500">
-              Base de conhecimento da organização
+              Sua base de conhecimento
               {!carregando &&
                 ` · ${total} ${total === 1 ? "documento" : "documentos"}`}
             </p>
@@ -61,8 +61,8 @@ export function RepositorioSection({
       </div>
 
       <p className="dark:text-dark-300 text-xs-plus mt-4 text-gray-400">
-        Os documentos do repositório pertencem à organização e ficam disponíveis
-        como contexto para a IA de quem tem acesso a eles.
+        Os documentos do repositório ficam na sua conta e servem de contexto
+        para a IA do Oracle.
       </p>
     </SectionCard>
   );

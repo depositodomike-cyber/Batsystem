@@ -28,7 +28,7 @@ export function Bubble() {
        * `Button color="primary"` em vez de classes soltas: o variant filled
        * carrega a cor de texto do design system, e o skin da marca troca essa
        * cor por slate-900 quando o primary é o amber (`.this:primary.bg-this`
-       * em beculture-theme.css) — branco sobre amber não passa de contraste.
+       * em oracle-theme.css) — branco sobre amber não passa de contraste.
        * Assim o ícone acompanha a cor do botão sozinho, em qualquer scheme:
        * herda o `currentColor` do botão em vez de ter cor própria, como
        * tinha a marca que estava aqui antes.

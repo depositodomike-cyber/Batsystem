@@ -27,11 +27,15 @@ import { PageTitle } from "@/components/shared/PageTitle";
 import { Button, Badge, ScrollShadow } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
 import {
-  connectors,
-  connectorCategories,
+  connectors as todosConectores,
+  connectorCategories as todasCategorias,
   categoryById,
   type Connector,
 } from "@/app/data/conectores";
+import {
+  isConnectorCategoryHiddenByOracle,
+  isConnectorHiddenByOracle,
+} from "@/configs/oracleModules";
 import { useConnectorsContext } from "@/app/contexts/connectors/context";
 import {
   checkContaConectorApi,
@@ -46,12 +50,25 @@ import {
   labelDoCampo,
 } from "@/app/data/conector-credenciais";
 import { isConnectorTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import { BotaoImportarDoDrive } from "./drive/ImportarDoDrive";
 
 // ----------------------------------------------------------------------
 
 type StatusFilter = "all" | "connected" | "available";
 
 const ALL = "all";
+
+// Catálogo exibido no Oracle: sem as categorias corporativas ocultas pelo
+// módulo `corporateConnectors` (configs/oracleModules.ts). O catálogo completo
+// segue intacto em app/data/conectores.ts.
+const connectors = todosConectores.filter(
+  (c) =>
+    !isConnectorCategoryHiddenByOracle(c.category) &&
+    !isConnectorHiddenByOracle(c.id),
+);
+const connectorCategories = todasCategorias.filter(
+  (cat) => !isConnectorCategoryHiddenByOracle(cat.id),
+);
 
 /** Mensagem de erro da API, com um fallback por chamador. */
 function mensagemErro(err: unknown, fallback: string): string {
@@ -270,8 +287,8 @@ export default function Conectores({ embutido = false }: { embutido?: boolean })
                 description: (
                   <>
                     <p>
-                      <strong>Conectores</strong> ligam o GregHub às ferramentas
-                      que sua empresa já usa — e-mail, agenda, mensagens e
+                      <strong>Conectores</strong> ligam o Oracle às ferramentas
+                      que você já usa — e-mail, agenda, mensagens e
                       outros serviços — para sincronizar dados e automatizar
                       fluxos.
                     </p>
@@ -290,7 +307,7 @@ export default function Conectores({ embutido = false }: { embutido?: boolean })
               Conectores
             </PageTitle>
             <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-              Conecte o GregHub às ferramentas que sua empresa já usa. Ative uma
+              Conecte o Oracle às ferramentas que você já usa. Ative uma
               integração para sincronizar dados e automatizar fluxos.
             </p>
           </div>
@@ -838,6 +855,10 @@ function ConnectorDrawer({
 
                 {connected && suportaTesteDeConexao(connector.id) && (
                   <TestarConexao conectorId={connector.id} />
+                )}
+
+                {connected && connector.id === "google-drive" && (
+                  <BotaoImportarDoDrive />
                 )}
 
                 {/* Quais credenciais estão guardadas. Os valores não voltam do

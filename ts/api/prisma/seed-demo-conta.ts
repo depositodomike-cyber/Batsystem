@@ -17,10 +17,10 @@ import { PrismaClient } from "@prisma/client";
 
 /** Credenciais oficiais da conta de demonstração compartilhada. */
 export const DEMO_CONTA = {
-  nome: "Time BeCulture",
-  email: "demo@beculture.ai",
-  senha: "BecultureDemo1",
-  organizacao: "BeCulture Demo",
+  nome: "Time Oracle",
+  email: "demo@oracle.ai",
+  senha: "OracleDemo1",
+  organizacao: "Oracle Demo",
 } as const;
 
 const TRIAL_DIAS = 14;

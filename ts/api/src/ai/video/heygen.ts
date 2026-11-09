@@ -1,4 +1,4 @@
-// Integração com a API do HeyGen (avatar falante). Portado do beculture/Confi
+// Integração com a API do HeyGen (avatar falante). Portado do Oracle/Confi
 // (lib/heygen.js). O vídeo é gerado na nuvem do HeyGen: script + avatar + voz →
 // MP4 com lip-sync (assíncrono → polling). A chave fica server-side.
 
@@ -161,7 +161,7 @@ export async function gerar(key: string, spec: GerarSpec): Promise<{ videoId: st
 
   const test = spec.teste !== false; // padrão TESTE (marca d'água, sem gastar créditos)
   const body = {
-    title: (spec.titulo || 'beculture').slice(0, 120),
+    title: (spec.titulo || 'Oracle').slice(0, 120),
     test,
     dimension,
     video_inputs: [video_input],

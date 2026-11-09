@@ -48,7 +48,7 @@ export type AssistenteTab = "chat" | "historico";
 
 /** Resultado de `perguntar` — a barra desenha a própria linha de status com ele. */
 export type PerguntarResult =
-  | { ok: true; origem: "vault" | "web" }
+  | { ok: true; origem: "vault" | "web"; /** Texto da 1ª resposta (para a resposta falada). */ resposta?: string }
   | { ok: false; erro: string };
 
 export interface AssistenteContextValue {

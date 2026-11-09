@@ -15,6 +15,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router";
 import { useAuthContext } from "@/app/contexts/auth/context";
 import { Button, InputErrorMsg } from "@/components/ui";
 import { HOME_PATH } from "@/constants/app";
+import { isOracleModuleVisible } from "@/configs/oracleModules";
 import {
   descricaoModoLocal,
   garantirSessaoBackend,
@@ -33,6 +34,10 @@ export default function ConfigurarOrganizacao() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const novaOrganizacao = searchParams.get("novo") === "1";
+  // Oracle pessoal (módulo `organizations` oculto, configs/oracleModules.ts):
+  // o uso é sempre pessoal e o seletor some. A criação interna segue igual —
+  // a organização pessoal é o escopo técnico dos dados do dono.
+  const comOrganizacoes = isOracleModuleVisible("organizations");
   const usuario = useUsuario();
   const { despachar } = usePrototipoContas();
   const { adoptSession } = useAuthContext();
@@ -47,7 +52,7 @@ export default function ConfigurarOrganizacao() {
   } = useForm<OrganizacaoFormValues>({
     resolver: yupResolver(organizacaoSchema),
     defaultValues: {
-      tipoUso: novaOrganizacao ? "organization" : "personal",
+      tipoUso: comOrganizacoes && novaOrganizacao ? "organization" : "personal",
       nomeOrganizacao: "",
       emails: [],
     },
@@ -56,6 +61,10 @@ export default function ConfigurarOrganizacao() {
   const tipoUso = useWatch({ control, name: "tipoUso" });
 
   if (!usuario) return <Navigate to="../criar-conta" replace />;
+  // "Criar organização" (?novo=1) vinha do menu de perfil, oculto no Oracle.
+  if (!comOrganizacoes && novaOrganizacao) {
+    return <Navigate to={HOME_PATH} replace />;
+  }
 
   const onSubmit = async (valores: OrganizacaoFormValues) => {
     setErroBackend(null);
@@ -111,23 +120,41 @@ export default function ConfigurarOrganizacao() {
   return (
     <MolduraAuth
       tituloPagina={
-        novaOrganizacao ? "Nova organização" : "Configurar organização"
+        !comOrganizacoes
+          ? "Preparar o Oracle"
+          : novaOrganizacao
+            ? "Nova organização"
+            : "Configurar organização"
       }
-      kicker={novaOrganizacao ? "Nova organização" : "Sua organização"}
-      titulo="Como você quer usar a beculture?"
-      subtitulo="Isso ajuda a personalizar sua experiência"
+      kicker={
+        !comOrganizacoes
+          ? "Sua conta"
+          : novaOrganizacao
+            ? "Nova organização"
+            : "Sua organização"
+      }
+      titulo={
+        comOrganizacoes ? "Como você quer usar o Oracle?" : "Tudo pronto"
+      }
+      subtitulo={
+        comOrganizacoes
+          ? "Isso ajuda a personalizar sua experiência"
+          : "Vamos preparar o seu espaço pessoal no Oracle."
+      }
     >
       <form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
-        <Controller
-          name="tipoUso"
-          control={control}
-          render={({ field }) => (
-            <TipoUsoSelector
-              value={field.value}
-              onChange={field.onChange}
-            />
-          )}
-        />
+        {comOrganizacoes && (
+          <Controller
+            name="tipoUso"
+            control={control}
+            render={({ field }) => (
+              <TipoUsoSelector
+                value={field.value}
+                onChange={field.onChange}
+              />
+            )}
+          />
+        )}
         {errors.tipoUso?.message && (
           <p className="mt-2 text-xs text-error dark:text-error-lighter">
             {errors.tipoUso.message}

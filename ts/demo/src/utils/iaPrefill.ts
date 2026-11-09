@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------
 // Handoff leve entre telas e os modais de IA (tela de IA).
 // A tela de Notas (e potencialmente outras) guarda aqui o contexto da nota
-// aberta antes de navegar para `/behuman/ia?fn=<id>`; o modal correspondente
+// aberta antes de navegar para `/oracle/ia?fn=<id>`; o modal correspondente
 // consome o prefill ao abrir e o limpa em seguida (uso único).
 // ----------------------------------------------------------------------
 

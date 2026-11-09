@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
-import { applyAppearancePrefs } from "@/utils/beculturePrefs";
+import { applyAppearancePrefs } from "@/utils/oraclePrefs";
 
 import "./i18n/config";
 

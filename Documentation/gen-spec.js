@@ -1,4 +1,4 @@
-/* Gerador da Especificação Técnica — beculture (para a CEIA).
+/* Gerador da Especificação Técnica — Oracle (para a CEIA).
  * Documento de REQUISITOS (greenfield): descreve O QUE o produto deve fazer.
  */
 const fs = require("fs");
@@ -149,7 +149,7 @@ add(
   new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 40 },
-    children: [new TextRun({ text: "Plataforma beculture", bold: true, size: 40, color: BLUE })],
+    children: [new TextRun({ text: "Plataforma Oracle", bold: true, size: 40, color: BLUE })],
   }),
   new Paragraph({
     alignment: AlignmentType.CENTER,
@@ -173,7 +173,7 @@ add(
   TABLE(
     ["Campo", "Valor"],
     [
-      ["Documento", "Especificação Técnica de Requisitos — Plataforma beculture"],
+      ["Documento", "Especificação Técnica de Requisitos — Plataforma Oracle"],
       ["Destinatário", "CEIA (fornecedor de desenvolvimento)"],
       ["Natureza", "Requisitos de produto — define O QUE construir; stack de frontend obrigatória"],
       ["Versão", "1.0"],
@@ -204,7 +204,7 @@ add(LEAD([
   T("Este documento especifica os "),
   T("requisitos funcionais e não-funcionais", { bold: true }),
   T(" da plataforma "),
-  T("beculture", { bold: true }),
+  T("Oracle", { bold: true }),
   T(", para que a "),
   T("CEIA", { bold: true }),
   T(" desenvolva a versão definitiva (produção) do produto. O documento descreve "),
@@ -218,7 +218,7 @@ add(CALLOUT("Como ler", "Requisitos funcionais são identificados por RF-xx e n�
 
 add(H2("1.2 Visão geral do produto"));
 add(LEAD([
-  T("O beculture é um "),
+  T("O Oracle é um "),
   T("“business partner” de inteligência artificial para empresas", { bold: true }),
   T(": um ambiente web onde líderes e equipes conversam com squads de especialistas de IA, recebem insights sobre pessoas e negócio, consultam relatórios, conectam suas ferramentas corporativas e acumulam uma memória organizacional de longo prazo que personaliza as respostas da IA."),
 ]));
@@ -889,8 +889,8 @@ add(new Paragraph({
 // DOCUMENTO
 // ============================================================
 const doc = new Document({
-  creator: "beculture",
-  title: "Especificação Técnica — beculture (CEIA)",
+  creator: "Oracle",
+  title: "Especificação Técnica — Oracle (CEIA)",
   description: "Requisitos de produto para desenvolvimento da versão definitiva",
   features: { updateFields: true },
   styles: {
@@ -930,7 +930,7 @@ const doc = new Document({
         alignment: AlignmentType.RIGHT,
         spacing: { after: 0 },
         border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "D5DEE8", space: 4 } },
-        children: [new TextRun({ text: "Especificação Técnica · beculture", size: 16, color: "8A97A6" })],
+        children: [new TextRun({ text: "Especificação Técnica · Oracle", size: 16, color: "8A97A6" })],
       })] }),
     },
     footers: {
@@ -950,7 +950,7 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then((buf) => {
-  const out = "/Users/roansantos/Documents/Claude/tailux/Documentation/Especificacao-Tecnica-beculture-CEIA.docx";
+  const out = "/Users/roansantos/Documents/Claude/tailux/Documentation/Especificacao-Tecnica-oracle-CEIA.docx";
   fs.writeFileSync(out, buf);
   console.log("OK ->", out, "(" + buf.length + " bytes)");
 });

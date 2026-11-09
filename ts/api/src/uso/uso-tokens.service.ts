@@ -25,7 +25,7 @@ const TRINTA_DIAS = 30 * UM_DIA;
  * Contador de tokens consumidos pela IA, por janelas de tempo (última hora, 24h,
  * 7 dias, 30 dias). Cada chamada ao modelo grava um evento em `ai_usage` (via
  * `registrar`) e o header consulta o `resumo` do usuário. Portado do contador do
- * beculture/Confi (lib/uso-tokens.js), agora persistido no Postgres e com escopo
+ * Oracle/Confi (lib/uso-tokens.js), agora persistido no Postgres e com escopo
  * por usuário.
  */
 @Injectable()

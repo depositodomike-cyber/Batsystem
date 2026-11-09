@@ -8,7 +8,36 @@ import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import { Button, Spinner } from "@/components/ui";
 import { getCurrentProduct } from "@/app/navigation/ceoOs";
-import { getTtsAtivo, setTtsAtivo } from "@/utils/beculturePrefs";
+import {
+  getEscutaAtiva,
+  getMotorVoz,
+  getTtsAtivo,
+  getVozNeural,
+  getVozNome,
+  setEscutaAtiva,
+  setMotorVoz,
+  setTtsAtivo,
+  setVozNeural,
+  setVozNome,
+  type MotorVoz,
+} from "@/utils/oraclePrefs";
+import {
+  VOZES_NEURAIS,
+  VOZ_NEURAL_PADRAO,
+  baixarVoz,
+  removerVoz,
+  vozNeuralSuportada,
+  vozesBaixadas,
+} from "@/utils/vozNeural";
+import {
+  falaSuportada,
+  falar,
+  pararFala,
+  vozesDisponiveis,
+  vozesDoIdioma,
+} from "@/utils/falar";
+import { Select } from "@/components/ui/Form";
+import { WAKE_WORD } from "@/configs/wakeWord";
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
 import { AparenciaSection } from "./AparenciaSection";
@@ -30,6 +59,7 @@ import {
   useRotuloOrganizacaoAtiva,
 } from "@/app/pages/prototypes/contas/model/context";
 import { isFeatureTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
+import { isOracleModuleVisible } from "@/configs/oracleModules";
 
 // ----------------------------------------------------------------------
 // Configurações — o contexto ÚNICO de configuração da plataforma.
@@ -82,8 +112,12 @@ export default function Configuracoes() {
    * nome que a pessoa acabou de clicar que tem de aparecer aqui.
    */
   const organizacao = useRotuloOrganizacaoAtiva();
-  const titulo =
-    organizacao == null
+  // Oracle pessoal (módulo `organizations` oculto): não há organização a
+  // nomear — a tela é simplesmente "Configurações".
+  const comOrganizacoes = isOracleModuleVisible("organizations");
+  const titulo = !comOrganizacoes
+    ? "Configurações"
+    : organizacao == null
       ? // Nenhum repositório aberto: não há organização a nomear, e inventar um
         // nome ou deixar um ":" pendurado seria pior que o título curto.
         "Configurações da organização"
@@ -130,6 +164,26 @@ export default function Configuracoes() {
                     voltar o trecho: "(conexão dos provedores de IA da empresa
                     e consumo de tokens)".
                   */}
+                  {!comOrganizacoes ? (
+                    <>
+                      <p>
+                        <strong>Configurações</strong> é onde você ajusta o
+                        Oracle:{" "}
+                        <strong>Geral</strong> (aparência, as identidades
+                        visuais e os templates de apresentação, voz e o
+                        Repositório, a sua base de conhecimento) e{" "}
+                        <strong>IA</strong> (as orientações que a IA segue nas
+                        respostas, os agentes chamados por @menção no
+                        Assistente e a conexão dos provedores de IA).
+                      </p>
+                      <p>
+                        As preferências de aparência e voz ficam salvas só
+                        neste navegador. Identidades visuais, templates e
+                        documentos do Repositório ficam na sua conta.
+                      </p>
+                    </>
+                  ) : (
+                  <>
                   <p>
                     <strong>Configurações</strong> é onde a plataforma e a
                     organização se configuram, em quatro grupos:{" "}
@@ -152,6 +206,8 @@ export default function Configuracoes() {
                     documentos do Repositório são a exceção: pertencem à organização e valem
                     para todo mundo nela.
                   </p>
+                  </>
+                  )}
                 </>
               ),
               // O cabeçalho do modal de ajuda, explícito porque `PageHelp`
@@ -163,7 +219,9 @@ export default function Configuracoes() {
             {titulo}
           </PageTitle>
           <p className="dark:text-dark-300 max-w-xl text-sm text-gray-500">
-            Preferências do painel e da organização
+            {comOrganizacoes
+              ? "Preferências do painel e da organização"
+              : "Preferências do Oracle"}
           </p>
         </div>
 
@@ -217,25 +275,236 @@ export default function Configuracoes() {
 // ----------------------------------------------------------------------
 // Voz
 
+// "Resposta falada" (TTS): a barra de pesquisa lê a resposta em voz alta
+// quando a pergunta foi feita por voz (voz do navegador, utils/falar.ts).
+const MOSTRAR_RESPOSTA_FALADA = true;
+
+const FRASE_TESTE = "Olá! Eu sou o Oracle. É assim que vou ler as respostas das suas perguntas por voz.";
+
+/**
+ * Escolha do motor de fala (voz do navegador ou voz neural local Piper) e da
+ * voz, com teste. Vale para a resposta falada e para o Resumo Matinal.
+ */
+function EscolhaDeVoz() {
+  const [motor, setMotor] = useState<MotorVoz>(getMotorVoz);
+  const [vozes, setVozes] = useState<SpeechSynthesisVoice[]>([]);
+  const [nome, setNome] = useState(getVozNome);
+  const [neural, setNeural] = useState(() => getVozNeural() || VOZ_NEURAL_PADRAO);
+  const [baixadas, setBaixadas] = useState<string[]>([]);
+  const [progresso, setProgresso] = useState<number | null>(null);
+  const [testando, setTestando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    let vivo = true;
+    void vozesDisponiveis().then((v) => vivo && setVozes(vozesDoIdioma(v, "pt-BR")));
+    void vozesBaixadas().then((b) => vivo && setBaixadas(b));
+    return () => {
+      vivo = false;
+      pararFala();
+    };
+  }, []);
+
+  const neuralOk = vozNeuralSuportada();
+  const baixada = baixadas.includes(neural);
+  const info = VOZES_NEURAIS.find((v) => v.id === neural);
+
+  const baixar = async () => {
+    setErro("");
+    setProgresso(0);
+    try {
+      await baixarVoz(neural, setProgresso);
+      setBaixadas(await vozesBaixadas());
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "Não foi possível baixar a voz.");
+    } finally {
+      setProgresso(null);
+    }
+  };
+
+  const remover = async () => {
+    pararFala();
+    await removerVoz(neural);
+    setBaixadas(await vozesBaixadas());
+  };
+
+  const testar = () => {
+    setErro("");
+    setTestando(true);
+    const idioma = info?.idioma ?? "pt-BR";
+    const frase = idioma === "en-US" ? "Hi! I am Oracle. This is how I will read your answers aloud." : FRASE_TESTE;
+    void falar(frase, {
+      idioma,
+      ...(motor === "navegador" ? { vozNome: nome } : {}),
+      onFim: () => setTestando(false),
+    }).finally(() => setTimeout(() => setTestando(false), 15000));
+  };
+
+  if (!falaSuportada() && !neuralOk) {
+    return (
+      <p className="dark:text-dark-300 text-xs-plus py-3 text-gray-500">
+        Este navegador não tem voz sintetizada. Use Chrome ou Edge.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3 py-3">
+      <Select
+        label="Motor de voz"
+        value={motor}
+        onChange={(e) => {
+          const m = e.target.value as MotorVoz;
+          pararFala();
+          setMotor(m);
+          setMotorVoz(m);
+          if (m === "neural" && !getVozNeural()) setVozNeural(neural);
+        }}
+        data={[
+          { label: "Voz do navegador", value: "navegador" },
+          ...(neuralOk
+            ? [{ label: "Voz neural local (Piper) — mais natural, grátis", value: "neural" }]
+            : []),
+        ]}
+        description={
+          motor === "neural"
+            ? "Open source, roda no seu computador: não gasta tokens nem envia o texto para fora. O modelo é baixado uma vez e fica guardado neste navegador."
+            : undefined
+        }
+      />
+
+      {motor === "navegador" ? (
+        <Select
+          label="Voz"
+          value={nome}
+          onChange={(e) => {
+            setNome(e.target.value);
+            setVozNome(e.target.value);
+          }}
+          data={[
+            { label: "Automática (a mais natural disponível)", value: "" },
+            ...vozes.map((v) => ({ label: `${v.name} · ${v.lang}`, value: v.name })),
+          ]}
+          description={
+            vozes.some((v) => /natural|neural/i.test(v.name))
+              ? undefined
+              : "Para vozes mais naturais, use a voz neural local ou o Microsoft Edge."
+          }
+        />
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Select
+            label="Voz neural"
+            value={neural}
+            onChange={(e) => {
+              pararFala();
+              setNeural(e.target.value);
+              setVozNeural(e.target.value);
+            }}
+            data={VOZES_NEURAIS.map((v) => ({
+              label: `${v.idioma === "pt-BR" ? "Português" : "Inglês"} · ${v.rotulo}${baixadas.includes(v.id) ? " ✓" : ""}`,
+              value: v.id,
+            }))}
+            description={
+              info?.idioma === "en-US"
+                ? `Voz em inglês: só é usada quando o Oracle fala em inglês. As respostas em português usam ${
+                    VOZES_NEURAIS.some((v) => v.idioma === "pt-BR" && baixadas.includes(v.id))
+                      ? "a voz em português já baixada"
+                      : "a voz do navegador até você baixar uma voz em português (Faber ou Edresson)"
+                  }.`
+                : baixada
+                  ? "Baixada neste navegador."
+                  : "Ainda não baixada — enquanto isso, o Oracle usa a voz do navegador."
+            }
+          />
+          {progresso !== null ? (
+            <div className="flex items-center gap-3">
+              <div className="dark:bg-dark-500 h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="bg-primary-500 h-full transition-all"
+                  style={{ width: `${Math.round(progresso * 100)}%` }}
+                />
+              </div>
+              <span className="dark:text-dark-300 w-10 text-right text-xs text-gray-500">
+                {Math.round(progresso * 100)}%
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {!baixada && (
+                <Button color="primary" className="h-9 rounded-lg" onClick={() => void baixar()}>
+                  Baixar voz (~{info?.mb ?? 60} MB)
+                </Button>
+              )}
+              {baixada && (
+                <Button variant="flat" className="h-9 rounded-lg" onClick={() => void remover()}>
+                  Remover do navegador
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {erro && <p className="text-error text-xs">{erro}</p>}
+
+      <div>
+        <Button variant="outlined" className="h-9 rounded-lg" disabled={progresso !== null} onClick={testar}>
+          {testando ? "Falando…" : "Testar voz"}
+        </Button>
+        {motor === "neural" && baixada && (
+          <span className="dark:text-dark-300 ml-3 text-xs text-gray-500">
+            A primeira fala carrega o modelo e leva alguns segundos.
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function VozSection() {
   const [tts, setTts] = useState(getTtsAtivo);
+  const [escuta, setEscuta] = useState(getEscutaAtiva);
 
   return (
     <SectionCard
       titulo="Voz"
-      descricao="Como o assistente responde a comandos de voz."
+      descricao="Como o Oracle ouve e responde a comandos de voz."
     >
       <div className="dark:divide-dark-500 divide-y divide-gray-100">
         <ToggleRow
-          nome="Resposta falada"
-          descricao="Lê as respostas em voz alta após um comando de voz."
-          checked={tts}
+          nome={`Ativação por voz (“${WAKE_WORD.rotulo}”)`}
+          descricao={`Diga só “${WAKE_WORD.rotulo}”, espere o bipe e faça a pergunta: o Oracle envia sozinho quando você parar de falar e fecha o microfone do ditado até ouvir a palavra de novo. A palavra é detectada no seu computador — o áudio só vai para o reconhecimento de fala do navegador depois dela.`}
+          checked={escuta}
           onChange={(v) => {
-            setTts(v);
-            setTtsAtivo(v);
+            setEscuta(v);
+            setEscutaAtiva(v);
           }}
         />
+        {MOSTRAR_RESPOSTA_FALADA && (
+          <ToggleRow
+            nome="Resposta falada"
+            descricao="Quando a pergunta é feita por voz, o Oracle lê a resposta em voz alta (um resumo das respostas longas). Para interromper, diga a palavra de ativação, clique no microfone ou feche a resposta."
+            checked={tts}
+            onChange={(v) => {
+              setTts(v);
+              setTtsAtivo(v);
+              if (!v) pararFala();
+            }}
+          />
+        )}
+        {/* A voz vale também para o Resumo Matinal, com ou sem resposta falada. */}
+        <EscolhaDeVoz />
       </div>
+      {escuta && (
+        <p className="dark:text-dark-300 mt-4 text-xs text-gray-500">
+          Funciona com o Oracle aberto no navegador. O ponto verde no
+          microfone da barra de pesquisa indica que ele está esperando a
+          palavra; se ficar vermelho, passe o mouse nele para ver o motivo. O
+          modelo de voz fica em ts/demo/public/wake/ (passo a passo em
+          docs/ativacao-por-voz.md).
+        </p>
+      )}
     </SectionCard>
   );
 }
@@ -266,7 +535,7 @@ function IaSection() {
     <div className="space-y-6">
       <SectionCard
         titulo="IA & API"
-        descricao="Conecte os provedores de IA da sua empresa e defina a prioridade dos modelos por modalidade."
+        descricao="Conecte os seus provedores de IA e defina a prioridade dos modelos por modalidade."
       >
         <AiConnectionCard />
       </SectionCard>

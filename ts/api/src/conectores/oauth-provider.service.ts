@@ -6,12 +6,13 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CryptoService } from '@/ai/crypto';
 import { OauthStateService } from './oauth-state.service';
 
 /** Família do conector — cada controller só aceita os provedores da sua. */
-export type ProviderKind = 'email' | 'agenda';
+export type ProviderKind = 'email' | 'agenda' | 'drive';
 
 /**
  * Provedor OAuth suportado. O `id` é o mesmo do catálogo de conectores,
@@ -35,6 +36,13 @@ interface OauthProvider {
   /** Parâmetros extras exigidos pelo provedor na tela de consentimento. */
   extraAuthorizeParams: Record<string, string>;
   defaultRedirectUrl: string;
+  /**
+   * PKCE (RFC 7636, S256): protege a troca do `code` mesmo se ele for
+   * interceptado no redirecionamento. O Google aceita em clientes Web.
+   */
+  pkce?: boolean;
+  /** Google: tokens revogáveis em oauth2.googleapis.com/revoke. */
+  google?: boolean;
   /** Lê a conta autorizada (id + e-mail) com o access token recém-obtido. */
   fetchAccount: (accessToken: string) => Promise<{ id: string; email: string }>;
 }
@@ -80,11 +88,14 @@ const PROVIDERS: OauthProvider[] = [
     scopes: [
       'openid',
       'email',
+      // Só leitura (menor privilégio): o Oracle lê e-mails e os salva no
+      // Repositório; nunca envia, apaga ou altera nada na caixa.
       'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.send',
     ].join(' '),
     extraAuthorizeParams: GOOGLE_AUTHORIZE_PARAMS,
     defaultRedirectUrl: 'http://localhost:3001/conectores/email/gmail/callback',
+    pkce: true,
+    google: true,
     fetchAccount: fetchGoogleAccount,
   },
   {
@@ -137,17 +148,53 @@ const PROVIDERS: OauthProvider[] = [
     scopes: [
       'openid',
       'email',
-      // `readonly` lê agendas, eventos e disponibilidade; `events` permite
-      // criar e atualizar eventos com convidados.
+      // Só leitura (menor privilégio): lê agendas e eventos; não cria nem
+      // altera eventos.
       'https://www.googleapis.com/auth/calendar.readonly',
-      'https://www.googleapis.com/auth/calendar.events',
     ].join(' '),
     extraAuthorizeParams: GOOGLE_AUTHORIZE_PARAMS,
     defaultRedirectUrl:
       'http://localhost:3001/conectores/agenda/google-calendar/callback',
+    pkce: true,
+    google: true,
+    fetchAccount: fetchGoogleAccount,
+  },
+  {
+    id: 'google-drive',
+    label: 'Google Drive',
+    kind: 'drive',
+    envPrefix: 'GOOGLE',
+    redirectEnv: 'GOOGLE_DRIVE_REDIRECT_URL',
+    authorizeUrl: () => 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: () => 'https://oauth2.googleapis.com/token',
+    scopes: [
+      'openid',
+      'email',
+      // Só leitura: lista e baixa arquivos para importar ao Repositório.
+      'https://www.googleapis.com/auth/drive.readonly',
+    ].join(' '),
+    extraAuthorizeParams: GOOGLE_AUTHORIZE_PARAMS,
+    defaultRedirectUrl:
+      'http://localhost:3001/conectores/drive/google-drive/callback',
+    pkce: true,
+    google: true,
     fetchAccount: fetchGoogleAccount,
   },
 ];
+
+/** PKCE: verifier aleatório (64 caracteres) e o challenge S256 dele. */
+function novoPkce(): { verifier: string; challenge: string } {
+  const verifier = randomBytes(48).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  return { verifier, challenge };
+}
+
+/** Escopos de API pedidos (sem os de identidade, que o Google renomeia). */
+function escoposDeApi(scopes: string): string[] {
+  return scopes
+    .split(/\s+/)
+    .filter((s) => s.startsWith('https://www.googleapis.com/auth/'));
+}
 
 interface TokenResponse {
   access_token?: string;
@@ -193,7 +240,7 @@ export class OauthProviderService {
     const base = this.config
       .get<string>('FRONT_URL', 'http://localhost:5173')
       .replace(/\/$/, '');
-    return `${base}/behuman/conectores`;
+    return `${base}/oracle/conectores`;
   }
 
   buildAuthorizeUrl(
@@ -202,12 +249,16 @@ export class OauthProviderService {
     kind: ProviderKind,
   ): string {
     const provider = this.requireProvider(providerId, kind);
+    const pkce = provider.pkce ? novoPkce() : null;
     const params = new URLSearchParams({
       ...provider.extraAuthorizeParams,
       client_id: this.clientId(provider),
       scope: provider.scopes,
       redirect_uri: this.redirectUrl(provider),
-      state: this.state.sign(empresaId, provider.id),
+      state: this.state.sign(empresaId, provider.id, pkce?.verifier),
+      ...(pkce
+        ? { code_challenge: pkce.challenge, code_challenge_method: 'S256' }
+        : {}),
     });
     return `${provider.authorizeUrl(this.config)}?${params.toString()}`;
   }
@@ -218,18 +269,40 @@ export class OauthProviderService {
     rawState: string,
     kind: ProviderKind,
   ): Promise<string> {
-    const { empresaId, connectorId } = this.state.verify(rawState);
+    const { empresaId, connectorId, codeVerifier } =
+      this.state.verify(rawState);
     const provider = this.requireProvider(connectorId, kind);
+    if (provider.pkce && !codeVerifier) {
+      throw new BadRequestException(
+        'Autorização inválida (verificador PKCE ausente). Clique em "Conectar" novamente.',
+      );
+    }
 
     const tokens = await this.requestTokens(provider, {
       grant_type: 'authorization_code',
       code,
       redirect_uri: this.redirectUrl(provider),
+      ...(codeVerifier ? { code_verifier: codeVerifier } : {}),
     });
     if (!tokens.access_token) {
       throw new BadRequestException(
         `${provider.label} recusou a autorização (${tokens.error ?? 'erro desconhecido'}).`,
       );
+    }
+
+    // Na tela do Google o usuário pode desmarcar permissões. Sem o escopo de
+    // API pedido a conexão não serve para nada — melhor avisar já.
+    if (provider.google && tokens.scope) {
+      const concedidos = new Set(tokens.scope.split(/\s+/));
+      const faltando = escoposDeApi(provider.scopes).filter(
+        (sc) => !concedidos.has(sc),
+      );
+      if (faltando.length) {
+        throw new BadRequestException(
+          `A permissão de leitura do ${provider.label} não foi concedida. ` +
+            'Clique em "Conectar" de novo e marque a caixa de acesso na tela do Google.',
+        );
+      }
     }
 
     let conta = { id: '', email: '' };
@@ -338,6 +411,45 @@ export class OauthProviderService {
       );
     }
     return conta.email;
+  }
+
+  /** Este conector é um dos conectores Google (Gmail, Calendar, Drive)? */
+  static ehGoogle(connectorId: string): boolean {
+    return PROVIDERS.some((p) => p.id === connectorId && p.google);
+  }
+
+  /** Ids de todos os conectores Google. */
+  static idsGoogle(): string[] {
+    return PROVIDERS.filter((p) => p.google).map((p) => p.id);
+  }
+
+  /**
+   * Revoga no Google o acesso concedido por um vínculo, antes de ele ser
+   * apagado. Os conectores Google compartilham a mesma concessão (escopos
+   * incrementais) e revogar um token derruba a concessão inteira — por isso
+   * quem chama só revoga quando é o ÚLTIMO conector Google da empresa.
+   * Best-effort: falha de rede não impede a desconexão local.
+   */
+  async revogarGoogle(empresaId: string, connectorId: string): Promise<void> {
+    const vinculo = await this.prisma.empresaConector.findUnique({
+      where: { empresaId_connectorId: { empresaId, connectorId } },
+    });
+    const cifrado =
+      vinculo?.refreshTokenEncrypted ?? vinculo?.accessTokenEncrypted;
+    if (!cifrado) return;
+    try {
+      const res = await fetch('https://oauth2.googleapis.com/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ token: this.crypto.decrypt(cifrado) }),
+      });
+      // 400 = token já inválido/revogado: nada a fazer.
+      if (!res.ok && res.status !== 400) {
+        this.logger.warn(`Google revoke respondeu ${res.status}`);
+      }
+    } catch (err) {
+      this.logger.warn(`Falha ao revogar o acesso ao Google: ${String(err)}`);
+    }
   }
 
   // ---------- infra ----------

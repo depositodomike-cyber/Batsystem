@@ -2,7 +2,7 @@ import axios from "@/utils/axios";
 import type { DesignSystem } from "@/app/pages/ceo/design-system/types";
 
 // Criar Ata (IA) — chama o backend ts/api (POST /ai/ata, multipart). A partir de
-// um arquivo ou texto colado, a IA redige a ata executiva. Portado do beculture/Confi.
+// um arquivo ou texto colado, a IA redige a ata executiva. Portado do Oracle/Confi.
 
 export interface Ata {
   titulo: string;

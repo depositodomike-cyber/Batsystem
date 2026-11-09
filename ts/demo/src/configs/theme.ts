@@ -6,13 +6,13 @@ import {
   ThemeConfig,
 } from "./@types/theme";
 
-const DEFAULT_DARK_COLOR: DarkColor = "cinder";
+const DEFAULT_DARK_COLOR: DarkColor = "black";
 const DEFAULT_LIGHT_COLOR: LightColor = "slate";
-const DEFAULT_PRIMARY_COLOR: PrimaryColor = "amber";
+const DEFAULT_PRIMARY_COLOR: PrimaryColor = "rose"; // "vermelho" nas configurações de tema
 
 // Default theme configuration
 export const defaultTheme: ThemeConfig = {
-  themeMode: "system",
+  themeMode: "dark",
   isMonochrome: false,
   themeLayout: "sideblock",
   cardSkin: "bordered",

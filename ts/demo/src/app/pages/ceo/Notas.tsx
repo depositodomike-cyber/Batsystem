@@ -47,7 +47,7 @@ import {
 import clsx from "clsx";
 
 // ----------------------------------------------------------------------
-// Notas — gestor de notas migrado do beculture/Confi. Duas colunas: à esquerda
+// Notas — gestor de notas migrado do Oracle/Confi. Duas colunas: à esquerda
 // os "Assuntos" (grupos), à direita a lista de notas do assunto selecionado ou
 // o editor. As notas e os assuntos ficam no navegador (localStorage). O botão
 // "Gravar no Repositório" envia a nota para a API real de Memória (aparece no

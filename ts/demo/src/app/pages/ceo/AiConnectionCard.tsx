@@ -409,7 +409,7 @@ function KeysSection({
         Chaves de API
       </h4>
       <p className="dark:text-dark-300 mt-1 text-sm text-gray-500">
-        Conecte os provedores de IA utilizados pela sua empresa. As chaves são
+        Conecte os provedores de IA que você usa. As chaves são
         armazenadas de forma segura e nunca são exibidas por completo.
       </p>
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy do frontend (behuman) para a Hostinger:
+# Deploy do frontend (oracle) para a Hostinger:
 #   build (com base) -> .htaccess + extrator PHP -> zip -> upload FTPS -> extração via HTTP -> limpeza.
 # Credenciais ficam em ts/demo/.deploy.env (NÃO versionado). Veja .deploy.env.example.
 # Uso: cd ts/demo && ./deploy.sh
@@ -10,9 +10,9 @@ ENVF=".deploy.env"
 [ -f "$ENVF" ] || { echo "ERRO: $ENVF não encontrado. Copie .deploy.env.example -> .deploy.env e preencha."; exit 1; }
 set -a; source "$ENVF"; set +a
 
-BASE="${BASE:-/behuman/}"
+BASE="${BASE:-/oracle/}"
 PORT="${DEPLOY_PORT:-21}"
-KEY="${UNZIP_KEY:-behuman-deploy-2026}"
+KEY="${UNZIP_KEY:-oracle-deploy-2026}"
 
 echo "==> Build (base=$BASE)"
 npm run build -- --base="$BASE"

@@ -79,6 +79,8 @@ export class AgendaApiService {
     empresaId: string,
     provedor: string,
     limite = LIMITE_PADRAO,
+    /** Janela opcional (ISO). Sem ela: a partir de agora, sem fim. */
+    janela: { inicio?: string; fim?: string } = {},
   ): Promise<AgendaEvento[]> {
     const max = Math.min(
       Math.max(1, Math.trunc(limite) || LIMITE_PADRAO),
@@ -89,7 +91,7 @@ export class AgendaApiService {
       provedor,
       'agenda',
     );
-    if (provedor === 'google-calendar') return this.listGoogle(token, max);
+    if (provedor === 'google-calendar') return this.listGoogle(token, max, janela);
     // Provedor desconhecido já falha em getAccessToken; guarda de tipo.
     throw new BadRequestException(`Provedor "${provedor}" não lê agenda.`);
   }
@@ -97,9 +99,11 @@ export class AgendaApiService {
   private async listGoogle(
     token: string,
     max: number,
+    janela: { inicio?: string; fim?: string } = {},
   ): Promise<AgendaEvento[]> {
     const params = new URLSearchParams({
-      timeMin: new Date().toISOString(),
+      timeMin: janela.inicio ?? new Date().toISOString(),
+      ...(janela.fim ? { timeMax: janela.fim } : {}),
       maxResults: String(max),
       singleEvents: 'true',
       orderBy: 'startTime',

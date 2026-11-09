@@ -17,8 +17,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import clsx from "clsx";
 import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 
-import BecultureSignature from "@/assets/branding/beculture-signature.svg?react";
-import BecultureSignatureDark from "@/assets/branding/beculture-signature-dark.svg?react";
+import OracleSignature from "@/assets/branding/oracle-signature.svg?react";
+import OracleSignatureDark from "@/assets/branding/oracle-signature-dark.svg?react";
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
 import {
@@ -168,8 +168,8 @@ export default function Cadastro() {
       <main className="min-h-100vh grid w-full grow grid-cols-1 place-items-center py-8">
         <div className="w-full max-w-[56rem] p-4 sm:px-5">
           <div className="text-center">
-            <BecultureSignature className="mx-auto h-12 w-auto dark:hidden" />
-            <BecultureSignatureDark className="mx-auto hidden h-12 w-auto dark:block" />
+            <OracleSignature className="mx-auto h-12 w-auto dark:hidden" />
+            <OracleSignatureDark className="mx-auto hidden h-12 w-auto dark:block" />
             <div className="mt-4">
               <PageTitle
                 className="text-2xl font-semibold text-gray-600 dark:text-dark-100"

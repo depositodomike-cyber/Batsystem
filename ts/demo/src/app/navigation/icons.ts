@@ -14,6 +14,7 @@ import {
   BriefcaseIcon,
   MegaphoneIcon as HiMegaphoneIcon,
   SparklesIcon,
+  SunIcon,
   NewspaperIcon,
   ChatBubbleOvalLeftIcon,
   UserGroupIcon,
@@ -283,11 +284,13 @@ export const navigationIcons: Record<string, ElementType> = {
   "ceo.redes-sociais": GlobeAltIcon,
   "ceo.gestao-pessoas": UserGroupIcon,
   "ceo.cultura": SparklesIcon,
-  // Ferramentas (widgets migrados do beculture/Confi)
+  // Ferramentas (widgets migrados do Oracle/Confi)
   "ceo.ia": SparklesIcon,
   "ceo.email": EnvelopeIcon,
   "ceo.slack": HashtagIcon,
   "ceo.agenda": CalendarDaysIcon,
+  "ceo.drive": CloudIcon,
+  "ceo.resumo": SunIcon,
   "ceo.notas": PencilSquareIcon,
   "ceo.todo": CheckDoubleIcon,
   // Uploads do Repositório (subitens que abrem o modal correspondente na tela de IA)

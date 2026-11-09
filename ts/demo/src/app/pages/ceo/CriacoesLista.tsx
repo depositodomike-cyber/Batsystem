@@ -42,10 +42,12 @@ import {
   type CriacaoStatus,
   type CriacaoTipo,
 } from "@/services/api/criacoes";
-import { aiFunctionScreenPath } from "./ia-functions";
+import { aiFunctionScreenPath, ALL_AI_FUNCTIONS } from "./ia-functions";
+import { useIaModals } from "@/app/contexts/ia-modals/context";
+import { IA_MODALS_BY_ID } from "@/app/contexts/ia-modals/registry";
 
 // ----------------------------------------------------------------------
-// Criações recentes — a Home do AI Studio.
+// Criações recentes — a Home do Lab.
 //
 // Responde "no que eu estou trabalhando?". A outra pergunta ("o que a IA pode
 // criar?") é do collapse AI STUDIO no sidebar, que continua sendo o lugar de
@@ -63,14 +65,35 @@ import { aiFunctionScreenPath } from "./ia-functions";
 
 const PAGINA = 25;
 
-const TIPOS: { id: CriacaoTipo; label: string; Icon: React.ElementType }[] = [
-  {
-    id: "apresentacao",
-    label: "Apresentação",
-    Icon: PresentationChartBarIcon,
-  },
-  { id: "planilha", label: "Planilha", Icon: TableCellsIcon },
-];
+// Rótulo de cada tipo na lista; o ícone vem do catálogo do Lab
+// (`ALL_AI_FUNCTIONS`), para a lista e a grade nunca divergirem.
+const ROTULOS_TIPO: Record<CriacaoTipo, string> = {
+  apresentacao: "Apresentação",
+  planilha: "Planilha",
+  analise: "Análise",
+  artigo: "Artigo",
+  ata: "Ata",
+  carrossel: "Carrossel",
+  dashboard: "Dashboard",
+  imagem: "Imagem",
+  melhorar: "Texto",
+  video: "Vídeo",
+};
+
+const ICONES_PADRAO: Partial<Record<CriacaoTipo, React.ElementType>> = {
+  apresentacao: PresentationChartBarIcon,
+  planilha: TableCellsIcon,
+};
+
+const TIPOS: { id: CriacaoTipo; label: string; Icon: React.ElementType }[] =
+  (Object.keys(ROTULOS_TIPO) as CriacaoTipo[]).map((id) => ({
+    id,
+    label: ROTULOS_TIPO[id],
+    Icon:
+      ICONES_PADRAO[id] ??
+      ALL_AI_FUNCTIONS.find((f) => f.id === id)?.Icon ??
+      SparklesIcon,
+  }));
 
 /**
  * Rótulo e cor de cada estado.
@@ -134,6 +157,7 @@ function quandoFoi(iso: string): string {
 
 export function CriacoesLista({ produto }: { produto: string }) {
   const navigate = useNavigate();
+  const { open: abrirJanela } = useIaModals();
 
   const [itens, setItens] = useState<CriacaoResumo[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -216,11 +240,17 @@ export function CriacoesLista({ produto }: { produto: string }) {
   /** Abre a criação existente — nunca começa uma nova. */
   const abrir = (c: CriacaoResumo) => {
     const tela = aiFunctionScreenPath(c.tipo, produto);
-    if (!tela) {
-      toast.error("Este gerador ainda não abre uma criação salva.");
+    if (tela) {
+      navigate(`${tela}?criacao=${c.id}`);
       return;
     }
-    navigate(`${tela}?criacao=${c.id}`);
+    // Ferramentas que seguem janela (ex.: Vídeo): reabre a janela com a
+    // criação, em vez de navegar.
+    if (IA_MODALS_BY_ID[c.tipo]) {
+      abrirJanela(c.tipo, { criacao: c.id });
+      return;
+    }
+    toast.error("Este gerador ainda não abre uma criação salva.");
   };
 
   /**
@@ -360,7 +390,7 @@ export function CriacoesLista({ produto }: { produto: string }) {
         ) : (
           <EstadoVazio
             icon={SparklesIcon}
-            titulo="Você ainda não criou nada no AI Studio."
+            titulo="Você ainda não criou nada no Lab."
             hint="Escolha uma opção no menu lateral para começar."
           />
         )
@@ -508,7 +538,7 @@ export function CriacoesLista({ produto }: { produto: string }) {
             title: "Excluir esta criação?",
             // Diz o que NÃO acontece de propósito: quem já salvou no
             // Repositório não perde o que disponibilizou por lá.
-            description: `"${aExcluir ? tituloDe(aExcluir) : "Esta criação"}" sai do seu AI Studio. O que você já salvou no Repositório não muda.`,
+            description: `"${aExcluir ? tituloDe(aExcluir) : "Esta criação"}" sai do seu Lab. O que você já salvou no Repositório não muda.`,
             actionText: "Excluir",
           },
           success: {

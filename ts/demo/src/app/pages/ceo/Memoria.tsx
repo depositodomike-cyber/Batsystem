@@ -350,7 +350,7 @@ function LinhaRegra({
                 className="text-tiny shrink-0 gap-1"
               >
                 <LockClosedIcon className="size-3" />
-                Corporativa
+                Fixa
               </Badge>
             )}
           </span>
@@ -378,11 +378,11 @@ function LinhaRegra({
 
       {memory.corporate && !canManage ? (
         <span
-          title="Definição corporativa — só um administrador pode desativá-la ou alterá-la."
+          title="Definição fixa — só o dono da conta pode desativá-la ou alterá-la."
           className="dark:text-dark-300 text-tiny inline-flex shrink-0 items-center gap-1 font-medium text-gray-400"
         >
           <LockClosedIcon className="size-3.5" />
-          Corporativa
+          Fixa
         </span>
       ) : (
         <Switch
@@ -525,7 +525,7 @@ function NewMemoryModal({
                     />
                     <div className="grow">
                       <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                        Fixar como definição corporativa
+                        Fixar como definição permanente
                       </p>
                       <p className="dark:text-dark-300 text-xs-plus text-gray-400">
                         Read-only para todos: não pode ser desativada, alterada
@@ -658,7 +658,7 @@ function MemoryDrawer({
                       className="gap-1 rounded-full"
                     >
                       <LockClosedIcon className="size-3.5" />
-                      Corporativa
+                      Fixa
                     </Badge>
                   )}
                 </div>
@@ -693,7 +693,7 @@ function MemoryDrawer({
                     <LockClosedIcon className="dark:text-dark-300 mt-0.5 size-4.5 shrink-0 text-gray-400" />
                     <div>
                       <p className="dark:text-dark-100 text-sm font-medium text-gray-700">
-                        Definição corporativa
+                        Definição fixa
                       </p>
                       <p className="dark:text-dark-300 text-xs-plus text-gray-400">
                         Sempre ativa — só um administrador pode desativá-la,

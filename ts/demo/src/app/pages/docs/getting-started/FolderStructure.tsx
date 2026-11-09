@@ -13,7 +13,7 @@ export function FolderStructure() {
       </h3>
       <div className="text-sm-plus mt-5">
         <p>
-          beculture offers a clean and organized folder structure, making it easy
+          Oracle offers a clean and organized folder structure, making it easy
           to locate and refactor components and sections for your project. Its
           design supports seamless scalability for projects of any size.
         </p>

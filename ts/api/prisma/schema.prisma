@@ -1,4 +1,4 @@
-// Schema do beculture — multi-tenant (Empresa = tenant) + billing.
+// Schema do Oracle — multi-tenant (Empresa = tenant) + billing.
 // Espelha os tipos que o frontend já define em:
 //   ts/demo/src/app/contexts/companies/context.ts
 //   ts/demo/src/services/billing/types.ts
@@ -944,7 +944,7 @@ model SquadPin {
 }
 
 // ---------- Memória da IA (por tenant) ----------
-// Base de conhecimento de longo prazo do BeHuman por empresa. Cada memória
+// Base de conhecimento de longo prazo do Oracle por empresa. Cada memória
 // ativa é injetada no contexto das respostas dos squads/chat. Espelha o front:
 //   ts/demo/src/app/data/memoria.ts -> MemoryItem
 // O tema (`categoria`) referencia o slug de um squad do catálogo (ex.: "cultura",
@@ -1239,6 +1239,45 @@ model AgenteUsuario {
   @@map("agentes_usuario")
 }
 
+/// Perfil Pessoal do usuário (Configurações do Usuário › Perfil Pessoal).
+///
+/// Pertence ao USUÁRIO, não à organização: uma linha por `usuarioId`, a mesma
+/// em qualquer organização ativa (não há `organizacaoId`). `empresaId` só
+/// isola o tenant. `dados` guarda as categorias (básico, formação, interesses,
+/// comunicação, objetivos, estilo de vida) — ver src/perfil/perfil.tipos.ts.
+/// Exclusão é definitiva (dado pessoal).
+model PerfilPessoal {
+  id           String   @id @default(cuid())
+  empresaId    String
+  usuarioId    String   @unique
+  dados        Json     @default("{}")
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([empresaId])
+  @@map("perfis_pessoais")
+}
+
+/// Resumo Matinal: cache do briefing do dia (um por usuário, data local e período).
+/// Não é memória — só guarda o que foi gerado para não regenerar a cada abertura.
+model Briefing {
+  id         String   @id @default(cuid())
+  empresaId  String
+  usuarioId  String
+  /// Data local do usuário, YYYY-MM-DD.
+  data       String
+  /// manha | noite
+  periodo    String
+  dados      Json
+  /// Hash dos ids/datas de agenda e e-mail usados — detecta novidades sem IA.
+  assinatura String
+  geradoEm   DateTime @default(now())
+
+  @@unique([usuarioId, data, periodo])
+  @@index([empresaId])
+  @@map("briefings")
+}
+
 /// Vocabulário de categorias macro de um repositório, descoberto pela IA.
 ///
 /// Não é lista fixa: a IA propõe a partir do conteúdo. Mas também não é livre
@@ -1455,6 +1494,14 @@ model Mensagem {
 enum CriacaoTipo {
   apresentacao
   planilha
+  analise
+  artigo
+  ata
+  carrossel
+  dashboard
+  imagem
+  melhorar
+  video
 }
 
 /// Estado real da criação. `rascunho` é trabalho iniciado; `plano_pronto` é

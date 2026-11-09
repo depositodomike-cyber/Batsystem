@@ -1,5 +1,5 @@
-// Barra "Pergunte ao seu Repositório" — portada do beculture/Confi (a barra de
-// prompt de public/index.html + app.js). Substitui a busca no header do behuman.
+// Barra "Pergunte ao seu Repositório" — portada do Oracle/Confi (a barra de
+// prompt de public/index.html + app.js). Substitui a busca no header do oracle.
 // Seletor de fonte (Memória/Web/Auto), anexo de texto, ditado por voz (Web
 // Speech API) e envio ao assistente — a resposta aparece no painel da bolinha,
 // no canto inferior direito (ver src/components/template/Assistente).
@@ -19,6 +19,17 @@ import { type ModoBusca } from "@/services/api/prompt";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import { useTranslation } from "react-i18next";
 import { useAssistente } from "@/app/contexts/assistente/context";
+import { EVENTO_ESCUTA, getEscutaAtiva, getTtsAtivo } from "@/utils/oraclePrefs";
+import { falar, pararFala } from "@/utils/falar";
+import { useWakeWord } from "./useWakeWord";
+import { useLocation, useNavigate } from "react-router";
+import { detectarIntencao } from "@/app/pages/ceo/resumo-matinal/intencao";
+import {
+  EVENTO_RESPOSTA_FALADA,
+  briefingAtivo,
+  contextoDoBriefing,
+  pedirBriefing,
+} from "@/app/pages/ceo/resumo-matinal/sessao";
 
 // ----------------------------------------------------------------------
 
@@ -40,11 +51,38 @@ type SpeechRecognitionLike = {
 };
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
+/** Bipe curto de "ouvindo" ao detectar a palavra de ativação. */
+function bipe() {
+  try {
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const ganho = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    ganho.gain.setValueAtTime(0.0001, ctx.currentTime);
+    ganho.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02);
+    ganho.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+    osc.connect(ganho).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.2);
+    osc.onended = () => void ctx.close();
+  } catch {
+    /* sem áudio: o aviso visual basta */
+  }
+}
+
 // ----------------------------------------------------------------------
 
 export function PromptBar() {
   const { t, i18n } = useTranslation();
-  const { perguntar, loading, expandido } = useAssistente();
+  const { perguntar, loading, expandido, status: statusAssistente } = useAssistente();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [modo, setModo] = useState<ModoBusca>("vault");
   const [value, setValue] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -58,6 +96,22 @@ export function PromptBar() {
   const fileRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ditado aberto pela palavra de ativação: ao terminar, envia sozinho.
+  const ditadoPorPalavraRef = useRef(false);
+  /** O texto atual do campo veio do ditado (vale para a resposta falada). */
+  const textoPorVozRef = useRef(false);
+  /** Limite de tempo do ditado aberto pela palavra de ativação. */
+  const ditadoLimiteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ditadoTextoRef = useRef("");
+
+  // --- Ativação por voz (Configurações › Voz) ---
+  const [escuta, setEscuta] = useState(getEscutaAtiva);
+  useEffect(() => {
+    const atualizar = (e: Event) =>
+      setEscuta(Boolean((e as CustomEvent<boolean>).detail));
+    window.addEventListener(EVENTO_ESCUTA, atualizar);
+    return () => window.removeEventListener(EVENTO_ESCUTA, atualizar);
+  }, []);
 
   const MODOS: { id: ModoBusca; label: string; title: string }[] = [
     {
@@ -110,6 +164,7 @@ export function PromptBar() {
   useEffect(() => {
     return () => {
       if (statusTimer.current) clearTimeout(statusTimer.current);
+      if (ditadoLimiteRef.current) clearTimeout(ditadoLimiteRef.current);
       recognitionRef.current?.stop();
     };
   }, []);
@@ -129,10 +184,21 @@ export function PromptBar() {
 
   // --- Ditado por voz (Web Speech API) ---
   const toggleMic = () => {
+    // Clicar no microfone também cala a resposta falada.
+    pararFala();
     if (listening) {
       recognitionRef.current?.stop();
       return;
     }
+    iniciarDitado(false);
+  };
+
+  /**
+   * Abre o ditado. `porPalavra`: veio da palavra de ativação — o texto ditado
+   * substitui o campo e é enviado sozinho quando a pessoa para de falar.
+   */
+  const iniciarDitado = (porPalavra: boolean) => {
+    pararFala();
     const w = window as unknown as {
       SpeechRecognition?: SpeechRecognitionCtor;
       webkitSpeechRecognition?: SpeechRecognitionCtor;
@@ -156,7 +222,20 @@ export function PromptBar() {
         else interim += txt;
       }
       if (final) {
-        setValue((v) => (v ? v.trimEnd() + " " : "") + final.trim());
+        textoPorVozRef.current = true;
+        if (ditadoPorPalavraRef.current) {
+          ditadoTextoRef.current = (
+            ditadoTextoRef.current +
+            " " +
+            final.trim()
+          ).trim();
+          setValue(ditadoTextoRef.current);
+          // A pergunta terminou: fecha o microfone do ditado já. Só uma nova
+          // palavra de ativação abre outro.
+          rec.stop();
+        } else {
+          setValue((v) => (v ? v.trimEnd() + " " : "") + final.trim());
+        }
         flashStatus("");
       } else if (interim) {
         flashStatus("🎙 " + interim);
@@ -164,23 +243,91 @@ export function PromptBar() {
     };
     rec.onerror = () => setListening(false);
     rec.onend = () => {
+      if (ditadoLimiteRef.current) {
+        clearTimeout(ditadoLimiteRef.current);
+        ditadoLimiteRef.current = null;
+      }
       setListening(false);
       recognitionRef.current = null;
       setStatus((s) => (s.msg.startsWith("🎙") ? { msg: "", cls: "" } : s));
       inputRef.current?.focus();
+      if (ditadoPorPalavraRef.current) {
+        ditadoPorPalavraRef.current = false;
+        const texto = ditadoTextoRef.current.trim();
+        ditadoTextoRef.current = "";
+        if (texto) void enviar(texto);
+        else flashStatus("Não ouvi a pergunta. Diga a palavra de novo.", "", true);
+      }
     };
+    ditadoPorPalavraRef.current = porPalavra;
+    ditadoTextoRef.current = "";
+    if (porPalavra) {
+      setValue("");
+      flashStatus("🎙 Ouvindo… pode perguntar");
+    }
     recognitionRef.current = rec;
     setListening(true);
     rec.start();
+    // Segurança: o ditado aberto pela palavra nunca fica aberto indefinidamente.
+    if (porPalavra) {
+      ditadoLimiteRef.current = setTimeout(() => rec.stop(), 15000);
+    }
   };
+
+  const wake = useWakeWord({
+    ativo: escuta,
+    // Pausa enquanto o ditado do navegador usa o microfone (e durante a busca).
+    pausado: listening || loading,
+    onDetect: () => {
+      if (recognitionRef.current || loading) return;
+      bipe();
+      iniciarDitado(true);
+    },
+  });
+
+  // Fechar o painel do assistente interrompe a resposta falada.
+  useEffect(() => {
+    if (statusAssistente === "closed") pararFala();
+  }, [statusAssistente]);
+
+  // Avisa uma vez quando a ativação por voz falha (chave, arquivos, permissão).
+  useEffect(() => {
+    if (wake.estado === "erro" && wake.erro) toast.error(wake.erro);
+  }, [wake.estado, wake.erro]);
 
   // --- Enviar (pergunta de topo: abre o painel do assistente) ---
   // A conversa em si (e o follow-up) vive no contexto do assistente; aqui só
   // coletamos a pergunta e refletimos o resultado na linha de status da barra.
-  const enviar = async () => {
-    const texto = value.trim();
+  const enviar = async (textoDitado?: string) => {
+    const texto = (textoDitado ?? value).trim();
     if (!texto || loading) return;
     if (listening) recognitionRef.current?.stop();
+    pararFala();
+    const porVoz = textoDitado !== undefined || textoPorVozRef.current;
+    textoPorVozRef.current = false;
+
+    // "Oracle, bom dia" (e variações): abre o Resumo Matinal em vez de
+    // virar uma pergunta comum. Por voz, o briefing também é falado.
+    const intencao = detectarIntencao(texto, { briefingAtivo: briefingAtivo() });
+    if (intencao) {
+      setValue("");
+      if (inputRef.current) inputRef.current.style.height = "auto";
+      const naPagina = pathname.endsWith("/resumo-matinal");
+      if (intencao.tipo === "continuar") {
+        pedirBriefing({ acao: "continuar" });
+      } else if (naPagina) {
+        pedirBriefing({ acao: "iniciar", periodo: intencao.periodo, ouvir: porVoz });
+      } else {
+        const produto = pathname.split("/").filter(Boolean)[0] || "oracle";
+        navigate(
+          `/${produto}/resumo-matinal?periodo=${intencao.periodo}${porVoz ? "&ouvir=1" : ""}`,
+        );
+      }
+      flashStatus("☀ abrindo o Resumo Matinal", "ok", true);
+      return;
+    }
+    // Pergunta durante o briefing: vai com o briefing como contexto.
+    const contextoBriefing = contextoDoBriefing();
 
     const usarAnexo = arquivo && modo !== "web";
     flashStatus(usarAnexo ? "lendo anexo e buscando…" : ROTULO[modo]);
@@ -189,6 +336,7 @@ export function PromptBar() {
       texto,
       modo,
       arquivo: modo !== "web" ? arquivo : null,
+      ...(contextoBriefing ? { contexto: contextoBriefing } : {}),
     });
 
     if (!r.ok) {
@@ -199,6 +347,19 @@ export function PromptBar() {
     setValue("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     limparAnexo();
+    // Resposta falada: só para perguntas feitas por voz (Configurações › Voz).
+    // Avisa o Resumo Matinal quando a resposta terminou (oferece continuar).
+    const avisarFim = () => {
+      if (contextoBriefing) window.dispatchEvent(new Event(EVENTO_RESPOSTA_FALADA));
+    };
+    if (porVoz && r.resposta && getTtsAtivo()) {
+      void falar(r.resposta, {
+        idioma: i18n.language?.startsWith("en") ? "en-US" : "pt-BR",
+        onFim: avisarFim,
+      });
+    } else {
+      avisarFim();
+    }
     flashStatus(
       r.origem === "web" ? "↗ respondido via web" : "◈ respondido pelo Repositório",
       "ok",
@@ -251,33 +412,60 @@ export function PromptBar() {
           <button
             type="button"
             onClick={toggleMic}
-            title={listening ? "Parar ditado" : "Ditar por voz"}
+            title={
+              listening
+                ? "Parar ditado"
+                : wake.estado === "escutando"
+                  ? `Ditar por voz · ou diga “${wake.rotulo}”`
+                  : wake.estado === "carregando"
+                    ? "Ditar por voz · preparando a ativação por voz…"
+                    : wake.estado === "erro"
+                      ? `Ditar por voz · ativação por voz indisponível: ${wake.erro}`
+                      : "Ditar por voz"
+            }
             className={clsx(
-              "grid size-7 shrink-0 place-items-center rounded-lg transition-colors",
+              "relative grid size-7 shrink-0 place-items-center rounded-lg transition-colors",
               listening
                 ? "from-primary-600 to-primary-400 animate-pulse bg-gradient-to-br text-white"
                 : "bg-primary-500/10 text-primary-600 dark:text-primary-400 dark:hover:bg-primary-400/20 hover:bg-primary-500/20",
             )}
           >
             <MicrophoneIcon className="size-4" />
+            {/* Indicador da ativação por voz: o microfone está aberto,
+                esperando a palavra (detecção local). */}
+            {!listening && wake.estado !== "desligado" && (
+              <span
+                aria-hidden
+                className={clsx(
+                  "absolute -top-0.5 -right-0.5 size-2 rounded-full ring-2 ring-white dark:ring-dark-700",
+                  wake.estado === "escutando" && "animate-pulse bg-emerald-500",
+                  wake.estado === "carregando" && "bg-amber-400",
+                  wake.estado === "pausado" && "bg-gray-400",
+                  wake.estado === "erro" && "bg-red-500",
+                )}
+              />
+            )}
           </button>
           <MemoriaTextarea
             ref={inputRef}
             rows={1}
             value={value}
             placeholder={t("chrome.promptPlaceholder")}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              textoPorVozRef.current = false;
+              setValue(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                enviar();
+                void enviar();
               }
             }}
             className="dark:text-dark-100 dark:placeholder:text-dark-300 h-7 max-h-7 min-w-0 flex-1 resize-none self-center bg-transparent px-1 py-1 text-sm text-gray-800 outline-none placeholder:text-gray-400"
           />
           <button
             type="button"
-            onClick={enviar}
+            onClick={() => void enviar()}
             disabled={loading || !value.trim()}
             title="Buscar"
             className="from-primary-600 to-primary-400 grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-white transition-opacity disabled:opacity-40"

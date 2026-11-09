@@ -94,7 +94,7 @@ export class TranscricaoController {
     const { text } = await this.ai.completar(user.empresaId, user.id, SYSTEM_TRANSCRICAO, userPrompt, 16000);
     const { titulo, ata } = parseAtaEstrategica(text);
 
-    // Salva a ata na Memória (categoria Reuniões), como o beculture grava no vault.
+    // Salva a ata na Memória (categoria Reuniões), como o Oracle grava no vault.
     let salvo = false;
     let memoriaId: string | undefined;
     try {

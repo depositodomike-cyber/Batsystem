@@ -1,4 +1,4 @@
-// Prompts do "Criar Ata" — portado do beculture/Confi (lib/claude.js, criarAta
+// Prompts do "Criar Ata" — portado do Oracle/Confi (lib/claude.js, criarAta
 // e criarAtaVault). A partir de uma transcrição/anotações, a IA redige uma ata
 // executiva em Markdown. Opção "Memória": frontmatter + [[wikilinks]] às
 // diretrizes existentes. Devolve JSON { titulo, ata }.

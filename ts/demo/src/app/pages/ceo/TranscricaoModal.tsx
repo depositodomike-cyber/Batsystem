@@ -34,7 +34,7 @@ import { nomesDeParticipantes } from "@/utils/memoriaVault";
 import { gerarTranscricaoApi } from "@/services/api/transcricao";
 
 // ----------------------------------------------------------------------
-// Upload Transcrição — portado do beculture/Confi. Cola/sobe uma transcrição →
+// Upload Transcrição — portado do Oracle/Confi. Cola/sobe uma transcrição →
 // a IA gera uma ATA estratégica detalhada e a SALVA no Repositório (Reuniões).
 // ----------------------------------------------------------------------
 

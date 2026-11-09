@@ -3,7 +3,7 @@
  * Qualquer pessoa com a API no ar consegue entrar com estas credenciais.
  */
 export const DEMO_LOGIN = {
-  email: "demo@beculture.ai",
-  senha: "BecultureDemo1",
-  nome: "Time BeCulture",
+  email: "demo@oracle.ai",
+  senha: "OracleDemo1",
+  nome: "Time Oracle",
 } as const;

@@ -80,7 +80,7 @@ export function McpKeysCard() {
   const onCreate = async () => {
     setError(null);
     if (!nome.trim()) {
-      setError("Dê um nome à chave (ex.: Claude do CEO).");
+      setError("Dê um nome à chave (ex.: Claude no notebook).");
       return;
     }
     setSaving(true);
@@ -168,7 +168,7 @@ export function McpKeysCard() {
             <>
               <p className="dark:text-dark-300 mt-2 text-sm text-gray-500">
                 Conecte agentes externos (Claude, Cursor, VS Code…) aos
-                conectores da sua empresa via MCP. Endpoint:{" "}
+                seus conectores via MCP. Endpoint:{" "}
                 <code className="dark:bg-dark-600 dark:text-dark-100 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
                   {mcpUrl}
                 </code>
@@ -272,7 +272,7 @@ export function McpKeysCard() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void onCreate();
                   }}
-                  placeholder="Nome da chave (ex.: Claude do CEO)"
+                  placeholder="Nome da chave (ex.: Claude no notebook)"
                   maxLength={80}
                   className="form-input dark:border-dark-450 dark:bg-dark-700 w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm"
                 />

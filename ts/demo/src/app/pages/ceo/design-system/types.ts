@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// Design System das marcas — portado do beculture/Confi (public/design-system.js).
+// Design System das marcas — portado do Oracle/Confi (public/design-system.js).
 //
 // Um design system descreve a marca (identidade, cores, tipografia, espaçamento,
 // componentes, elementos visuais e tokens/regras) e é usado por TODAS as
@@ -102,15 +102,15 @@ export interface BrandOption {
   nome: string;
 }
 
-// Preset padrão — identidade "beculture" (âmbar sobre grafite). Serve de ponto
+// Preset padrão — identidade "Oracle" (âmbar sobre grafite). Serve de ponto
 // de partida rico para uma marca nova; tudo é editável.
 export const PADRAO: DesignSystem = {
   marca: {
-    nome: "beculture",
+    nome: "Oracle",
     proposito:
-      "Transformar cultura organizacional em performance de negócio, unindo dados e humanidade.",
-    personalidade: "Confiante, inovadora, próxima, sofisticada",
-    publico: "C-level, líderes de RH e gestores de times",
+      "Centralizar conhecimento, investigações e operações pessoais com inteligência artificial.",
+    personalidade: "Precisa, analítica, discreta, sofisticada",
+    publico: "Uso pessoal do dono do sistema",
     contexto: ["Apresentação", "Web"],
     tom: "Moderno e premium",
   },
@@ -177,7 +177,7 @@ export const PADRAO: DesignSystem = {
  * Visual neutro — o que vale quando nenhuma identidade foi informada.
  *
  * É um DesignSystem como outro qualquer, e não a ausência dele, por dois
- * motivos: no backend, `designTheme()` cai na paleta beculture quando o design
+ * motivos: no backend, `designTheme()` cai na paleta Oracle quando o design
  * falta, e `designBrief()` pula todo campo vazio. Com a `marca` em branco, o
  * prompt recebe a PALETA sem receber identidade nenhuma — e o arquivo sai
  * neutro sem exigir uma linha de backend.

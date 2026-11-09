@@ -1,4 +1,4 @@
-// Prompts do "Criar Carrossel" — portado do beculture/Confi (lib/claude.js, tipo
+// Prompts do "Criar Carrossel" — portado do Oracle/Confi (lib/claude.js, tipo
 // "carrossel"). A IA devolve o ROTEIRO em JSON { titulo, cards[], legenda,
 // hashtags[], conexoes }, editável no cliente. Suporta estilo, nº de páginas e
 // refino. `conexoes` é o bloco "## 🔗 Conexões no Vault", anexado à nota quando

@@ -13,7 +13,7 @@ export function Installation() {
       </h3>
       <div className="text-sm-plus mt-5">
         <p>
-          Please download the latest version of beculture from the official{" "}
+          Please download the latest version of Oracle from the official{" "}
           <a
             href="#"
             className="text-primary-600 dark:text-primary-400 hover:underline"
@@ -27,7 +27,7 @@ export function Installation() {
           <li className="ltr:ml-4 rtl:mr-4">
             <strong>Demo</strong>
             <div className="mt-2">
-              This folder contains the demo pages of the beculture theme. We do not
+              This folder contains the demo pages of the Oracle theme. We do not
               recommend using this folder in your project, as it is intended for
               reference purposes only.
             </div>
@@ -36,7 +36,7 @@ export function Installation() {
             <strong>Starter</strong>
             <div className="mt-2">
               The starter package contains all the necessary files to begin
-              working with beculture. Use this folder to build your application.
+              working with Oracle. Use this folder to build your application.
             </div>
           </li>
         </ul>

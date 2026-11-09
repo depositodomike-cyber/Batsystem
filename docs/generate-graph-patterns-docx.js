@@ -1,4 +1,4 @@
-// Gerador do docs/Padroes-Visuais-Grafo-beculture.docx
+// Gerador do docs/Padroes-Visuais-Grafo-oracle.docx
 //
 // Irmão de generate-menu-patterns-docx.mjs: mesma identidade visual (capa
 // âmbar, cabeçalho/rodapé paginado, tabelas zebradas), outro tema — o grafo da
@@ -13,7 +13,7 @@
 //   ts/demo/src/app/pages/ceo/MemoriaGrafo.tsx         (desenho, física, câmera)
 //   ts/demo/src/app/pages/ceo/memoria-grafo-modelo.ts  (paleta, raio, massa, molas)
 //   ts/demo/src/app/pages/ceo/GrafoPainelContexto.tsx  (painel lateral)
-//   ts/demo/src/styles/beculture-theme.css             (tokens de marca)
+//   ts/demo/src/styles/oracle-theme.css             (tokens de marca)
 
 const {
   Document,
@@ -274,7 +274,7 @@ const doc = new Document({
               spacing: { after: 80 },
               children: [
                 new TextRun({
-                  text: "beculture  ·  Design System",
+                  text: "Oracle  ·  Design System",
                   font: "Calibri",
                   size: 16,
                   color: GRAY,
@@ -1091,7 +1091,7 @@ const doc = new Document({
         ),
         bullet("O painel é sempre sobreposto, nunca empurra o canvas."),
         spacer(280),
-        p("Documento para o time de frontend · beculture · Setembro 2026", {
+        p("Documento para o time de frontend · Oracle · Setembro 2026", {
           color: GRAY,
           size: 18,
         }),
@@ -1100,7 +1100,7 @@ const doc = new Document({
   ],
 });
 
-const outPath = path.join(__dirname, "Padroes-Visuais-Grafo-beculture.docx");
+const outPath = path.join(__dirname, "Padroes-Visuais-Grafo-oracle.docx");
 Packer.toBuffer(doc).then((buffer) => {
   fs.writeFileSync(outPath, buffer);
   console.log("Gerado:", outPath);

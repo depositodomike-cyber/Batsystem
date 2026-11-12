@@ -304,17 +304,16 @@ export const ROLES_DE_SISTEMA: RoleDeSistema[] = [
     //
     // Não existe escopo de dados nesta versão — a Role não tem coluna de
     // escopo, não há model de Repositório, e o repositório ativo vem de um
-    // header que o cliente envia e que ninguém confere. Além disso, só 6 dos
-    // 35 controllers passam pelo `PermissoesGuard`: os de `ai/` e o do vault
-    // NÃO passam.
+    // header que o cliente envia e que ninguém confere. As rotas que usam a IA
+    // (`ai/*` de geração e chat, e o orquestrador) exigem `ia.usar`; o vault
+    // ainda NÃO passa pelo guard.
     //
-    // Consequência: enquanto isso for verdade, `ia.usar` alcança o mesmo
-    // conteúdo que `repositorio.visualizar` alcançaria, porque os endpoints de
-    // IA leem o vault sem checar permissão nenhuma. A ausência de
-    // `repositorio.visualizar`, `documentos.visualizar` e `grafo.visualizar`
-    // aqui é uma DECLARAÇÃO DE INTENÇÃO, não um controle em vigor — no dia em
-    // que `ai/*` for guardado, esta é a permissão que o convidado precisa ter,
-    // e aquelas são as que ele precisa NÃO ter.
+    // Consequência: `ia.usar` alcança o mesmo conteúdo que
+    // `repositorio.visualizar` alcançaria, porque a IA lê o vault para
+    // responder. A ausência de `repositorio.visualizar`,
+    // `documentos.visualizar` e `grafo.visualizar` aqui é uma DECLARAÇÃO DE
+    // INTENÇÃO para as telas, não um confinamento da leitura feita pela IA.
+    // Sem `conectores.visualizar`, o convidado não conecta contas pessoais.
     //
     // O que a role entrega de verdade hoje: nenhuma escrita administrativa nas
     // 16 rotas guardadas (membros, áreas, cargos, roles, convites, chaves MCP).

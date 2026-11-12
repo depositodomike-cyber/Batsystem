@@ -88,8 +88,9 @@ export class DriveApiService {
 
   constructor(private readonly oauth: OauthProviderService) {}
 
-  private token(empresaId: string): Promise<string> {
-    return this.oauth.getAccessToken(empresaId, 'google-drive', 'drive');
+  /** Token do Drive DESTE usuário (conexão pessoal). */
+  private token(empresaId: string, usuarioId: string): Promise<string> {
+    return this.oauth.getAccessToken(empresaId, usuarioId, 'google-drive', 'drive');
   }
 
   /**
@@ -99,9 +100,10 @@ export class DriveApiService {
    */
   async listar(
     empresaId: string,
+    usuarioId: string,
     opts: { pasta?: string; busca?: string; pageToken?: string } = {},
   ): Promise<{ arquivos: DriveArquivo[]; proximaPagina: string | null }> {
-    const token = await this.token(empresaId);
+    const token = await this.token(empresaId, usuarioId);
     const filtros = ['trashed = false'];
     const termo = opts.busca?.trim().slice(0, 200);
     const pasta = opts.pasta?.trim() || 'root';
@@ -145,10 +147,11 @@ export class DriveApiService {
    */
   async pasta(
     empresaId: string,
+    usuarioId: string,
     id: string,
   ): Promise<{ id: string; nome: string; caminho: { id: string; nome: string }[] }> {
     if (!ID_VALIDO.test(id)) throw new BadRequestException('Pasta do Drive inválida.');
-    const token = await this.token(empresaId);
+    const token = await this.token(empresaId, usuarioId);
     const raiz = await this.meta(token, 'root').catch(() => null);
     const caminho: { id: string; nome: string }[] = [];
     let atual: GoogleFile | null = await this.meta(token, id);
@@ -171,10 +174,11 @@ export class DriveApiService {
    */
   async arvore(
     empresaId: string,
+    usuarioId: string,
     id: string,
   ): Promise<{ pasta: { id: string; nome: string }; arquivos: DriveArquivoNaArvore[]; truncado: boolean }> {
     if (!ID_VALIDO.test(id)) throw new BadRequestException('Pasta do Drive inválida.');
-    const token = await this.token(empresaId);
+    const token = await this.token(empresaId, usuarioId);
     const raiz = await this.meta(token, id);
     if (raiz.mimeType !== MIME_PASTA) throw new BadRequestException('O item escolhido não é uma pasta.');
 
@@ -239,12 +243,13 @@ export class DriveApiService {
   /** Texto do arquivo, pronto para virar nota no Repositório. */
   async conteudo(
     empresaId: string,
+    usuarioId: string,
     id: string,
   ): Promise<{ arquivo: DriveArquivo; texto: string; truncado: boolean }> {
     if (!/^[\w-]{10,200}$/.test(id)) {
       throw new BadRequestException('Arquivo do Drive inválido.');
     }
-    const token = await this.token(empresaId);
+    const token = await this.token(empresaId, usuarioId);
     const meta = await getProviderJson<GoogleFile>(
       ctx(this.logger),
       `https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,mimeType,modifiedTime,webViewLink,size,owners(displayName,emailAddress)&supportsAllDrives=true`,

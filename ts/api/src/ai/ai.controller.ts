@@ -11,6 +11,7 @@ import type { Response } from 'express';
 import { AiService } from './ai.service';
 import { ChatStreamDto } from './dto/chat.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -34,7 +35,8 @@ export class AiController {
    * que o usuário saia da tela.
    */
   @Post('chat/stream')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissoesGuard)
+  @RequerPermissao('ia.usar')
   async chatStream(
     @CurrentUser() user: AuthenticatedUser,
     @RepositorioAtual() repositorioId: string | null,

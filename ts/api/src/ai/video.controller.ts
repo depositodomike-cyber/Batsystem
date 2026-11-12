@@ -15,6 +15,7 @@ import { ehChaveRejeitada, ehFalhaDeProvedor } from './falha-provedor';
 import * as heygen from './video/heygen';
 import { designBrief, parseDesign, type DesignSystemDto } from './design/design';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
@@ -50,7 +51,9 @@ function erroMsg(err: unknown): string {
 }
 
 @Controller('ai/video')
-@UseGuards(JwtAuthGuard)
+// Usar a IA exige `ia.usar` (todas as roles de sistema a têm).
+@UseGuards(JwtAuthGuard, PermissoesGuard)
+@RequerPermissao('ia.usar')
 export class VideoController {
   private readonly logger = new Logger(VideoController.name);
 

@@ -17,6 +17,7 @@ import { VaultService } from '@/vault/vault.service';
 import { InsightsService } from '@/insights/insights.service';
 import { MAX_INSIGHTS_DOCUMENTO } from '@/insights/insights.prompts';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -34,7 +35,9 @@ interface DocumentoBody {
 const CATEGORIA_DOCUMENTOS = 'documentos';
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
+// Usar a IA exige `ia.usar` (todas as roles de sistema a têm).
+@UseGuards(JwtAuthGuard, PermissoesGuard)
+@RequerPermissao('ia.usar')
 export class DocumentoController {
   private readonly logger = new Logger(DocumentoController.name);
 

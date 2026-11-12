@@ -1,0 +1,110 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`POST /ai/artigo (caracterização) com fonte "memoria": diretrizes ativas entram na referência 1`] = `
+"
+## MARCA / DESIGN SYSTEM
+Produza tudo na identidade desta marca — linguagem, tom e, quando o resultado for visual, cores e tipografia.
+- Marca: Acme
+## TEMA
+IA no varejo
+
+## CONTEXTO / INSTRUÇÕES
+para lojistas
+
+## MATERIAL DE REFERÊNCIA (use como base factual e para exemplos concretos; não copie literalmente)
+### Memória (diretrizes ativas)
+- Tom: formal
+
+ref do cliente
+
+## AJUSTE PEDIDO
+mais curto
+Refaça o artigo aplicando ESTE ajuste e preservando o que já está bom. Mantenha o mesmo formato JSON.
+
+## TÍTULOS DA MEMÓRIA (VAULT)
+Notas que já existem na Memória do usuário. Use estes títulos, copiados exatamente, nos [[wikilinks]] do bloco de Conexões.
+- Nota A
+- Nota B
+
+Gere o artigo no formato JSON pedido, com o campo "conexoes" preenchido."
+`;
+
+exports[`POST /ai/artigo (caracterização) com fonte "memoria": diretrizes ativas entram na referência 2`] = `
+{
+  "conexoes": "",
+  "conteudo": "Corpo.",
+  "subtitulo": "",
+  "titulo": "Título",
+}
+`;
+
+exports[`POST /ai/ata (caracterização) arquivo vence o texto; memória "true" usa o system da Memória e os títulos ativos 1`] = `
+"
+## MARCA / DESIGN SYSTEM
+Produza tudo na identidade desta marca — linguagem, tom e, quando o resultado for visual, cores e tipografia.
+- Marca: Acme
+## CONTEÚDO DA REUNIÃO
+do arquivo: conteúdo
+
+## TÍTULOS DA MEMÓRIA (use para [[wikilinks]] quando citados; não invente)
+- Tom
+
+## TÍTULOS DA MEMÓRIA (VAULT)
+Notas que já existem na Memória do usuário. Use estes títulos, copiados exatamente, nos [[wikilinks]] do bloco de Conexões.
+- Nota A
+- Nota B
+
+Redija a ata no formato JSON pedido, fechando o campo "ata" com o bloco de Conexões no Vault."
+`;
+
+exports[`POST /ai/ata (caracterização) texto colado, sem memória: prompt e system padrão 1`] = `
+"## CONTEÚDO DA REUNIÃO
+reunião de ontem
+
+## INSTRUÇÕES
+resumida
+
+## TÍTULOS DA MEMÓRIA (VAULT)
+Notas que já existem na Memória do usuário. Use estes títulos, copiados exatamente, nos [[wikilinks]] do bloco de Conexões.
+- Nota A
+- Nota B
+
+Redija a ata no formato JSON pedido, fechando o campo "ata" com o bloco de Conexões no Vault."
+`;
+
+exports[`POST /ai/ata (caracterização) texto colado, sem memória: prompt e system padrão 2`] = `
+{
+  "ata": "# Ata da reunião
+
+Pontos.",
+  "memoria": false,
+  "titulo": "Ata da reunião",
+}
+`;
+
+exports[`POST /ai/melhorar (caracterização) monta o prompt com marca, instruções e títulos do vault 1`] = `
+"
+## MARCA / DESIGN SYSTEM
+Produza tudo na identidade desta marca — linguagem, tom e, quando o resultado for visual, cores e tipografia.
+- Marca: Acme
+## TEXTO
+meu texto
+
+## INSTRUÇÕES
+mais curto
+
+## TÍTULOS DA MEMÓRIA (VAULT)
+Notas que já existem na Memória do usuário. Use estes títulos, copiados exatamente, nos [[wikilinks]] do bloco de Conexões.
+- Nota A
+- Nota B
+
+Melhore o texto no formato JSON pedido, com o campo "conexoes" preenchido."
+`;
+
+exports[`POST /ai/melhorar (caracterização) monta o prompt com marca, instruções e títulos do vault 2`] = `
+{
+  "conexoes": "",
+  "resumo": "",
+  "texto": "TEXTO MELHORADO",
+}
+`;

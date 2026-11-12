@@ -170,6 +170,9 @@ model Empresa {
   conectores             EmpresaConector[]
   mcpApiKeys             McpApiKey[]
   aiUsage                AiUsage[]
+  execucoes              Execucao[]
+  aprovacoesAcao         AprovacaoAcao[]
+  registrosAuditoria     RegistroAuditoria[]
 
   @@map("empresas")
 }
@@ -194,6 +197,12 @@ model Usuario {
   conversas Conversa[]
   criacoes  Criacao[]
   aiUsage   AiUsage[]
+
+  execucoes             Execucao[]
+  conectores            EmpresaConector[]
+  aprovacoesSolicitadas AprovacaoAcao[]     @relation("AprovacaoSolicitante")
+  aprovacoesDecididas   AprovacaoAcao[]     @relation("AprovacaoDecisor")
+  registrosAuditoria    RegistroAuditoria[]
 
   insightLeituras        InsightLeitura[]
   insightFeedbacks       InsightFeedback[]
@@ -1382,10 +1391,24 @@ model EmpresaConector {
   /// Quando as credenciais foram gravadas pela última vez.
   credenciaisAtualizadoEm DateTime?
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  // --- Titular: de QUEM é a conexão ---
+  // Conexão PESSOAL (caixa de e-mail, agenda, Drive, token de usuário do
+  // Slack) pertence a uma pessoa: só ela lê. Conexão da ORGANIZAÇÃO (bot do
+  // Slack, Teams, Zapier, conectores de catálogo) é da empresa. A lista de
+  // pessoais está em src/conectores/titular.ts.
+  /// Dono da conexão pessoal. Nulo nas conexões da organização.
+  usuarioId String?
+  /// Chave de unicidade: o usuarioId nas pessoais, "" nas da organização. Existe
+  /// porque, no Postgres, NULL não colide com NULL num índice único — sem ela
+  /// a organização poderia ter duas linhas do mesmo conector.
+  titular   String  @default("")
 
-  @@unique([empresaId, connectorId])
+  empresa Empresa  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, connectorId, titular])
   @@index([empresaId])
+  @@index([usuarioId])
   @@map("empresa_conectores")
 }
 
@@ -1455,6 +1478,7 @@ model Conversa {
   empresa   Empresa    @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   usuario   Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   mensagens Mensagem[]
+  execucoes Execucao[]
 
   @@index([empresaId, usuarioId, atualizadoEm])
   @@index([empresaId, usuarioId, origem, atualizadoEm])
@@ -1570,4 +1594,192 @@ model AiUsage {
   @@index([usuarioId, criadoEm])
   @@index([empresaId])
   @@map("ai_usage")
+}
+
+// ---------- Orquestrador ----------
+// Uma EXECUÇÃO é um pedido do usuário que o orquestrador resolveu em várias
+// etapas (as perguntas simples continuam no fluxo direto do Assistente e não
+// geram execução). O estado fica no banco para a execução sobreviver à queda
+// da conexão e ao reinício da API, e poder ser retomada da última etapa
+// concluída.
+//
+// Escopo igual ao de `Conversa`: empresa + usuário em todo `where` e 404 (não
+// 403) para id de outra pessoa.
+
+enum ExecucaoStatus {
+  planejando
+  executando
+  /// Parada numa etapa de escrita até o usuário aprovar ou negar.
+  aguardando_aprovacao
+  concluida
+  falhou
+  cancelada
+  /// Estava executando quando a API caiu ou reiniciou; pode ser retomada.
+  interrompida
+}
+
+enum EtapaStatus {
+  pendente
+  executando
+  aguardando_aprovacao
+  concluida
+  falhou
+  /// Não rodou porque uma dependência falhou ou foi negada.
+  pulada
+  /// A aprovação foi negada: a ação não foi executada.
+  negada
+}
+
+enum AprovacaoStatus {
+  pendente
+  aprovada
+  negada
+  expirada
+}
+
+/// Um pedido resolvido pelo orquestrador em várias etapas.
+model Execucao {
+  id            String         @id @default(cuid())
+  empresaId     String
+  usuarioId     String
+  /// Conversa do Assistente onde a resposta final é gravada.
+  conversaId    String?
+  /// Organização e repositório ativos no pedido: as ferramentas rodam neste
+  /// escopo também ao retomar, sem depender dos headers da nova requisição.
+  organizacaoId String?
+  repositorioId String?
+  /// Texto do usuário que originou a execução.
+  pedido        String
+  status        ExecucaoStatus @default(planejando)
+  /// Plano gerado (etapas e dependências), como o planejador o devolveu.
+  plano         Json?
+  /// Estado do loop do executor quando a execução PAUSA (aguardando
+  /// aprovação): histórico com o modelo, contadores e chamadas pendentes.
+  /// É o que permite continuar exatamente de onde parou.
+  estado        Json?
+  /// Resposta final entregue ao usuário.
+  resultado     String?
+  /// Motivo legível quando `falhou`.
+  erro          String?
+  /// Soma de tokens de todas as chamadas desta execução (orçamento).
+  tokensEntrada Int            @default(0)
+  tokensSaida   Int            @default(0)
+  criadoEm      DateTime       @default(now())
+  atualizadoEm  DateTime       @updatedAt
+  concluidaEm   DateTime?
+
+  empresa    Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario    Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conversa   Conversa?           @relation(fields: [conversaId], references: [id], onDelete: SetNull)
+  etapas     EtapaExecucao[]
+  aprovacoes AprovacaoAcao[]
+  auditoria  RegistroAuditoria[]
+
+  @@index([empresaId, usuarioId, criadoEm])
+  /// Varredura do boot: execuções que ficaram `executando` viram `interrompida`.
+  @@index([status])
+  @@map("execucoes")
+}
+
+/// Uma etapa do plano: chamada de ferramenta ou passo do modelo.
+model EtapaExecucao {
+  id                String      @id @default(cuid())
+  execucaoId        String
+  /// Id da etapa dentro do plano (ex.: "e1"), referenciado em `dependeDe`.
+  chave             String
+  /// Ordem de exibição; a ordem de execução vem das dependências.
+  ordem             Int
+  /// `ferramenta` | `modelo` | `resposta`.
+  tipo              String
+  /// Nome no registro de ferramentas, quando `tipo = ferramenta`.
+  ferramenta        String?
+  descricao         String
+  /// Chaves das etapas que precisam terminar antes desta.
+  dependeDe         String[]
+  entrada           Json?
+  saida             Json?
+  erro              String?
+  status            EtapaStatus @default(pendente)
+  /// Para escritas externas: impede repetir a ação ao retomar a execução.
+  chaveIdempotencia String?     @unique
+  tentativas        Int         @default(0)
+  iniciadaEm        DateTime?
+  concluidaEm       DateTime?
+  criadoEm          DateTime    @default(now())
+  atualizadoEm      DateTime    @updatedAt
+
+  execucao  Execucao       @relation(fields: [execucaoId], references: [id], onDelete: Cascade)
+  aprovacao AprovacaoAcao?
+
+  @@unique([execucaoId, chave])
+  @@index([execucaoId, ordem])
+  @@map("etapas_execucao")
+}
+
+/// Pedido de aprovação humana antes de uma ação de escrita.
+model AprovacaoAcao {
+  id            String          @id @default(cuid())
+  empresaId     String
+  execucaoId    String
+  /// Uma aprovação por etapa.
+  etapaId       String          @unique
+  solicitanteId String
+  decididoPorId String?
+  ferramenta    String
+  risco         String
+  /// O que será feito, em linguagem do usuário.
+  resumo        String
+  /// Parâmetros exatos apresentados ao usuário.
+  entrada       Json
+  /// Hash dos parâmetros aprovados: a execução só roda se a entrada final
+  /// tiver o mesmo hash (o que foi aprovado é o que é executado).
+  hashEntrada   String
+  /// Parecer do revisor de segurança (consultivo; não autoriza nada).
+  revisao       Json?
+  status        AprovacaoStatus @default(pendente)
+  /// Motivo informado ao negar.
+  motivo        String?
+  expiraEm      DateTime
+  decididoEm    DateTime?
+  criadoEm      DateTime        @default(now())
+
+  empresa     Empresa       @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  execucao    Execucao      @relation(fields: [execucaoId], references: [id], onDelete: Cascade)
+  etapa       EtapaExecucao @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  solicitante Usuario       @relation("AprovacaoSolicitante", fields: [solicitanteId], references: [id], onDelete: Cascade)
+  decididoPor Usuario?      @relation("AprovacaoDecisor", fields: [decididoPorId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId, status, criadoEm])
+  @@index([execucaoId])
+  @@map("aprovacoes_acao")
+}
+
+/// Trilha de auditoria do orquestrador. Só recebe INSERT: nada a atualiza.
+/// Sobrevive à exclusão da execução e do usuário (as referências viram nulas)
+/// e só some com a empresa.
+model RegistroAuditoria {
+  id           String   @id @default(cuid())
+  empresaId    String
+  /// Quem agiu (o usuário do pedido ou quem aprovou). Nulo para eventos do
+  /// sistema (ex.: varredura do boot).
+  usuarioId    String?
+  execucaoId   String?
+  etapaId      String?
+  /// Ex.: `execucao.criada`, `ferramenta.executada`, `politica.bloqueou`,
+  /// `aprovacao.concedida`.
+  evento       String
+  ferramenta   String?
+  risco        String?
+  detalhes     Json?
+  /// Id de correlação da requisição (X-Request-Id), para casar com os logs.
+  idRequisicao String?
+  criadoEm     DateTime @default(now())
+
+  empresa  Empresa   @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario  Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  execucao Execucao? @relation(fields: [execucaoId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId, criadoEm])
+  @@index([execucaoId, criadoEm])
+  @@map("registros_auditoria")
 }

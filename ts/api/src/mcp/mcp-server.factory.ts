@@ -2,6 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { ConectoresService } from '@/conectores/conectores.service';
+import { ehPessoal } from '@/conectores/titular';
+
+/**
+ * A chave MCP identifica a empresa, não uma pessoa: conexões PESSOAIS (e-mail,
+ * agenda, Drive) ficam fora do alcance do MCP — nem listadas, nem alteradas.
+ */
+function exigirDaOrganizacao(connectorId: string): void {
+  if (ehPessoal(connectorId)) {
+    throw new Error(
+      'Conector pessoal (conta de uma pessoa): conecte ou desconecte pelo app do Oracle, não pelo MCP.',
+    );
+  }
+}
 import { SlackApiService } from '@/conectores/slack-api.service';
 
 /** Serializa o resultado de uma ferramenta como JSON legível. */
@@ -53,7 +66,7 @@ export class McpServerFactory {
       {
         title: 'Listar conectores',
         description:
-          'Lista os conectores do catálogo com o estado de conexão da conta pessoal ' +
+          'Lista os conectores do catálogo com o estado de conexão da organização ' +
           '(connected/connectedAt). Pode filtrar por categoria ou listar só os conectados.',
         inputSchema: {
           categoria: z
@@ -68,7 +81,8 @@ export class McpServerFactory {
       },
       async ({ categoria, apenas_conectados }) =>
         jsonResult(
-          await this.conectores.list(empresaId, {
+          // MCP não tem identidade de usuário: só as conexões da organização.
+          await this.conectores.list(empresaId, null, {
             categoria,
             apenasConectados: apenas_conectados,
           }),
@@ -85,7 +99,7 @@ export class McpServerFactory {
           id: z.string().describe('Id do conector (ex.: "slack", "gupy").'),
         },
       },
-      async ({ id }) => jsonResult(await this.conectores.get(empresaId, id)),
+      async ({ id }) => jsonResult(await this.conectores.get(empresaId, null, id)),
     );
 
     server.registerTool(
@@ -93,14 +107,16 @@ export class McpServerFactory {
       {
         title: 'Conectar conector',
         description:
-          'Ativa um conector na conta pessoal. Idempotente: conectar um conector ' +
+          'Ativa um conector da organização (contas pessoais, como e-mail e agenda, só pelo app). Idempotente: conectar um conector ' +
           'já ativo não tem efeito.',
         inputSchema: {
           id: z.string().describe('Id do conector a ativar.'),
         },
       },
-      async ({ id }) =>
-        jsonResult(await this.conectores.connect(empresaId, id, 'mcp')),
+      async ({ id }) => {
+        exigirDaOrganizacao(id);
+        return jsonResult(await this.conectores.connect(empresaId, null, id, 'mcp'));
+      },
     );
 
     server.registerTool(
@@ -108,14 +124,16 @@ export class McpServerFactory {
       {
         title: 'Desconectar conector',
         description:
-          'Desativa um conector da conta pessoal. Idempotente: desconectar um conector ' +
+          'Desativa um conector da organização (contas pessoais só pelo app). Idempotente: desconectar um conector ' +
           'já inativo não tem efeito.',
         inputSchema: {
           id: z.string().describe('Id do conector a desativar.'),
         },
       },
-      async ({ id }) =>
-        jsonResult(await this.conectores.disconnect(empresaId, id)),
+      async ({ id }) => {
+        exigirDaOrganizacao(id);
+        return jsonResult(await this.conectores.disconnect(empresaId, null, id));
+      },
     );
 
     // ---------- Slack (integração real, requer OAuth no app) ----------

@@ -14,6 +14,7 @@ import { AgendaApiService, type AgendaEvento } from './agenda-api.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
+import { AcessoConectores } from './acesso-conectores';
 import { oauthRetorno } from './oauth-retorno';
 
 /**
@@ -37,16 +38,18 @@ export class AgendaController {
   constructor(
     private readonly oauth: OauthProviderService,
     private readonly agendaApi: AgendaApiService,
+    private readonly acesso: AcessoConectores,
   ) {}
 
   @Get('autorizar')
   @UseGuards(JwtAuthGuard)
-  authorize(
+  async authorize(
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
-  ): { url: string } {
+  ): Promise<{ url: string }> {
+    await this.acesso.exigirPodeAlterar(user, provedor);
     return {
-      url: this.oauth.buildAuthorizeUrl(user.empresaId, provedor, 'agenda'),
+      url: this.oauth.buildAuthorizeUrl(user.empresaId, user.id, provedor, 'agenda'),
     };
   }
 
@@ -57,7 +60,7 @@ export class AgendaController {
     @Param('provedor') provedor: string,
   ): Promise<{ conta: string }> {
     return {
-      conta: await this.oauth.checkAccount(user.empresaId, provedor, 'agenda'),
+      conta: await this.oauth.checkAccount(user.empresaId, user.id, provedor, 'agenda'),
     };
   }
 
@@ -71,11 +74,12 @@ export class AgendaController {
   ): Promise<{ conta: string | null; eventos: AgendaEvento[] }> {
     const eventos = await this.agendaApi.listUpcoming(
       user.empresaId,
+      user.id,
       provedor,
       Number(limite) || undefined,
     );
     return {
-      conta: await this.contaSilenciosa(user.empresaId, provedor),
+      conta: await this.contaSilenciosa(user.empresaId, user.id, provedor),
       eventos,
     };
   }
@@ -83,10 +87,11 @@ export class AgendaController {
   /** Conta autorizada só para rotular a agenda — nunca derruba a listagem. */
   private async contaSilenciosa(
     empresaId: string,
+    usuarioId: string,
     provedor: string,
   ): Promise<string | null> {
     try {
-      return await this.oauth.checkAccount(empresaId, provedor, 'agenda');
+      return await this.oauth.checkAccount(empresaId, usuarioId, provedor, 'agenda');
     } catch {
       return null;
     }

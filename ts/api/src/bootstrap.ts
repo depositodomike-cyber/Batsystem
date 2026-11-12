@@ -3,6 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { HttpExceptionFilter } from './common/http-exception.filter';
+import {
+  HEADER_CORRELACAO,
+  LoggerComCorrelacao,
+  middlewareCorrelacao,
+} from './common/correlacao';
 
 /**
  * Configuração compartilhada entre o bootstrap local (`main.ts`) e o
@@ -10,6 +15,11 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
  * parser, helmet e pipes iguais nos dois ambientes.
  */
 export function configureApp(app: INestApplication): void {
+  // Primeiro de tudo: o id de correlação precisa envolver a requisição inteira
+  // para aparecer em qualquer log que ela produza.
+  app.useLogger(new LoggerComCorrelacao());
+  app.use(middlewareCorrelacao);
+
   // Desligamos o body-parser padrão (limite ~100kb) e registramos o nosso com
   // um teto alto: a sincronização do Vault (/ai/vault) envia lotes de notas .md
   // em JSON que passam facilmente de 100kb. Uploads multipart (FileInterceptor)
@@ -100,7 +110,10 @@ export function configureApp(app: INestApplication): void {
       "Authorization",
       "X-Repositorio-Id",
       "X-Organizacao-Id",
+      HEADER_CORRELACAO,
     ],
+    // O front pode ler o id para citar num relato de erro.
+    exposedHeaders: [HEADER_CORRELACAO],
   });
 
   app.useGlobalPipes(

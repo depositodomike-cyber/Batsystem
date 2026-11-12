@@ -218,7 +218,7 @@ export class SlackApiService {
     comoUsuario = false,
   ): Promise<string> {
     const vinculo = await this.prisma.empresaConector.findUnique({
-      where: { empresaId_connectorId: { empresaId, connectorId: 'slack' } },
+      where: { empresaId_connectorId_titular: { empresaId, connectorId: 'slack', titular: '' } },
     });
     if (!vinculo?.accessTokenEncrypted) {
       throw new BadRequestException(

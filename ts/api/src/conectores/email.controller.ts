@@ -14,6 +14,7 @@ import { EmailApiService, type EmailItem } from './email-api.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
+import { AcessoConectores } from './acesso-conectores';
 import { oauthRetorno } from './oauth-retorno';
 
 /**
@@ -36,16 +37,18 @@ export class EmailController {
   constructor(
     private readonly emailOauth: OauthProviderService,
     private readonly emailApi: EmailApiService,
+    private readonly acesso: AcessoConectores,
   ) {}
 
   @Get('autorizar')
   @UseGuards(JwtAuthGuard)
-  authorize(
+  async authorize(
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
-  ): { url: string } {
+  ): Promise<{ url: string }> {
+    await this.acesso.exigirPodeAlterar(user, provedor);
     return {
-      url: this.emailOauth.buildAuthorizeUrl(user.empresaId, provedor, 'email'),
+      url: this.emailOauth.buildAuthorizeUrl(user.empresaId, user.id, provedor, 'email'),
     };
   }
 
@@ -58,6 +61,7 @@ export class EmailController {
     return {
       conta: await this.emailOauth.checkAccount(
         user.empresaId,
+        user.id,
         provedor,
         'email',
       ),
@@ -74,11 +78,12 @@ export class EmailController {
   ): Promise<{ conta: string | null; emails: EmailItem[] }> {
     const emails = await this.emailApi.listInbox(
       user.empresaId,
+      user.id,
       provedor,
       Number(limite) || undefined,
     );
     return {
-      conta: await this.contaSilenciosa(user.empresaId, provedor),
+      conta: await this.contaSilenciosa(user.empresaId, user.id, provedor),
       emails,
     };
   }
@@ -86,10 +91,11 @@ export class EmailController {
   /** Conta autorizada só para rotular a caixa — nunca derruba a listagem. */
   private async contaSilenciosa(
     empresaId: string,
+    usuarioId: string,
     provedor: string,
   ): Promise<string | null> {
     try {
-      return await this.emailOauth.checkAccount(empresaId, provedor, 'email');
+      return await this.emailOauth.checkAccount(empresaId, usuarioId, provedor, 'email');
     } catch {
       return null;
     }

@@ -83,7 +83,9 @@ export function PromptBar() {
   const { perguntar, loading, expandido, status: statusAssistente } = useAssistente();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [modo, setModo] = useState<ModoBusca>("vault");
+  // Padrão: a IA decide a fonte (memória ou web). "Repositório" e "Web" ficam
+  // como escolha explícita de quem quer forçar uma delas.
+  const [modo, setModo] = useState<ModoBusca>("auto");
   const [value, setValue] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [status, setStatus] = useState<{ msg: string; cls: "" | "ok" | "err" }>({

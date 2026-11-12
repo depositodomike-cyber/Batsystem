@@ -17,6 +17,7 @@ import { designBrief, parseDesign, type DesignSystemDto } from './design/design'
 import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -34,7 +35,9 @@ interface DashboardBody {
 }
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
+// Usar a IA exige `ia.usar` (todas as roles de sistema a têm).
+@UseGuards(JwtAuthGuard, PermissoesGuard)
+@RequerPermissao('ia.usar')
 export class DashboardController {
   private readonly logger = new Logger(DashboardController.name);
 

@@ -9,6 +9,8 @@ import { PlanilhaController } from './planilha.controller';
 import { ArtigoController } from './artigo.controller';
 import { AtaController } from './ata.controller';
 import { PromptController } from './prompt.controller';
+import { PromptService } from './prompt.service';
+import { GeradoresTextoService } from './geradores-texto.service';
 import { CarrosselController } from './carrossel.controller';
 import { ImagemController } from './imagem.controller';
 import { VideoController } from './video.controller';
@@ -78,6 +80,8 @@ import { BriefingFontesService } from '@/briefing/briefing-fontes.service';
   ],
   providers: [
     AiService,
+    PromptService,
+    GeradoresTextoService,
     AiConnectionsService,
     AiCredentialsService,
     AiMediaConnectionsService,
@@ -92,5 +96,7 @@ import { BriefingFontesService } from '@/briefing/briefing-fontes.service';
     BriefingService,
     BriefingFontesService,
   ],
+  // Usados pelas ferramentas do orquestrador (OrquestradorModule).
+  exports: [AiService, PromptService, AgentesService, RepositorioOrgService, GeradoresTextoService],
 })
 export class AiModule {}

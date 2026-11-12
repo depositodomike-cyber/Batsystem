@@ -347,6 +347,11 @@ export class ConversasService {
      * repetir a mensagem do usuário. Exige conversa existente.
      */
     respostaAdicional?: boolean;
+    /**
+     * Execução do orquestrador que produziu a resposta: vai para o `meta`
+     * dela, para o cliente buscar as etapas ao reabrir a conversa.
+     */
+    execucaoId?: string;
   }): Promise<{ conversaId: string; nova: boolean; mensagemId: string }> {
     const repositorioId = params.repositorioId?.trim() || null;
     const existing = params.conversaId
@@ -393,6 +398,7 @@ export class ConversasService {
         ...(params.arquivos?.length
           ? { arquivos: params.arquivos as Prisma.InputJsonValue }
           : {}),
+        ...(params.execucaoId ? { execucaoId: params.execucaoId } : {}),
       },
     );
     // O agente não é mais um estado da conversa (é chamado por @menção, por

@@ -19,6 +19,8 @@ export interface ConversaMessageMeta {
   arquivos?: ArquivoConversa[];
   /** Agentes @mencionados (mensagens do usuário). */
   mencoes?: MencaoAgente[];
+  /** Execução do orquestrador que produziu a resposta (resolvida em etapas). */
+  execucaoId?: string;
 }
 
 export interface ConversaMessage {

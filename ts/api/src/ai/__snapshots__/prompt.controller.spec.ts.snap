@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`POST /ai/prompt (caracterização) modo Memória (vault) sem notas, usa o aviso de memória vazia 1`] = `
+"## MEMÓRIA
+(Nenhuma nota sincronizada ainda — abra a tela Memória e selecione sua pasta.)
+
+## PERGUNTA
+pergunta"
+`;
+
+exports[`POST /ai/prompt (caracterização) modo Memória (vault) é o padrão para modo ausente ou inválido e monta o prompt completo 1`] = `
+"## MEMÓRIA (suas notas)
+### Perfil
+Gosto de café.
+
+### Política
+Política da organização sobre café.
+
+### Nota A
+Conteúdo sobre café.
+
+## REFERÊNCIAS (Notas / Insights / To-do's)
+To-do: comprar café
+
+## CONVERSA ANTERIOR
+Usuário: oi
+Assistente: olá
+
+## PERGUNTA
+Do que eu gosto?"
+`;
+
+exports[`POST /ai/prompt (caracterização) modo Web usa completarWeb com o perfil relevante e ignora o anexo 1`] = `
+"## CONTEXTO PESSOAL DO USUÁRIO (Perfil Pessoal — use se for relevante)
+Mora em SP.
+
+## PERGUNTA
+clima"
+`;

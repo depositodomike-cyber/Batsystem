@@ -14,6 +14,7 @@ import {
 } from './catalog';
 import { camposDoConector, exigeCredenciais } from './credenciais-spec';
 import { OauthProviderService } from './oauth-provider.service';
+import { chaveConexao, ehPessoal, titularDe, visiveisPara } from './titular';
 
 /**
  * Teto por campo. Nenhuma credencial de provedor chega perto disso — o maior
@@ -61,13 +62,18 @@ export class ConectoresService {
     return connectorCategories;
   }
 
-  /** Catálogo completo com o estado da empresa, opcionalmente filtrado. */
+  /**
+   * Catálogo completo com o estado visto por `usuarioId`: conexões da
+   * organização e as pessoais DELE (nunca as de outro membro). Sem usuário
+   * (MCP), só as da organização. Opcionalmente filtrado.
+   */
   async list(
     empresaId: string,
+    usuarioId: string | null,
     filtro?: { categoria?: string; apenasConectados?: boolean },
   ): Promise<ConnectorWithStatus[]> {
     const vinculos = await this.prisma.empresaConector.findMany({
-      where: { empresaId },
+      where: visiveisPara(empresaId, usuarioId),
     });
     const byConnector = new Map(vinculos.map((v) => [v.connectorId, v]));
 
@@ -88,11 +94,19 @@ export class ConectoresService {
     return lista.sort((a, b) => a.rank - b.rank);
   }
 
-  async get(empresaId: string, connectorId: string): Promise<ConnectorWithStatus> {
+  async get(
+    empresaId: string,
+    usuarioId: string | null,
+    connectorId: string,
+  ): Promise<ConnectorWithStatus> {
     const conector = this.requireFromCatalog(connectorId);
-    const vinculo = await this.prisma.empresaConector.findUnique({
-      where: { empresaId_connectorId: { empresaId, connectorId } },
-    });
+    // Pessoal sem usuário (MCP): não há o que mostrar — aparece desconectado.
+    const vinculo =
+      ehPessoal(connectorId) && !usuarioId
+        ? null
+        : await this.prisma.empresaConector.findUnique({
+            where: chaveConexao(empresaId, connectorId, usuarioId),
+          });
     return {
       ...conector,
       connected: Boolean(vinculo),
@@ -103,46 +117,56 @@ export class ConectoresService {
     };
   }
 
-  /** Ativa o conector para a empresa (idempotente). */
+  /**
+   * Ativa o conector (idempotente): pessoal, para `usuarioId`; da
+   * organização, para a empresa. Quem pode fazer o quê é conferido antes,
+   * no controller e no MCP.
+   */
   async connect(
     empresaId: string,
+    usuarioId: string | null,
     connectorId: string,
     origem: 'app' | 'mcp',
   ): Promise<ConnectorWithStatus> {
     this.requireFromCatalog(connectorId);
+    const titular = titularDe(connectorId, usuarioId);
     await this.prisma.empresaConector.upsert({
-      where: { empresaId_connectorId: { empresaId, connectorId } },
-      create: { empresaId, connectorId, origem },
+      where: chaveConexao(empresaId, connectorId, usuarioId),
+      create: { empresaId, connectorId, origem, titular, usuarioId: titular || null },
       update: {},
     });
-    return this.get(empresaId, connectorId);
+    return this.get(empresaId, usuarioId, connectorId);
   }
 
-  /** Desativa o conector (idempotente). */
+  /** Desativa o conector (idempotente). Pessoal: só a conexão de `usuarioId`. */
   async disconnect(
     empresaId: string,
+    usuarioId: string | null,
     connectorId: string,
   ): Promise<ConnectorWithStatus> {
     this.requireFromCatalog(connectorId);
+    const titular = titularDe(connectorId, usuarioId);
     // Google: Gmail, Calendar e Drive dividem a mesma concessão; revogar
     // derruba as três. Só revoga no Google quando este é o último conector
     // Google conectado — senão apenas esquece o vínculo local.
+    // A concessão é da PESSOA: conta só os conectores Google dela.
     if (OauthProviderService.ehGoogle(connectorId)) {
       const outros = await this.prisma.empresaConector.count({
         where: {
           empresaId,
+          titular,
           connectorId: {
             in: OauthProviderService.idsGoogle().filter((id) => id !== connectorId),
           },
           accessTokenEncrypted: { not: null },
         },
       });
-      if (outros === 0) await this.oauth.revogarGoogle(empresaId, connectorId);
+      if (outros === 0) await this.oauth.revogarGoogle(empresaId, usuarioId, connectorId);
     }
     await this.prisma.empresaConector.deleteMany({
-      where: { empresaId, connectorId },
+      where: { empresaId, connectorId, titular },
     });
-    return this.get(empresaId, connectorId);
+    return this.get(empresaId, usuarioId, connectorId);
   }
 
   /**
@@ -217,8 +241,9 @@ export class ConectoresService {
     }
 
     const credenciaisEncrypted = this.crypto.encrypt(JSON.stringify(limpos));
+    // Credenciais de formulário são sempre da organização (titular "").
     await this.prisma.empresaConector.upsert({
-      where: { empresaId_connectorId: { empresaId, connectorId } },
+      where: chaveConexao(empresaId, connectorId, null),
       create: {
         empresaId,
         connectorId,
@@ -231,7 +256,7 @@ export class ConectoresService {
         credenciaisAtualizadoEm: new Date(),
       },
     });
-    return this.get(empresaId, connectorId);
+    return this.get(empresaId, null, connectorId);
   }
 
   /**

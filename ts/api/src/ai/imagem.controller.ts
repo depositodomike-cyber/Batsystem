@@ -13,6 +13,7 @@ import { gerarImagensOpenAI, type ModeloImagem } from './imagem/gerar';
 import { designImagemHint, parseDesign, type DesignSystemDto } from './design/design';
 import { MemoriasService } from '@/memorias/memorias.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
@@ -45,7 +46,9 @@ function mensagemErro(err: unknown): string {
 }
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
+// Usar a IA exige `ia.usar` (todas as roles de sistema a têm).
+@UseGuards(JwtAuthGuard, PermissoesGuard)
+@RequerPermissao('ia.usar')
 export class ImagemController {
   private readonly logger = new Logger(ImagemController.name);
 

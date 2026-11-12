@@ -17,6 +17,8 @@ import { AgenteAvatar } from "@/components/shared/AgenteAvatar";
 import { Fontes } from "./Fontes";
 import { LogoMark } from "./LogoMark";
 import { ArquivoCard } from "./ArquivoCard";
+import { EtapasExecucao } from "./EtapasExecucao";
+import { AprovacaoCard } from "./AprovacaoCard";
 
 // ----------------------------------------------------------------------
 
@@ -51,7 +53,7 @@ function PerguntaComMencoes({
 
 export function ChatTab() {
   const { t } = useTranslation();
-  const { conversa, loading, expandido } = useAssistente();
+  const { conversa, loading, expandido, decidirAprovacao } = useAssistente();
   const { porId, todos } = useAgentes();
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -127,6 +129,24 @@ export function ChatTab() {
                   <span className="truncate">{agente.titulo}</span>
                 </p>
               )}
+              {turno.execucao && (
+                <EtapasExecucao execucao={turno.execucao} pendente={turno.pendente} />
+              )}
+              {turno.execucao?.id &&
+                (turno.execucao.aprovacoes ?? []).map((aprovacao) => (
+                  <AprovacaoCard
+                    key={aprovacao.id}
+                    aprovacao={aprovacao}
+                    bloqueado={loading}
+                    onDecidir={(aprovar) =>
+                      void decidirAprovacao({
+                        execucaoId: turno.execucao!.id!,
+                        aprovacaoId: aprovacao.id,
+                        aprovar,
+                      })
+                    }
+                  />
+                ))}
               <div className={agente ? "mt-1" : "mt-1.5"}>
                 {turno.pendente ? (
                   <p className="dark:text-dark-300 flex items-center gap-2 text-sm text-gray-400">

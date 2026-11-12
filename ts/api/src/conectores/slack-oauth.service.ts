@@ -182,7 +182,7 @@ export class SlackOauthService {
     };
 
     await this.prisma.empresaConector.upsert({
-      where: { empresaId_connectorId: { empresaId, connectorId: 'slack' } },
+      where: { empresaId_connectorId_titular: { empresaId, connectorId: 'slack', titular: '' } },
       create: {
         empresaId,
         connectorId: 'slack',

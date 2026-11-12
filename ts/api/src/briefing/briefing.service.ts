@@ -5,6 +5,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { AiService } from '@/ai/ai.service';
 import { BriefingFontesService, type FontesBriefing, type Janela } from './briefing-fontes.service';
 import { systemBriefing } from './briefing.prompts';
+import { visiveisPara } from '@/conectores/titular';
 import {
   NIVEIS,
   type BriefingDados,
@@ -90,8 +91,10 @@ export class BriefingService {
    */
   private async assinaturaConfig(empresaId: string, usuarioId: string): Promise<string> {
     const [conectores, credenciais, conexoes, perfil] = await Promise.all([
+      // Só as conexões que este usuário vê (da organização + as pessoais dele):
+      // conectar o Gmail de outra pessoa não invalida o seu briefing.
       this.prisma.empresaConector.findMany({
-        where: { empresaId },
+        where: visiveisPara(empresaId, usuarioId),
         select: { connectorId: true, criadoEm: true },
       }),
       this.prisma.aiCredential.findMany({ where: { empresaId }, select: { id: true, atualizadoEm: true } }),
@@ -128,7 +131,7 @@ export class BriefingService {
       select: { assinatura: true },
     });
     if (!row) return { novidades: false, existe: false };
-    const { assinatura, fontes } = await this.fontesSvc.conectores(empresaId, janela);
+    const { assinatura, fontes } = await this.fontesSvc.conectores(empresaId, usuarioId, janela);
     // Agenda/Gmail com falha (ex.: cota do Google) não é novidade: a lista vazia
     // mudaria a assinatura sem nada ter mudado de fato.
     if (fontes.agenda?.status === 'erro' || fontes.email?.status === 'erro') {

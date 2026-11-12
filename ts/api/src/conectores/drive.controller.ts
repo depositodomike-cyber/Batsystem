@@ -19,6 +19,7 @@ import {
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
+import { AcessoConectores } from './acesso-conectores';
 import { oauthRetorno } from './oauth-retorno';
 
 /**
@@ -42,15 +43,17 @@ export class DriveController {
   constructor(
     private readonly oauth: OauthProviderService,
     private readonly drive: DriveApiService,
+    private readonly acesso: AcessoConectores,
   ) {}
 
   @Get('autorizar')
   @UseGuards(JwtAuthGuard)
-  authorize(
+  async authorize(
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
-  ): { url: string } {
-    return { url: this.oauth.buildAuthorizeUrl(user.empresaId, provedor, 'drive') };
+  ): Promise<{ url: string }> {
+    await this.acesso.exigirPodeAlterar(user, provedor);
+    return { url: this.oauth.buildAuthorizeUrl(user.empresaId, user.id, provedor, 'drive') };
   }
 
   @Get('conta')
@@ -59,7 +62,7 @@ export class DriveController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
   ): Promise<{ conta: string }> {
-    return { conta: await this.oauth.checkAccount(user.empresaId, provedor, 'drive') };
+    return { conta: await this.oauth.checkAccount(user.empresaId, user.id, provedor, 'drive') };
   }
 
   @Get('arquivos')
@@ -72,7 +75,7 @@ export class DriveController {
     @Query('pagina') pagina?: string,
   ): Promise<{ arquivos: DriveArquivo[]; proximaPagina: string | null }> {
     this.exigirDrive(provedor);
-    return this.drive.listar(user.empresaId, { pasta, busca: q, pageToken: pagina });
+    return this.drive.listar(user.empresaId, user.id, { pasta, busca: q, pageToken: pagina });
   }
 
   @Get('pastas/:id')
@@ -83,7 +86,7 @@ export class DriveController {
     @Param('id') id: string,
   ) {
     this.exigirDrive(provedor);
-    return this.drive.pasta(user.empresaId, id);
+    return this.drive.pasta(user.empresaId, user.id, id);
   }
 
   @Get('pastas/:id/arvore')
@@ -94,7 +97,7 @@ export class DriveController {
     @Param('id') id: string,
   ): Promise<{ pasta: { id: string; nome: string }; arquivos: DriveArquivoNaArvore[]; truncado: boolean }> {
     this.exigirDrive(provedor);
-    return this.drive.arvore(user.empresaId, id);
+    return this.drive.arvore(user.empresaId, user.id, id);
   }
 
   @Get('arquivos/:id/conteudo')
@@ -105,7 +108,7 @@ export class DriveController {
     @Param('id') id: string,
   ) {
     this.exigirDrive(provedor);
-    return this.drive.conteudo(user.empresaId, id);
+    return this.drive.conteudo(user.empresaId, user.id, id);
   }
 
   @Get('callback')

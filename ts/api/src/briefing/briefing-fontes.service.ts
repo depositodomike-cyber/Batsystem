@@ -73,12 +73,15 @@ export class BriefingFontesService {
     private readonly vault: VaultService,
   ) {}
 
-  /** Agenda + Gmail (o que muda ao longo do dia) e a assinatura deles. */
-  async conectores(empresaId: string, janela: Janela) {
+  /**
+   * Agenda + Gmail DESTE usuário (o que muda ao longo do dia) e a assinatura
+   * deles. As conexões são pessoais: cada briefing lê só as do seu dono.
+   */
+  async conectores(empresaId: string, usuarioId: string, janela: Janela) {
     const fontes: Partial<Record<FonteId, FonteInfo>> = {};
     const [ev, em] = await Promise.allSettled([
-      this.agenda.listUpcoming(empresaId, 'google-calendar', 60, janela),
-      this.email.listInbox(empresaId, 'gmail', 30),
+      this.agenda.listUpcoming(empresaId, usuarioId, 'google-calendar', 60, janela),
+      this.email.listInbox(empresaId, usuarioId, 'gmail', 30),
     ]);
     let eventos: AgendaEvento[] = [];
     let emails: EmailItem[] = [];
@@ -112,7 +115,7 @@ export class BriefingFontesService {
     operacoes: OperacoesCliente,
   ): Promise<FontesBriefing> {
     const [conn, perfilRes] = await Promise.all([
-      this.conectores(empresaId, janela),
+      this.conectores(empresaId, usuarioId, janela),
       this.perfil.obter(empresaId, usuarioId).catch(() => null),
     ]);
     const fontes = { ...conn.fontes };

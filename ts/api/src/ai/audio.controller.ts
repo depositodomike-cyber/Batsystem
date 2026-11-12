@@ -21,6 +21,7 @@ import {
 import { MemoriasService } from '@/memorias/memorias.service';
 import { InsightsService } from '@/insights/insights.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 
@@ -33,7 +34,9 @@ interface UploadedFileLike {
 const CATEGORIA_REUNIOES = 'reunioes';
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
+// Usar a IA exige `ia.usar` (todas as roles de sistema a têm).
+@UseGuards(JwtAuthGuard, PermissoesGuard)
+@RequerPermissao('ia.usar')
 export class AudioController {
   private readonly logger = new Logger(AudioController.name);
 

@@ -147,6 +147,8 @@ export class EmailApiService {
   /** Últimos e-mails da caixa de entrada, do mais recente para o mais antigo. */
   async listInbox(
     empresaId: string,
+    /** Dono da conexão: a caixa é pessoal. */
+    usuarioId: string,
     provedor: string,
     limite = LIMITE_PADRAO,
   ): Promise<EmailItem[]> {
@@ -154,7 +156,7 @@ export class EmailApiService {
       Math.max(1, Math.trunc(limite) || LIMITE_PADRAO),
       LIMITE_MAX,
     );
-    const token = await this.oauth.getAccessToken(empresaId, provedor, 'email');
+    const token = await this.oauth.getAccessToken(empresaId, usuarioId, provedor, 'email');
     if (provedor === 'gmail') return this.listGmail(token, max);
     if (provedor === 'outlook') return this.listOutlook(token, max);
     // Provedor desconhecido já falha em getAccessToken; guarda de tipo.

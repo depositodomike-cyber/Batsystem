@@ -26,6 +26,7 @@ import { useConversasContext } from "@/app/contexts/conversas/context";
 import { useAgentes } from "@/app/contexts/agentes/context";
 import { AgenteSelect } from "./AgenteSelect";
 import { ChatTab } from "./ChatTab";
+import { TarefasAbertas } from "./TarefasAbertas";
 import { HistoricoTab } from "./HistoricoTab";
 
 // ----------------------------------------------------------------------
@@ -215,7 +216,14 @@ export function Panel() {
           />
         </div>
 
-        {tab === "chat" ? <ChatTab /> : <HistoricoTab />}
+        {tab === "chat" ? (
+          <>
+            <TarefasAbertas />
+            <ChatTab />
+          </>
+        ) : (
+          <HistoricoTab />
+        )}
 
         {/* Campo de envio */}
         {tab === "chat" && (

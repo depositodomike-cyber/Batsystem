@@ -77,6 +77,8 @@ export class AgendaApiService {
    */
   async listUpcoming(
     empresaId: string,
+    /** Dono da conexão: a agenda é pessoal. */
+    usuarioId: string,
     provedor: string,
     limite = LIMITE_PADRAO,
     /** Janela opcional (ISO). Sem ela: a partir de agora, sem fim. */
@@ -88,6 +90,7 @@ export class AgendaApiService {
     );
     const token = await this.oauth.getAccessToken(
       empresaId,
+      usuarioId,
       provedor,
       'agenda',
     );

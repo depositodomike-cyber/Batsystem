@@ -9,6 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import type { AiProvider } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { getProvider, type LlmWebResult } from './providers';
+import {
+  validarFerramentas,
+  type DefinicaoFerramenta,
+  type EscolhaFerramenta,
+  type LlmToolsResult,
+  type MensagemComFerramentas,
+} from './tool-use';
 import { AiConnectionsService } from './connections.service';
 import {
   ehChaveRejeitada,
@@ -453,8 +460,8 @@ ${PLATFORM_FRAMING}${conexoes}`;
 
   /**
    * Resposta única com busca na web (fontes citadas) — usada pelo modo "Web" do
-   * Prompt. Se o provedor do tenant não oferece busca (ex.: OpenAI aqui), cai
-   * numa resposta comum sem fontes, apenas com o conhecimento do modelo.
+   * Prompt e pela ferramenta `buscar_web`. Anthropic e OpenAI pesquisam de
+   * verdade; um provedor sem busca cai numa resposta comum sem fontes.
    */
   async completarWeb(
     empresaId: string,
@@ -491,6 +498,61 @@ ${PLATFORM_FRAMING}${conexoes}`;
         entrada: result.usage.entrada,
         saida: result.usage.saida,
         fonte: 'web',
+      });
+    }
+    return result;
+  }
+
+  /**
+   * UM turno com ferramentas, com o mesmo failover das outras chamadas. O
+   * histórico vai no formato neutro (`tool-use.ts`), então cada turno pode
+   * cair num provedor diferente da fila sem quebrar a conversa. Quem roda o
+   * loop (executar as chamadas e mandar os resultados no próximo turno) é o
+   * chamador.
+   *
+   * `semDiretrizes` segue a regra de `completar`: só para passos internos
+   * (roteamento, planejamento); turnos que produzem texto para o usuário
+   * levam as diretrizes.
+   */
+  async completarComFerramentas(
+    empresaId: string,
+    usuarioId: string,
+    p: {
+      system: string;
+      mensagens: MensagemComFerramentas[];
+      ferramentas: DefinicaoFerramenta[];
+      maxTokens?: number;
+      escolha?: EscolhaFerramenta;
+      fonte?: string;
+      semDiretrizes?: boolean;
+    },
+  ): Promise<LlmToolsResult & { modelo: string }> {
+    validarFerramentas(p.ferramentas);
+    if (p.mensagens.length === 0) {
+      throw new BadRequestException('Envie ao menos uma mensagem.');
+    }
+    const systemFinal = p.semDiretrizes
+      ? p.system
+      : await this.comDiretrizes(empresaId, usuarioId, p.system);
+    const result = await this.comFailover(empresaId, async (candidato) => ({
+      ...(await getProvider(candidato.provider).completeWithTools({
+        apiKey: candidato.apiKey,
+        model: candidato.model,
+        system: systemFinal,
+        mensagens: p.mensagens,
+        ferramentas: p.ferramentas,
+        maxTokens: p.maxTokens ?? 4000,
+        escolha: p.escolha,
+      })),
+      modelo: `${candidato.provider}/${candidato.model}`,
+    }));
+    if (result.usage) {
+      this.uso.registrar({
+        empresaId,
+        usuarioId,
+        entrada: result.usage.entrada,
+        saida: result.usage.saida,
+        fonte: p.fonte ?? 'ferramentas',
       });
     }
     return result;

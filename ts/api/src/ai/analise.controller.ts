@@ -16,6 +16,7 @@ import { designBrief, parseDesign } from './design/design';
 import { MemoriasService } from '@/memorias/memorias.service';
 import { VaultService } from '@/vault/vault.service';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import { RepositorioAtual } from '@/common/repositorio-atual.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
@@ -66,7 +67,8 @@ export class AnaliseController {
    * Retorna { titulo, analise, origem }.
    */
   @Post('analise')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissoesGuard)
+  @RequerPermissao('ia.usar')
   @UseInterceptors(
     FileInterceptor('arquivo', { limits: { fileSize: 20 * 1024 * 1024 } }),
   )

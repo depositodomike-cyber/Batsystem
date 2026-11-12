@@ -12,7 +12,12 @@
 // "pensando…". Sem menção, responde o Assistente padrão, como sempre. Um
 // agente nunca recebe a resposta do outro à mesma pergunta: não há conversa
 // entre agentes.
-import { ReactNode, useCallback, useMemo, useRef, useState } from "react";
+//
+// SEM menção (e sem anexo), a pergunta vai ao ORQUESTRADOR, que decide entre
+// responder direto ou resolver em etapas (memória, web, especialistas),
+// mostrando as etapas no turno enquanto acontecem. Com a rota desligada no
+// servidor, tudo segue pelo /ai/prompt como antes.
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   perguntarPromptApi,
@@ -24,6 +29,20 @@ import {
   fetchConversaApi,
   marcarArquivoSalvoApi,
 } from "@/services/api/conversas";
+import {
+  cancelarExecucaoApi,
+  decidirAprovacaoApi,
+  etapasParaTela,
+  listarAbertasApi,
+  orquestradorDisponivel,
+  orquestrarApi,
+  OrquestradorIndisponivel,
+  retomarExecucaoApi,
+  type DesfechoOrquestrador,
+  type EtapaOrquestrador,
+  type ExecucaoAberta,
+  type OrquestrarCallbacks,
+} from "@/services/api/orquestrador";
 import { coletarReferencia } from "@/services/referencia";
 import { marcarBuscaMemoria } from "@/utils/memoriaBusca";
 import { useConversasContext } from "@/app/contexts/conversas/context";
@@ -34,6 +53,7 @@ import {
   type AssistenteContextValue,
   type AssistenteStatus,
   type AssistenteTab,
+  type ExecucaoDoTurno,
   type PerguntarResult,
   type Turno,
 } from "./context";
@@ -72,6 +92,22 @@ function historicoDe(turnos: Turno[]): HistoricoTurno[] {
   return pares;
 }
 
+/** A execução do turno (ou uma vazia, para começar a preencher). */
+function comExecucao(t: Turno): ExecucaoDoTurno {
+  return t.execucao ?? { etapas: [] };
+}
+
+/** Acrescenta a etapa, ou atualiza a de mesma chave. */
+function comEtapa(ex: ExecucaoDoTurno, etapa: EtapaOrquestrador): ExecucaoDoTurno {
+  const existe = ex.etapas.some((e) => e.chave === etapa.chave);
+  return {
+    ...ex,
+    etapas: existe
+      ? ex.etapas.map((e) => (e.chave === etapa.chave ? etapa : e))
+      : [...ex.etapas, etapa],
+  };
+}
+
 // ----------------------------------------------------------------------
 
 export function AssistenteHostProvider({ children }: { children: ReactNode }) {
@@ -83,7 +119,8 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState<AssistenteTab>("chat");
   const [conversa, setConversa] = useState<Turno[]>([]);
   const [conversaId, setConversaId] = useState<string | null>(null);
-  const [modoConversa, setModoConversa] = useState<ModoBusca>("vault");
+  // Padrão "auto": a IA decide se responde pela memória ou pesquisando na web.
+  const [modoConversa, setModoConversa] = useState<ModoBusca>("auto");
   const [loading, setLoading] = useState(false);
   const [naoLido, setNaoLido] = useState(false);
   const [expandido, setExpandido] = useState(false);
@@ -161,6 +198,85 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /**
+   * Um turno pelo orquestrador. As etapas atualizam o turno pendente ao vivo.
+   * Devolve `null` quando a rota não está disponível (flag desligada no
+   * servidor ou sem permissão) — aí quem chamou segue pelo /ai/prompt.
+   */
+  const responderOrquestrado = useCallback(
+    async (p: {
+      pendente: Turno;
+      pergunta: string;
+      modo: ModoBusca;
+      historico: HistoricoTurno[];
+      referencia?: string;
+      conversaId: string | null;
+    }): Promise<{ resultado: PerguntarResult; conversaId?: string } | null> => {
+      // O turno é trocado por cópias a cada evento; `atual` é a versão que
+      // está na tela, para o próximo `map` achá-la pela identidade.
+      let atual = p.pendente;
+      const trocar = (novo: Turno) => {
+        const antes = atual;
+        atual = novo;
+        setConversa((c) => c.map((t) => (t === antes ? novo : t)));
+      };
+      try {
+        const r = await orquestrarApi(
+          {
+            texto: p.pergunta,
+            modo: p.modo,
+            historico: p.historico,
+            referencia: p.referencia,
+            conversaId: p.conversaId ?? undefined,
+            repositorioId,
+          },
+          {
+            onRota: (rota) => {
+              if (rota === "plano") trocar({ ...atual, execucao: { etapas: [] } });
+            },
+            onExecucao: (id) =>
+              trocar({ ...atual, execucao: { ...comExecucao(atual), id } }),
+            onEtapa: (etapa) =>
+              trocar({ ...atual, execucao: comEtapa(comExecucao(atual), etapa) }),
+          },
+        );
+        if (r.tipo === "pausa") {
+          // Parou numa escrita: o turno mostra o pedido de aprovação, e a
+          // resposta só vem depois da decisão (ver `decidirAprovacao`).
+          trocar({
+            ...atual,
+            pendente: false,
+            resposta: "",
+            execucao: { ...comExecucao(atual), id: r.execucaoId, aprovacoes: r.aprovacoes },
+          });
+          return { resultado: { ok: true, origem: "vault" } };
+        }
+        if (r.conversaId) setConversaId(r.conversaId);
+        trocar({
+          ...atual,
+          pendente: false,
+          resposta: r.resposta,
+          fontes: r.fontes,
+          origem: r.origem,
+          mensagemId: r.mensagemId,
+          ...(r.execucaoId
+            ? { execucao: { etapas: atual.execucao?.etapas ?? [], id: r.execucaoId } }
+            : {}),
+        });
+        return {
+          resultado: { ok: true, origem: r.origem, resposta: r.resposta },
+          conversaId: r.conversaId,
+        };
+      } catch (e) {
+        if (e instanceof OrquestradorIndisponivel) return null;
+        const erro = msgErro(e, "Erro na busca.");
+        trocar({ ...atual, pendente: false, resposta: `⚠️ ${erro}` });
+        return { resultado: { ok: false, erro } };
+      }
+    },
+    [repositorioId],
+  );
+
+  /**
    * Responde a uma pergunta — numa conversa nova (`base` vazia e sem id) ou
    * continuando a aberta. Com @menções, faz uma chamada por agente, em
    * sequência e na ordem das menções: a primeira grava a pergunta (e cria a
@@ -208,7 +324,25 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       let cid = p.conversaIdBase;
       let resultado: PerguntarResult = { ok: false, erro: "" };
       try {
-        for (let i = 0; i < pendentes.length; i++) {
+        // Sem @menção e sem anexo, o orquestrador decide: responde direto
+        // (igual ao /ai/prompt) ou resolve em etapas. Se a rota não estiver
+        // disponível no servidor, cai no /ai/prompt logo abaixo.
+        const orquestrado =
+          agentes.length === 0 && !(p.arquivo && modo !== "web") && orquestradorDisponivel()
+            ? await responderOrquestrado({
+                pendente: pendentes[0],
+                pergunta,
+                modo,
+                historico,
+                referencia,
+                conversaId: cid,
+              })
+            : null;
+        if (orquestrado) {
+          resultado = orquestrado.resultado;
+          cid = orquestrado.conversaId ?? cid;
+        }
+        for (let i = 0; !orquestrado && i < pendentes.length; i++) {
           const pendente = pendentes[i];
           try {
             const r = await perguntarPromptApi({
@@ -265,7 +399,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       }
     },
     // `referenciaDoTurno` lê só refs e o storage local.
-    [encontrarMencoes, refresh, repositorioId, sinalizarResposta],
+    [encontrarMencoes, refresh, repositorioId, responderOrquestrado, sinalizarResposta],
   );
 
   const perguntar = useCallback(
@@ -381,7 +515,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
         setModoConversa(
           c.modo === "web" || c.modo === "auto" || c.modo === "vault"
             ? c.modo
-            : "vault",
+            : "auto",
         );
         setConversa(turnosDeMensagens(c.messages));
       } catch (e) {
@@ -398,6 +532,166 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       }
     },
     [loading, repositorioId],
+  );
+
+  // ---------------------------------------------------- Execuções em aberto
+  // Execuções que pararam esperando o usuário (aprovação) ou que a API
+  // interrompeu: listadas no painel para decidir, retomar ou descartar.
+  const [abertas, setAbertas] = useState<ExecucaoAberta[]>([]);
+  const carregarAbertas = useCallback(async () => {
+    setAbertas(await listarAbertasApi());
+  }, []);
+
+  // Ao abrir o painel: o usuário pode ter saído no meio de uma execução.
+  useEffect(() => {
+    if (status === "open") void carregarAbertas();
+  }, [status, carregarAbertas]);
+
+  /** Aplica `f` ao turno desta execução (achado pelo id, não pela posição). */
+  const noTurnoDa = useCallback(
+    (execucaoId: string, f: (t: Turno) => Turno) =>
+      setConversa((c) => c.map((t) => (t.execucao?.id === execucaoId ? f(t) : t))),
+    [],
+  );
+
+  /**
+   * Acompanha a continuação de uma execução (decisão ou retomada) no turno
+   * dela: etapas ao vivo e, no fim, a resposta, uma nova pausa ou "ainda
+   * aguardando" (outras aprovações da mesma execução).
+   */
+  const seguirExecucao = useCallback(
+    async (
+      execucaoId: string,
+      iniciar: (cb: OrquestrarCallbacks) => Promise<DesfechoOrquestrador>,
+      aoAguardar?: (t: Turno) => Turno,
+    ) => {
+      const noTurno = (f: (t: Turno) => Turno) => noTurnoDa(execucaoId, f);
+      setLoading(true);
+      try {
+        const r = await iniciar({
+          onEtapa: (etapa) => noTurno((t) => ({ ...t, execucao: comEtapa(comExecucao(t), etapa) })),
+        });
+        if (r.tipo === "aguardando") {
+          noTurno((t) => ({ ...(aoAguardar ? aoAguardar(t) : t), pendente: false }));
+          return;
+        }
+        if (r.tipo === "pausa") {
+          noTurno((t) => ({
+            ...t,
+            pendente: false,
+            execucao: { ...comExecucao(t), aprovacoes: r.aprovacoes },
+          }));
+          return;
+        }
+        if (r.conversaId) setConversaId((atual) => atual ?? r.conversaId ?? null);
+        noTurno((t) => ({
+          ...t,
+          pendente: false,
+          resposta: r.resposta,
+          fontes: r.fontes,
+          origem: r.origem,
+          mensagemId: r.mensagemId,
+          execucao: { ...comExecucao(t), aprovacoes: [] },
+        }));
+        sinalizarResposta();
+        void refresh();
+      } catch (e) {
+        noTurno((t) => ({
+          ...t,
+          pendente: false,
+          resposta: `⚠️ ${msgErro(e, "Não foi possível continuar a tarefa.")}`,
+          execucao: { ...comExecucao(t), aprovacoes: [] },
+        }));
+      } finally {
+        setLoading(false);
+        void carregarAbertas();
+      }
+    },
+    [carregarAbertas, noTurnoDa, refresh, sinalizarResposta],
+  );
+
+  const decidirAprovacao = useCallback(
+    async ({
+      execucaoId,
+      aprovacaoId,
+      aprovar,
+    }: {
+      execucaoId: string;
+      aprovacaoId: string;
+      aprovar: boolean;
+    }) => {
+      noTurnoDa(execucaoId, (t) => ({
+        ...t,
+        pendente: true,
+        execucao: {
+          ...comExecucao(t),
+          aprovacoes: (t.execucao?.aprovacoes ?? []).map((a) =>
+            a.id === aprovacaoId ? { ...a, enviando: true } : a,
+          ),
+        },
+      }));
+      await seguirExecucao(
+        execucaoId,
+        (cb) => decidirAprovacaoApi(aprovacaoId, { aprovar }, cb),
+        // Outras ações da mesma execução ainda esperam: só esta sai da tela.
+        (t) => ({
+          ...t,
+          execucao: {
+            ...comExecucao(t),
+            aprovacoes: (t.execucao?.aprovacoes ?? []).filter((a) => a.id !== aprovacaoId),
+          },
+        }),
+      );
+    },
+    [noTurnoDa, seguirExecucao],
+  );
+
+  /**
+   * Mostra uma execução em aberto num painel limpo (como uma conversa nova):
+   * a pergunta, as etapas até aqui e as aprovações pendentes. Interrompida e
+   * retomável, já continua de onde parou.
+   */
+  const abrirExecucao = useCallback(
+    async (e: ExecucaoAberta) => {
+      if (loading) return;
+      contextoRef.current = null;
+      const rodando = e.status === "executando" || e.status === "planejando";
+      setConversaId(null);
+      setTab("chat");
+      setStatus("open");
+      setNaoLido(false);
+      setConversa([
+        {
+          pergunta: e.pedido,
+          resposta: rodando ? "Esta tarefa ainda está em andamento; a resposta vai para o Histórico quando terminar." : "",
+          fontes: [],
+          origem: "vault",
+          pendente: e.status === "interrompida" && e.retomavel,
+          execucao: { id: e.id, etapas: etapasParaTela(e.etapas), aprovacoes: e.aprovacoes },
+        },
+      ]);
+      if (e.status === "interrompida" && e.retomavel) {
+        await seguirExecucao(e.id, (cb) => retomarExecucaoApi(e.id, cb));
+      }
+    },
+    [loading, seguirExecucao],
+  );
+
+  const descartarExecucao = useCallback(
+    async (execucaoId: string) => {
+      try {
+        await cancelarExecucaoApi(execucaoId);
+        noTurnoDa(execucaoId, (t) => ({
+          ...t,
+          pendente: false,
+          resposta: "Tarefa descartada. Nada pendente foi executado.",
+          execucao: { ...comExecucao(t), aprovacoes: [] },
+        }));
+      } finally {
+        void carregarAbertas();
+      }
+    },
+    [carregarAbertas, noTurnoDa],
   );
 
   const value = useMemo<AssistenteContextValue>(
@@ -425,6 +719,10 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       continuar,
       anunciar,
       abrirConversa,
+      decidirAprovacao,
+      abertas,
+      abrirExecucao,
+      descartarExecucao,
     }),
     [
       status,
@@ -447,6 +745,10 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       continuar,
       anunciar,
       abrirConversa,
+      decidirAprovacao,
+      abertas,
+      abrirExecucao,
+      descartarExecucao,
     ],
   );
 

@@ -640,6 +640,20 @@ export class RolesService {
    * As duas leituras vão juntas porque o guard precisa das duas no mesmo
    * caminho, e separá-las voltaria a permitir que uma fosse feita sem a outra.
    */
+  /**
+   * A mesma regra do PermissoesGuard, para quem precisa decidir dentro do
+   * código (ex.: a permissão depende do conector pedido): owner/admin passam,
+   * exceto convidados; os demais precisam da permissão em alguma role.
+   */
+  async pode(
+    user: { id: string; empresaId: string; role: string },
+    permissao: string,
+  ): Promise<boolean> {
+    const ctx = await this.contextoDeAutorizacao(user.empresaId, user.id);
+    if (!ctx.convidado && (user.role === 'owner' || user.role === 'admin')) return true;
+    return ctx.permissoes.includes(permissao);
+  }
+
   async contextoDeAutorizacao(
     empresaId: string,
     usuarioId: string,

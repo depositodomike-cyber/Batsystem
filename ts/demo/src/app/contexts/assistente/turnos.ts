@@ -11,6 +11,7 @@ function origemDe(m: ConversaMessage): "vault" | "web" {
 function respostaDe(m: ConversaMessage) {
   const fontes = m.meta?.fontes;
   const arquivos = m.meta?.arquivos;
+  const execucaoId = m.meta?.execucaoId;
   return {
     resposta: m.text,
     fontes: Array.isArray(fontes) ? fontes : [],
@@ -18,6 +19,10 @@ function respostaDe(m: ConversaMessage) {
     agente: m.meta?.agente ?? null,
     arquivos: Array.isArray(arquivos) ? arquivos : [],
     mensagemId: m.id,
+    // Só o id: as etapas são buscadas quando o usuário abre o resumo.
+    ...(typeof execucaoId === "string" && execucaoId
+      ? { execucao: { id: execucaoId, etapas: [] } }
+      : {}),
   };
 }
 

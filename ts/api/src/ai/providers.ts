@@ -2,6 +2,18 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import type { AiProvider } from '@prisma/client';
 import { sanitizarUnicode } from './texto-seguro';
+import {
+  escolhaAnthropic,
+  escolhaOpenAi,
+  ferramentasAnthropic,
+  ferramentasOpenAi,
+  mensagensAnthropic,
+  mensagensOpenAi,
+  respostaAnthropic,
+  respostaOpenAi,
+  type LlmToolsParams,
+  type LlmToolsResult,
+} from './tool-use';
 
 /** Tokens consumidos por uma chamada ao modelo (entrada inclui cache). */
 export interface LlmUsage {
@@ -62,6 +74,11 @@ export interface LlmProvider {
    * provedor oferece busca — quem não implementa cai no `complete` sem fontes.
    */
   completeWeb?(params: LlmCompleteParams): Promise<LlmWebResult>;
+  /**
+   * Um turno com ferramentas: o modelo responde em texto e/ou pede chamadas.
+   * Histórico e ferramentas no formato neutro de `tool-use.ts`.
+   */
+  completeWithTools(params: LlmToolsParams): Promise<LlmToolsResult>;
   /** Confere a chave junto ao provedor. Nunca lança: classifica o resultado. */
   validateKey(apiKey: string): Promise<KeyCheck>;
 }
@@ -317,6 +334,35 @@ class AnthropicProvider implements LlmProvider {
     };
   }
 
+  async completeWithTools(params: LlmToolsParams): Promise<LlmToolsResult> {
+    const { apiKey, model, system, mensagens, ferramentas, maxTokens } = params;
+    const client = new Anthropic({ apiKey });
+    const msg = await client.messages.create({
+      model,
+      max_tokens: maxTokens,
+      system: [
+        {
+          type: 'text',
+          text: sanitizarUnicode(system),
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: mensagensAnthropic(mensagens),
+      ...(ferramentas.length
+        ? {
+            tools: ferramentasAnthropic(ferramentas),
+            tool_choice: escolhaAnthropic(params.escolha ?? 'auto'),
+          }
+        : {}),
+    });
+    const r = respostaAnthropic(msg);
+    return {
+      ...r,
+      texto: textoOuRecusa(r.texto, msg.stop_reason),
+      usage: anthropicUsage(msg.usage),
+    };
+  }
+
   async validateKey(apiKey: string): Promise<KeyCheck> {
     const client = new Anthropic({ apiKey, ...CHECAGEM });
     try {
@@ -340,6 +386,33 @@ class AnthropicProvider implements LlmProvider {
 }
 
 // ---------- OpenAI (GPT) ----------
+
+/**
+ * Texto, fontes (citações `url_citation`, deduplicadas por URL), corte e uso
+ * de uma resposta da API Responses com busca na web.
+ */
+export function respostaWebOpenAi(res: OpenAI.Responses.Response): LlmWebResult {
+  const fontesMap = new Map<string, string>();
+  for (const item of res.output ?? []) {
+    if (item.type !== 'message') continue;
+    for (const parte of item.content) {
+      if (parte.type !== 'output_text') continue;
+      for (const a of parte.annotations ?? []) {
+        if (a.type === 'url_citation' && a.url && !fontesMap.has(a.url)) {
+          fontesMap.set(a.url, (a.title || a.url).trim());
+        }
+      }
+    }
+  }
+  return {
+    text: res.output_text ?? '',
+    fontes: [...fontesMap].map(([url, titulo]) => ({ titulo, url })),
+    truncated: res.status === 'incomplete' && res.incomplete_details?.reason === 'max_output_tokens',
+    usage: res.usage
+      ? { entrada: res.usage.input_tokens || 0, saida: res.usage.output_tokens || 0 }
+      : undefined,
+  };
+}
 
 class OpenAiProvider implements LlmProvider {
   async *streamChat(params: LlmStreamParams) {
@@ -388,6 +461,54 @@ class OpenAiProvider implements LlmProvider {
         ? { entrada: res.usage.prompt_tokens || 0, saida: res.usage.completion_tokens || 0 }
         : undefined,
     };
+  }
+
+  async completeWithTools(params: LlmToolsParams): Promise<LlmToolsResult> {
+    const { apiKey, model, system, mensagens, ferramentas, maxTokens } = params;
+    const client = new OpenAI({ apiKey });
+    const res = await client.chat.completions.create({
+      model,
+      max_tokens: maxTokens,
+      messages: mensagensOpenAi(system, mensagens),
+      ...(ferramentas.length
+        ? {
+            tools: ferramentasOpenAi(ferramentas),
+            tool_choice: escolhaOpenAi(params.escolha ?? 'auto'),
+          }
+        : {}),
+    });
+    return respostaOpenAi(res);
+  }
+
+  /**
+   * Resposta com busca na web pela API Responses (ferramenta nativa
+   * `web_search`): a OpenAI pesquisa, lê as páginas e devolve o texto com as
+   * citações. Sem isto, num tenant que cai na OpenAI o modo Web respondia só
+   * com o conhecimento do modelo, sem pesquisar.
+   *
+   * Se o modelo não aceitar a ferramenta (400), cai na resposta comum sem
+   * fontes — o mesmo comportamento de antes, em vez de falhar.
+   */
+  async completeWeb(params: LlmCompleteParams): Promise<LlmWebResult> {
+    const { apiKey, model, system, user, maxTokens } = sanear(params);
+    const client = new OpenAI({ apiKey });
+    let res: OpenAI.Responses.Response;
+    try {
+      res = await client.responses.create({
+        model,
+        instructions: system,
+        input: user,
+        max_output_tokens: maxTokens,
+        tools: [{ type: 'web_search' }],
+      });
+    } catch (err) {
+      if (err instanceof OpenAI.APIError && err.status === 400) {
+        const r = await this.complete(params);
+        return { text: r.text, fontes: [], truncated: r.truncated, usage: r.usage };
+      }
+      throw err;
+    }
+    return respostaWebOpenAi(res);
   }
 
   async validateKey(apiKey: string): Promise<KeyCheck> {

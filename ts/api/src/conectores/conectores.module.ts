@@ -13,8 +13,11 @@ import { DriveApiService } from './drive-api.service';
 import { OauthProviderService } from './oauth-provider.service';
 import { OauthStateService } from './oauth-state.service';
 import { CryptoService } from '@/ai/crypto';
+import { AcessoModule } from '@/acesso/acesso.module';
+import { AcessoConectores } from './acesso-conectores';
 
 @Module({
+  imports: [AcessoModule],
   controllers: [
     ConectoresController,
     SlackController,
@@ -32,6 +35,7 @@ import { CryptoService } from '@/ai/crypto';
     DriveApiService,
     OauthStateService,
     CryptoService,
+    AcessoConectores,
   ],
   exports: [
     ConectoresService,

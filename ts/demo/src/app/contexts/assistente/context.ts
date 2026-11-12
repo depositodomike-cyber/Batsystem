@@ -9,6 +9,11 @@ import type {
   MencaoAgente,
   ModoBusca,
 } from "@/services/api/prompt";
+import type {
+  AprovacaoOrquestrador,
+  EtapaOrquestrador,
+  ExecucaoAberta,
+} from "@/services/api/orquestrador";
 
 // ----------------------------------------------------------------------
 
@@ -39,6 +44,25 @@ export interface Turno {
   mencoes?: MencaoAgente[];
   /** Resposta de mais um agente à pergunta do turno anterior. */
   continuacao?: boolean;
+  /**
+   * O orquestrador resolveu este turno em etapas. Durante a resposta as
+   * etapas chegam ao vivo; ao reabrir a conversa só há o `id`, e as etapas
+   * são buscadas quando o usuário pede para vê-las.
+   */
+  execucao?: ExecucaoDoTurno;
+}
+
+export interface ExecucaoDoTurno {
+  /** Id da execução (chega com a resposta, ou vem do `meta` ao reabrir). */
+  id?: string;
+  etapas: EtapaOrquestrador[];
+  /** Ações de escrita esperando o usuário aprovar ou negar. */
+  aprovacoes?: AprovacaoDoTurno[];
+}
+
+export interface AprovacaoDoTurno extends AprovacaoOrquestrador {
+  /** true enquanto a decisão está sendo enviada (botões travados). */
+  enviando?: boolean;
 }
 
 /** "minimized" mantém a conversa em memória, só recolhe o painel na bolinha. */
@@ -123,6 +147,25 @@ export interface AssistenteContextValue {
   anunciar: (aviso: { titulo: string; corpo: string }) => void;
   /** Carrega uma conversa persistida do histórico dentro do painel. */
   abrirConversa: (id: string) => Promise<void>;
+  /**
+   * Aprova ou nega uma ação de escrita pedida pelo orquestrador. Se era a
+   * última pendente, a execução continua no mesmo turno até a resposta.
+   */
+  decidirAprovacao: (p: {
+    execucaoId: string;
+    aprovacaoId: string;
+    aprovar: boolean;
+  }) => Promise<void>;
+  /**
+   * Execuções que ainda pedem algo do usuário: esperando aprovação,
+   * interrompidas por uma queda da API ou ainda rodando. Recarregada ao abrir
+   * o painel.
+   */
+  abertas: ExecucaoAberta[];
+  /** Mostra a execução no painel; interrompida e retomável, já retoma. */
+  abrirExecucao: (e: ExecucaoAberta) => Promise<void>;
+  /** Descarta uma execução parada (nada pendente é executado). */
+  descartarExecucao: (execucaoId: string) => Promise<void>;
 }
 
 export const [AssistenteProvider, useAssistente] =

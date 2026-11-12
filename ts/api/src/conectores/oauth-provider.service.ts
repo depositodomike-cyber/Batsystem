@@ -10,6 +10,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CryptoService } from '@/ai/crypto';
 import { OauthStateService } from './oauth-state.service';
+import { chaveConexao, ehPessoal, titularDe } from './titular';
 
 /** Família do conector — cada controller só aceita os provedores da sua. */
 export type ProviderKind = 'email' | 'agenda' | 'drive';
@@ -243,8 +244,10 @@ export class OauthProviderService {
     return `${base}/oracle/conectores`;
   }
 
+  /** URL de autorização. A conta autorizada será de `usuarioId` (conector pessoal). */
   buildAuthorizeUrl(
     empresaId: string,
+    usuarioId: string,
     providerId: string,
     kind: ProviderKind,
   ): string {
@@ -255,7 +258,7 @@ export class OauthProviderService {
       client_id: this.clientId(provider),
       scope: provider.scopes,
       redirect_uri: this.redirectUrl(provider),
-      state: this.state.sign(empresaId, provider.id, pkce?.verifier),
+      state: this.state.sign(empresaId, provider.id, pkce?.verifier, usuarioId),
       ...(pkce
         ? { code_challenge: pkce.challenge, code_challenge_method: 'S256' }
         : {}),
@@ -269,9 +272,14 @@ export class OauthProviderService {
     rawState: string,
     kind: ProviderKind,
   ): Promise<string> {
-    const { empresaId, connectorId, codeVerifier } =
+    const { empresaId, connectorId, codeVerifier, usuarioId } =
       this.state.verify(rawState);
     const provider = this.requireProvider(connectorId, kind);
+    // Conta pessoal: sem dono no state (link gerado antes desta versão), não
+    // há a quem atribuir a caixa — melhor pedir de novo do que adivinhar.
+    if (ehPessoal(provider.id) && !usuarioId) {
+      throw new BadRequestException('Autorização antiga. Clique em "Conectar" novamente.');
+    }
     if (provider.pkce && !codeVerifier) {
       throw new BadRequestException(
         'Autorização inválida (verificador PKCE ausente). Clique em "Conectar" novamente.',
@@ -326,11 +334,16 @@ export class OauthProviderService {
       teamName: conta.email || null,
       scopes: tokens.scope ?? provider.scopes,
     };
+    const titular = titularDe(provider.id, usuarioId ?? null);
     await this.prisma.empresaConector.upsert({
-      where: {
-        empresaId_connectorId: { empresaId, connectorId: provider.id },
+      where: chaveConexao(empresaId, provider.id, usuarioId ?? null),
+      create: {
+        empresaId,
+        connectorId: provider.id,
+        titular,
+        usuarioId: titular || null,
+        ...credenciais,
       },
-      create: { empresaId, connectorId: provider.id, ...credenciais },
       update: credenciais,
     });
 
@@ -344,18 +357,19 @@ export class OauthProviderService {
    */
   async getAccessToken(
     empresaId: string,
+    usuarioId: string,
     providerId: string,
     kind: ProviderKind,
   ): Promise<string> {
     const provider = this.requireProvider(providerId, kind);
+    // Só a conexão DESTE usuário: a caixa de outro membro não existe para ele.
     const vinculo = await this.prisma.empresaConector.findUnique({
-      where: {
-        empresaId_connectorId: { empresaId, connectorId: provider.id },
-      },
+      where: chaveConexao(empresaId, provider.id, usuarioId),
     });
     if (!vinculo?.accessTokenEncrypted) {
+      // "ainda não foi autorizado" é o que o front reconhece (ehNaoConectado).
       throw new BadRequestException(
-        `O ${provider.label} ainda não foi autorizado para esta empresa. ` +
+        `O ${provider.label} ainda não foi autorizado na sua conta. ` +
           `Abra Conectores → ${provider.label} → Conectar e autorize a conta.`,
       );
     }
@@ -399,11 +413,12 @@ export class OauthProviderService {
   /** Conta autorizada, confirmada contra a API do provedor (health check). */
   async checkAccount(
     empresaId: string,
+    usuarioId: string,
     providerId: string,
     kind: ProviderKind,
   ): Promise<string> {
     const provider = this.requireProvider(providerId, kind);
-    const token = await this.getAccessToken(empresaId, provider.id, kind);
+    const token = await this.getAccessToken(empresaId, usuarioId, provider.id, kind);
     const conta = await provider.fetchAccount(token);
     if (!conta.email) {
       throw new ServiceUnavailableException(
@@ -427,12 +442,17 @@ export class OauthProviderService {
    * Revoga no Google o acesso concedido por um vínculo, antes de ele ser
    * apagado. Os conectores Google compartilham a mesma concessão (escopos
    * incrementais) e revogar um token derruba a concessão inteira — por isso
-   * quem chama só revoga quando é o ÚLTIMO conector Google da empresa.
+   * quem chama só revoga quando é o ÚLTIMO conector Google DO USUÁRIO.
    * Best-effort: falha de rede não impede a desconexão local.
    */
-  async revogarGoogle(empresaId: string, connectorId: string): Promise<void> {
+  async revogarGoogle(
+    empresaId: string,
+    usuarioId: string | null,
+    connectorId: string,
+  ): Promise<void> {
+    if (!usuarioId) return; // Google é sempre pessoal.
     const vinculo = await this.prisma.empresaConector.findUnique({
-      where: { empresaId_connectorId: { empresaId, connectorId } },
+      where: chaveConexao(empresaId, connectorId, usuarioId),
     });
     const cifrado =
       vinculo?.refreshTokenEncrypted ?? vinculo?.accessTokenEncrypted;

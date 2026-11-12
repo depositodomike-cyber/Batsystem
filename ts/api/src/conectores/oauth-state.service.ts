@@ -11,6 +11,11 @@ export interface OauthState {
   connectorId: string;
   /** PKCE: `code_verifier` gerado no início do fluxo (ausente no Slack). */
   codeVerifier?: string;
+  /**
+   * Quem iniciou a autorização. Obrigatório nos conectores PESSOAIS: o
+   * callback chega sem JWT e é por aqui que sabe de quem é a conta.
+   */
+  usuarioId?: string;
 }
 
 /**
@@ -36,13 +41,20 @@ export class OauthStateService {
    * navegador e pela URL do provedor, e o verifier só pode ser conhecido pelo
    * servidor. Assim o fluxo continua sem armazenamento no servidor.
    */
-  sign(empresaId: string, connectorId: string, codeVerifier?: string): string {
+  sign(
+    empresaId: string,
+    connectorId: string,
+    codeVerifier?: string,
+    usuarioId?: string,
+  ): string {
     const payload = Buffer.from(
       JSON.stringify({
         e: empresaId,
         c: connectorId,
         x: Date.now() + STATE_TTL_MS,
         ...(codeVerifier ? { v: this.crypto.encrypt(codeVerifier) } : {}),
+        // Vai dentro do payload assinado: o HMAC impede trocar o dono.
+        ...(usuarioId ? { u: usuarioId } : {}),
       }),
     ).toString('base64url');
     return `${payload}.${this.mac(payload)}`;
@@ -59,7 +71,7 @@ export class OauthStateService {
     if (a.length !== b.length || !timingSafeEqual(a, b)) {
       throw new BadRequestException('Autorização inválida (state adulterado).');
     }
-    let parsed: { e?: string; c?: string; x?: number; v?: string };
+    let parsed: { e?: string; c?: string; x?: number; v?: string; u?: string };
     try {
       parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     } catch {
@@ -78,7 +90,12 @@ export class OauthStateService {
         throw new BadRequestException('Autorização inválida (state corrompido).');
       }
     }
-    return { empresaId: parsed.e, connectorId: parsed.c ?? '', codeVerifier };
+    return {
+      empresaId: parsed.e,
+      connectorId: parsed.c ?? '',
+      codeVerifier,
+      ...(parsed.u ? { usuarioId: parsed.u } : {}),
+    };
   }
 
   private mac(payload: string): string {

@@ -2,6 +2,7 @@
 import {
   BookOpenIcon,
   BriefcaseIcon,
+  ComputerDesktopIcon,
   BuildingOffice2Icon,
   CircleStackIcon,
   CpuChipIcon,
@@ -47,6 +48,8 @@ export const GRUPOS = [
   { id: "ia", titulo: "IA" },
   { id: "estrutura", titulo: "Estrutura" },
   { id: "acesso", titulo: "Acesso" },
+  // Integração da organização com o computador do usuário (Ambiente local).
+  { id: "organizacao", titulo: "Organização" },
 ] as const;
 
 export type GrupoId = (typeof GRUPOS)[number]["id"];
@@ -162,6 +165,16 @@ export const SECOES = [
     grupo: "acesso",
     titulo: "Roles",
     icon: KeyIcon,
+    feature: null,
+  },
+  // ----------------------------------------------------- Organização
+  // Controle do computador pelo Oracle. Só CONFIGURAÇÃO: a capacidade em si
+  // é usada na conversa (chat e voz), sem módulo próprio.
+  {
+    id: "ambiente-local",
+    grupo: "organizacao",
+    titulo: "Ambiente local",
+    icon: ComputerDesktopIcon,
     feature: null,
   },
 ] as const satisfies readonly FormaDaSecao[];

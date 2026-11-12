@@ -173,6 +173,9 @@ model Empresa {
   execucoes              Execucao[]
   aprovacoesAcao         AprovacaoAcao[]
   registrosAuditoria     RegistroAuditoria[]
+  dispositivosDesktop    DispositivoDesktop[]
+  politicasDesktop       PoliticaDesktop[]
+  pareamentosDesktop     PareamentoDesktop[]
 
   @@map("empresas")
 }
@@ -200,9 +203,12 @@ model Usuario {
 
   execucoes             Execucao[]
   conectores            EmpresaConector[]
-  aprovacoesSolicitadas AprovacaoAcao[]     @relation("AprovacaoSolicitante")
-  aprovacoesDecididas   AprovacaoAcao[]     @relation("AprovacaoDecisor")
+  aprovacoesSolicitadas AprovacaoAcao[]      @relation("AprovacaoSolicitante")
+  aprovacoesDecididas   AprovacaoAcao[]      @relation("AprovacaoDecisor")
   registrosAuditoria    RegistroAuditoria[]
+  dispositivosDesktop   DispositivoDesktop[]
+  politicasDesktop      PoliticaDesktop[]
+  pareamentosDesktop    PareamentoDesktop[]
 
   insightLeituras        InsightLeitura[]
   insightFeedbacks       InsightFeedback[]
@@ -1639,41 +1645,47 @@ enum AprovacaoStatus {
 
 /// Um pedido resolvido pelo orquestrador em várias etapas.
 model Execucao {
-  id            String         @id @default(cuid())
-  empresaId     String
-  usuarioId     String
+  id              String         @id @default(cuid())
+  empresaId       String
+  usuarioId       String
   /// Conversa do Assistente onde a resposta final é gravada.
-  conversaId    String?
+  conversaId      String?
   /// Organização e repositório ativos no pedido: as ferramentas rodam neste
   /// escopo também ao retomar, sem depender dos headers da nova requisição.
-  organizacaoId String?
-  repositorioId String?
+  organizacaoId   String?
+  repositorioId   String?
   /// Texto do usuário que originou a execução.
-  pedido        String
-  status        ExecucaoStatus @default(planejando)
+  pedido          String
+  /// SR-06c: o contexto inicial trouxe conteúdo além do pedido (referências
+  /// ou histórico). Calculado pelo servidor; a política desktop lê daqui.
+  contextoExterno Boolean        @default(false)
+  /// Como o pedido chegou: `texto`, `voz` (ditado) ou `voz_ativacao` (wake word).
+  origem          String?
+  status          ExecucaoStatus @default(planejando)
   /// Plano gerado (etapas e dependências), como o planejador o devolveu.
-  plano         Json?
+  plano           Json?
   /// Estado do loop do executor quando a execução PAUSA (aguardando
   /// aprovação): histórico com o modelo, contadores e chamadas pendentes.
   /// É o que permite continuar exatamente de onde parou.
-  estado        Json?
+  estado          Json?
   /// Resposta final entregue ao usuário.
-  resultado     String?
+  resultado       String?
   /// Motivo legível quando `falhou`.
-  erro          String?
+  erro            String?
   /// Soma de tokens de todas as chamadas desta execução (orçamento).
-  tokensEntrada Int            @default(0)
-  tokensSaida   Int            @default(0)
-  criadoEm      DateTime       @default(now())
-  atualizadoEm  DateTime       @updatedAt
-  concluidaEm   DateTime?
+  tokensEntrada   Int            @default(0)
+  tokensSaida     Int            @default(0)
+  criadoEm        DateTime       @default(now())
+  atualizadoEm    DateTime       @updatedAt
+  concluidaEm     DateTime?
 
-  empresa    Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  usuario    Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  conversa   Conversa?           @relation(fields: [conversaId], references: [id], onDelete: SetNull)
-  etapas     EtapaExecucao[]
-  aprovacoes AprovacaoAcao[]
-  auditoria  RegistroAuditoria[]
+  empresa         Empresa             @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario         Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  conversa        Conversa?           @relation(fields: [conversaId], references: [id], onDelete: SetNull)
+  etapas          EtapaExecucao[]
+  aprovacoes      AprovacaoAcao[]
+  auditoria       RegistroAuditoria[]
+  comandosDesktop ComandoDesktop[]
 
   @@index([empresaId, usuarioId, criadoEm])
   /// Varredura do boot: execuções que ficaram `executando` viram `interrompida`.
@@ -1782,4 +1794,164 @@ model RegistroAuditoria {
   @@index([empresaId, criadoEm])
   @@index([execucaoId, criadoEm])
   @@map("registros_auditoria")
+}
+
+// ----------------------------------------------------------------------
+// Controle do computador (Oracle Local Agent). Ver docs/security/.
+// O banco é a fonte da verdade de comandos e nonces (SR-36).
+
+enum DispositivoStatus {
+  /// Pareado pelo agente, esperando o dono conferir a impressão digital (SR-28).
+  pendente
+  conectado
+  desconectado
+  inicializando
+  sincronizando
+  atualizando
+  /// "Parar tudo": nenhuma operação até o dono retomar (SR-31).
+  bloqueado
+  erro
+  /// Chave apagada; o agente recebe 401 (SR-32).
+  revogado
+}
+
+enum ComandoDesktopStatus {
+  pendente
+  entregue
+  concluido
+  falhou
+  /// Sem resultado no prazo: estado desconhecido, nunca reenviado (SR-29).
+  expirado
+  /// Pendente/entregue quando a API reiniciou ou o dono parou tudo.
+  interrompido
+  cancelado
+}
+
+/// Um computador pareado com o Oracle.
+model DispositivoDesktop {
+  id                       String            @id @default(cuid())
+  empresaId                String
+  usuarioId                String
+  nome                     String
+  /// Chave pública ECDSA P-256 (SPKI DER em base64). Nula depois de revogar.
+  chavePublica             String?
+  /// SHA-256 da chave pública, 16 hex (SR-28).
+  impressaoDigital         String
+  versaoAgente             String
+  status                   DispositivoStatus @default(pendente)
+  /// O agente informou que o usuário parou tudo pela bandeja.
+  paradoLocal              Boolean           @default(false)
+  /// Versão da política que o agente confirmou localmente (SR-35).
+  politicaAplicada         Int               @default(0)
+  /// Ampliação de política esperando confirmação na bandeja.
+  confirmacaoLocalPendente Boolean           @default(false)
+  /// Aplicativos encontrados pelo agente: [{id, nome, alvo}] (SR-11a).
+  inventario               Json?
+  autoinicio               Boolean           @default(false)
+  ultimoContato            DateTime?
+  confirmadoEm             DateTime?
+  revogadoEm               DateTime?
+  criadoEm                 DateTime          @default(now())
+  atualizadoEm             DateTime          @updatedAt
+
+  empresa  Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario  Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  comandos ComandoDesktop[]
+  nonces   NonceDesktop[]
+
+  @@index([empresaId, usuarioId])
+  @@map("dispositivos_desktop")
+}
+
+/// Código de pareamento de uso único (SR-23). Só o hash é guardado.
+model PareamentoDesktop {
+  id         String    @id @default(cuid())
+  empresaId  String
+  usuarioId  String
+  codigoHash String    @unique
+  tentativas Int       @default(0)
+  expiraEm   DateTime
+  usadoEm    DateTime?
+  criadoEm   DateTime  @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, usuarioId])
+  @@map("pareamentos_desktop")
+}
+
+/// Uma operação enviada ao agente. Só o gateway cria (SR-09a).
+model ComandoDesktop {
+  id            String               @id @default(cuid())
+  dispositivoId String
+  execucaoId    String?
+  etapaId       String?
+  /// SR-07: cada aprovação gera no máximo um comando.
+  aprovacaoId   String?              @unique
+  operacao      String
+  /// Entrada validada (a mesma do hash aprovado).
+  parametros    Json
+  risco         String
+  nonce         String
+  /// Envelope assinado entregue ao agente (payload base64 + assinatura).
+  envelope      Json
+  status        ComandoDesktopStatus @default(pendente)
+  resultado     Json?
+  erro          String?
+  emitidoEm     DateTime             @default(now())
+  expiraEm      DateTime
+  entregueEm    DateTime?
+  concluidoEm   DateTime?
+
+  dispositivo DispositivoDesktop @relation(fields: [dispositivoId], references: [id], onDelete: Cascade)
+  execucao    Execucao?          @relation(fields: [execucaoId], references: [id], onDelete: SetNull)
+
+  @@unique([dispositivoId, nonce])
+  @@index([dispositivoId, status, emitidoEm])
+  @@map("comandos_desktop")
+}
+
+/// Nonces já vistos em requisições do agente (SR-22).
+model NonceDesktop {
+  dispositivoId String
+  nonce         String
+  criadoEm      DateTime @default(now())
+
+  dispositivo DispositivoDesktop @relation(fields: [dispositivoId], references: [id], onDelete: Cascade)
+
+  @@id([dispositivoId, nonce])
+  @@index([criadoEm])
+  @@map("nonces_desktop")
+}
+
+/// O que o Oracle pode fazer no computador do usuário (SR-02: tudo desligado).
+model PoliticaDesktop {
+  id           String   @id @default(cuid())
+  empresaId    String
+  usuarioId    String
+  /// Sobe a cada mudança; o agente rejeita versão menor (SR-27).
+  versao       Int      @default(1)
+  /// Categorias ligadas: { apps: true, midia: false, ... }.
+  permissoes   Json     @default("{}")
+  /// Operações moderadas que sempre pedem confirmação.
+  confirmar    String[] @default([])
+  /// Ids do inventário autorizados.
+  apps         String[] @default([])
+  /// Ids do inventário cujos títulos de janela podem ser lidos (SR-16).
+  observaveis  String[] @default([])
+  diretorios   String[] @default([])
+  dominios     String[] @default([])
+  /// O dono quer o agente iniciando com o Windows (vale após confirmação local, SR-35).
+  autoinicio  Boolean  @default(false)
+  /// Dias de retenção do histórico de operações.
+  retencaoDias Int      @default(90)
+  atualizadoEm DateTime @updatedAt
+  criadoEm     DateTime @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, usuarioId])
+  @@map("politicas_desktop")
 }

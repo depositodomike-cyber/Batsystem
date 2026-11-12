@@ -10,8 +10,10 @@ import {
   ChevronDownIcon,
   ClockIcon,
   NoSymbolIcon,
+  StopCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import { toast } from "sonner";
 
 import type { ExecucaoDoTurno } from "@/app/contexts/assistente/context";
 import {
@@ -20,6 +22,28 @@ import {
   type EtapaOrquestrador,
   type StatusEtapa,
 } from "@/services/api/orquestrador";
+import { pararDesktopApi } from "@/services/api/desktop";
+
+/** Botão "Parar" enquanto houver ação no computador em curso (SR-31). */
+function PararComputador() {
+  const [parando, setParando] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={parando}
+      onClick={() => {
+        setParando(true);
+        void pararDesktopApi()
+          .then(() => toast.success("Tudo parado no computador. Retome em Configurações > Ambiente local."))
+          .catch(() => toast.error("Não consegui parar pelo servidor. Use \"Parar tudo\" no ícone do Oracle na bandeja."))
+          .finally(() => setParando(false));
+      }}
+      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-red-200 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20"
+    >
+      <StopCircleIcon className="size-3.5" /> {parando ? "Parando…" : "Parar ações no computador"}
+    </button>
+  );
+}
 
 // ----------------------------------------------------------------------
 
@@ -83,6 +107,9 @@ export function EtapasExecucao({
         ) : (
           <ListaEtapas etapas={execucao.etapas} />
         )}
+        {execucao.etapas.some(
+          (e) => e.ferramenta?.startsWith("desktop_") && (e.status === "executando" || e.status === "aguardando_aprovacao"),
+        ) && <PararComputador />}
       </div>
     );
   }

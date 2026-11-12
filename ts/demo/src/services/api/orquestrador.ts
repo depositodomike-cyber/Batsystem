@@ -98,7 +98,14 @@ export interface OrquestrarParams {
   referencia?: string;
   conversaId?: string;
   repositorioId?: string;
+  /**
+   * Como o pedido chegou. "voz_ativacao" (palavra "Oracle") faz o servidor
+   * pedir confirmação até para ações moderadas no computador (SR-06b).
+   */
+  origem?: OrigemPedido;
 }
+
+export type OrigemPedido = "texto" | "voz" | "voz_ativacao";
 
 export interface OrquestrarCallbacks {
   onRota?: (rota: "direta" | "plano") => void;
@@ -222,6 +229,7 @@ export async function orquestrarApi(
       ...(p.referencia ? { referencia: p.referencia } : {}),
       ...(p.conversaId ? { conversaId: p.conversaId } : {}),
       ...(p.repositorioId ? { repositorioId: p.repositorioId } : {}),
+      ...(p.origem ? { origem: p.origem } : {}),
       // O orquestrador só oferece os agentes do sistema que a interface
       // exibe — sem isto ele consultaria especialistas ocultos.
       ...(AGENTES_SISTEMA_VISIVEIS ? { agentesSistema: AGENTES_SISTEMA_VISIVEIS } : {}),

@@ -24,6 +24,18 @@ export function configureApp(app: INestApplication): void {
   // um teto alto: a sincronização do Vault (/ai/vault) envia lotes de notas .md
   // em JSON que passam facilmente de 100kb. Uploads multipart (FileInterceptor)
   // usam multer e não são afetados por isto.
+  // Rotas do agente local (Ambiente local): corpo pequeno e guardado CRU,
+  // porque a assinatura do dispositivo cobre os bytes exatos (SR-22/SR-26).
+  // Registrado ANTES do parser global, que pula corpos já lidos.
+  app.use(
+    '/desktop/agente',
+    json({
+      limit: '64kb',
+      verify: (req, _res, buf) => {
+        (req as unknown as { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use(json({ limit: '25mb' }));
   app.use(urlencoded({ extended: true, limit: '25mb' }));
 

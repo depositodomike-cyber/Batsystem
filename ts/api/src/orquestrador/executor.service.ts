@@ -12,7 +12,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { RegistroFerramentasService } from './ferramentas/registro.service';
 import type { ContextoFerramenta } from './ferramentas/ferramenta';
 import { AuditoriaService } from './auditoria.service';
-import { hashEntrada, PoliticaExecucaoService, type Pode } from './politica.service';
+import { hashEntrada, PoliticaExecucaoService, type Decisao, type Pode } from './politica.service';
 import { systemExecutor } from './prompts';
 import { RevisorSegurancaService, type Parecer } from './revisor.service';
 
@@ -37,6 +37,9 @@ export const LIMITES_PADRAO: Limites = {
   concorrencia: 3,
   maxTokensTurno: 3000,
 };
+
+/** Execuções que planejam ações no computador (sequências mais longas). */
+export const LIMITES_DESKTOP: Limites = { ...LIMITES_PADRAO, maxTurnos: 10, maxChamadas: 20 };
 
 /** Resposta ao modelo quando ele tenta sair do repositório numa conversa restrita. */
 export const MOTIVO_SOMENTE_REPOSITORIO =
@@ -449,11 +452,20 @@ export class ExecutorService {
       return erro(a.idChamada, motivo);
     }
 
-    const r = await this.registro.executar(a.ferramenta, d.entrada, ctx);
+    // O contexto da execução (com a aprovação) só é montado aqui, pelo
+    // executor — a ferramenta desktop o usa como prova no gateway (SR-07).
+    const r = await this.registro.executar(a.ferramenta, d.entrada, {
+      ...ctx,
+      execucao: { id: exec.execucaoId, etapaId: a.etapaId, aprovacaoId: a.aprovacaoId },
+    });
     await this.prisma.etapaExecucao.update({
       where: { id: a.etapaId },
       data: r.ok
-        ? { status: 'concluida', saida: { conteudo: r.conteudo } as Prisma.InputJsonValue, concluidaEm: new Date() }
+        ? {
+            status: 'concluida',
+            saida: { conteudo: this.registro.redigirSaida(a.ferramenta, r.conteudo) } as Prisma.InputJsonValue,
+            concluidaEm: new Date(),
+          }
         : { status: 'falhou', erro: r.erro, concluidaEm: new Date() },
     });
     await this.auditoria.registrar({
@@ -597,11 +609,26 @@ export class ExecutorService {
     etapasTurno.push(chave);
     const descricao = descreverChamada(c.nome, c.entrada);
     const perfil = this.registro.perfil(c.nome);
-    const decisao = c.argumentosInvalidos
+    const estatica = c.argumentosInvalidos
       ? ({ tipo: 'negar', motivo: 'Argumentos em JSON inválido; refaça a chamada.' } as const)
       : ctx.somenteRepositorio && perfil?.dadosExternos
         ? ({ tipo: 'negar', motivo: MOTIVO_SOMENTE_REPOSITORIO } as const)
         : this.politica.avaliar(perfil, exec.pode);
+    // Política dinâmica (ex.: desktop): depende da entrada e do estado da
+    // execução. A estática continua mandando no "negar" (permissão).
+    const dinamica =
+      estatica.tipo === 'negar'
+        ? null
+        : await this.registro.avaliar(c.nome, c.entrada, {
+            ...ctx,
+            execucao: { id: exec.execucaoId, etapaId: '' },
+          });
+    const decisao: Decisao = dinamica
+      ? dinamica.decisao === 'negar'
+        ? { tipo: 'negar', motivo: dinamica.motivo ?? 'Ação bloqueada pela política.' }
+        : { tipo: dinamica.decisao }
+      : estatica;
+    const riscoRotulo = dinamica?.risco ?? perfil?.risco ?? null;
 
     const etapa = await this.prisma.etapaExecucao.create({
       data: {
@@ -612,7 +639,8 @@ export class ExecutorService {
         ferramenta: c.nome,
         descricao,
         dependeDe: estado.anteriores,
-        entrada: c.entrada as Prisma.InputJsonValue,
+        // SR-40: caminhos/URLs de ferramentas sensíveis ficam redigidos.
+        entrada: this.registro.redigir(c.nome, c.entrada) as Prisma.InputJsonValue,
         status: decisao.tipo === 'aprovar' ? 'aguardando_aprovacao' : 'executando',
         tentativas: decisao.tipo === 'permitir' ? 1 : 0,
         iniciadaEm: decisao.tipo === 'permitir' ? new Date() : null,
@@ -631,7 +659,7 @@ export class ExecutorService {
         etapaId: etapa.id,
         evento: c.argumentosInvalidos ? 'ferramenta.falhou' : 'politica.bloqueou',
         ferramenta: c.nome,
-        risco: perfil?.risco ?? null,
+        risco: riscoRotulo,
         detalhes: { motivo: decisao.motivo },
       });
       exec.aoEtapa({ chave, ferramenta: c.nome, descricao, status: 'falhou', erro: decisao.motivo });
@@ -651,11 +679,14 @@ export class ExecutorService {
       // Revisor de segurança: lê a ação e o pedido original e dá um parecer.
       // Pode barrar (sinal claro de injeção/vazamento) ou alertar; nunca
       // dispensa a aprovação humana que vem a seguir.
+      // Complemento da política dinâmica (ex.: caminho real do app, GA-09).
+      const resumo = dinamica?.detalhe ? `${prep.resumo} — ${dinamica.detalhe}` : prep.resumo;
       const revisao = await this.revisor.revisarAcao(ctx.user, {
         pedido: exec.pedido,
         ferramenta: c.nome,
-        risco: perfil?.risco ?? 'escrita_interna',
-        resumo: prep.resumo,
+        // GB-08: o risco real da política dinâmica (ex.: "alto"), não o estático.
+        risco: riscoRotulo ?? 'escrita_interna',
+        resumo,
         entrada: prep.entrada,
         // Só turnos ANTERIORES: o modelo escreveu estes parâmetros antes de
         // ver o resultado das chamadas do turno atual, então elas não podem
@@ -669,7 +700,7 @@ export class ExecutorService {
         etapaId: etapa.id,
         evento: revisao.recomendacao === 'bloquear' ? 'revisao.bloqueou' : 'revisao.parecer',
         ferramenta: c.nome,
-        risco: perfil?.risco ?? null,
+        risco: riscoRotulo,
         detalhes: revisao as unknown as Prisma.InputJsonValue,
       });
       if (revisao.recomendacao === 'bloquear') {
@@ -684,7 +715,7 @@ export class ExecutorService {
         return erro(c.id, motivo);
       }
 
-      const expiraEm = new Date(Date.now() + VALIDADE_APROVACAO_MS);
+      const expiraEm = new Date(Date.now() + (dinamica?.validadeAprovacaoMs ?? VALIDADE_APROVACAO_MS));
       const aprovacao = await this.prisma.aprovacaoAcao.create({
         data: {
           empresaId: ctx.user.empresaId,
@@ -692,8 +723,9 @@ export class ExecutorService {
           etapaId: etapa.id,
           solicitanteId: ctx.user.id,
           ferramenta: c.nome,
-          risco: perfil?.risco ?? 'escrita_interna',
-          resumo: prep.resumo,
+          // GA-03: o risco da política dinâmica (ex.: "alto"), que o gateway compara.
+          risco: dinamica?.risco ?? perfil?.risco ?? 'escrita_interna',
+          resumo,
           entrada: prep.entrada as Prisma.InputJsonValue,
           hashEntrada: hashEntrada(prep.entrada),
           revisao: revisao as unknown as Prisma.InputJsonValue,
@@ -702,7 +734,10 @@ export class ExecutorService {
       });
       await this.prisma.etapaExecucao.update({
         where: { id: etapa.id },
-        data: { entrada: prep.entrada as Prisma.InputJsonValue, chaveIdempotencia: `aprovacao:${aprovacao.id}` },
+        data: {
+          entrada: this.registro.redigir(c.nome, prep.entrada) as Prisma.InputJsonValue,
+          chaveIdempotencia: `aprovacao:${aprovacao.id}`,
+        },
       });
       await this.auditoria.registrar({
         empresaId: ctx.user.empresaId,
@@ -711,8 +746,15 @@ export class ExecutorService {
         etapaId: etapa.id,
         evento: 'aprovacao.solicitada',
         ferramenta: c.nome,
-        risco: perfil?.risco ?? null,
-        detalhes: { aprovacaoId: aprovacao.id, resumo: prep.resumo },
+        risco: riscoRotulo,
+        // GB-05/SR-40: ferramentas com redação (desktop) não levam caminhos
+        // completos para a auditoria; as demais mantêm o resumo legível.
+        detalhes: (() => {
+          const redigida = this.registro.redigir(c.nome, prep.entrada);
+          return redigida !== prep.entrada
+            ? { aprovacaoId: aprovacao.id, entrada: redigida }
+            : { aprovacaoId: aprovacao.id, resumo };
+        })() as Prisma.InputJsonValue,
       });
       aguardando.push({
         aprovacaoId: aprovacao.id,
@@ -722,7 +764,7 @@ export class ExecutorService {
         idChamada: c.id,
         ferramenta: c.nome,
         entrada: prep.entrada,
-        resumo: prep.resumo,
+        resumo,
         expiraEm: expiraEm.toISOString(),
         revisao,
       });
@@ -732,13 +774,19 @@ export class ExecutorService {
 
     // Leitura permitida: roda agora.
     exec.aoEtapa({ chave, ferramenta: c.nome, descricao, status: 'executando' });
-    const resultado = await this.registro.executar(c.nome, c.entrada, ctx);
+    const resultado = await this.registro.executar(c.nome, c.entrada, {
+      ...ctx,
+      execucao: { id: exec.execucaoId, etapaId: etapa.id },
+    });
     await this.prisma.etapaExecucao.update({
       where: { id: etapa.id },
       data: resultado.ok
         ? {
             status: 'concluida',
-            saida: { conteudo: resultado.conteudo, fontes: resultado.fontes } as Prisma.InputJsonValue,
+            saida: {
+              conteudo: this.registro.redigirSaida(c.nome, resultado.conteudo),
+              fontes: resultado.fontes,
+            } as Prisma.InputJsonValue,
             concluidaEm: new Date(),
           }
         : { status: 'falhou', erro: resultado.erro, concluidaEm: new Date() },
@@ -750,8 +798,11 @@ export class ExecutorService {
       etapaId: etapa.id,
       evento: resultado.ok ? 'ferramenta.executada' : 'ferramenta.falhou',
       ferramenta: c.nome,
-      risco: perfil?.risco ?? null,
-      detalhes: { entrada: c.entrada, ...(resultado.ok ? {} : { erro: resultado.erro }) } as Prisma.InputJsonValue,
+      risco: riscoRotulo,
+      detalhes: {
+        entrada: this.registro.redigir(c.nome, c.entrada),
+        ...(resultado.ok ? {} : { erro: resultado.erro }),
+      } as Prisma.InputJsonValue,
     });
     exec.aoEtapa({
       chave,

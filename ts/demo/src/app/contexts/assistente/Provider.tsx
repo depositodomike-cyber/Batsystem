@@ -36,6 +36,7 @@ import {
   listarAbertasApi,
   orquestradorDisponivel,
   orquestrarApi,
+  type OrigemPedido,
   OrquestradorIndisponivel,
   retomarExecucaoApi,
   type DesfechoOrquestrador,
@@ -210,6 +211,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       historico: HistoricoTurno[];
       referencia?: string;
       conversaId: string | null;
+      origem?: OrigemPedido;
     }): Promise<{ resultado: PerguntarResult; conversaId?: string } | null> => {
       // O turno é trocado por cópias a cada evento; `atual` é a versão que
       // está na tela, para o próximo `map` achá-la pela identidade.
@@ -228,6 +230,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
             referencia: p.referencia,
             conversaId: p.conversaId ?? undefined,
             repositorioId,
+            origem: p.origem,
           },
           {
             onRota: (rota) => {
@@ -289,6 +292,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       base: Turno[];
       conversaIdBase: string | null;
       arquivo?: File | null;
+      origem?: OrigemPedido;
     }): Promise<PerguntarResult> => {
       const { pergunta, modo, base } = p;
       const agentes = encontrarMencoes(pergunta);
@@ -336,6 +340,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
                 historico,
                 referencia,
                 conversaId: cid,
+                origem: p.origem,
               })
             : null;
         if (orquestrado) {
@@ -408,11 +413,13 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       modo,
       arquivo,
       contexto,
+      origem,
     }: {
       texto: string;
       modo: ModoBusca;
       arquivo?: File | null;
       contexto?: string;
+      origem?: OrigemPedido;
     }): Promise<PerguntarResult> => {
       const pergunta = texto.trim();
       if (!pergunta || loading) return { ok: false, erro: "" };
@@ -432,6 +439,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
           base: [],
           conversaIdBase: null,
           arquivo,
+          origem,
         });
       } finally {
         setLoading(false);

@@ -129,6 +129,19 @@ export const GRUPOS_PERMISSOES: GrupoPermissoes[] = [
     ],
   },
   {
+    id: "desktop",
+    titulo: "Ambiente local",
+    descricao: "Ações do Oracle no computador do usuário.",
+    permissoes: [
+      { code: "desktop.usar", rotulo: "Pedir ao Oracle ações no computador", requer: "ia.usar" },
+      {
+        code: "desktop.configurar",
+        rotulo: "Conectar o computador e configurar permissões",
+        requer: "desktop.usar",
+      },
+    ],
+  },
+  {
     id: "insights",
     titulo: "Insights",
     descricao: "Orientações que ajudam a IA a gerar insights mais relevantes.",

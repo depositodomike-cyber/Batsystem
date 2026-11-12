@@ -69,4 +69,12 @@ export class OrquestrarDto {
   @IsString({ each: true })
   @MaxLength(120, { each: true })
   agentesSistema?: string[];
+
+  /**
+   * Como o pedido chegou. `voz_ativacao` = palavra de ativação "Oracle":
+   * a política desktop trata o risco moderado como alto (SR-06b).
+   */
+  @IsOptional()
+  @IsIn(['texto', 'voz', 'voz_ativacao'])
+  origem?: 'texto' | 'voz' | 'voz_ativacao';
 }

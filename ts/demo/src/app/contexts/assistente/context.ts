@@ -133,6 +133,8 @@ export interface AssistenteContextValue {
     modo: ModoBusca;
     arquivo?: File | null;
     contexto?: string;
+    /** Como o pedido chegou (texto, ditado ou palavra de ativação). */
+    origem?: "texto" | "voz" | "voz_ativacao";
   }) => Promise<PerguntarResult>;
   /** Follow-up dentro da conversa aberta (também reconhece @menções). */
   continuar: (texto: string) => Promise<void>;

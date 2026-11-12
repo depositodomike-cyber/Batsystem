@@ -82,6 +82,9 @@ function montar() {
     revisarPlano: jest.fn().mockResolvedValue({ nivel: 'baixo', recomendacao: 'seguir', motivos: [] }),
   };
   const registro = {
+    avaliar: jest.fn(async () => null),
+    redigir: jest.fn((_nome: string, entrada: unknown) => entrada),
+    redigirSaida: jest.fn((_nome: string, conteudo: string) => conteudo),
     perfil: jest.fn((nome: string) =>
       nome === 'salvar_no_repositorio'
         ? { nome, risco: 'escrita_interna', permissao: 'documentos.enviar' }
@@ -197,6 +200,8 @@ describe('OrquestradorService.orquestrar', () => {
         repositorioId: 'repo1',
         pedido: 'compare minhas notas de café com o mercado',
         status: 'planejando',
+        contextoExterno: true,
+        origem: 'texto',
       },
     });
     const [, , mensagens] = m.planejador.planejar.mock.calls[0];

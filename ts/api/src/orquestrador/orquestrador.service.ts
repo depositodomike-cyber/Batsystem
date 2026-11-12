@@ -19,6 +19,7 @@ import { PlanejadorService, planoEmTexto, type Plano } from './planejador.servic
 import {
   estadoInicial,
   ExecutorService,
+  LIMITES_DESKTOP,
   type AoCheckpoint,
   type DecisaoGravada,
   type EstadoExecutor,
@@ -40,6 +41,8 @@ export interface PedidoOrquestrador {
   organizacaoId: string | null;
   /** Agentes do sistema exibidos na interface (ausente = todos). */
   agentesSistema?: string[] | null;
+  /** Como o pedido chegou (texto, ditado ou palavra de ativação). */
+  origem?: 'texto' | 'voz' | 'voz_ativacao';
 }
 
 /** Uma escrita esperando o usuário, como o cliente a recebe. */
@@ -256,6 +259,9 @@ export class OrquestradorService implements OnApplicationBootstrap {
         repositorioId: p.repositorioId,
         pedido: texto,
         status: 'planejando',
+        // SR-06c: referências ou histórico = conteúdo além do pedido.
+        contextoExterno: !!p.referencia?.trim() || p.historico.length > 0,
+        origem: p.origem ?? 'texto',
       },
     });
     emitir({ type: 'execucao', execucaoId: execucao.id });
@@ -303,6 +309,8 @@ export class OrquestradorService implements OnApplicationBootstrap {
         mensagens,
         aoEtapa: (etapa) => emitir({ type: 'etapa', etapa }),
         aoCheckpoint: this.checkpoint(execucao.id, pedido, tokens),
+        // Ações no computador costumam ser sequências (achar → abrir → organizar).
+        limites: plano.etapas.some((e) => e.ferramenta?.startsWith('desktop_')) ? LIMITES_DESKTOP : undefined,
       });
       await this.desfecho(
         { id: execucao.id, pedido: texto, repositorioId: p.repositorioId },

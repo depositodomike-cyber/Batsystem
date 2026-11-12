@@ -108,6 +108,7 @@ export class OrquestradorController {
           repositorioId: dto.repositorioId?.trim() || repositorioDoHeader || null,
           organizacaoId,
           agentesSistema: dto.agentesSistema ?? null,
+          origem: dto.origem,
         },
         enviar,
       ),

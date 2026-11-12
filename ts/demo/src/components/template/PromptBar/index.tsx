@@ -22,6 +22,9 @@ import { useAssistente } from "@/app/contexts/assistente/context";
 import { EVENTO_ESCUTA, getEscutaAtiva, getTtsAtivo } from "@/utils/oraclePrefs";
 import { falar, pararFala } from "@/utils/falar";
 import { useWakeWord } from "./useWakeWord";
+import type { OrigemPedido } from "@/services/api/orquestrador";
+import { pararDesktopApi } from "@/services/api/desktop";
+import { decidirEnvio } from "@/services/api/desktop-comandos";
 import { useLocation, useNavigate } from "react-router";
 import { detectarIntencao } from "@/app/pages/ceo/resumo-matinal/intencao";
 import {
@@ -257,7 +260,9 @@ export function PromptBar() {
         ditadoPorPalavraRef.current = false;
         const texto = ditadoTextoRef.current.trim();
         ditadoTextoRef.current = "";
-        if (texto) void enviar(texto);
+        // Veio da palavra de ativação: o servidor trata ações no computador
+        // com mais cautela (SR-06b), porque áudio de terceiros também ativa.
+        if (texto) void enviar(texto, "voz_ativacao");
         else flashStatus("Não ouvi a pergunta. Diga a palavra de novo.", "", true);
       }
     };
@@ -278,10 +283,12 @@ export function PromptBar() {
 
   const wake = useWakeWord({
     ativo: escuta,
-    // Pausa enquanto o ditado do navegador usa o microfone (e durante a busca).
-    pausado: listening || loading,
+    // Pausa enquanto o ditado do navegador usa o microfone. Continua ativa
+    // durante a busca para "Oracle, pare tudo" funcionar no meio de uma
+    // execução (GB-03); outros pedidos ditados nessa hora são ignorados.
+    pausado: listening,
     onDetect: () => {
-      if (recognitionRef.current || loading) return;
+      if (recognitionRef.current) return;
       bipe();
       iniciarDitado(true);
     },
@@ -300,13 +307,30 @@ export function PromptBar() {
   // --- Enviar (pergunta de topo: abre o painel do assistente) ---
   // A conversa em si (e o follow-up) vive no contexto do assistente; aqui só
   // coletamos a pergunta e refletimos o resultado na linha de status da barra.
-  const enviar = async (textoDitado?: string) => {
+  const enviar = async (textoDitado?: string, origemDitado?: OrigemPedido) => {
     const texto = (textoDitado ?? value).trim();
-    if (!texto || loading) return;
+    // "Oracle, pare tudo" passa ANTES do bloqueio de `loading` (GB-03): é
+    // justamente durante uma execução que a pessoa precisa parar.
+    const decisao = decidirEnvio(texto, loading);
+    if (decisao === "ignorar") return;
     if (listening) recognitionRef.current?.stop();
     pararFala();
     const porVoz = textoDitado !== undefined || textoPorVozRef.current;
+    const origem: OrigemPedido = origemDitado ?? (porVoz ? "voz" : "texto");
     textoPorVozRef.current = false;
+
+    // Interrompe as ações no computador na hora, sem passar pela IA (SR-31).
+    if (decisao === "parar") {
+      setValue("");
+      flashStatus("⏹ parando tudo…");
+      try {
+        const r = await pararDesktopApi();
+        flashStatus(`⏹ tudo parado (${r.dispositivos} computador(es))`, "ok", true);
+      } catch {
+        flashStatus("✕ não consegui parar pelo servidor — use \"Parar tudo\" na bandeja", "err");
+      }
+      return;
+    }
 
     // "Oracle, bom dia" (e variações): abre o Resumo Matinal em vez de
     // virar uma pergunta comum. Por voz, o briefing também é falado.
@@ -339,6 +363,7 @@ export function PromptBar() {
       modo,
       arquivo: modo !== "web" ? arquivo : null,
       ...(contextoBriefing ? { contexto: contextoBriefing } : {}),
+      origem,
     });
 
     if (!r.ok) {

@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{16AF2B26-7FBB-4AF5-9834-4E102D9B68DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OracleAgent", "src\OracleAgent\OracleAgent.csproj", "{7BF7507E-B539-4827-9E16-0CC56D1E9FE0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{C169E37C-56F6-4D80-85A7-232D73CB5832}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OracleAgent.Tests", "tests\OracleAgent.Tests\OracleAgent.Tests.csproj", "{5392B5D5-D24A-4D01-9889-A750E12DDE47}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7BF7507E-B539-4827-9E16-0CC56D1E9FE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BF7507E-B539-4827-9E16-0CC56D1E9FE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BF7507E-B539-4827-9E16-0CC56D1E9FE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BF7507E-B539-4827-9E16-0CC56D1E9FE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5392B5D5-D24A-4D01-9889-A750E12DDE47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5392B5D5-D24A-4D01-9889-A750E12DDE47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5392B5D5-D24A-4D01-9889-A750E12DDE47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5392B5D5-D24A-4D01-9889-A750E12DDE47}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7BF7507E-B539-4827-9E16-0CC56D1E9FE0} = {16AF2B26-7FBB-4AF5-9834-4E102D9B68DA}
+		{5392B5D5-D24A-4D01-9889-A750E12DDE47} = {C169E37C-56F6-4D80-85A7-232D73CB5832}
+	EndGlobalSection
+EndGlobal

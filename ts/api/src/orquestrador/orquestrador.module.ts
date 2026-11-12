@@ -8,6 +8,8 @@ import { FerramentasEscrita } from './ferramentas/escrita';
 import { FerramentasGeracao } from './ferramentas/geracao';
 import { FerramentasConectores } from './ferramentas/conectores';
 import { FerramentasWeb } from './ferramentas/web';
+import { FerramentasDesktop } from './ferramentas/desktop';
+import { DesktopModule } from '@/desktop/desktop.module';
 import { ConectoresModule } from '@/conectores/conectores.module';
 import { PoliticaExecucaoService } from './politica.service';
 import { RevisorSegurancaService } from './revisor.service';
@@ -26,7 +28,7 @@ import { OrquestradorController } from './orquestrador.controller';
  * Rotas atrás da flag ORQUESTRADOR_ATIVO.
  */
 @Module({
-  imports: [AiModule, AuthModule, AcessoModule, ConversasModule, ConectoresModule],
+  imports: [AiModule, AuthModule, AcessoModule, ConversasModule, ConectoresModule, DesktopModule],
   controllers: [OrquestradorController],
   providers: [
     FerramentasLeitura,
@@ -34,6 +36,7 @@ import { OrquestradorController } from './orquestrador.controller';
     FerramentasGeracao,
     FerramentasConectores,
     FerramentasWeb,
+    FerramentasDesktop,
     RegistroFerramentasService,
     PoliticaExecucaoService,
     RevisorSegurancaService,

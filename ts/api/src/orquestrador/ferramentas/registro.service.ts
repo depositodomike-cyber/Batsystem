@@ -8,8 +8,10 @@ import { FerramentasEscrita } from './escrita';
 import { FerramentasGeracao } from './geracao';
 import { FerramentasConectores } from './conectores';
 import { FerramentasWeb } from './web';
+import { FerramentasDesktop } from './desktop';
 import {
   ErroFerramenta,
+  type AvaliacaoDinamica,
   type ContextoFerramenta,
   type Ferramenta,
   type NivelRisco,
@@ -53,6 +55,8 @@ export class RegistroFerramentasService {
     geracao: FerramentasGeracao,
     conectores: FerramentasConectores,
     web: FerramentasWeb,
+    /** Opcional: specs antigos constroem o registro sem o desktop. */
+    desktop?: FerramentasDesktop,
   ) {
     for (const f of [
       ...leitura.todas(),
@@ -60,6 +64,7 @@ export class RegistroFerramentasService {
       ...conectores.todas(),
       ...geracao.todas(),
       ...escrita.todas(),
+      ...(desktop?.todas() ?? []),
     ]) {
       this.registrar(f);
     }
@@ -130,6 +135,44 @@ export class RegistroFerramentasService {
     }
     const dados = validada.data as Record<string, unknown>;
     return { ok: true, entrada: dados, resumo: f.resumir?.(dados) ?? `Executar ${nome}.` };
+  }
+
+  /**
+   * Política dinâmica da ferramenta (depende da entrada e do estado). Sem
+   * `avaliar`, devolve null e vale só a política estática. Entrada inválida
+   * ou falha da avaliação = negar (falha fechada).
+   */
+  async avaliar(
+    nome: string,
+    entrada: unknown,
+    ctx: ContextoFerramenta & { execucao: { id: string; etapaId: string } },
+  ): Promise<AvaliacaoDinamica | null> {
+    const f = this.ferramentas.get(nome);
+    if (!f?.avaliar) return null;
+    const validada = f.esquema.safeParse(entrada);
+    if (!validada.success) {
+      return { decisao: 'negar', risco: 'bloqueado', motivo: `Argumentos inválidos para ${nome}:
+${z.prettifyError(validada.error)}` };
+    }
+    try {
+      return await f.avaliar(validada.data, ctx);
+    } catch (err) {
+      this.logger.warn(`Falha na avaliação de ${nome}: ${String(err)}`);
+      return { decisao: 'negar', risco: 'bloqueado', motivo: 'A camada de segurança não conseguiu avaliar esta ação; ela não foi executada.' };
+    }
+  }
+
+  /** Entrada que pode ir para etapa/auditoria (SR-40). */
+  redigir(nome: string, entrada: unknown): unknown {
+    const f = this.ferramentas.get(nome);
+    if (!f?.redigir) return entrada;
+    const v = f.esquema.safeParse(entrada);
+    return v.success ? f.redigir(v.data) : { invalida: true };
+  }
+
+  /** Saída que pode ser gravada na etapa (SR-40/GA-04). */
+  redigirSaida(nome: string, conteudo: string): string {
+    return this.ferramentas.get(nome)?.redigirSaida?.(conteudo) ?? conteudo;
   }
 
   async executar(

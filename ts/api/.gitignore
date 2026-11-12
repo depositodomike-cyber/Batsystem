@@ -6,3 +6,6 @@ dist
 .DS_Store
 .vercel
 .env*
+
+# Chave privada do canal desktop (SR-25)
+.desktop/

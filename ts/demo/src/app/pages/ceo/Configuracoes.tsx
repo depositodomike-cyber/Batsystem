@@ -41,6 +41,7 @@ import { WAKE_WORD } from "@/configs/wakeWord";
 import { fetchUsoTokensApi, type UsoTokens } from "@/services/api/uso";
 import { AiConnectionCard } from "./AiConnectionCard";
 import { AparenciaSection } from "./AparenciaSection";
+import { AmbienteLocalSection } from "./AmbienteLocalSection";
 import { SectionCard, ToggleRow } from "./configuracoes-ui";
 import { RegrasSection } from "./Memoria";
 import { PainelAdministracao } from "./Administracao";
@@ -235,6 +236,7 @@ export default function Configuracoes() {
             {active === "voz" && <VozSection />}
             {active === "ia" && <IaSection />}
             {active === "regras" && <RegrasSection />}
+            {active === "ambiente-local" && <AmbienteLocalSection />}
             {active === "agentes" && (
               // `key` pelo dono: trocar de organização recarrega a lista.
               <AgentesOrganizacaoSection key={donoRepositorio ?? ""} />

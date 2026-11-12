@@ -2,6 +2,9 @@
 // ampliado como janela central com backdrop. Header com identidade do
 // assistente, abas Chat/Histórico, corpo e campo de envio nos dois modos.
 import { useEffect, useRef } from "react";
+import { pararDesktopApi } from "@/services/api/desktop";
+import { decidirEnvio } from "@/services/api/desktop-comandos";
+import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
@@ -106,9 +109,18 @@ export function Panel() {
 
   const enviar = () => {
     const valor = texto.trim();
-    if (!valor || loading) return;
+    // "pare tudo" passa mesmo durante uma execução (GB-03).
+    const decisao = decidirEnvio(valor, loading);
+    if (decisao === "ignorar") return;
     setTexto("");
     if (inputRef.current) inputRef.current.style.height = "auto";
+    // Interrompe as ações no computador sem passar pela IA.
+    if (decisao === "parar") {
+      void pararDesktopApi()
+        .then(() => toast.success("Tudo parado no computador."))
+        .catch(() => toast.error("Não consegui parar pelo servidor. Use \"Parar tudo\" na bandeja."));
+      return;
+    }
     // Sem conversa aberta, o campo do painel inicia uma; com conversa, continua.
     if (conversa.length === 0) {
       void perguntar({ texto: valor, modo: modoConversa });

@@ -32,6 +32,24 @@ export interface ContextoFerramenta {
    * ficam de fora.
    */
   somenteRepositorio?: boolean;
+  /**
+   * Onde esta chamada está sendo executada. Preenchido SÓ pelo executor
+   * (nunca pela entrada do modelo: os esquemas das ferramentas que o usam são
+   * `.strict()`). O gateway desktop prova a aprovação com isto (SR-07).
+   */
+  execucao?: { id: string; etapaId: string; aprovacaoId?: string };
+}
+
+/** Resultado de uma avaliação dinâmica (depende da entrada e do estado). */
+export interface AvaliacaoDinamica {
+  decisao: 'permitir' | 'aprovar' | 'negar';
+  /** Rótulo de risco gravado na aprovação (ex.: `alto`). */
+  risco: string;
+  motivo?: string;
+  /** Validade do pedido de aprovação, se diferente do padrão. */
+  validadeAprovacaoMs?: number;
+  /** Complemento do resumo da aprovação (ex.: caminho real do app, GA-09). */
+  detalhe?: string;
 }
 
 export interface SaidaFerramenta {
@@ -61,6 +79,19 @@ export interface Ferramenta<S extends z.ZodType = z.ZodType> {
    * Repositório…"). Obrigatória em escritas; leituras não pedem aprovação.
    */
   resumir?(entrada: z.output<S>): string;
+  /**
+   * Política que depende da ENTRADA e do estado (ex.: desktop). Roda depois
+   * da checagem estática de permissão, que continua mandando no "negar".
+   * Quando existe, decide entre executar direto, pedir aprovação ou negar.
+   */
+  avaliar?(
+    entrada: z.output<S>,
+    ctx: ContextoFerramenta & { execucao: { id: string; etapaId: string } },
+  ): Promise<AvaliacaoDinamica>;
+  /** Versão da entrada que pode ir para etapa/auditoria (SR-40). */
+  redigir?(entrada: z.output<S>): Record<string, unknown>;
+  /** Versão da saída que pode ser gravada na etapa (SR-40/GA-04). */
+  redigirSaida?(conteudo: string): string;
 }
 
 /**

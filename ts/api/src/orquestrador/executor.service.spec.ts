@@ -58,6 +58,7 @@ const PERFIS: Record<string, { nome: string; risco: string; permissao: string; d
   buscar_memoria: { nome: 'buscar_memoria', risco: 'leitura', permissao: 'ia.usar' },
   buscar_web: { nome: 'buscar_web', risco: 'leitura', permissao: 'ia.usar', dadosExternos: true },
   salvar_no_repositorio: { nome: 'salvar_no_repositorio', risco: 'escrita_interna', permissao: 'documentos.enviar' },
+  desktop_abrir_aplicativo: { nome: 'desktop_abrir_aplicativo', risco: 'escrita_externa', permissao: 'desktop.usar' },
 };
 
 function resposta(r: ResultadoExecutor) {
@@ -80,6 +81,9 @@ function montar(permissoes = ['ia.usar', 'documentos.enviar']) {
     },
   };
   const registro = {
+    avaliar: jest.fn(async () => null),
+    redigir: jest.fn((_nome: string, entrada: unknown) => entrada),
+    redigirSaida: jest.fn((_nome: string, conteudo: string) => conteudo),
     definicoes: jest.fn((nomes?: string[]) =>
       (nomes ?? Object.keys(PERFIS)).map((nome) => ({ nome, descricao: 'd', parametros: { type: 'object' } })),
     ),
@@ -157,7 +161,10 @@ describe('ExecutorService — leituras', () => {
         { tipo: 'resultado', idChamada: 'c2', conteudo: embrulharResultado('buscar_memoria', 'notas sobre chá') },
       ],
     });
-    expect(m.registro.executar).toHaveBeenCalledWith('buscar_memoria', { consulta: 'café' }, ctx);
+    expect(m.registro.executar).toHaveBeenCalledWith('buscar_memoria', { consulta: 'café' }, {
+      ...ctx,
+      execucao: { id: 'x1', etapaId: expect.any(String) },
+    });
   });
 
   it('grava cada chamada como etapa, dependente das etapas do turno anterior', async () => {
@@ -312,7 +319,10 @@ describe('ExecutorService — aprovação', () => {
     const r = await pausar(m);
 
     expect(m.registro.executar).toHaveBeenCalledTimes(1); // só a leitura
-    expect(m.registro.executar).toHaveBeenCalledWith('buscar_memoria', { consulta: 'café' }, ctx);
+    expect(m.registro.executar).toHaveBeenCalledWith('buscar_memoria', { consulta: 'café' }, {
+      ...ctx,
+      execucao: { id: 'x1', etapaId: expect.any(String) },
+    });
     expect(m.prisma.aprovacaoAcao.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         empresaId: 'e1',
@@ -392,7 +402,8 @@ describe('ExecutorService — aprovação', () => {
     expect(m.registro.executar).toHaveBeenLastCalledWith(
       'salvar_no_repositorio',
       { titulo: 'Plano', conteudo: '# Plano' },
-      ctx,
+      // O executor anexa a prova da aprovação (usada pelo gateway desktop, SR-07).
+      { ...ctx, execucao: { id: 'x1', etapaId: 'et2', aprovacaoId: 'ap1' } },
     );
     // O próximo turno recebe os DOIS resultados, na ordem das chamadas.
     const msgs = m.ai.completarComFerramentas.mock.calls[1][2].mensagens;
@@ -777,5 +788,66 @@ describe('emParalelo', () => {
     });
     expect(await emParalelo(tarefas, 2)).toEqual([0, 1, 2, 3, 4]);
     expect(pico).toBe(2);
+  });
+});
+
+
+describe('ExecutorService — política dinâmica (desktop)', () => {
+  const abrir = (id: string): ChamadaFerramenta => ({ id, nome: 'desktop_abrir_aplicativo', entrada: { aplicativo: 'Figma' } });
+
+  it('permissão estática negada vence: a política dinâmica nem é consultada', async () => {
+    const m = montar(['ia.usar']);
+    m.ai.completarComFerramentas.mockResolvedValueOnce(pede(abrir('c1'))).mockResolvedValueOnce(responde('ok'));
+    await m.rodar();
+    expect(m.registro.avaliar).not.toHaveBeenCalled();
+    expect(m.registro.executar).not.toHaveBeenCalled();
+  });
+
+  it('dinâmica "negar": não executa, audita politica.bloqueou com o risco da política', async () => {
+    const m = montar(['ia.usar', 'desktop.usar']);
+    m.registro.avaliar.mockResolvedValue({ decisao: 'negar', risco: 'bloqueado', motivo: 'App fora da allowlist.' } as never);
+    m.ai.completarComFerramentas.mockResolvedValueOnce(pede(abrir('c1'))).mockResolvedValueOnce(responde('não deu'));
+    await m.rodar();
+    expect(m.registro.executar).not.toHaveBeenCalled();
+    expect(m.auditoria.registrar).toHaveBeenCalledWith(
+      expect.objectContaining({ evento: 'politica.bloqueou', risco: 'bloqueado', detalhes: { motivo: 'App fora da allowlist.' } }),
+    );
+  });
+
+  it('dinâmica "aprovar": aprovação grava o risco da política, validade curta e o detalhe no resumo (GA-03, GA-09)', async () => {
+    const m = montar(['ia.usar', 'desktop.usar']);
+    m.registro.avaliar.mockResolvedValue({
+      decisao: 'aprovar', risco: 'alto', validadeAprovacaoMs: 10 * 60_000, detalhe: 'Programa: C:\Figma.exe',
+    } as never);
+    m.registro.preparar.mockReturnValue({ ok: true, entrada: { aplicativo: 'Figma' }, resumo: 'Abrir o aplicativo "Figma"' } as never);
+    m.ai.completarComFerramentas.mockResolvedValueOnce(pede(abrir('c1')));
+    const antes = Date.now();
+    const r = await m.rodar();
+    expect(r.tipo).toBe('pausa');
+    const data = (m.prisma.aprovacaoAcao.create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0].data;
+    expect(data.risco).toBe('alto');
+    expect(String(data.resumo)).toContain('Programa: C:\Figma.exe');
+    const expira = (data.expiraEm as Date).getTime();
+    expect(expira - antes).toBeLessThanOrEqual(10 * 60_000 + 1000);
+    expect(m.registro.executar).not.toHaveBeenCalled();
+  });
+
+  it('dinâmica "permitir": roda já, com o contexto da execução, e grava entrada/saída redigidas (SR-09d)', async () => {
+    const m = montar(['ia.usar', 'desktop.usar']);
+    m.registro.avaliar.mockResolvedValue({ decisao: 'permitir', risco: 'moderado' } as never);
+    m.registro.redigir.mockReturnValue({ aplicativo: '[redigido]' } as never);
+    m.registro.redigirSaida.mockReturnValue('[saída redigida]' as never);
+    m.ai.completarComFerramentas.mockResolvedValueOnce(pede(abrir('c1'))).mockResolvedValueOnce(responde('aberto'));
+    await m.rodar();
+    expect(m.registro.avaliar).toHaveBeenCalledWith(
+      'desktop_abrir_aplicativo', { aplicativo: 'Figma' }, expect.objectContaining({ execucao: { id: 'x1', etapaId: '' } }),
+    );
+    expect(m.registro.executar).toHaveBeenCalledWith(
+      'desktop_abrir_aplicativo', { aplicativo: 'Figma' }, expect.objectContaining({ execucao: { id: 'x1', etapaId: 'et1' } }),
+    );
+    expect(m.prisma.etapaExecucao.create).toHaveBeenCalledWith({ data: expect.objectContaining({ entrada: { aplicativo: '[redigido]' } }) });
+    expect(m.prisma.etapaExecucao.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ saida: expect.objectContaining({ conteudo: '[saída redigida]' }) }) }),
+    );
   });
 });

@@ -851,3 +851,26 @@ describe('ExecutorService — política dinâmica (desktop)', () => {
     );
   });
 });
+
+describe('ExecutorService — primeiraChamada (comando direto)', () => {
+  it('o turno 1 é a chamada dada, sem perguntar ao modelo; etapa marcada comando_direto', async () => {
+    const m = montar(['ia.usar', 'desktop.usar']);
+    m.registro.avaliar.mockResolvedValue({ decisao: 'permitir', risco: 'moderado' } as never);
+    m.ai.completarComFerramentas.mockResolvedValueOnce(responde('Abri o Figma.'));
+    const r = await m.executor.executar({
+      execucaoId: 'x1',
+      pedido: 'abrir figma',
+      ctx,
+      plano: 'Objetivo: comando',
+      mensagens: [{ papel: 'user', blocos: [{ tipo: 'texto', texto: 'abrir figma' }] }],
+      aoEtapa: () => undefined,
+      primeiraChamada: { id: 'comando_direto', nome: 'desktop_abrir_aplicativo', entrada: { aplicativo: 'figma' } },
+    });
+    expect(r).toMatchObject({ tipo: 'resposta', resposta: 'Abri o Figma.' });
+    expect(m.ai.completarComFerramentas).toHaveBeenCalledTimes(1); // só a resposta final
+    expect(m.prisma.etapaExecucao.create).toHaveBeenCalledWith({ data: expect.objectContaining({ tipo: 'comando_direto', ordem: 1 }) });
+    expect(m.registro.executar).toHaveBeenCalledWith(
+      'desktop_abrir_aplicativo', { aplicativo: 'figma' }, expect.objectContaining({ execucao: expect.objectContaining({ comandoDireto: true }) }),
+    );
+  });
+});

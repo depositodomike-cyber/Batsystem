@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   type OnApplicationBootstrap,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -20,6 +21,7 @@ import {
   estadoInicial,
   ExecutorService,
   LIMITES_DESKTOP,
+  LIMITES_PADRAO,
   type AoCheckpoint,
   type DecisaoGravada,
   type EstadoExecutor,
@@ -29,6 +31,7 @@ import {
 import { AuditoriaService } from './auditoria.service';
 import { RevisorSegurancaService, type Parecer } from './revisor.service';
 import { RegistroFerramentasService } from './ferramentas/registro.service';
+import { ComandosDesktopService, type DecisaoComando } from '@/desktop/comandos.service';
 
 export interface PedidoOrquestrador {
   user: AuthenticatedUser;
@@ -43,6 +46,14 @@ export interface PedidoOrquestrador {
   agentesSistema?: string[] | null;
   /** Como o pedido chegou (texto, ditado ou palavra de ativação). */
   origem?: 'texto' | 'voz' | 'voz_ativacao';
+  /** Outras transcrições do ditado, para corrigir nomes de apps. */
+  alternativas?: string[];
+}
+
+/** Comando de computador pronto para o caminho rápido. */
+interface ComandoDireto {
+  entendido: string;
+  chamada: { nome: string; entrada: Record<string, unknown> };
 }
 
 /** Uma escrita esperando o usuário, como o cliente a recebe. */
@@ -169,7 +180,20 @@ export class OrquestradorService implements OnApplicationBootstrap {
     private readonly auditoria: AuditoriaService,
     private readonly revisor: RevisorSegurancaService,
     private readonly registro: RegistroFerramentasService,
+    /** Opcional: ausente nos specs antigos e quando o módulo desktop não existe. */
+    @Optional() private readonly comandos?: ComandosDesktopService,
   ) {}
+
+  /** Nunca derruba o pedido: na dúvida, segue o fluxo normal. */
+  private async interpretarComando(p: PedidoOrquestrador, texto: string): Promise<DecisaoComando> {
+    if (!this.comandos || p.modo === 'vault') return null;
+    try {
+      return await this.comandos.interpretar(p.user, texto, p.alternativas ?? [], p.origem);
+    } catch (err) {
+      this.logger.warn(`Falha ao interpretar comando de computador: ${String(err)}`);
+      return null;
+    }
+  }
 
   /**
    * Execuções que estavam rodando quando a API caiu não têm mais quem as
@@ -211,6 +235,27 @@ export class OrquestradorService implements OnApplicationBootstrap {
 
   async orquestrar(p: PedidoOrquestrador, emitir: Emitir): Promise<void> {
     const texto = p.texto.trim();
+
+    // Comandos de computador ("abrir Figma", "próxima música"): reconhecidos
+    // de forma determinística, ANTES do roteador — nunca viram pesquisa.
+    const comando = await this.interpretarComando(p, texto);
+    if (comando?.acao === 'responder') {
+      emitir({ type: 'rota', rota: 'direta', motivo: 'comando de computador' });
+      const salvo = await this.gravarNaConversa(p.user, { conversaId: p.conversaId, modo: p.modo }, p.repositorioId, texto, comando.resposta, [], 'vault', null);
+      emitir({ type: 'resposta', resposta: comando.resposta, fontes: [], origem: 'vault', ...salvo });
+      return;
+    }
+    if (comando?.acao === 'executar') {
+      emitir({ type: 'rota', rota: 'plano', motivo: `comando: ${comando.entendido}` });
+      await this.executarPlano(p, comando.texto, undefined, emitir, { entendido: comando.entendido, chamada: comando.chamada });
+      return;
+    }
+    if (comando?.acao === 'planejar') {
+      emitir({ type: 'rota', rota: 'plano', motivo: 'arquivos no computador' });
+      await this.executarPlano(p, texto, undefined, emitir);
+      return;
+    }
+
     const decisao = await this.roteador.decidir(p.user, texto, p.historico);
     emitir({ type: 'rota', rota: decisao.rota, motivo: decisao.motivo });
 
@@ -249,6 +294,7 @@ export class OrquestradorService implements OnApplicationBootstrap {
     texto: string,
     usageRota: LlmUsage | undefined,
     emitir: Emitir,
+    comando?: ComandoDireto,
   ): Promise<void> {
     const { user } = p;
     const execucao = await this.prisma.execucao.create({
@@ -259,8 +305,9 @@ export class OrquestradorService implements OnApplicationBootstrap {
         repositorioId: p.repositorioId,
         pedido: texto,
         status: 'planejando',
-        // SR-06c: referências ou histórico = conteúdo além do pedido.
-        contextoExterno: !!p.referencia?.trim() || p.historico.length > 0,
+        // SR-06c: referências ou histórico = conteúdo além do pedido. O comando
+        // direto roda SEM histórico nem referências (só o texto do usuário).
+        contextoExterno: comando ? false : !!p.referencia?.trim() || p.historico.length > 0,
         origem: p.origem ?? 'texto',
       },
     });
@@ -270,6 +317,17 @@ export class OrquestradorService implements OnApplicationBootstrap {
       usuarioId: user.id,
       execucaoId: execucao.id,
       evento: 'execucao.criada',
+      // GC-02: o que a pessoa disse e o que foi usado (quando o ditado trouxe alternativas).
+      ...(comando
+        ? {
+            detalhes: {
+              comandoDireto: comando.entendido,
+              textoOriginal: p.texto.slice(0, 300),
+              ...(texto !== p.texto.trim() ? { alternativaUsada: texto.slice(0, 300) } : {}),
+              origem: p.origem ?? 'texto',
+            },
+          }
+        : {}),
     });
 
     const pedido: PedidoSalvo = {
@@ -279,20 +337,14 @@ export class OrquestradorService implements OnApplicationBootstrap {
     };
     const tokens: LlmUsage = { entrada: usageRota?.entrada ?? 0, saida: usageRota?.saida ?? 0 };
     try {
-      const mensagens = mensagensIniciais(p.historico, texto, p.referencia);
+      const mensagens = comando ? mensagensIniciais([], texto) : mensagensIniciais(p.historico, texto, p.referencia);
       // Checkpoint zero, antes de planejar: guarda o histórico e as
       // referências (que o cliente não reenviaria) para uma eventual retomada.
       const checkpoint = this.checkpoint(execucao.id, pedido, tokens);
       await checkpoint(estadoInicial(mensagens), { entrada: 0, saida: 0 });
-      const plano = await this.planejarExecucao(
-        user,
-        execucao.id,
-        texto,
-        mensagens,
-        tokens,
-        emitir,
-        pedido.modo === 'vault',
-      );
+      const plano = comando
+        ? await this.planoDoComando(execucao.id, comando, emitir)
+        : await this.planejarExecucao(user, execucao.id, texto, mensagens, tokens, emitir, pedido.modo === 'vault');
 
       const r = await this.executor.executar({
         execucaoId: execucao.id,
@@ -310,7 +362,11 @@ export class OrquestradorService implements OnApplicationBootstrap {
         aoEtapa: (etapa) => emitir({ type: 'etapa', etapa }),
         aoCheckpoint: this.checkpoint(execucao.id, pedido, tokens),
         // Ações no computador costumam ser sequências (achar → abrir → organizar).
-        limites: plano.etapas.some((e) => e.ferramenta?.startsWith('desktop_')) ? LIMITES_DESKTOP : undefined,
+        // Comando direto: a ação e uma resposta curta, nada além.
+        limites: comando
+          ? { ...LIMITES_PADRAO, maxTurnos: 2, maxChamadas: 1 }
+          : plano.etapas.some((e) => e.ferramenta?.startsWith('desktop_')) ? LIMITES_DESKTOP : undefined,
+        ...(comando ? { primeiraChamada: { id: 'comando_direto', nome: comando.chamada.nome, entrada: comando.chamada.entrada } } : {}),
       });
       await this.desfecho(
         { id: execucao.id, pedido: texto, repositorioId: p.repositorioId },
@@ -323,6 +379,23 @@ export class OrquestradorService implements OnApplicationBootstrap {
     } catch (err) {
       await this.falhar(execucao.id, user, tokens, err, emitir);
     }
+  }
+
+  /** Plano fixo de um comando direto (sem chamar o planejador). */
+  private async planoDoComando(execucaoId: string, comando: ComandoDireto, emitir: Emitir): Promise<Plano> {
+    const plano: Plano = {
+      objetivo: `Comando do usuário: ${comando.entendido}`,
+      etapas: [
+        { chave: 'e1', descricao: `Entendi: ${comando.entendido}`, ferramenta: comando.chamada.nome, dependeDe: [] },
+        { chave: 'e2', descricao: 'Confirmar ao usuário em uma frase curta', ferramenta: null, dependeDe: ['e1'] },
+      ],
+    };
+    await this.prisma.execucao.update({
+      where: { id: execucaoId },
+      data: { status: 'executando', plano: { ...plano, comandoDireto: true } as unknown as Prisma.InputJsonValue },
+    });
+    emitir({ type: 'plano', plano });
+    return plano;
   }
 
   /** Planeja, revisa o plano se houver escrita, grava e emite. Soma os tokens. */
@@ -854,7 +927,7 @@ export class OrquestradorService implements OnApplicationBootstrap {
     resposta: string,
     fontes: Fonte[],
     origem: 'vault' | 'web',
-    execucaoId: string,
+    execucaoId: string | null,
   ): Promise<{ conversaId?: string; mensagemId?: string }> {
     try {
       const r = await this.conversas.persistPromptTurn({
@@ -868,7 +941,7 @@ export class OrquestradorService implements OnApplicationBootstrap {
         fontes,
         origemResposta: origem,
         agente: null,
-        execucaoId,
+        ...(execucaoId ? { execucaoId } : {}),
       });
       // Conversa nova: mesmo título resumido que o caminho direto ganha.
       if (r.nova) this.prompt.refinarTitulo(user, r.conversaId, pergunta, resposta);

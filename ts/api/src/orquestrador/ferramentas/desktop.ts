@@ -9,6 +9,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { GatewayDesktopService, redigirParametros, VALIDADE_APROVACAO_DESKTOP_MS } from '@/desktop/gateway.service';
 import { PoliticaDesktopService } from '@/desktop/politica-desktop.service';
 import type { Operacao } from '@/desktop/risco-desktop';
+import { resolverAlvo } from '@/desktop/vocabulario';
 import {
   definirFerramenta,
   ErroFerramenta,
@@ -23,19 +24,13 @@ interface App {
   alvo: string;
 }
 
-const normalizar = (s: string) =>
-  s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 /** Resolve "figma" → app autorizado. Só entre os AUTORIZADOS (nunca um caminho). */
-export function resolverApp(pedido: string, apps: App[]): App | null {
-  const p = normalizar(pedido);
-  if (!p) return null;
+export function resolverApp(pedido: string, apps: App[], apelidos: Record<string, string[]> = {}): App | null {
   const porId = apps.find((a) => a.id === pedido);
   if (porId) return porId;
-  const exato = apps.filter((a) => normalizar(a.nome) === p);
-  if (exato.length === 1) return exato[0];
-  const contem = apps.filter((a) => normalizar(a.nome).includes(p) || p.includes(normalizar(a.nome)));
-  return contem.length === 1 ? contem[0] : null;
+  // Fuzzy + fonético + apelidos ("firma" → Figma, "Klaus" → Claude), só entre os AUTORIZADOS.
+  return resolverAlvo(pedido, apps, apelidos).app as App | null;
 }
 
 const SAIDA_REDIGIDA = (conteudo: string) => `[resultado com ${conteudo.split('\n').length} linha(s) omitido do histórico por privacidade]`;
@@ -164,6 +159,11 @@ export class FerramentasDesktop {
     return inv.filter((a) => politica.apps.includes(a.id));
   }
 
+  private async apelidos(ctx: ContextoFerramenta): Promise<Record<string, string[]>> {
+    const politica = await this.politicas.obter(ctx.user.empresaId, ctx.user.id);
+    return (politica.apelidos ?? {}) as Record<string, string[]>;
+  }
+
   private listarAplicativos() {
     return definirFerramenta({
       nome: 'desktop_listar_aplicativos',
@@ -183,7 +183,7 @@ export class FerramentasDesktop {
     const avaliar = this.avaliarCom(op);
     const resolver = async (pedido: string, ctx: ContextoFerramenta) => {
       const apps = await this.appsAutorizados(ctx);
-      const app = resolverApp(pedido, apps);
+      const app = resolverApp(pedido, apps, await this.apelidos(ctx));
       if (!app) {
         throw new ErroFerramenta(
           apps.length
@@ -235,8 +235,9 @@ export class FerramentasDesktop {
       .strict();
     const resolverTodos = async (nomes: string[], ctx: ContextoFerramenta) => {
       const apps = await this.appsAutorizados(ctx);
+      const apelidos = await this.apelidos(ctx);
       return nomes.map((n) => {
-        const a = resolverApp(n, apps);
+        const a = resolverApp(n, apps, apelidos);
         if (!a) throw new ErroFerramenta(`"${n}" não é um aplicativo autorizado.`);
         return a;
       });

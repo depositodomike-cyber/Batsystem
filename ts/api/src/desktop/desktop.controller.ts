@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { PermissoesGuard, RequerPermissao } from '@/acesso/permissoes.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
+import { ErroFerramenta } from '@/orquestrador/ferramentas/ferramenta';
 import { AgenteDesktopGuard } from './agente.guard';
 import { DispositivosService } from './dispositivos.service';
 import { GatewayDesktopService } from './gateway.service';
@@ -56,6 +57,7 @@ export class DesktopController {
         dominios: politica.dominios,
         retencaoDias: politica.retencaoDias,
         autoinicio: politica.autoinicio,
+        apelidos: politica.apelidos,
       },
       catalogo: {
         categorias: CATEGORIAS,
@@ -113,6 +115,19 @@ export class DesktopController {
   @RequerPermissao('ia.usar')
   parar(@CurrentUser() user: AuthenticatedUser) {
     return this.dispositivos.pararTudo(user);
+  }
+
+  /** "Desfazer" o app aberto por um comando direto desta execução (até 2 min). */
+  @Post('execucoes/:id/desfazer')
+  @HttpCode(200)
+  @RequerPermissao('desktop.usar')
+  async desfazer(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    try {
+      return { ok: true, mensagem: await this.gateway.desfazer(user, id) };
+    } catch (err) {
+      if (err instanceof ErroFerramenta) throw new ConflictException(err.message);
+      throw err;
+    }
   }
 
   @Get('historico')

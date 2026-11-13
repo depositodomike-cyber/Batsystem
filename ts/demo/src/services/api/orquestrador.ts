@@ -103,6 +103,8 @@ export interface OrquestrarParams {
    * pedir confirmação até para ações moderadas no computador (SR-06b).
    */
   origem?: OrigemPedido;
+  /** Outras transcrições do ditado: o servidor corrige nomes de apps com elas. */
+  alternativas?: string[];
 }
 
 export type OrigemPedido = "texto" | "voz" | "voz_ativacao";
@@ -230,6 +232,7 @@ export async function orquestrarApi(
       ...(p.conversaId ? { conversaId: p.conversaId } : {}),
       ...(p.repositorioId ? { repositorioId: p.repositorioId } : {}),
       ...(p.origem ? { origem: p.origem } : {}),
+      ...(p.alternativas?.length ? { alternativas: p.alternativas.slice(0, 5) } : {}),
       // O orquestrador só oferece os agentes do sistema que a interface
       // exibe — sem isto ele consultaria especialistas ocultos.
       ...(AGENTES_SISTEMA_VISIVEIS ? { agentesSistema: AGENTES_SISTEMA_VISIVEIS } : {}),

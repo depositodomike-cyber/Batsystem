@@ -1889,6 +1889,8 @@ model ComandoDesktop {
   etapaId       String?
   /// SR-07: cada aprovação gera no máximo um comando.
   aprovacaoId   String?              @unique
+  /// "Desfazer" de um comando direto (fecha o app que ele abriu): no máximo uma vez.
+  desfazDe      String?              @unique
   operacao      String
   /// Entrada validada (a mesma do hash aprovado).
   parametros    Json
@@ -1942,8 +1944,10 @@ model PoliticaDesktop {
   observaveis  String[] @default([])
   diretorios   String[] @default([])
   dominios     String[] @default([])
+  /// Apelidos por app autorizado: { appId: ["zap", ...] } (só resolvem nomes; não ampliam nada).
+  apelidos     Json     @default("{}")
   /// O dono quer o agente iniciando com o Windows (vale após confirmação local, SR-35).
-  autoinicio  Boolean  @default(false)
+  autoinicio   Boolean  @default(false)
   /// Dias de retenção do histórico de operações.
   retencaoDias Int      @default(90)
   atualizadoEm DateTime @updatedAt

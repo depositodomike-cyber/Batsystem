@@ -87,7 +87,23 @@ export interface ContextoRisco {
   limpa: boolean;
   /** SR-06b: pedido chegou pela wake word. */
   vozAtivacao: boolean;
+  /**
+   * SR-06d: comando direto do usuário — parâmetros extraídos literalmente do
+   * texto dele pelo parser determinístico (conferido no banco pelo gateway).
+   */
+  comandoDireto?: boolean;
 }
+
+/**
+ * SR-06d: operações moderadas que um comando direto do usuário executa sem
+ * aprovação, mesmo por voz e com histórico na conversa. Todas são
+ * reversíveis e só alcançam o que já está autorizado (apps, mídia, janelas).
+ */
+export const DIRETO_SEM_CONFIRMACAO: ReadonlySet<Operacao> = new Set<Operacao>([
+  'abrir_aplicativo',
+  'controlar_midia',
+  'organizar_janelas',
+]);
 
 export interface Avaliacao {
   risco: RiscoDesktop;
@@ -282,6 +298,9 @@ export function avaliarRisco(
   // Moderado só roda direto em condições "limpas"; senão pede aprovação.
   if (risco === 'moderado') {
     if (politica.confirmar.includes(op)) subir('alto', 'Você configurou esta operação para sempre pedir confirmação.');
+    // SR-06d: o próprio usuário mandou, com estas palavras: contexto e voz
+    // não elevam o risco (a configuração dele acima continua valendo).
+    if (ctx.comandoDireto && DIRETO_SEM_CONFIRMACAO.has(op)) return { risco, motivos };
     if (!ctx.limpa) subir('alto', 'Esta execução leu conteúdo (memória, web, arquivos ou conversa) que poderia influenciar a ação.');
     if (ctx.vozAtivacao) subir('alto', 'Pedidos feitos pela palavra de ativação pedem confirmação.');
   }

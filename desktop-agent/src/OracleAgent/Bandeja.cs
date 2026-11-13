@@ -15,6 +15,7 @@ internal sealed class Bandeja : ApplicationContext
     private readonly ToolStripMenuItem _retomar = new("Retomar");
     private readonly ToolStripMenuItem _revisar = new("Revisar permissões pendentes…");
     private readonly CancellationTokenSource _cts = new();
+    private readonly SynchronizationContext _ui;
     private bool _avisouAmpliacao;
 
     public Bandeja(Agente agente)
@@ -39,7 +40,12 @@ internal sealed class Bandeja : ApplicationContext
         _revisar.Click += (_, _) => Revisar();
 
         _icone = new NotifyIcon { Icon = SystemIcons.Shield, Visible = true, ContextMenuStrip = menu, Text = "Oracle — Ambiente local" };
-        _agente.Mudou += () => { if (menu.IsHandleCreated) menu.BeginInvoke(Atualizar); else Atualizar(); };
+        // Clique no ícone (botão esquerdo) com permissões pendentes abre a revisão direto.
+        _icone.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left && _agente.AmpliacaoPendente) Revisar(); };
+        _icone.BalloonTipClicked += (_, _) => { if (_agente.AmpliacaoPendente) Revisar(); };
+        // O loop de rede roda em outra thread: a UI só é tocada na thread dela.
+        _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
+        _agente.Mudou += () => _ui.Post(_ => Atualizar(), null);
         Atualizar();
         _ = Task.Run(() => _agente.Rodar(_cts.Token));
     }
@@ -63,24 +69,44 @@ internal sealed class Bandeja : ApplicationContext
         if (_agente.AmpliacaoPendente && !_avisouAmpliacao)
         {
             _avisouAmpliacao = true;
-            Avisar("O Oracle pediu novas permissões neste computador. Clique com o botão direito no ícone → Revisar permissões pendentes.");
+            Avisar("O Oracle pediu novas permissões neste computador. Clique aqui (ou no ícone do escudo) para revisar.");
         }
         if (!_agente.AmpliacaoPendente) _avisouAmpliacao = false;
         if (_agente.EstadoServidor == "revogado") Avisar("Este computador foi desconectado do Oracle.");
     }
 
+    private bool _revisando;
+
     private void Revisar()
+    {
+        if (_revisando) return;
+        _revisando = true;
+        try { RevisarUmaVez(); } finally { _revisando = false; }
+    }
+
+    private void RevisarUmaVez()
     {
         // GB-02: o "Sim" vale só para a versão e o diff exibidos agora.
         var (versao, lista) = _agente.AmpliacoesPendentes();
         if (lista.Count == 0) return;
+        _agente.Registrar("politica.revisao_aberta", new { versao, itens = lista.Count });
         var texto = $"O Oracle quer AMPLIAR o que pode fazer neste computador (política v{versao}):\n\n• " + string.Join("\n• ", lista) +
                     "\n\nSe não foi você que pediu em Configurações > Ambiente local, clique em Não.";
-        if (MessageBox.Show(texto, "Oracle — novas permissões", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes
-            && !_agente.ConfirmarAmpliacao(versao))
+        var resposta = MessageBox.Show(texto, "Oracle — novas permissões", MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2, MessageBoxOptions.DefaultDesktopOnly);
+        if (resposta != DialogResult.Yes)
+        {
+            _agente.Registrar("politica.revisao_negada", new { versao });
+            return;
+        }
+        if (_agente.ConfirmarAmpliacao(versao))
+        {
+            Avisar($"Permissões confirmadas neste computador (política v{versao}).");
+        }
+        else
         {
             MessageBox.Show("As permissões pedidas mudaram enquanto esta janela estava aberta. Nada foi aplicado; revise de novo.",
-                "Oracle — novas permissões", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                "Oracle — novas permissões", MessageBoxButtons.OK, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button1, MessageBoxOptions.DefaultDesktopOnly);
         }
     }
 

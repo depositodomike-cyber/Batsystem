@@ -37,7 +37,7 @@ export interface ContextoFerramenta {
    * (nunca pela entrada do modelo: os esquemas das ferramentas que o usam são
    * `.strict()`). O gateway desktop prova a aprovação com isto (SR-07).
    */
-  execucao?: { id: string; etapaId: string; aprovacaoId?: string };
+  execucao?: { id: string; etapaId: string; aprovacaoId?: string; comandoDireto?: boolean };
 }
 
 /** Resultado de uma avaliação dinâmica (depende da entrada e do estado). */

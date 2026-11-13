@@ -9,6 +9,7 @@ import { ErroFerramenta } from '@/orquestrador/ferramentas/ferramenta';
 import { hashEntrada } from '@/orquestrador/politica.service';
 import { ChaveServidor, novoNonce, sha256Hex, type Envelope } from './assinatura';
 import { estadoLiberacao, type EstadoLiberacao } from './liberacao';
+import { chamadaDoComando, interpretarComando } from './intencao';
 import { paraEfetiva, PoliticaDesktopService } from './politica-desktop.service';
 import {
   avaliarRisco,
@@ -121,7 +122,41 @@ export class GatewayDesktopService implements OnApplicationBootstrap {
     const politica = paraEfetiva(await this.politicas.obter(ctx.user.empresaId, ctx.user.id));
     const contexto = await this.politicas.execucaoLimpa(this.prisma, ctx.execucao.id, ctx.execucao.etapaId);
     if (!contexto) return { risco: 'bloqueado', motivos: ['Execução não encontrada.'], negado: 'Execução não encontrada.' };
-    return avaliarRisco(op, entrada, politica, contexto);
+    // Na avaliação (antes de a etapa existir) vale a marcação do executor; o
+    // `enviar` confere de verdade no banco (verificarComandoDireto).
+    return avaliarRisco(op, entrada, politica, { ...contexto, comandoDireto: ctx.execucao.comandoDireto === true });
+  }
+
+  /**
+   * SR-06d: é comando direto se a etapa é a PRIMEIRA da execução, criada
+   * como `comando_direto` pelo executor, E se o parser determinístico,
+   * rodado de novo sobre o texto gravado do usuário, produz exatamente esta
+   * ferramenta com esta entrada. Nada vindo do modelo passa por aqui.
+   */
+  async verificarComandoDireto(
+    db: Db,
+    execucaoId: string,
+    etapaId: string,
+    ferramenta: string,
+    entradaAprovada: Record<string, unknown>,
+  ): Promise<boolean> {
+    const et = await db.etapaExecucao.findUnique({
+      where: { id: etapaId },
+      select: { tipo: true, ordem: true, execucaoId: true },
+    });
+    if (!et || et.tipo !== 'comando_direto' || et.ordem !== 1 || et.execucaoId !== execucaoId) return false;
+    const ex = await db.execucao.findUnique({ where: { id: execucaoId }, select: { pedido: true } });
+    const i = ex ? interpretarComando(ex.pedido) : null;
+    const esperado = i ? chamadaDoComando(i) : null;
+    return !!esperado && esperado.nome === ferramenta && hashEntrada(esperado.entrada) === hashEntrada(entradaAprovada);
+  }
+
+  /** Por que o computador não pode agir agora (ou null se pode). Sem efeito colateral. */
+  async indisponibilidade(empresaId: string, usuarioId: string): Promise<string | null> {
+    const lib = this.liberacao();
+    if (!lib.ativo) return `O controle do computador está desligado neste servidor (${lib.motivo})`;
+    const d = await this.dispositivoAtivo(this.prisma, empresaId, usuarioId);
+    return 'erro' in d ? d.erro : null;
   }
 
   private async dispositivoAtivo(
@@ -192,7 +227,16 @@ export class GatewayDesktopService implements OnApplicationBootstrap {
           if (!dono) throw new ErroFerramenta('Execução não encontrada.');
           const contexto = await this.politicas.execucaoLimpa(tx, exec.id, exec.etapaId);
           if (!contexto) throw new ErroFerramenta('Execução não encontrada.');
-          const av = avaliarRisco(op, entrada, politica, contexto);
+          // SR-06d: só vale se conferido no banco — a marcação em memória não basta.
+          let comandoDireto = await this.verificarComandoDireto(tx, exec.id, exec.etapaId, ferramenta, entradaAprovada);
+          if (comandoDireto && contexto.vozAtivacao) {
+            // Áudio de terceiros: no máximo 1 comando direto por voz a cada 3 s.
+            const ultimos = await tx.comandoDesktop.count({
+              where: { dispositivoId: d.id, emitidoEm: { gt: new Date(Date.now() - 3_000) } },
+            });
+            if (ultimos > 0) comandoDireto = false;
+          }
+          const av = avaliarRisco(op, entrada, politica, { ...contexto, comandoDireto });
 
           if (av.risco === 'bloqueado') {
             throw new ErroFerramenta(`Bloqueado pela política de segurança: ${av.motivos.join(' ')} Não tente de novo.`);
@@ -305,6 +349,113 @@ export class GatewayDesktopService implements OnApplicationBootstrap {
 
     this.acordar(dispositivoId);
     return this.aguardarResultado(comandoId, user.empresaId, user.id, exec, ferramenta);
+  }
+
+  /**
+   * "Desfazer" (SR-06d): fecha o app que um COMANDO DIRETO desta execução
+   * abriu há no máximo 2 min. O clique autenticado do dono é a autorização;
+   * `desfazDe @unique` garante uma única vez. Não serve para nenhum outro
+   * caso (não é um "fechar sem aprovação" genérico).
+   */
+  async desfazer(user: ContextoFerramenta['user'], execucaoId: string): Promise<string> {
+    const lib = this.liberacao();
+    if (!lib.ativo) throw new ErroFerramenta(`Controle do computador indisponível: ${lib.motivo}`);
+    const exec = { id: execucaoId, etapaId: '' };
+    let comandoId: string;
+    let dispositivoId: string;
+    try {
+      ({ comandoId, dispositivoId } = await this.prisma.$transaction(
+        async (tx) => {
+          const original = await tx.comandoDesktop.findFirst({
+            where: {
+              execucaoId,
+              operacao: 'abrir_aplicativo',
+              status: 'concluido',
+              risco: 'moderado',
+              concluidoEm: { gt: new Date(Date.now() - 2 * 60_000) },
+              dispositivo: { empresaId: user.empresaId, usuarioId: user.id },
+            },
+            orderBy: { concluidoEm: 'desc' },
+          });
+          if (!original || !original.etapaId) throw new ErroFerramenta('Não há nada recente para desfazer nesta conversa.');
+          // GC-03: só desfaz se o comando INICIOU o app (não se ele já estava
+          // aberto — aí fecharia janelas que a pessoa já usava).
+          const conteudo = String((original.resultado as { conteudo?: unknown } | null)?.conteudo ?? '');
+          if (!conteudo.endsWith('foi aberto.')) {
+            throw new ErroFerramenta('O aplicativo já estava aberto antes do comando; não vou fechá-lo por você.');
+          }
+          const etapa = await tx.etapaExecucao.findUnique({ where: { id: original.etapaId }, select: { tipo: true } });
+          if (etapa?.tipo !== 'comando_direto') throw new ErroFerramenta('Só ações feitas por comando direto podem ser desfeitas assim.');
+          const disp = await this.dispositivoAtivo(tx, user.empresaId, user.id);
+          if ('erro' in disp) throw new ErroFerramenta(disp.erro);
+          if (disp.dispositivo.id !== original.dispositivoId) throw new ErroFerramenta('O app foi aberto em outro computador.');
+          const politica = paraEfetiva(await this.politicas.obter(user.empresaId, user.id, tx));
+          const parametros = { aplicativoId: String((original.parametros as Record<string, unknown>).aplicativoId ?? '') };
+          if (!politica.apps.includes(parametros.aplicativoId)) throw new ErroFerramenta('O aplicativo não está mais autorizado.');
+          // GC-04: mesma categoria e mesmo limite de taxa de qualquer comando.
+          if (!politica.permissoes.apps) throw new ErroFerramenta('A categoria "apps" não está liberada.');
+          const recentes = await tx.comandoDesktop.count({
+            where: { dispositivoId: disp.dispositivo.id, emitidoEm: { gt: new Date(Date.now() - 60_000) } },
+          });
+          if (recentes >= MAX_COMANDOS_MINUTO) throw new ErroFerramenta('Limite de operações por minuto atingido. Espere um pouco.');
+
+          const id = randomUUID();
+          const nonce = novoNonce();
+          const emitidoEm = new Date();
+          const expiraEm = new Date(emitidoEm.getTime() + VALIDADE_COMANDO_MS);
+          const envelope: Envelope = this.chaveServidor().envelope({
+            tipo: 'comando',
+            dispositivoId: disp.dispositivo.id,
+            id,
+            operacao: 'fechar_aplicativo',
+            parametros,
+            risco: 'alto',
+            nonce,
+            emitidoEm: emitidoEm.toISOString(),
+            expiraEm: expiraEm.toISOString(),
+            versaoPolitica: politica.versao,
+          });
+          await tx.registroAuditoria.create({
+            data: {
+              empresaId: user.empresaId,
+              usuarioId: user.id,
+              execucaoId,
+              evento: 'desktop.comando.desfazer',
+              ferramenta: 'desktop_fechar_aplicativo',
+              risco: 'alto',
+              detalhes: { comandoId: id, desfazDe: original.id } as Prisma.InputJsonValue,
+              idRequisicao: idDaRequisicao() ?? null,
+            },
+          });
+          await tx.comandoDesktop.create({
+            data: {
+              id,
+              dispositivoId: disp.dispositivo.id,
+              execucaoId,
+              desfazDe: original.id, // @unique: desfaz uma vez só
+              operacao: 'fechar_aplicativo',
+              parametros: parametros as Prisma.InputJsonValue,
+              risco: 'alto',
+              nonce,
+              envelope: envelope as unknown as Prisma.InputJsonValue,
+              emitidoEm,
+              expiraEm,
+            },
+          });
+          return { comandoId: id, dispositivoId: disp.dispositivo.id };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      ));
+    } catch (err) {
+      if (err instanceof ErroFerramenta) throw err;
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ErroFerramenta('Esta ação já foi desfeita.');
+      }
+      this.logger.error(`Falha ao desfazer: ${String(err)}`);
+      throw new ErroFerramenta('Falha interna da camada de segurança: nada foi desfeito.');
+    }
+    this.acordar(dispositivoId);
+    return this.aguardarResultado(comandoId, user.empresaId, user.id, exec, 'desktop_fechar_aplicativo');
   }
 
   private async aguardarResultado(

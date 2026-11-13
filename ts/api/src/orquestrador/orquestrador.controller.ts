@@ -109,6 +109,7 @@ export class OrquestradorController {
           organizacaoId,
           agentesSistema: dto.agentesSistema ?? null,
           origem: dto.origem,
+          alternativas: dto.alternativas ?? [],
         },
         enviar,
       ),

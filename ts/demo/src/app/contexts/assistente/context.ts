@@ -135,6 +135,8 @@ export interface AssistenteContextValue {
     contexto?: string;
     /** Como o pedido chegou (texto, ditado ou palavra de ativação). */
     origem?: "texto" | "voz" | "voz_ativacao";
+    /** Outras transcrições do ditado (corrigem nomes de apps). */
+    alternativas?: string[];
   }) => Promise<PerguntarResult>;
   /** Follow-up dentro da conversa aberta (também reconhece @menções). */
   continuar: (texto: string) => Promise<void>;

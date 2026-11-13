@@ -6,6 +6,7 @@ import { AgenteDesktopController, DesktopController } from './desktop.controller
 import { DispositivosService } from './dispositivos.service';
 import { GatewayDesktopService } from './gateway.service';
 import { PoliticaDesktopService } from './politica-desktop.service';
+import { ComandosDesktopService } from './comandos.service';
 
 /**
  * Controle do computador pelo Oracle: pareamento, política (Permission
@@ -17,7 +18,7 @@ import { PoliticaDesktopService } from './politica-desktop.service';
 @Module({
   imports: [AuthModule, AcessoModule],
   controllers: [DesktopController, AgenteDesktopController],
-  providers: [GatewayDesktopService, PoliticaDesktopService, DispositivosService, AgenteDesktopGuard],
-  exports: [GatewayDesktopService, PoliticaDesktopService],
+  providers: [GatewayDesktopService, PoliticaDesktopService, DispositivosService, AgenteDesktopGuard, ComandosDesktopService],
+  exports: [GatewayDesktopService, PoliticaDesktopService, ComandosDesktopService],
 })
 export class DesktopModule {}

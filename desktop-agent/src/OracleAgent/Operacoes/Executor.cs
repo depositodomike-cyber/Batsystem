@@ -89,6 +89,7 @@ internal sealed class Executor(Func<Politica> politica, Func<IReadOnlyList<AppIn
 
     private static List<Process> ProcessosDe(string alvo)
     {
+        if (Inventario.EhPacote(alvo)) return Pacotes.Processos(Inventario.Aumid(alvo));
         var nome = Path.GetFileNameWithoutExtension(alvo);
         var lista = new List<Process>();
         foreach (var pr in Process.GetProcessesByName(nome))
@@ -110,6 +111,23 @@ internal sealed class Executor(Func<Politica> politica, Func<IReadOnlyList<AppIn
     {
         var app = AppAutorizado(prm, p);
         var antes = ProcessosDe(app.Alvo).Select(x => x.Id).ToHashSet();
+        if (Inventario.EhPacote(app.Alvo))
+        {
+            // App da Store: ativação oficial do Windows, que devolve o PID.
+            var pid = Pacotes.Ativar(Inventario.Aumid(app.Alvo));
+            if (pid is null) return Resultado.Falha($"O Windows recusou abrir {app.Nome}.");
+            await Task.Delay(500, ct);
+            try
+            {
+                using var pr = Process.GetProcessById(pid.Value);
+                return Resultado.Feito(antes.Contains(pid.Value) ? $"{app.Nome} já estava aberto; foi acionado de novo." : $"{app.Nome} foi aberto.");
+            }
+            catch (ArgumentException)
+            {
+                return Resultado.SemConfirmacao($"Pedi para abrir {app.Nome}, mas o processo não ficou em execução.");
+            }
+        }
+        // Executável comum: sempre SEM argumentos (os do atalho são ignorados).
         using var _ = Process.Start(new ProcessStartInfo(app.Alvo)
         {
             UseShellExecute = false,

@@ -190,6 +190,27 @@ export function descreverChamada(nome: string, entrada: Record<string, unknown>)
       return `Escrever o artigo: "${String(entrada.tema ?? '').slice(0, 120)}"`;
     case 'salvar_no_repositorio':
       return `Salvar no Repositório: "${String(entrada.titulo ?? '').slice(0, 120)}"`;
+    // Computador: rótulos curtos e sem caminhos completos (SR-40).
+    case 'desktop_abrir_aplicativo':
+      return `Abrir o aplicativo "${String(entrada.aplicativo ?? '').slice(0, 60)}"`;
+    case 'desktop_fechar_aplicativo':
+      return `Fechar o aplicativo "${String(entrada.aplicativo ?? '').slice(0, 60)}"`;
+    case 'desktop_controlar_midia':
+      return `Mídia: ${String(entrada.acao ?? '').replace('_', ' ')}`;
+    case 'desktop_organizar_janelas':
+      return `Organizar janelas (${String(entrada.layout ?? '').replace(/_/g, ' ')})`;
+    case 'desktop_abrir_url':
+      return 'Abrir um endereço no navegador';
+    case 'desktop_abrir_documento':
+      return 'Abrir um documento';
+    case 'desktop_buscar_arquivos':
+      return 'Procurar arquivos no computador';
+    case 'desktop_energia':
+      return `Energia: ${String(entrada.acao ?? '').replace('_', ' ')}`;
+    case 'desktop_listar_processos':
+    case 'desktop_listar_janelas':
+    case 'desktop_listar_aplicativos':
+      return 'Ver o que está aberto no computador';
     default:
       return `Executar ${nome}`;
   }
@@ -243,6 +264,12 @@ interface ExecucaoCtx {
   limites: Limites;
   pode: Pode;
   aoCheckpoint?: AoCheckpoint;
+  /**
+   * Comando direto do usuário (caminho rápido): o turno 1 é esta chamada,
+   * extraída de forma determinística do texto dele — o modelo não escolhe.
+   * Passa pela mesma política/aprovação/gateway de qualquer chamada.
+   */
+  primeiraChamada?: ChamadaFerramenta;
 }
 
 /**
@@ -276,8 +303,10 @@ export class ExecutorService {
     aoEtapa: (e: EtapaEvento) => void;
     aoCheckpoint?: AoCheckpoint;
     limites?: Limites;
+    primeiraChamada?: ChamadaFerramenta;
   }): Promise<ResultadoExecutor> {
     const exec = await this.contexto(p);
+    exec.primeiraChamada = p.primeiraChamada;
     return this.loop(exec, estadoInicial(p.mensagens), { entrada: 0, saida: 0 });
   }
 
@@ -483,6 +512,11 @@ export class ExecutorService {
     return { tipo: 'resultado', idChamada: a.idChamada, conteudo: embrulharResultado(a.ferramenta, r.conteudo) };
   }
 
+  /** A chamada é a do caminho rápido (turno 1, primeira posição, mesma ferramenta)? */
+  private ehDireto(exec: ExecucaoCtx, turno: number, indice: number): boolean {
+    return !!exec.primeiraChamada && turno === 1 && indice === 0;
+  }
+
   private async falharEtapa(etapaId: string, motivo: string): Promise<void> {
     await this.prisma.etapaExecucao.updateMany({
       where: { id: etapaId, status: { in: ['aguardando_aprovacao', 'executando'] } },
@@ -530,7 +564,16 @@ export class ExecutorService {
           estado.limiteAtingido = 'tokens';
         }
       }
-      const r = await this.ai.completarComFerramentas(ctx.user.empresaId, ctx.user.id, {
+      const direto = turno === 1 && estado.turno === 0 ? exec.primeiraChamada : undefined;
+      const r = direto
+        ? {
+            texto: '',
+            chamadas: [direto],
+            parada: 'ferramenta' as const,
+            usage: { entrada: 0, saida: 0 },
+            mensagem: { papel: 'assistant' as const, blocos: [{ tipo: 'chamada' as const, ...direto }] },
+          }
+        : await this.ai.completarComFerramentas(ctx.user.empresaId, ctx.user.id, {
         system: systemExecutor(exec.plano),
         mensagens: estado.mensagens,
         // As definições vão sempre: o histórico pode ter chamadas antigas e
@@ -621,7 +664,7 @@ export class ExecutorService {
         ? null
         : await this.registro.avaliar(c.nome, c.entrada, {
             ...ctx,
-            execucao: { id: exec.execucaoId, etapaId: '' },
+            execucao: { id: exec.execucaoId, etapaId: '', ...(this.ehDireto(exec, turno, indice) ? { comandoDireto: true } : {}) },
           });
     const decisao: Decisao = dinamica
       ? dinamica.decisao === 'negar'
@@ -635,7 +678,8 @@ export class ExecutorService {
         execucaoId: exec.execucaoId,
         chave,
         ordem: ++estado.ordem,
-        tipo: 'ferramenta',
+        // A etapa do comando direto fica marcada no banco: é o que o gateway confere (SR-06d).
+        tipo: this.ehDireto(exec, turno, indice) ? 'comando_direto' : 'ferramenta',
         ferramenta: c.nome,
         descricao,
         dependeDe: estado.anteriores,
@@ -776,7 +820,7 @@ export class ExecutorService {
     exec.aoEtapa({ chave, ferramenta: c.nome, descricao, status: 'executando' });
     const resultado = await this.registro.executar(c.nome, c.entrada, {
       ...ctx,
-      execucao: { id: exec.execucaoId, etapaId: etapa.id },
+      execucao: { id: exec.execucaoId, etapaId: etapa.id, ...(this.ehDireto(exec, turno, indice) ? { comandoDireto: true } : {}) },
     });
     await this.prisma.etapaExecucao.update({
       where: { id: etapa.id },

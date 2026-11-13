@@ -26,6 +26,7 @@ export const ESQUEMA_POLITICA = z
       .max(100)
       .optional(),
     retencaoDias: z.number().int().min(1).max(3650).optional(),
+    apelidos: z.record(z.string().regex(/^[a-f0-9]{16,64}$/), z.array(z.string().trim().min(2).max(40)).max(10)).optional(),
     autoinicio: z.boolean().optional(),
   })
   .strict();
@@ -90,6 +91,7 @@ export class PoliticaDesktopService {
         ...(diretorios ? { diretorios } : {}),
         ...(a.dominios ? { dominios: [...new Set(a.dominios)] } : {}),
         ...(a.retencaoDias ? { retencaoDias: a.retencaoDias } : {}),
+        ...(a.apelidos ? { apelidos: a.apelidos } : {}),
         ...(a.autoinicio !== undefined ? { autoinicio: a.autoinicio } : {}),
       },
     });

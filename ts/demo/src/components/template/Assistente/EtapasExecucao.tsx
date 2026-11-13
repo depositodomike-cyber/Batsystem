@@ -22,7 +22,37 @@ import {
   type EtapaOrquestrador,
   type StatusEtapa,
 } from "@/services/api/orquestrador";
-import { pararDesktopApi } from "@/services/api/desktop";
+import { desfazerComandoApi, pararDesktopApi } from "@/services/api/desktop";
+
+/**
+ * "Desfazer": fecha o app que um comando direto acabou de abrir (até 2 min;
+ * o servidor confere). Contrapeso de abrir apps por voz sem confirmação.
+ */
+function DesfazerAbertura({ execucaoId }: { execucaoId: string }) {
+  const [estado, setEstado] = useState<"pronto" | "desfazendo" | "feito">("pronto");
+  if (estado === "feito") return null;
+  return (
+    <button
+      type="button"
+      disabled={estado === "desfazendo"}
+      onClick={() => {
+        setEstado("desfazendo");
+        void desfazerComandoApi(execucaoId)
+          .then((r) => {
+            toast.success(r.mensagem || "Desfeito.");
+            setEstado("feito");
+          })
+          .catch((e: { response?: { data?: { message?: string } } }) => {
+            toast.error(e?.response?.data?.message ?? "Não foi possível desfazer.");
+            setEstado("pronto");
+          });
+      }}
+      className="dark:text-dark-300 ml-3 text-xs text-gray-500 underline-offset-2 hover:underline"
+    >
+      {estado === "desfazendo" ? "Desfazendo…" : "Desfazer"}
+    </button>
+  );
+}
 
 /** Botão "Parar" enquanto houver ação no computador em curso (SR-31). */
 function PararComputador() {
@@ -143,6 +173,10 @@ export function EtapasExecucao({
           ? t("chrome.assistantStepsDone", { count: total })
           : t("chrome.assistantStepsShow")}
       </button>
+      {execucao.id &&
+        execucao.etapas.some((e) => e.ferramenta === "desktop_abrir_aplicativo" && e.status === "concluida") && (
+          <DesfazerAbertura execucaoId={execucao.id} />
+        )}
       {aberto && (
         <div className="dark:border-dark-500 mt-1.5 border-l-2 border-gray-200 pl-2.5">
           {erro ? (

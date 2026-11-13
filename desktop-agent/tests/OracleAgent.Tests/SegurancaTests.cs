@@ -441,3 +441,28 @@ public class GB01Tests
         Caminhos.ConferirFinal(aut, [aut]); // pasta normal passa
     }
 }
+
+public class PacotesTests
+{
+    [Theory]
+    [InlineData("Claude", "Claude_pzs8sxrjxfjjc!Claude", true)]
+    [InlineData("Spotify", "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify", true)]
+    [InlineData("WhatsApp", "5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App", true)]
+    [InlineData("Terminal", "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App", false)]
+    [InlineData("PowerShell", "Microsoft.PowerShell_8wekyb3d8bbwe!Pwsh", false)]
+    [InlineData("Configurações", "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel", false)]
+    [InlineData("Chrome", "Chrome", false)]
+    [InlineData("x", @"C:\Windows\System32\cmd.exe", false)]
+    [InlineData("x", "Evil_abcdefghijklm!App & calc", false)]
+    public void Store_apps_aceitos_e_de_sistema_bloqueados(string nome, string aumid, bool ok)
+    {
+        var app = Inventario.AvaliarPacote(nome, aumid);
+        Assert.Equal(ok, app is not null);
+        if (app is not null)
+        {
+            Assert.True(Inventario.EhPacote(app.Alvo));
+            Assert.True(Inventario.AlvoAceitavel(app.Alvo));
+            Assert.Equal(aumid, Inventario.Aumid(app.Alvo));
+        }
+    }
+}

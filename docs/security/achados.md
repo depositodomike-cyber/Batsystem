@@ -39,3 +39,10 @@ Mantido a partir dos pareceres do Security Engineer Agent (`gates/`). Formato de
 | GB-10 | INFO | CORRIGIDO | Vínculo do GB-04 por substring; nome do app (do modelo) no resumo poderia imitar "Programa:" | gates/fase-1-3-codigo-r2 | Nome higienizado no resumo (remove "Programa:", aspas, \ e :). Comparação por campo estruturado fica para a Fase 4 |
 | GB-11 | INFO | CORRIGIDO | `oracle-agent permissoes` liberava o mutex cedo; diff com hashes | gates/fase-1-3-codigo-r2 | Mutex mantido até o fim; nomes do inventário local no diff |
 | GB-12 | INFO | ABERTO | Corpo acima de 64 KB devolve 500 em vez de 413 | gates/fase-1-3-codigo-r2 | Cosmético (o handler não roda) |
+| GC-01 | MEDIA | CORRIGIDO | Alternativa de voz transformava frase comum em comando ou trocava a operação | gates/comandos-diretos-r1 | `melhorComando`: o principal decide; alternativas só corrigem o alvo do mesmo tipo/operação e só quando a origem é voz. Testes `GC-01` |
+| GC-02 | BAIXA | CORRIGIDO | Texto original perdido quando uma alternativa é usada | gates/comandos-diretos-r1 | `execucao.criada` registra `textoOriginal`, `alternativaUsada` e `origem` |
+| GC-03 | BAIXA | CORRIGIDO | Desfazer fechava app que já estava aberto | gates/comandos-diretos-r1 | Só desfaz quando o agente relatou "foi aberto." (processo novo). Teste `GC-03` |
+| GC-04 | BAIXA | CORRIGIDO | Desfazer sem SR-33 e sem categoria no servidor | gates/comandos-diretos-r1 | Mesma contagem por minuto e checagem de `apps` |
+| GC-05 | BAIXA | CORRIGIDO | Instrução extra descartada ("executa o claude e apaga tudo") | gates/comandos-diretos-r1 | Alvo longo → fluxo normal. Teste `GC-05` |
+| GC-06 | INFO | CORRIGIDO | Testes faltantes (ordem≠1, outra execução) | gates/comandos-diretos-r1 | Testes `GC-06` (turno 2/retomada cobertos pelo `ehDireto`: turno 1, índice 0) |
+| GC-07 | INFO | CORRIGIDO | "liga"/"usar" como abrir | gates/comandos-diretos-r1 | Removidos do verbo de abrir. Teste `GC-07` |

@@ -58,6 +58,8 @@ export interface PoliticaDesktop {
   dominios: string[];
   retencaoDias: number;
   autoinicio: boolean;
+  /** Apelidos por app autorizado ("zap" → WhatsApp). */
+  apelidos: Record<string, string[]>;
 }
 
 export interface EstadoAmbienteLocal {
@@ -105,6 +107,12 @@ export const retomarDispositivoApi = (id: string) =>
 /** "Parar tudo" (SR-31): bloqueia todos os computadores do usuário. */
 export const pararDesktopApi = () =>
   axios.post<{ ok: true; dispositivos: number }>("/desktop/parar").then((r) => r.data);
+
+/** Fecha o app aberto por um comando direto desta execução (até 2 min). */
+export const desfazerComandoApi = (execucaoId: string) =>
+  axios
+    .post<{ ok: true; mensagem: string }>(`/desktop/execucoes/${encodeURIComponent(execucaoId)}/desfazer`)
+    .then((r) => r.data);
 
 export const historicoDesktopApi = (limite = 50) =>
   axios.get<EventoHistorico[]>("/desktop/historico", { params: { limite } }).then((r) => r.data);

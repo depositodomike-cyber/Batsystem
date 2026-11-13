@@ -27,6 +27,10 @@ function montar(o: {
   status?: string;
   resultado?: unknown;
   recentes?: number;
+  /** Etapa e pedido gravados, para a checagem de comando direto (SR-06d). */
+  etapa?: { tipo: string; ordem: number; execucaoId: string } | null;
+  pedido?: string;
+  vozAtivacao?: boolean;
 } = {}) {
   const ordem: string[] = [];
   const disp =
@@ -35,7 +39,13 @@ function montar(o: {
       : { id: 'd1', status: 'conectado', paradoLocal: false, versaoAgente: '1.0.0', ultimoContato: new Date(), ...o.dispositivo };
   const tx = {
     dispositivoDesktop: { findFirst: jest.fn().mockResolvedValue(disp) },
-    execucao: { findFirst: jest.fn().mockResolvedValue({ id: 'x1' }) },
+    execucao: {
+      findFirst: jest.fn().mockResolvedValue({ id: 'x1' }),
+      findUnique: jest.fn().mockResolvedValue({ pedido: o.pedido ?? 'qualquer coisa' }),
+    },
+    etapaExecucao: {
+      findUnique: jest.fn().mockResolvedValue(o.etapa === undefined ? { tipo: 'ferramenta', ordem: 1, execucaoId: 'x1' } : o.etapa),
+    },
     aprovacaoAcao: { findFirst: jest.fn().mockResolvedValue(o.aprovacao ?? null) },
     comandoDesktop: {
       count: jest.fn().mockResolvedValue(o.recentes ?? 0),
@@ -58,7 +68,7 @@ function montar(o: {
   const config = { get: (k: string) => (k === 'DESKTOP_CHAVE_PRIVADA' ? Buffer.from(pem).toString('base64') : undefined) };
   const politicas = {
     obter: jest.fn().mockResolvedValue(politicaDb()),
-    execucaoLimpa: jest.fn().mockResolvedValue({ limpa: o.limpa ?? true, vozAtivacao: false }),
+    execucaoLimpa: jest.fn().mockResolvedValue({ limpa: o.limpa ?? true, vozAtivacao: o.vozAtivacao ?? false }),
   };
   const g = new GatewayDesktopService(prisma as never, config as never, politicas as never);
   jest.spyOn(g, 'liberacao').mockReturnValue({ ativo: true });
@@ -231,5 +241,108 @@ describe('GB-04: aprovação amarrada ao programa exibido', () => {
     const m = montar({ aprovacao: ap('Fechar o aplicativo "Figma" — Programa: C:\Apps\Figma.exe') });
     await m.g.enviar('desktop_fechar_aplicativo', 'fechar_aplicativo', E, P, ctx(exec), ['Programa: C:\Apps\Figma.exe']);
     expect(m.tx.comandoDesktop.create).toHaveBeenCalled();
+  });
+});
+
+
+describe('SR-06d: comando direto do usuário', () => {
+  const direto = { tipo: 'comando_direto', ordem: 1, execucaoId: 'x1' };
+  const ex = { id: 'x1', etapaId: 'et1' };
+
+  it('abrir app por voz, com histórico, roda sem aprovação quando o banco confirma o comando', async () => {
+    const m = montar({ limpa: false, vozAtivacao: true, etapa: direto, pedido: 'Oracle, abrir figma' });
+    await m.g.enviar('desktop_abrir_aplicativo', 'abrir_aplicativo', { aplicativo: 'figma' }, P, ctx(ex));
+    const cmd = (m.tx.comandoDesktop.create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0].data;
+    expect(cmd.risco).toBe('moderado');
+  });
+
+  it('etapa que não é comando_direto (ex.: chamada do modelo) continua exigindo aprovação', async () => {
+    const m = montar({ limpa: false, etapa: { tipo: 'ferramenta', ordem: 1, execucaoId: 'x1' }, pedido: 'abrir figma' });
+    await expect(m.g.enviar('desktop_abrir_aplicativo', 'abrir_aplicativo', { aplicativo: 'figma' }, P, ctx(ex))).rejects.toThrow(/aprovação/);
+  });
+
+  it('parâmetros diferentes do que o texto do usuário diz → não é comando direto', async () => {
+    const m = montar({ limpa: false, etapa: direto, pedido: 'abrir figma' });
+    await expect(m.g.enviar('desktop_abrir_aplicativo', 'abrir_aplicativo', { aplicativo: 'spotify' }, P, ctx(ex))).rejects.toThrow(/aprovação/);
+  });
+
+  it('a marcação em memória do executor não basta: sem a etapa no banco, exige aprovação', async () => {
+    const m = montar({ limpa: false, etapa: null, pedido: 'abrir figma' });
+    await expect(
+      m.g.enviar('desktop_abrir_aplicativo', 'abrir_aplicativo', { aplicativo: 'figma' }, P, ctx({ ...ex, comandoDireto: true } as never)),
+    ).rejects.toThrow(/aprovação/);
+  });
+
+  it('fechar app e energia continuam altos mesmo como comando direto', async () => {
+    const a = montar({ etapa: direto, pedido: 'fechar figma' });
+    await expect(a.g.enviar('desktop_fechar_aplicativo', 'fechar_aplicativo', { aplicativo: 'figma' }, P, ctx(ex))).rejects.toThrow(/aprovação/);
+    const b = montar({ etapa: direto, pedido: 'desliga o computador' });
+    await expect(b.g.enviar('desktop_energia', 'energia', { acao: 'desligar' }, { acao: 'desligar' }, ctx(ex))).rejects.toThrow(/aprovação/);
+  });
+
+  it('por voz, um segundo comando direto em menos de 3 s volta a exigir aprovação', async () => {
+    const m = montar({ limpa: false, vozAtivacao: true, etapa: direto, pedido: 'abrir figma', recentes: 1 });
+    await expect(m.g.enviar('desktop_abrir_aplicativo', 'abrir_aplicativo', { aplicativo: 'figma' }, P, ctx(ex))).rejects.toThrow(/aprovação/);
+  });
+});
+
+describe('Desfazer (SR-06d)', () => {
+  const original = { id: 'c-orig', etapaId: 'et1', dispositivoId: 'd1', parametros: { aplicativoId: APP }, resultado: { conteudo: 'Figma foi aberto.', verificado: true } };
+  const comOriginal = (o: Parameters<typeof montar>[0], orig: unknown) => {
+    const m = montar(o);
+    (m.tx.comandoDesktop as unknown as { findFirst: jest.Mock }).findFirst = jest.fn().mockResolvedValue(orig);
+    return m;
+  };
+
+  it('fecha o app aberto por comando direto: comando alto, desfazDe e auditoria antes', async () => {
+    const m = comOriginal({ etapa: { tipo: 'comando_direto', ordem: 1, execucaoId: 'x1' } }, original);
+    await m.g.desfazer({ id: 'u1', empresaId: 'e1' } as never, 'x1');
+    const where = ((m.tx.comandoDesktop as unknown as { findFirst: jest.Mock }).findFirst.mock.calls[0][0] as { where: Record<string, unknown> }).where;
+    expect(where).toMatchObject({ execucaoId: 'x1', operacao: 'abrir_aplicativo', status: 'concluido', risco: 'moderado', concluidoEm: { gt: expect.any(Date) } });
+    expect(m.ordem).toEqual(['auditoria', 'comando']);
+    const cmd = (m.tx.comandoDesktop.create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0].data;
+    expect(cmd).toMatchObject({ operacao: 'fechar_aplicativo', risco: 'alto', desfazDe: 'c-orig', parametros: { aplicativoId: APP } });
+  });
+
+  it('nada recente para desfazer, ou ação que não foi comando direto → nega', async () => {
+    await expect(comOriginal({}, null).g.desfazer({ id: 'u1', empresaId: 'e1' } as never, 'x1')).rejects.toThrow(/nada recente/);
+    await expect(
+      comOriginal({ etapa: { tipo: 'ferramenta', ordem: 1, execucaoId: 'x1' } }, original).g.desfazer({ id: 'u1', empresaId: 'e1' } as never, 'x1'),
+    ).rejects.toThrow(/comando direto/);
+  });
+
+  it('desfazer duas vezes → "já foi desfeita" (unique)', async () => {
+    const m = comOriginal(
+      {
+        etapa: { tipo: 'comando_direto', ordem: 1, execucaoId: 'x1' },
+        comandoCreate: async () => {
+          throw new Prisma.PrismaClientKnownRequestError('dup', { code: 'P2002', clientVersion: 'x' });
+        },
+      },
+      original,
+    );
+    await expect(m.g.desfazer({ id: 'u1', empresaId: 'e1' } as never, 'x1')).rejects.toThrow(/já foi desfeita/);
+  });
+});
+
+
+describe('GC-03/GC-04/GC-06', () => {
+  it('GC-03: não desfaz quando o app já estava aberto antes do comando', async () => {
+    const m = montar({ etapa: { tipo: 'comando_direto', ordem: 1, execucaoId: 'x1' } });
+    (m.tx.comandoDesktop as unknown as { findFirst: jest.Mock }).findFirst = jest.fn().mockResolvedValue({
+      id: 'c-orig', etapaId: 'et1', dispositivoId: 'd1', parametros: { aplicativoId: APP },
+      resultado: { conteudo: 'Figma já estava aberto; foi acionado de novo.', verificado: true },
+    });
+    await expect(m.g.desfazer({ id: 'u1', empresaId: 'e1' } as never, 'x1')).rejects.toThrow(/já estava aberto/);
+  });
+
+  it('GC-06: etapa comando_direto que não é a 1ª, ou de outra execução, não é comando direto', async () => {
+    for (const etapa of [
+      { tipo: 'comando_direto', ordem: 2, execucaoId: 'x1' },
+      { tipo: 'comando_direto', ordem: 1, execucaoId: 'outra' },
+    ]) {
+      const m = montar({ limpa: false, etapa, pedido: 'abrir figma' });
+      await expect(m.g.enviar('desktop_abrir_aplicativo', 'abrir_aplicativo', { aplicativo: 'figma' }, P, ctx({ id: 'x1', etapaId: 'et1' }))).rejects.toThrow(/aprovação/);
+    }
   });
 });

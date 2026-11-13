@@ -212,6 +212,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       referencia?: string;
       conversaId: string | null;
       origem?: OrigemPedido;
+      alternativas?: string[];
     }): Promise<{ resultado: PerguntarResult; conversaId?: string } | null> => {
       // O turno é trocado por cópias a cada evento; `atual` é a versão que
       // está na tela, para o próximo `map` achá-la pela identidade.
@@ -231,6 +232,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
             conversaId: p.conversaId ?? undefined,
             repositorioId,
             origem: p.origem,
+            alternativas: p.alternativas,
           },
           {
             onRota: (rota) => {
@@ -293,6 +295,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       conversaIdBase: string | null;
       arquivo?: File | null;
       origem?: OrigemPedido;
+      alternativas?: string[];
     }): Promise<PerguntarResult> => {
       const { pergunta, modo, base } = p;
       const agentes = encontrarMencoes(pergunta);
@@ -341,6 +344,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
                 referencia,
                 conversaId: cid,
                 origem: p.origem,
+                alternativas: p.alternativas,
               })
             : null;
         if (orquestrado) {
@@ -414,12 +418,14 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
       arquivo,
       contexto,
       origem,
+      alternativas,
     }: {
       texto: string;
       modo: ModoBusca;
       arquivo?: File | null;
       contexto?: string;
       origem?: OrigemPedido;
+      alternativas?: string[];
     }): Promise<PerguntarResult> => {
       const pergunta = texto.trim();
       if (!pergunta || loading) return { ok: false, erro: "" };
@@ -440,6 +446,7 @@ export function AssistenteHostProvider({ children }: { children: ReactNode }) {
           conversaIdBase: null,
           arquivo,
           origem,
+          alternativas,
         });
       } finally {
         setLoading(false);

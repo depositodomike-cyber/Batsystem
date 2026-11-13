@@ -757,3 +757,57 @@ describe('OrquestradorService no boot', () => {
     expect(m.prisma.$transaction).not.toHaveBeenCalled();
   });
 });
+
+describe('OrquestradorService — comandos de computador (caminho rápido)', () => {
+  const comComandos = (decisao: unknown) => {
+    const m = montar();
+    const comandos = { interpretar: jest.fn().mockResolvedValue(decisao) };
+    (m.service as unknown as { comandos: unknown }).comandos = comandos;
+    return { ...m, comandos };
+  };
+
+  it('comando reconhecido: não chama roteador nem planejador; executor recebe a chamada direta, sem histórico', async () => {
+    const m = comComandos({
+      acao: 'executar',
+      texto: 'abrir figma',
+      entendido: 'abrir Figma',
+      chamada: { nome: 'desktop_abrir_aplicativo', entrada: { aplicativo: 'figma' } },
+    });
+    await m.service.orquestrar({ ...pedido, texto: 'abrir firma', alternativas: ['abrir figma'] }, (e) => m.eventos.push(e));
+    expect(m.comandos.interpretar).toHaveBeenCalledWith(user, 'abrir firma', ['abrir figma'], undefined);
+    expect(m.roteador.decidir).not.toHaveBeenCalled();
+    expect(m.planejador.planejar).not.toHaveBeenCalled();
+    expect(m.prisma.execucao.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ pedido: 'abrir figma', contextoExterno: false }),
+    });
+    const args = m.executor.executar.mock.calls[0][0];
+    expect(args.primeiraChamada).toEqual({ id: 'comando_direto', nome: 'desktop_abrir_aplicativo', entrada: { aplicativo: 'figma' } });
+    expect(args.mensagens).toHaveLength(1); // só o comando, sem histórico/referências
+    expect(args.limites).toMatchObject({ maxTurnos: 2, maxChamadas: 1 });
+    expect(m.eventos[0]).toEqual({ type: 'rota', rota: 'plano', motivo: 'comando: abrir Figma' });
+  });
+
+  it('indisponível: responde o motivo na hora e grava na conversa, sem pesquisar', async () => {
+    const m = comComandos({ acao: 'responder', resposta: 'Entendi: **abrir Figma**. Mas não consigo…' });
+    await m.service.orquestrar({ ...pedido, texto: 'abrir firma' }, (e) => m.eventos.push(e));
+    expect(m.roteador.decidir).not.toHaveBeenCalled();
+    expect(m.prompt.responder).not.toHaveBeenCalled();
+    expect(m.conversas.persistPromptTurn).toHaveBeenCalledWith(expect.objectContaining({ pergunta: 'abrir firma', resposta: 'Entendi: **abrir Figma**. Mas não consigo…' }));
+    expect(m.eventos.at(-1)).toMatchObject({ type: 'resposta', resposta: 'Entendi: **abrir Figma**. Mas não consigo…' });
+  });
+
+  it('não é comando: segue o roteador normalmente', async () => {
+    const m = comComandos(null);
+    m.roteador.decidir.mockResolvedValue({ rota: 'direta', motivo: 'simples' });
+    await m.service.orquestrar(pedido, (e) => m.eventos.push(e));
+    expect(m.roteador.decidir).toHaveBeenCalled();
+  });
+
+  it('falha ao interpretar nunca derruba o pedido', async () => {
+    const m = comComandos(null);
+    m.comandos.interpretar.mockRejectedValue(new Error('banco fora'));
+    m.roteador.decidir.mockResolvedValue({ rota: 'direta', motivo: 'simples' });
+    await m.service.orquestrar(pedido, (e) => m.eventos.push(e));
+    expect(m.prompt.responder).toHaveBeenCalled();
+  });
+});

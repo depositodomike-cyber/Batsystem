@@ -42,6 +42,7 @@ const ACEITA_ANEXO = ".txt,.md,.csv,.json,.log,.markdown,text/*";
 type SpeechResult = ArrayLike<{ transcript: string }> & { isFinal: boolean };
 type SpeechRecognitionLike = {
   lang: string;
+  maxAlternatives?: number;
   interimResults: boolean;
   continuous: boolean;
   onresult:
@@ -108,6 +109,9 @@ export function PromptBar() {
   /** Limite de tempo do ditado aberto pela palavra de ativação. */
   const ditadoLimiteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ditadoTextoRef = useRef("");
+  // Outras transcrições do último ditado: o servidor escolhe a que forma um
+  // comando com um app que existe no computador ("firma" × "figma").
+  const alternativasRef = useRef<string[]>([]);
 
   // --- Ativação por voz (Configurações › Voz) ---
   const [escuta, setEscuta] = useState(getEscutaAtiva);
@@ -217,17 +221,26 @@ export function PromptBar() {
     rec.lang = i18n.language?.startsWith("en") ? "en-US" : "pt-BR";
     rec.interimResults = true;
     rec.continuous = false;
+    rec.maxAlternatives = 5;
     rec.onresult = (e) => {
       let interim = "";
       let final = "";
+      const outras: string[] = [];
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
         const txt = r[0]?.transcript ?? "";
-        if (r.isFinal) final += txt;
-        else interim += txt;
+        if (r.isFinal) {
+          final += txt;
+          for (let k = 1; k < r.length; k++) {
+            const alt = r[k]?.transcript?.trim();
+            if (alt) outras.push(alt);
+          }
+        } else interim += txt;
       }
       if (final) {
         textoPorVozRef.current = true;
+        const prefixo = ditadoPorPalavraRef.current ? ditadoTextoRef.current : value;
+        alternativasRef.current = outras.map((a) => ((prefixo ? prefixo.trimEnd() + " " : "") + a).trim()).slice(0, 5);
         if (ditadoPorPalavraRef.current) {
           ditadoTextoRef.current = (
             ditadoTextoRef.current +
@@ -317,6 +330,8 @@ export function PromptBar() {
     pararFala();
     const porVoz = textoDitado !== undefined || textoPorVozRef.current;
     const origem: OrigemPedido = origemDitado ?? (porVoz ? "voz" : "texto");
+    const alternativas = porVoz ? alternativasRef.current : [];
+    alternativasRef.current = [];
     textoPorVozRef.current = false;
 
     // Interrompe as ações no computador na hora, sem passar pela IA (SR-31).
@@ -364,6 +379,7 @@ export function PromptBar() {
       arquivo: modo !== "web" ? arquivo : null,
       ...(contextoBriefing ? { contexto: contextoBriefing } : {}),
       origem,
+      ...(alternativas.length ? { alternativas } : {}),
     });
 
     if (!r.ok) {

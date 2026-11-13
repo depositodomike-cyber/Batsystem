@@ -165,7 +165,9 @@ export function AmbienteLocalSection() {
         </div>
       )}
 
+      <Diagnostico estado={estado} />
       <Conexao estado={estado} onMudou={carregar} />
+      <ComandosConhecidos />
 
       <SectionCard
         titulo="Permissões de operação"
@@ -418,10 +420,133 @@ function LinhaDispositivo(p: {
           <Button color="primary" className="h-9 text-sm" onClick={p.onConfirmar}>
             <ShieldCheckIcon className="mr-1 size-4" /> Confirmar computador
           </Button>
-          <span className="dark:text-dark-300 text-xs text-gray-500">Digite a impressão que o agente mostrou no pareamento.</span>
+          <span className="dark:text-dark-300 text-xs text-gray-500">
+            Digite a <strong>“Impressão DESTE PC”</strong> que o agente mostrou no pareamento (16 caracteres, ex.: 7042-1917-AF6C-2F56) —
+            não é o código de pareamento. Rode <code>oracle-agent status</code> no computador para vê-la de novo.
+          </span>
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * Checklist do que falta para "Oracle, abrir Figma" funcionar. Cada item diz
+ * o próximo passo — é o que faltou quando os comandos viravam pesquisa.
+ */
+function Diagnostico({ estado }: { estado: EstadoAmbienteLocal }) {
+  const d = estado.dispositivos.find((x) => x.estado !== "pendente") ?? null;
+  const pendente = estado.dispositivos.find((x) => x.estado === "pendente");
+  const algumaCategoria = Object.values(estado.politica.permissoes).some(Boolean);
+  const itens: { ok: boolean; titulo: string; passo: string }[] = [
+    {
+      ok: estado.liberacao.ativo,
+      titulo: "Servidor liberado para controlar o computador",
+      passo: estado.liberacao.motivo ?? "Ligue DESKTOP_ATIVO=true no .env da API e reinicie a API.",
+    },
+    {
+      ok: !!d && d.estado === "conectado",
+      titulo: "Agente do Oracle conectado neste computador",
+      passo: pendente
+        ? "Confirme o computador digitando a impressão digital (abaixo)."
+        : d
+          ? `O agente está "${ESTADO[d.estado]?.rotulo ?? d.estado}". Rode "oracle-agent run" no computador.`
+          : 'Clique em "Conectar um computador" e rode o comando mostrado.',
+    },
+    {
+      ok: algumaCategoria,
+      titulo: "Permissões de operação liberadas",
+      passo: "Ligue ao menos \"Abrir e fechar aplicativos\" em Permissões de operação.",
+    },
+    {
+      ok: estado.politica.apps.length > 0,
+      titulo: "Aplicativos autorizados",
+      passo: "Marque os apps (Figma, Claude, Chrome…) em Aplicativos autorizados.",
+    },
+    {
+      ok: !!d && !d.confirmacaoLocalPendente && d.politicaAplicada >= estado.politica.versao,
+      titulo: "Permissões confirmadas no computador",
+      passo: 'Confirme no ícone do Oracle na bandeja ("Revisar permissões pendentes") ou rode "oracle-agent permissoes".',
+    },
+  ];
+  const tudoOk = itens.every((i) => i.ok);
+  return (
+    <SectionCard
+      titulo="Diagnóstico"
+      descricao={tudoOk ? "Tudo pronto: é só pedir ao Oracle, por texto ou voz." : "O que falta para o Oracle agir no seu computador."}
+    >
+      <ul className="space-y-2">
+        {itens.map((i) => (
+          <li key={i.titulo} className="flex items-start gap-2 text-sm">
+            {i.ok ? (
+              <ShieldCheckIcon className="mt-0.5 size-4.5 shrink-0 text-emerald-500" />
+            ) : (
+              <ExclamationTriangleIcon className="mt-0.5 size-4.5 shrink-0 text-amber-500" />
+            )}
+            <div>
+              <p className="dark:text-dark-100 text-gray-800">{i.titulo}</p>
+              {!i.ok && <p className="dark:text-dark-300 text-xs text-gray-500">{i.passo}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
+  );
+}
+
+const EXEMPLOS: { grupo: string; frases: string[] }[] = [
+  { grupo: "Aplicativos", frases: ["Oracle, abrir Figma", "abre o Claude", "inicia o Spotify", "fecha o Chrome"] },
+  { grupo: "Música e som", frases: ["tocar música", "pausar", "próxima música", "música anterior", "aumenta o volume", "mudo"] },
+  { grupo: "Janelas", frases: ["maximiza o Figma", "deixa só o Figma", "coloca o Figma e o Chrome lado a lado"] },
+  { grupo: "Navegador", frases: ["abrir o site figma.com", "pesquisa design systems no Google"] },
+  { grupo: "Arquivos", frases: ["abrir o último documento que editei", "encontre o arquivo da proposta"] },
+  { grupo: "Computador", frases: ["bloqueia a tela", "desliga o computador", "pare tudo"] },
+];
+
+/** Palavras-chave e frases que o Oracle reconhece como comando (sem virar pesquisa). */
+function ComandosConhecidos() {
+  return (
+    <SectionCard
+      titulo="Comandos que o Oracle entende"
+      descricao='Comece com um verbo de ação: abrir, abre, inicia, executa, fecha, toca, pausa, pula, maximiza, desliga… Sinônimos e frases naturais também funcionam ("pode abrir o Figma pra mim").'
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        {EXEMPLOS.map((g) => (
+          <div key={g.grupo}>
+            <p className="dark:text-dark-100 text-xs font-semibold tracking-wide text-gray-700 uppercase">{g.grupo}</p>
+            <ul className="dark:text-dark-300 mt-1 space-y-0.5 text-sm text-gray-600">
+              {g.frases.map((f) => (
+                <li key={f}>“{f}”</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <p className="dark:text-dark-300 mt-4 text-xs text-gray-500">
+        Se o ditado entender errado o nome de um app (ex.: “firma” em vez de Figma), o Oracle corrige pela lista de
+        aplicativos deste computador. Para nomes difíceis, cadastre apelidos em Aplicativos autorizados. Fechar apps,
+        desligar e sites fora da lista sempre pedem confirmação; “Desfazer” fecha um app aberto por engano.
+      </p>
+    </SectionCard>
+  );
+}
+
+/** Apelidos de um app ("zap" → WhatsApp), separados por vírgula. */
+function ApelidosApp({ valor, onSalvar }: { valor: string[]; onSalvar: (lista: string[]) => void }) {
+  const [texto, setTexto] = useState(valor.join(", "));
+  const salvar = () => {
+    const lista = [...new Set(texto.split(",").map((x) => x.trim()).filter((x) => x.length >= 2))].slice(0, 10);
+    if (lista.join("|") !== valor.join("|")) onSalvar(lista);
+  };
+  return (
+    <input
+      className={`${inputCls} basis-full text-xs`}
+      placeholder="Apelidos (opcional), separados por vírgula — ex.: zap, whats"
+      value={texto}
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={salvar}
+      onKeyDown={(e) => e.key === "Enter" && salvar()}
+    />
   );
 }
 
@@ -501,6 +626,12 @@ function Aplicativos({
                       observável
                     </label>
                   </div>
+                  {autorizado && (
+                    <ApelidosApp
+                      valor={politica.apelidos?.[a.id] ?? []}
+                      onSalvar={(lista) => void alterar({ apelidos: { ...(politica.apelidos ?? {}), [a.id]: lista } }, false)}
+                    />
+                  )}
                 </li>
               );
             })}

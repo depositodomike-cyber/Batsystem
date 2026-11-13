@@ -151,6 +151,7 @@ internal sealed class Agente : IDisposable
         }, ct);
 
         var anterior = _estadoServidor;
+        var pendenteAntes = _politica.AmpliacaoPendente;
         _estadoServidor = resp.Estado;
         // Bloqueado no servidor ("parar tudo" pela UI/voz) → aborta o que estiver rodando.
         if (resp.Estado == "bloqueado")
@@ -178,7 +179,8 @@ internal sealed class Agente : IDisposable
         {
             _log.Registrar("politica.rejeitada", new { motivo = e.Message });
         }
-        if (anterior != _estadoServidor) Mudou?.Invoke();
+        // A bandeja precisa saber também quando surge (ou some) uma ampliação pendente.
+        if (anterior != _estadoServidor || pendenteAntes != _politica.AmpliacaoPendente) Mudou?.Invoke();
 
         foreach (var env in resp.Comandos)
         {
@@ -253,6 +255,9 @@ internal sealed class Agente : IDisposable
     }
 
     public static void RemoverAutoinicio() => AplicarAutoinicio(false);
+
+    /// <summary>Evento da bandeja no log local (sem dados sensíveis).</summary>
+    public void Registrar(string evento, object? detalhes) => _log.Registrar(evento, detalhes);
 
     public void Dispose()
     {

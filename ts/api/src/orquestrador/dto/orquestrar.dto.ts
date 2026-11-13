@@ -77,4 +77,15 @@ export class OrquestrarDto {
   @IsOptional()
   @IsIn(['texto', 'voz', 'voz_ativacao'])
   origem?: 'texto' | 'voz' | 'voz_ativacao';
+
+  /**
+   * Outras transcrições do ditado (maxAlternatives): o servidor escolhe a que
+   * forma um comando com um app que existe no computador ("firma" × "figma").
+   */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(500, { each: true })
+  alternativas?: string[];
 }

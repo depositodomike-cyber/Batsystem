@@ -11,6 +11,8 @@ export const CONECTORES_PESSOAIS: ReadonlySet<string> = new Set([
   'outlook',
   'google-calendar',
   'google-drive',
+  // Bot do Telegram: o vínculo é da conta da pessoa (notas vão ao Repositório dela).
+  'telegram',
 ]);
 
 export function ehPessoal(connectorId: string): boolean {

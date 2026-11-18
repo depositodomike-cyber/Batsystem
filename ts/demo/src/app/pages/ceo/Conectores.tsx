@@ -51,6 +51,7 @@ import {
 } from "@/app/data/conector-credenciais";
 import { isConnectorTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import { BotaoImportarDoDrive } from "./drive/ImportarDoDrive";
+import { TelegramSection } from "./telegram/TelegramSection";
 
 // ----------------------------------------------------------------------
 
@@ -192,6 +193,11 @@ export default function Conectores({ embutido = false }: { embutido?: boolean })
     // Cinto de segurança: o card já não deixa clicar, mas o drawer pode estar
     // aberto de antes e o estado do conector pode mudar por outro caminho.
     if (isConnectorTemporarilyDisabled(c.id)) return;
+    // Telegram conecta pelo código enviado ao bot (TelegramSection, no drawer).
+    if (c.id === "telegram" && !isConnected(c.id)) {
+      setSelected(c);
+      return;
+    }
     if (c.oauth && !isConnected(c.id)) {
       getOauthAuthorizeUrlApi(c.id)
         .then((url) => {
@@ -861,6 +867,8 @@ function ConnectorDrawer({
                   <BotaoImportarDoDrive />
                 )}
 
+                {connector.id === "telegram" && <TelegramSection />}
+
                 {/* Quais credenciais estão guardadas. Os valores não voltam do
                     servidor, então listamos só os rótulos dos campos. */}
                 {connected && exigeCredenciais(connector.id) && (
@@ -914,7 +922,8 @@ function ConnectorDrawer({
                 </div>
               </ScrollShadow>
 
-              {/* Rodapé */}
+              {/* Rodapé (Telegram desconectado conecta pelo código, no corpo) */}
+              {!(connector.id === "telegram" && !connected) && (
               <div className="dark:border-dark-600 shrink-0 border-t border-gray-200 px-5 py-4">
                 <Button
                   color={connected ? "error" : "primary"}
@@ -932,6 +941,7 @@ function ConnectorDrawer({
                   )}
                 </Button>
               </div>
+              )}
             </>
           )}
         </TransitionChild>

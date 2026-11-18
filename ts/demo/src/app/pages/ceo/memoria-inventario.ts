@@ -569,6 +569,7 @@ const TIPO_POR_TAG: [RegExp, string][] = [
   [/^slack$/i, "Slack"],
   [/^conversa$/i, "Conversa"],
   [/^documento$/i, "Documento"],
+  [/^telegram$/i, "Telegram"],
   [/^nota$/i, "Nota"],
 ];
 

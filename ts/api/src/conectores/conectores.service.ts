@@ -129,6 +129,12 @@ export class ConectoresService {
     origem: 'app' | 'mcp',
   ): Promise<ConnectorWithStatus> {
     this.requireFromCatalog(connectorId);
+    // Telegram só conecta pelo código de vínculo enviado ao bot.
+    if (connectorId === 'telegram') {
+      throw new BadRequestException(
+        'O Telegram conecta pelo código de vínculo: gere-o em Configurações → Conectores → Telegram.',
+      );
+    }
     const titular = titularDe(connectorId, usuarioId);
     await this.prisma.empresaConector.upsert({
       where: chaveConexao(empresaId, connectorId, usuarioId),
@@ -162,6 +168,15 @@ export class ConectoresService {
         },
       });
       if (outros === 0) await this.oauth.revogarGoogle(empresaId, usuarioId, connectorId);
+    }
+    // Telegram: revoga o vínculo (o bot deixa de aceitar a conta). A fila já
+    // recebida continua chegando às Notas — nada é descartado.
+    if (connectorId === 'telegram' && usuarioId) {
+      await this.prisma.telegramVinculo.updateMany({
+        where: { usuarioId, revogadoEm: null },
+        data: { revogadoEm: new Date() },
+      });
+      await this.prisma.telegramCodigoVinculo.deleteMany({ where: { usuarioId, usadoEm: null } });
     }
     await this.prisma.empresaConector.deleteMany({
       where: { empresaId, connectorId, titular },

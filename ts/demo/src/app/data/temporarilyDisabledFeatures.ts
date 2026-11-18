@@ -358,6 +358,7 @@ export const CONECTORES_HABILITADOS: string[] = [
   "google-calendar",
   "google-drive",
   "slack",
+  "telegram",
 ];
 
 /** True quando o conector está visível mas indisponível para conectar. */

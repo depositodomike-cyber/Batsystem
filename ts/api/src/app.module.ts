@@ -17,6 +17,7 @@ import { TemplatesModule } from './templates/templates.module';
 import { ConversasModule } from './conversas/conversas.module';
 import { CriacoesModule } from './criacoes/criacoes.module';
 import { ConectoresModule } from './conectores/conectores.module';
+import { TelegramModule } from './conectores/telegram/telegram.module';
 import { McpModule } from './mcp/mcp.module';
 import { UsoModule } from './uso/uso.module';
 import { OrquestradorModule } from './orquestrador/orquestrador.module';
@@ -43,6 +44,7 @@ import { HealthController } from './health.controller';
     ConversasModule,
     CriacoesModule,
     ConectoresModule,
+    TelegramModule,
     McpModule,
     UsoModule,
     OrquestradorModule,

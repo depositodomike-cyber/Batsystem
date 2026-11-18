@@ -26,7 +26,7 @@ import {
 // Local Imports
 import { Page } from "@/components/shared/Page";
 import { PageTitle } from "@/components/shared/PageTitle";
-import { Button } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import { Input, Select, Textarea } from "@/components/ui/Form";
 import { MemoriaTextarea } from "@/components/shared/MemoriaMentions";
 import {
@@ -39,7 +39,17 @@ import {
   salvarConteudoNaMemoria,
 } from "./memoria-conteudo";
 import { setIaPrefill } from "@/utils/iaPrefill";
-import { chaveConta, lerComMigracao } from "@/utils/escopoConta";
+import {
+  ASSUNTOS_BASE,
+  assuntosKey,
+  EVENTO_NOTAS_ATUALIZADAS,
+  NOTAS_BASE,
+  notasKey,
+  readJSON,
+  tituloAuto,
+  type Nota,
+} from "./notas-armazenamento";
+import { gravarCaixaTelegramComPermissao } from "./telegram/caixa-entrada";
 import {
   aiFunctionScreenPath,
   isAiStudioFunctionDisabled,
@@ -55,38 +65,7 @@ import clsx from "clsx";
 // conteúdo da nota preenchido.
 // ----------------------------------------------------------------------
 
-interface Nota {
-  id: string;
-  /** Nome do assunto ("" = Sem assunto). */
-  assunto: string;
-  titulo: string;
-  corpo: string;
-  criadaEm: number;
-  atualizadaEm: number;
-}
-
-const NOTAS_BASE = "ceo-notas-itens";
-const ASSUNTOS_BASE = "ceo-notas-assuntos";
 const SEM_ASSUNTO = "__sem__";
-
-function notasKey(): string {
-  return chaveConta(NOTAS_BASE);
-}
-function assuntosKey(): string {
-  return chaveConta(ASSUNTOS_BASE);
-}
-
-function readJSON<T>(key: string, fallback: T, base?: string): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = base ? lerComMigracao(base) : window.localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return parsed ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
 
 function formatData(ms: number): string {
   try {
@@ -100,18 +79,25 @@ function formatData(ms: number): string {
   }
 }
 
+function formatDataHora(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 function previa(corpo: string): string {
   const t = corpo.trim().replace(/\s+/g, " ");
   return t.length > 120 ? t.slice(0, 120) + "…" : t;
 }
 
-// Deriva um título a partir da primeira linha do corpo (quando o usuário não
-// informa um título explícito).
-function tituloAuto(corpo: string): string {
-  const primeira = corpo.trim().split("\n")[0]?.trim() ?? "";
-  if (!primeira) return "Nota sem título";
-  return primeira.length > 80 ? primeira.slice(0, 80) + "…" : primeira;
-}
 
 // ----------------------------------------------------------------------
 
@@ -165,8 +151,38 @@ export default function Notas() {
     }
   }, [assuntos]);
 
+  // Notas criadas fora desta tela (caixa de entrada do Telegram).
+  useEffect(() => {
+    const recarregar = () => {
+      setNotas(readJSON<Nota[]>(notasKey(), [], NOTAS_BASE));
+      setAssuntos(readJSON<string[]>(assuntosKey(), [], ASSUNTOS_BASE));
+    };
+    window.addEventListener(EVENTO_NOTAS_ATUALIZADAS, recarregar);
+    return () => window.removeEventListener(EVENTO_NOTAS_ATUALIZADAS, recarregar);
+  }, []);
+
+  // Notas do Telegram ainda sem o .md no Repositório (a pasta precisa de um
+  // clique para liberar a escrita).
+  const telegramSemRepositorio = useMemo(
+    () => notas.filter((n) => n.origem === "telegram" && n.telegram?.status === "nas_notas").length,
+    [notas],
+  );
+  const [gravandoTelegram, setGravandoTelegram] = useState(false);
+  const gravarTelegramNoRepositorio = async () => {
+    setGravandoTelegram(true);
+    try {
+      const r = await gravarCaixaTelegramComPermissao();
+      if (r.semPermissao) toast.error("Sem permissão para gravar na pasta do Repositório.");
+      else if (r.noRepositorio) toast.success(`${r.noRepositorio} nota(s) do Telegram gravada(s) no Repositório.`);
+      else if (r.erro) toast.error(r.erro);
+    } finally {
+      setGravandoTelegram(false);
+    }
+  };
+
   // ---- Derivados ----
   const selAssunto = sel === SEM_ASSUNTO ? "" : sel;
+  const notaEditada = editId ? notas.find((n) => n.id === editId) : undefined;
   const notasDoAssunto = useMemo(
     () =>
       notas
@@ -530,6 +546,26 @@ export default function Notas() {
                   </Button>
                 </div>
 
+                {telegramSemRepositorio > 0 && (
+                  <div className="dark:bg-dark-800 text-xs-plus mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 dark:border-sky-500/20">
+                    <span className="dark:text-dark-100 text-gray-700">
+                      {telegramSemRepositorio === 1
+                        ? "1 nota do Telegram aguardando gravação no Repositório."
+                        : `${telegramSemRepositorio} notas do Telegram aguardando gravação no Repositório.`}
+                    </span>
+                    <Button
+                      variant="soft"
+                      color="info"
+                      onClick={() => void gravarTelegramNoRepositorio()}
+                      disabled={gravandoTelegram}
+                      className="h-8 gap-1.5 px-3 text-xs-plus"
+                    >
+                      <ArrowUpTrayIcon className="size-4" />
+                      {gravandoTelegram ? "Gravando…" : "Gravar agora"}
+                    </Button>
+                  </div>
+                )}
+
                 {notasDoAssunto.length === 0 ? (
                   <div className="dark:border-dark-500 grid flex-1 place-items-center rounded-lg border border-dashed border-gray-300">
                     <div className="text-center">
@@ -585,9 +621,25 @@ export default function Notas() {
                             {previa(n.corpo)}
                           </p>
                         )}
-                        <span className="dark:text-dark-400 text-tiny mt-2 text-gray-400">
-                          {formatData(n.atualizadaEm)}
-                        </span>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="dark:text-dark-400 text-tiny text-gray-400">
+                            {formatData(n.atualizadaEm)}
+                          </span>
+                          {n.origem === "telegram" && (
+                            <Badge
+                              variant="soft"
+                              color="info"
+                              className="text-tiny rounded-full"
+                              title={
+                                n.telegram?.status === "no_repositorio"
+                                  ? "Recebida pelo Telegram · gravada no Repositório"
+                                  : "Recebida pelo Telegram · aguardando o Repositório"
+                              }
+                            >
+                              Telegram
+                            </Badge>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -613,7 +665,56 @@ export default function Notas() {
                   <h3 className="dark:text-dark-100 text-base font-semibold text-gray-800">
                     {editId ? "Editar nota" : "Nova nota"}
                   </h3>
+                  {notaEditada?.origem === "telegram" && (
+                    <Badge variant="soft" color="info" className="rounded-full">
+                      Telegram
+                    </Badge>
+                  )}
                 </div>
+
+                {notaEditada?.telegram && (
+                  <dl className="dark:border-dark-500 dark:bg-dark-800 text-xs-plus mb-4 grid grid-cols-1 gap-x-4 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 sm:grid-cols-2">
+                    <div className="flex gap-1.5">
+                      <dt className="dark:text-dark-300 text-gray-500">Origem:</dt>
+                      <dd className="dark:text-dark-100 text-gray-700">
+                        Telegram ·{" "}
+                        {notaEditada.telegram.tipo === "texto"
+                          ? "texto"
+                          : notaEditada.telegram.tipo === "voz"
+                            ? "mensagem de voz (transcrição)"
+                            : "arquivo de áudio (transcrição)"}
+                      </dd>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <dt className="dark:text-dark-300 text-gray-500">Recebida:</dt>
+                      <dd className="dark:text-dark-100 text-gray-700">
+                        {formatDataHora(notaEditada.telegram.recebidaEm)}
+                      </dd>
+                    </div>
+                    {notaEditada.telegram.processadaEm && (
+                      <div className="flex gap-1.5">
+                        <dt className="dark:text-dark-300 text-gray-500">Processada:</dt>
+                        <dd className="dark:text-dark-100 text-gray-700">
+                          {formatDataHora(notaEditada.telegram.processadaEm)}
+                        </dd>
+                      </div>
+                    )}
+                    <div className="flex min-w-0 gap-1.5">
+                      <dt className="dark:text-dark-300 shrink-0 text-gray-500">Repositório:</dt>
+                      <dd className="dark:text-dark-100 truncate text-gray-700" title={notaEditada.telegram.repositorioPath ?? undefined}>
+                        {notaEditada.telegram.status === "no_repositorio"
+                          ? notaEditada.telegram.repositorioPath
+                          : "aguardando gravação"}
+                      </dd>
+                    </div>
+                    {notaEditada.telegram.legenda && (
+                      <div className="flex gap-1.5 sm:col-span-2">
+                        <dt className="dark:text-dark-300 shrink-0 text-gray-500">Legenda:</dt>
+                        <dd className="dark:text-dark-100 text-gray-700">{notaEditada.telegram.legenda}</dd>
+                      </div>
+                    )}
+                  </dl>
+                )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Select

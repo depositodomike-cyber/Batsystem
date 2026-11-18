@@ -18,6 +18,7 @@ import { MelhorarController } from './melhorar.controller';
 import { TranscricaoController } from './transcricao.controller';
 import { DocumentoController } from './documento.controller';
 import { AudioController } from './audio.controller';
+import { ChaveOpenAiService } from './audio/chave-openai';
 import { DashboardController } from './dashboard.controller';
 import { InsightsController } from '@/insights/insights.controller';
 import { InsightsService } from '@/insights/insights.service';
@@ -85,6 +86,7 @@ import { BriefingFontesService } from '@/briefing/briefing-fontes.service';
     AiConnectionsService,
     AiCredentialsService,
     AiMediaConnectionsService,
+    ChaveOpenAiService,
     CryptoService,
     InsightsService,
     DirecionamentosService,
@@ -97,6 +99,6 @@ import { BriefingFontesService } from '@/briefing/briefing-fontes.service';
     BriefingFontesService,
   ],
   // Usados pelas ferramentas do orquestrador (OrquestradorModule).
-  exports: [AiService, PromptService, AgentesService, RepositorioOrgService, GeradoresTextoService],
+  exports: [AiService, PromptService, AgentesService, RepositorioOrgService, GeradoresTextoService, ChaveOpenAiService],
 })
 export class AiModule {}

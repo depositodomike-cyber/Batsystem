@@ -176,6 +176,8 @@ model Empresa {
   dispositivosDesktop    DispositivoDesktop[]
   politicasDesktop       PoliticaDesktop[]
   pareamentosDesktop     PareamentoDesktop[]
+  telegramCodigos        TelegramCodigoVinculo[]
+  telegramVinculos       TelegramVinculo[]
 
   @@map("empresas")
 }
@@ -209,6 +211,8 @@ model Usuario {
   dispositivosDesktop   DispositivoDesktop[]
   politicasDesktop      PoliticaDesktop[]
   pareamentosDesktop    PareamentoDesktop[]
+  telegramCodigos       TelegramCodigoVinculo[]
+  telegramVinculo       TelegramVinculo?
 
   insightLeituras        InsightLeitura[]
   insightFeedbacks       InsightFeedback[]
@@ -1879,6 +1883,100 @@ model PareamentoDesktop {
 
   @@index([empresaId, usuarioId])
   @@map("pareamentos_desktop")
+}
+
+// ---------------------------------------------------------------------------
+// Telegram — bot privado que cria Notas. O servidor é só a CAIXA DE ENTRADA:
+// a nota nasce nas Notas e no Repositório pelo navegador (pipeline atual).
+// ---------------------------------------------------------------------------
+
+/// Código de vínculo de uso único (10 min). Só o hash é guardado.
+model TelegramCodigoVinculo {
+  id            String    @id @default(cuid())
+  empresaId     String
+  usuarioId     String
+  /// Repositório pessoal ativo quando o código foi gerado (destino das notas).
+  repositorioId String?
+  codigoHash    String    @unique
+  tentativas    Int       @default(0)
+  expiraEm      DateTime
+  usadoEm       DateTime?
+  criadoEm      DateTime  @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId, usuarioId])
+  @@map("telegram_codigos_vinculo")
+}
+
+/// Conta do Telegram autorizada (um vínculo por usuário). Desconectar apaga.
+model TelegramVinculo {
+  id                  String    @id @default(cuid())
+  empresaId           String
+  usuarioId           String    @unique
+  repositorioId       String?
+  telegramUserId      String    @unique
+  chatId              String
+  username            String?
+  nome                String?
+  criadoEm            DateTime  @default(now())
+  ultimaComunicacaoEm DateTime?
+  /// Desconectado: deixa de aceitar mensagens, mas a fila pendente continua
+  /// chegando às Notas (nada é descartado em silêncio).
+  revogadoEm          DateTime?
+
+  empresa   Empresa            @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  usuario   Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagens TelegramMensagem[]
+
+  @@map("telegram_vinculos")
+}
+
+/// Fila de entrada: cada mensagem recebida até virar Nota no Repositório.
+/// status: recebida | transcrevendo | pronta | falha | nas_notas | no_repositorio
+model TelegramMensagem {
+  id                 String    @id @default(cuid())
+  vinculoId          String
+  chatId             String
+  messageId          Int
+  /// texto | voz | audio
+  tipo               String
+  /// Texto original, sem alteração.
+  texto              String?
+  legenda            String?
+  transcricao        String?
+  audioFileId        String?
+  audioMime          String?
+  audioNome          String?
+  audioTamanho       Int?
+  audioDuracao       Int?
+  /// Áudio original até ser gravado no Repositório.
+  audio              Bytes?
+  status             String    @default("recebida")
+  tentativas         Int       @default(0)
+  erro               String?
+  proximaTentativaEm DateTime?
+  recebidaEm         DateTime  @default(now())
+  processadaEm       DateTime?
+  entregueEm         DateTime?
+  repositorioPath    String?
+
+  vinculo TelegramVinculo @relation(fields: [vinculoId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, messageId])
+  @@index([vinculoId, status])
+  @@index([status, proximaTentativaEm])
+  @@map("telegram_mensagens")
+}
+
+/// Linha única ("bot") com o offset do getUpdates.
+model TelegramCursor {
+  id           String   @id
+  offset       BigInt   @default(0)
+  atualizadoEm DateTime @updatedAt
+
+  @@map("telegram_cursor")
 }
 
 /// Uma operação enviada ao agente. Só o gateway cria (SR-09a).

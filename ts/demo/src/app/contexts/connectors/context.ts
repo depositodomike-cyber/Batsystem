@@ -23,6 +23,11 @@ export interface ConnectorsContextValue {
    * guarda o resumo, sem esperar um novo GET /conectores.
    */
   aplicarCredenciais: (id: string, resumo: CredenciaisResumo | null) => void;
+  /**
+   * Reflete uma conexão que o servidor já fez por outro caminho (ex.: o
+   * vínculo do Telegram, confirmado pelo bot), sem chamar a API.
+   */
+  refletirConexao: (id: string, conectado: boolean, workspace?: string | null) => void;
 }
 
 export const [ConnectorsContext, useConnectorsContext] =

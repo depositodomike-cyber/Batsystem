@@ -47,6 +47,7 @@ export const connectors: Connector[] = [
   { id: 'linkedin-pages', rank: 51, name: 'LinkedIn', category: 'comunicacao', objective: 'Publicação em redes sociais', permissions: ['Publicar posts', 'Agendar publicações', 'Compartilhar artigos'] },
   { id: 'facebook', rank: 52, name: 'Facebook', category: 'comunicacao', objective: 'Publicação em páginas', permissions: ['Publicar posts', 'Agendar publicações', 'Enviar mensagens'] },
   { id: 'instagram', rank: 53, name: 'Instagram', category: 'comunicacao', objective: 'Publicação em redes sociais', permissions: ['Publicar posts', 'Publicar stories', 'Enviar mensagens diretas'] },
+  { id: 'telegram', rank: 60, name: 'Telegram', category: 'comunicacao', objective: 'Notas por texto e áudio', permissions: ['Receber textos e áudios do seu chat privado com o bot', 'Transcrever áudios', 'Criar notas no seu Repositório'] },
 
   // E-mail (OAuth real — ver oauth-provider.service.ts)
   { id: 'gmail', rank: 54, name: 'Gmail', category: 'email', objective: 'E-mail corporativo (Google)', permissions: ['Ler e-mails (somente leitura)', 'Salvar e-mails no Repositório', 'Acessar a conta autorizada'] },

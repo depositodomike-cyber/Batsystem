@@ -63,6 +63,7 @@ const connectorCatalog: Connector[] = [
   { id: "slack", rank: 2, name: "Slack", category: "comunicacao", objective: "Comunicação entre squads", permissions: ["Ler canais", "Enviar mensagens", "Criar bots", "Acessar usuários", "Publicar notificações"], brand: "#611f69", initials: "S", oauth: true },
   { id: "zoom", rank: 4, name: "Zoom", category: "comunicacao", objective: "Reuniões online", permissions: ["Criar reuniões", "Acessar participantes", "Gravar reuniões"], brand: "#2d8cff", initials: "Z" },
   { id: "whatsapp", rank: 5, name: "WhatsApp Business", category: "comunicacao", objective: "Comunicação e IA", permissions: ["Enviar mensagens", "Receber mensagens", "Criar fluxos IA", "Acessar templates"], brand: "#25d366", initials: "W" },
+  { id: "telegram", rank: 60, name: "Telegram", category: "comunicacao", objective: "Notas por texto e áudio", permissions: ["Receber textos e áudios do seu chat privado com o bot", "Transcrever áudios", "Criar notas no seu Repositório"], brand: "#229ed9", initials: "TG", isNew: true },
   { id: "linkedin-pages", rank: 51, name: "LinkedIn", category: "comunicacao", objective: "Publicação em redes sociais", permissions: ["Publicar posts", "Agendar publicações", "Compartilhar artigos"], brand: "#0a66c2", initials: "in", isNew: true },
   { id: "facebook", rank: 52, name: "Facebook", category: "comunicacao", objective: "Publicação em páginas", permissions: ["Publicar posts", "Agendar publicações", "Enviar mensagens"], brand: "#1877f2", initials: "f", isNew: true },
   { id: "instagram", rank: 53, name: "Instagram", category: "comunicacao", objective: "Publicação em redes sociais", permissions: ["Publicar posts", "Publicar stories", "Enviar mensagens diretas"], brand: "#e4405f", initials: "Ig", isNew: true },
@@ -163,6 +164,8 @@ export const VISIBLE_CONNECTOR_IDS: string[] = [
   "onedrive",
   "youtube",
   "zapier",
+  // Bot privado: conecta pelo código de vínculo (TelegramSection).
+  "telegram",
 ];
 
 /** Conectores exibidos no produto, na ordem do catálogo. */

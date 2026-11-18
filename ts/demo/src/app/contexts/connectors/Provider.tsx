@@ -181,6 +181,25 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const refletirConexao = useCallback(
+    (id: string, conectado: boolean, workspace?: string | null) => {
+      setConnectedIds((prev) => {
+        if (prev.has(id) === conectado) return prev;
+        const next = new Set(prev);
+        if (conectado) next.add(id);
+        else next.delete(id);
+        return next;
+      });
+      setWorkspaces((prev) => {
+        const next = { ...prev };
+        if (conectado && workspace) next[id] = workspace;
+        else delete next[id];
+        return next;
+      });
+    },
+    [],
+  );
+
   const value = useMemo<ConnectorsContextValue>(
     () => ({
       connectedIds,
@@ -191,6 +210,7 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
       getWorkspace,
       getCredenciais,
       aplicarCredenciais,
+      refletirConexao,
     }),
     [
       connectedIds,
@@ -201,6 +221,7 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
       getWorkspace,
       getCredenciais,
       aplicarCredenciais,
+      refletirConexao,
     ],
   );
 

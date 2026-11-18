@@ -232,10 +232,11 @@ export async function salvarNotaMemoria(
  * Diferente de `escreverNotaMemoria` (que deriva o nome do título e monta o
  * frontmatter), aqui quem chama decide nome e conteúdo inteiros — usado pelos
  * arquivos de nome fixo do Perfil Pessoal. Precisa partir de um clique.
+ * Aceita Blob para anexos binários (ex.: o áudio original do Telegram).
  */
 export async function gravarArquivoMemoria(
   path: string,
-  conteudo: string,
+  conteudo: string | Blob,
 ): Promise<{ ok: true } | { ok: false; reason: VaultFalha }> {
   const pasta = await pastaComPermissao("readwrite");
   if (!pasta.ok) return pasta;

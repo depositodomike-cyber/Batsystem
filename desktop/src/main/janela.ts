@@ -130,5 +130,13 @@ export function focarJanelaPrincipal(): void {
   if (!win) return;
   if (win.isMinimized()) win.restore();
   win.show();
+  // Windows: quem abriu o deep link foi o navegador, e o bloqueio de primeiro
+  // plano pode deixar o Oracle só piscando na barra de tarefas. Subir como
+  // "sempre no topo" por um instante traz a janela para a frente de fato.
+  if (process.platform === "win32") {
+    win.setAlwaysOnTop(true);
+    win.focus();
+    win.setAlwaysOnTop(false);
+  }
   win.focus();
 }

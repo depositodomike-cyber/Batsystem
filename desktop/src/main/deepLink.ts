@@ -1,5 +1,7 @@
 import { app } from "electron";
+import { appendFileSync } from "node:fs";
 import path from "node:path";
+import { arquivoLog } from "./servicos/caminhos";
 import { URL_DEV } from "./config";
 import { abrirRota, focarJanelaPrincipal } from "./janela";
 
@@ -72,11 +74,24 @@ export function rotaDoDeepLink(link: string): string | null {
   return `/oracle/conectores?${params.toString()}`;
 }
 
+/** Registro do retorno OAuth (logs/oauth.log): só conector e status, nunca a conta. */
+function registrar(evento: string, rota: string | null): void {
+  try {
+    const p = rota ? new URLSearchParams(rota.split("?")[1] ?? "") : null;
+    const detalhe = p ? `conector=${p.get("conector")} status=${p.get("status")}` : "link inválido";
+    appendFileSync(arquivoLog("oauth.log"), `${new Date().toISOString()} ${evento} ${detalhe}\n`);
+  } catch {
+    // log é opcional
+  }
+}
+
 export function tratarDeepLink(link: string | null): void {
   if (!link) return;
   const rota = rotaDoDeepLink(link);
   focarJanelaPrincipal();
-  if (!rota || !consumirRetornoEsperado()) return;
+  const esperado = consumirRetornoEsperado();
+  registrar(esperado ? "retorno" : "retorno-ignorado(sem-espera)", rota);
+  if (!rota || !esperado) return;
   // Recarrega na página de Conectores: ela lê os parâmetros ao montar, mostra
   // o aviso e busca o estado novo dos conectores.
   abrirRota(rota);

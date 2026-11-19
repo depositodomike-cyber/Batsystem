@@ -34,7 +34,7 @@ const initialState: AuthContextType = {
   errorMessage: null,
   user: null,
   sessaoLocal: false,
-  login: async () => {},
+  login: async () => null,
   logout: async () => {},
   refreshSession: async () => {},
   establishSession: () => {},
@@ -218,13 +218,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         type: "LOGIN_SUCCESS",
         payload: { user },
       });
+      return null;
     } catch (err) {
+      // O interceptor do axios rejeita com o corpo da API ({ message }), não
+      // com um Error: sem ler `message` daqui toda falha virava "Login failed".
+      const bruto =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+            ? err
+            : (err as { message?: unknown } | null)?.message;
+      const errorMessage =
+        typeof bruto === "string" && bruto.trim() !== ""
+          ? bruto
+          : "Não foi possível entrar.";
       dispatch({
         type: "LOGIN_ERROR",
-        payload: {
-          errorMessage: err instanceof Error ? err.message : "Login failed",
-        },
+        payload: { errorMessage },
       });
+      return errorMessage;
     }
   }, []);
 

@@ -55,38 +55,54 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
     Record<string, CredenciaisResumo>
   >({});
 
-  // Sincroniza com o servidor após autenticar; servidor ganha do cache.
+  // Sincroniza com o servidor após autenticar; servidor ganha do cache. E de
+  // novo sempre que a janela volta ao foco: a autorização OAuth acontece no
+  // navegador do sistema (Oracle Desktop) ou em outra aba, e ao voltar o
+  // conector recém-autorizado precisa aparecer mesmo sem recarregar a página.
+  // Busca o estado no servidor e aplica (servidor ganha do cache). Também é o
+  // botão "Sincronizar" da tela de Conectores: rejeita se a API falhar, para a
+  // tela poder avisar.
+  const sincronizar = useCallback(async () => {
+    const items = await fetchConectoresApi();
+    setConnectedIds(new Set(items.filter((c) => c.connected).map((c) => c.id)));
+    setWorkspaces(
+      Object.fromEntries(
+        items.filter((c) => c.workspace).map((c) => [c.id, c.workspace as string]),
+      ),
+    );
+    setCredenciais(
+      Object.fromEntries(
+        items
+          .filter((c) => c.credenciais)
+          .map((c) => [c.id, c.credenciais as CredenciaisResumo]),
+      ),
+    );
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
-    fetchConectoresApi()
-      .then((items) => {
-        if (cancelled) return;
-        setConnectedIds(
-          new Set(items.filter((c) => c.connected).map((c) => c.id)),
-        );
-        setWorkspaces(
-          Object.fromEntries(
-            items
-              .filter((c) => c.workspace)
-              .map((c) => [c.id, c.workspace as string]),
-          ),
-        );
-        setCredenciais(
-          Object.fromEntries(
-            items
-              .filter((c) => c.credenciais)
-              .map((c) => [c.id, c.credenciais as CredenciaisResumo]),
-          ),
-        );
-      })
-      .catch(() => {
+    let ultima = 0;
+    const automatico = () => {
+      const agora = Date.now();
+      if (cancelled || agora - ultima < 2_000) return;
+      ultima = agora;
+      sincronizar().catch(() => {
         /* sem API no ar → mantém o cache local */
       });
+    };
+    const aoVoltar = () => {
+      if (document.visibilityState === "visible") automatico();
+    };
+    automatico();
+    window.addEventListener("focus", aoVoltar);
+    document.addEventListener("visibilitychange", aoVoltar);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", aoVoltar);
+      document.removeEventListener("visibilitychange", aoVoltar);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, sincronizar]);
 
   // Cache local a cada alteração (render imediato na próxima visita).
   useEffect(() => {
@@ -211,6 +227,7 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
       getCredenciais,
       aplicarCredenciais,
       refletirConexao,
+      sincronizar,
     }),
     [
       connectedIds,
@@ -222,6 +239,7 @@ export function ConnectorsProvider({ children }: { children: ReactNode }) {
       getCredenciais,
       aplicarCredenciais,
       refletirConexao,
+      sincronizar,
     ],
   );
 

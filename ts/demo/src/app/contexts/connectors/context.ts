@@ -28,6 +28,12 @@ export interface ConnectorsContextValue {
    * vínculo do Telegram, confirmado pelo bot), sem chamar a API.
    */
   refletirConexao: (id: string, conectado: boolean, workspace?: string | null) => void;
+  /**
+   * Busca de novo no servidor o estado de todos os conectores (botão
+   * "Sincronizar"; também roda sozinho ao voltar o foco para a janela).
+   * Rejeita se a API não responder.
+   */
+  sincronizar: () => Promise<void>;
 }
 
 export const [ConnectorsContext, useConnectorsContext] =

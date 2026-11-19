@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { AcessoConectores } from './acesso-conectores';
-import { oauthRetorno, origemOauth } from './oauth-retorno';
+import { enviarRetornoOauth, oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Fluxo OAuth dos conectores de e-mail (`gmail`, `outlook`).
@@ -119,7 +119,8 @@ export class EmailController {
     const front = this.emailOauth.frontRetorno(state);
     // Usuário negou na tela do provedor (ou o provedor reportou erro).
     if (error || !code || !state) {
-      res.redirect(
+      enviarRetornoOauth(
+        res,
         oauthRetorno(front, provedor, {
           motivo: error ?? 'autorizacao_cancelada',
         }),
@@ -128,7 +129,7 @@ export class EmailController {
     }
     try {
       const conta = await this.emailOauth.handleCallback(code, state, 'email');
-      res.redirect(oauthRetorno(front, provedor, { conta }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { conta }));
     } catch (err) {
       this.logger.error(err);
       const motivo =
@@ -138,7 +139,7 @@ export class EmailController {
                 err.message,
             )
           : 'Erro inesperado ao concluir a autorização.';
-      res.redirect(oauthRetorno(front, provedor, { motivo }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { motivo }));
     }
   }
 }

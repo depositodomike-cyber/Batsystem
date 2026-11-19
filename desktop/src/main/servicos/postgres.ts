@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, openSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { Client } from "pg";
@@ -91,42 +91,86 @@ async function rodando(): Promise<boolean> {
 let portaAtual: number | null = null;
 
 /** Sobe o Postgres e devolve a porta. Um servidor órfão (app fechado à força) é parado antes. */
+/**
+ * Sobe o Postgres e devolve a porta. Um servidor órfão (app fechado à força) é
+ * parado antes. Se a partida falhar — tipicamente porque a instância anterior
+ * do Oracle ainda está DESLIGANDO o banco (fechar e reabrir em seguida) —,
+ * espera e tenta de novo, até 5 vezes.
+ */
 export async function iniciar(): Promise<number> {
-  if (await rodando()) await parar();
-  const porta = await portaLivre();
-  await pgCtlStart([
-    "start",
-    "-D",
-    pastaDadosPostgres(),
-    "-w",
-    "-t",
-    "60",
-    "-l",
-    arquivoLog("postgres.log"),
-    "-o",
-    `-p ${porta} -c listen_addresses=127.0.0.1`,
-  ]);
-  portaAtual = porta;
-  return porta;
+  let ultimoErro: unknown = null;
+  for (let tentativa = 1; tentativa <= 5; tentativa++) {
+    try {
+      if (await rodando()) await parar();
+      const porta = await portaLivre();
+      await pgCtlStart([
+        "start",
+        "-D",
+        pastaDadosPostgres(),
+        "-w",
+        "-t",
+        "60",
+        "-l",
+        arquivoLog("postgres.log"),
+        "-o",
+        `-p ${porta} -c listen_addresses=127.0.0.1`,
+      ]);
+      portaAtual = porta;
+      return porta;
+    } catch (err) {
+      ultimoErro = err;
+      registrarPgCtl(`tentativa ${tentativa} falhou: ${err instanceof Error ? err.message : String(err)}`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  }
+  throw ultimoErro instanceof Error ? ultimoErro : new Error(String(ultimoErro));
+}
+
+function registrarPgCtl(linha: string): void {
+  try {
+    appendFileSync(arquivoLog("pg_ctl.log"), `${new Date().toISOString()} ${linha}\n`);
+  } catch {
+    // log é opcional
+  }
 }
 
 /**
- * `pg_ctl start` com stdio ignorado, esperando o processo SAIR (e não os pipes
- * fecharem): o postgres herda os handles e os manteria abertos, e o execFile
- * só voltaria no timeout.
+ * `pg_ctl start` esperando o processo SAIR (e não os pipes fecharem): o
+ * postgres herda os handles e os manteria abertos. A saída do PRÓPRIO pg_ctl
+ * (o motivo de uma falha) vai para logs/pg_ctl.log; a do servidor, para
+ * postgres.log (-l).
  */
 function pgCtlStart(args: string[]): Promise<void> {
   return new Promise((resolve, reject) => {
-    const p = spawn(exe("pg_ctl"), args, { stdio: "ignore", windowsHide: true });
+    let fd: number | null = null;
+    try {
+      fd = openSync(arquivoLog("pg_ctl.log"), "a");
+    } catch {
+      fd = null;
+    }
+    const saida = fd ?? "ignore";
+    const p = spawn(exe("pg_ctl"), args, { stdio: ["ignore", saida, saida], windowsHide: true });
+    const fechar = () => {
+      if (fd !== null) {
+        try {
+          closeSync(fd);
+        } catch {
+          // já fechado
+        }
+        fd = null;
+      }
+    };
     const t = setTimeout(() => p.kill(), 90_000);
     p.once("error", (err) => {
       clearTimeout(t);
+      fechar();
       reject(err);
     });
     p.once("exit", (code) => {
       clearTimeout(t);
+      fechar();
       if (code === 0) resolve();
-      else reject(new Error(`pg_ctl start falhou (código ${code}). Veja postgres.log.`));
+      else reject(new Error(`pg_ctl start falhou (código ${code}). Veja pg_ctl.log e postgres.log.`));
     });
   });
 }

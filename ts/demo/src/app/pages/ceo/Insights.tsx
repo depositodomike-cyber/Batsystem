@@ -65,7 +65,6 @@ import {
   FILTRO_OPCOES,
   INSIGHT_ACOES,
   INSIGHT_ACOES_OCULTAS,
-  INSIGHT_EXEMPLO_REUNIAO,
   ehInsightDemo,
   INSIGHT_USUARIOS,
   MEETING_EMAIL_CONNECTOR,
@@ -136,8 +135,8 @@ export default function Insights() {
     setCarregando(true);
     setErro("");
     listarInsightsApi()
-      // O exemplo do protótipo (sugestão de reunião) entra sempre no topo.
-      .then((lista) => setItens([INSIGHT_EXEMPLO_REUNIAO, ...lista]))
+      // Só os insights reais da conta (o exemplo fixo do protótipo saiu).
+      .then((lista) => setItens(lista))
       .catch(() => setErro("Não foi possível carregar os insights."))
       .finally(() => setCarregando(false));
   };

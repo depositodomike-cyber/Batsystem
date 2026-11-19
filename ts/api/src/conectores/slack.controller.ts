@@ -18,7 +18,7 @@ import {
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
-import { oauthRetorno, origemOauth } from './oauth-retorno';
+import { enviarRetornoOauth, oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Fluxo OAuth e leitura do conector Slack.
@@ -96,7 +96,8 @@ export class SlackController {
     const front = this.slackOauth.frontRetorno(state);
     // Usuário negou na tela do Slack (ou o Slack reportou erro).
     if (error || !code || !state) {
-      res.redirect(
+      enviarRetornoOauth(
+        res,
         oauthRetorno(front, 'slack', {
           motivo: error ?? 'autorizacao_cancelada',
         }),
@@ -105,7 +106,7 @@ export class SlackController {
     }
     try {
       const workspace = await this.slackOauth.handleCallback(code, state);
-      res.redirect(oauthRetorno(front, 'slack', { conta: workspace }));
+      enviarRetornoOauth(res, oauthRetorno(front, 'slack', { conta: workspace }));
     } catch (err) {
       this.logger.error(err);
       const motivo =
@@ -114,7 +115,7 @@ export class SlackController {
               (err.getResponse() as { message?: string }).message ?? err.message,
             )
           : 'Erro inesperado ao concluir a autorização.';
-      res.redirect(oauthRetorno(front, 'slack', { motivo }));
+      enviarRetornoOauth(res, oauthRetorno(front, 'slack', { motivo }));
     }
   }
 }

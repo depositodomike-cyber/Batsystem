@@ -20,7 +20,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { AcessoConectores } from './acesso-conectores';
-import { oauthRetorno, origemOauth } from './oauth-retorno';
+import { enviarRetornoOauth, oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Google Drive (somente leitura). Mesmas rotas OAuth do AgendaController,
@@ -128,19 +128,19 @@ export class DriveController {
   ): Promise<void> {
     const front = this.oauth.frontRetorno(state);
     if (error || !code || !state) {
-      res.redirect(oauthRetorno(front, provedor, { motivo: error ?? 'autorizacao_cancelada' }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { motivo: error ?? 'autorizacao_cancelada' }));
       return;
     }
     try {
       const conta = await this.oauth.handleCallback(code, state, 'drive');
-      res.redirect(oauthRetorno(front, provedor, { conta }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { conta }));
     } catch (err) {
       this.logger.error(err);
       const motivo =
         err instanceof HttpException
           ? String((err.getResponse() as { message?: string }).message ?? err.message)
           : 'Erro inesperado ao concluir a autorização.';
-      res.redirect(oauthRetorno(front, provedor, { motivo }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { motivo }));
     }
   }
 

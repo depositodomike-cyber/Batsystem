@@ -1,7 +1,7 @@
 {
   "name": "oracle-desktop",
   "productName": "Oracle",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "Oracle Desktop — camada Electron sobre o Oracle (ts/demo + ts/api).",
   "private": true,
   "main": "dist/main/app.js",

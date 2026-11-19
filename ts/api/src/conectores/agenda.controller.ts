@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { AcessoConectores } from './acesso-conectores';
-import { oauthRetorno, origemOauth } from './oauth-retorno';
+import { enviarRetornoOauth, oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Fluxo OAuth dos conectores de agenda (`google-calendar`). Rotas espelhadas
@@ -115,7 +115,8 @@ export class AgendaController {
     const front = this.oauth.frontRetorno(state);
     // Usuário negou na tela do provedor (ou o provedor reportou erro).
     if (error || !code || !state) {
-      res.redirect(
+      enviarRetornoOauth(
+        res,
         oauthRetorno(front, provedor, {
           motivo: error ?? 'autorizacao_cancelada',
         }),
@@ -124,7 +125,7 @@ export class AgendaController {
     }
     try {
       const conta = await this.oauth.handleCallback(code, state, 'agenda');
-      res.redirect(oauthRetorno(front, provedor, { conta }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { conta }));
     } catch (err) {
       this.logger.error(err);
       const motivo =
@@ -134,7 +135,7 @@ export class AgendaController {
                 err.message,
             )
           : 'Erro inesperado ao concluir a autorização.';
-      res.redirect(oauthRetorno(front, provedor, { motivo }));
+      enviarRetornoOauth(res, oauthRetorno(front, provedor, { motivo }));
     }
   }
 }

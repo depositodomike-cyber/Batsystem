@@ -13,7 +13,7 @@ export interface AuthContextType {
    * novo login. Ver utils/sessaoLocal.ts.
    */
   sessaoLocal: boolean;
-  login: (credentials: { username: string; password: string }) => Promise<void>;
+  login: (credentials: { username: string; password: string }) => Promise<string | null>;
   logout: () => Promise<void>;
   /**
    * Reidrata a sessão a partir do JWT já armazenado (ex.: após o cadastro, que

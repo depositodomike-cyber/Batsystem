@@ -111,7 +111,7 @@ export default function SignIn() {
     // Senha local diferente não encerra o fluxo: `sessao/garantir` grava
     // `demonstracao1` depois de um login na API, e a conta do time usa outra
     // senha. Sem esta tentativa, o e-mail fica preso no protótipo.
-    await login({
+    const erroApi = await login({
       username: data.username,
       password: data.password,
     });
@@ -120,10 +120,13 @@ export default function SignIn() {
     // apenas errou o e-mail ou ainda não tem conta. O token é a única prova
     // confiável de sucesso aqui: o `isAuthenticated` do closure está velho.
     if (!tokenArmazenado()) {
+      // A conta pode existir só no servidor (nada no protótipo local): aí o
+      // erro certo é o da API — senha errada ou servidor fora do ar —, não
+      // "Nenhuma conta com este e-mail".
       setErroLocal(
         resultado.motivo === "senha"
           ? "Senha incorreta."
-          : 'Nenhuma conta com este e-mail. Use "Criar conta" para começar.',
+          : (erroApi ?? "Não foi possível entrar."),
       );
       return;
     }

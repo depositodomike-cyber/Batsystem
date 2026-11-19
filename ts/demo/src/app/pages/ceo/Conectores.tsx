@@ -18,6 +18,7 @@ import {
   Squares2X2Icon,
   ShieldCheckIcon,
   BoltIcon,
+  ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 
@@ -150,7 +151,23 @@ export default function Conectores({ embutido = false }: { embutido?: boolean })
     getWorkspace,
     getCredenciais,
     aplicarCredenciais,
+    sincronizar,
   } = useConnectorsContext();
+
+  // "Sincronizar": busca de novo no servidor o estado de todas as conexões —
+  // ex.: depois de autorizar o Google no navegador e voltar ao Oracle.
+  const [sincronizando, setSincronizando] = useState(false);
+  const sincronizarAgora = async () => {
+    setSincronizando(true);
+    try {
+      await sincronizar();
+      toast.success("Conexões atualizadas.");
+    } catch {
+      toast.error("Não foi possível falar com o servidor do Oracle.");
+    } finally {
+      setSincronizando(false);
+    }
+  };
 
   // Retorno do fluxo OAuth — o callback do backend devolve
   // ?conector=<id>&status=ok|erro (+ conta / motivo).
@@ -328,6 +345,18 @@ export default function Conectores({ embutido = false }: { embutido?: boolean })
               Conecte o Oracle às ferramentas que você já usa. Ative uma
               integração para sincronizar dados e automatizar fluxos.
             </p>
+            <div className="mt-2">
+              <Button
+                variant="flat"
+                className="h-8 gap-1.5 px-3 text-xs"
+                disabled={sincronizando}
+                onClick={() => void sincronizarAgora()}
+                title="Busca de novo o estado das conexões (ex.: depois de autorizar no navegador)"
+              >
+                <ArrowPathIcon className={clsx("size-4", sincronizando && "animate-spin")} />
+                {sincronizando ? "Sincronizando…" : "Sincronizar"}
+              </Button>
+            </div>
           </div>
 
           {/* Resumo */}

@@ -20,7 +20,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { AcessoConectores } from './acesso-conectores';
-import { oauthRetorno } from './oauth-retorno';
+import { oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Google Drive (somente leitura). Mesmas rotas OAuth do AgendaController,
@@ -51,9 +51,16 @@ export class DriveController {
   async authorize(
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
+    @Query('origem') origem?: string,
   ): Promise<{ url: string }> {
     await this.acesso.exigirPodeAlterar(user, provedor);
-    return { url: this.oauth.buildAuthorizeUrl(user.empresaId, user.id, provedor, 'drive') };
+    return { url: this.oauth.buildAuthorizeUrl(
+        user.empresaId,
+        user.id,
+        provedor,
+        'drive',
+        origemOauth(origem),
+      ) };
   }
 
   @Get('conta')
@@ -119,7 +126,7 @@ export class DriveController {
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const front = this.oauth.frontConectoresUrl;
+    const front = this.oauth.frontRetorno(state);
     if (error || !code || !state) {
       res.redirect(oauthRetorno(front, provedor, { motivo: error ?? 'autorizacao_cancelada' }));
       return;

@@ -5,7 +5,11 @@ import { jwtDecode } from "jwt-decode";
 // Local Imports
 import axios from "@/utils/axios";
 import { isTokenValid, setSession } from "@/utils/jwt";
-import { PROTOTYPE_TOKEN_SUFFIX, isPrototypeToken } from "@/utils/sessaoLocal";
+import {
+  PROTOTYPE_TOKEN_SUFFIX,
+  isPrototypeToken,
+  tokenArmazenado,
+} from "@/utils/sessaoLocal";
 import { AuthProvider as AuthContext, AuthContextType } from "./context";
 import { SPLASH_AFTER_LOGIN_KEY } from "@/components/template/SplashScreen";
 import { User } from "@/@types/user";
@@ -127,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
-        const authToken = window.localStorage.getItem("authToken");
+        const authToken = tokenArmazenado();
 
         if (authToken && isTokenValid(authToken)) {
           setSession(authToken);
@@ -232,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Reidrata a sessão a partir do JWT já armazenado (ex.: após o cadastro).
   const refreshSession = useCallback(async () => {
-    const authToken = window.localStorage.getItem("authToken");
+    const authToken = tokenArmazenado();
     if (!authToken || !isTokenValid(authToken)) {
       dispatch({ type: "LOGOUT" });
       return;

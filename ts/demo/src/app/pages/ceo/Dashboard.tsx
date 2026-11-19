@@ -32,6 +32,9 @@ import {
   useEtapasLab,
   type PassoLab,
 } from "./lab";
+import { toast } from "sonner";
+import { abrirEmJanelaPropria, usePreviaIsolada } from "@/utils/abrirPrevia";
+import { ehDesktop } from "@/utils/desktop";
 
 // ----------------------------------------------------------------------
 // Criar Dashboard — página do Lab (era janela). Gera uma página HTML autônoma
@@ -61,6 +64,8 @@ export default function DashboardPagina() {
   const [refinando, setRefinando] = useState(false);
   const [erro, setErro] = useState("");
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  // Desktop: prévia por URL isolada (oracle-previa:); web: srcDoc, como antes.
+  const urlPrevia = usePreviaIsolada(dashboard?.html ?? null);
   const [ajuste, setAjuste] = useState("");
 
   const design = useActiveDesignSystem();
@@ -149,10 +154,10 @@ export default function DashboardPagina() {
   const abrirEmNovaAba = () => {
     if (!dashboard) return;
     const blob = new Blob([dashboard.html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    // Revoga depois de um tempo para dar tempo de a aba carregar.
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    // Web: nova aba (blob). Desktop: janela de prévia isolada (HTML gerado por IA).
+    void abrirEmJanelaPropria(blob, { titulo: "Dashboard — Oracle" }).catch((e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível abrir."),
+    );
   };
 
   const baixar = () => {
@@ -349,7 +354,9 @@ export default function DashboardPagina() {
           <div className="dark:border-dark-600 overflow-hidden rounded-xl border border-gray-200 bg-white">
             <iframe
               title={dashboard.titulo}
-              srcDoc={dashboard.html}
+              {...(ehDesktop()
+                ? { src: urlPrevia ?? "about:blank" }
+                : { srcDoc: dashboard.html })}
               sandbox="allow-scripts"
               className="h-[60vh] w-full border-0 bg-white"
             />

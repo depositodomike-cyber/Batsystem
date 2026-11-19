@@ -79,6 +79,7 @@ import {
   DISABLED_MENU_CLASS,
   isFeatureTemporarilyDisabled,
 } from "@/app/data/temporarilyDisabledFeatures";
+import { abrirEmJanelaPropria } from "@/utils/abrirPrevia";
 
 // ----------------------------------------------------------------------
 // Criar apresentação — tela do Lab (`/:produto/ia/apresentacao`). Era uma
@@ -971,9 +972,10 @@ export default function Apresentacao() {
     if (!resultado || formato === "pptx") return;
     const blob = await obterBlob();
     if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    // Web: nova aba (blob). Desktop: janela de prévia isolada (HTML gerado por IA).
+    await abrirEmJanelaPropria(blob, { titulo: `${resultado.nome} — Oracle` }).catch((e: unknown) =>
+      toast.error(e instanceof Error ? e.message : "Não foi possível abrir."),
+    );
   };
 
   // ---- Repositório ----

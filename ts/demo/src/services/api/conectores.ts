@@ -1,4 +1,5 @@
 import axios from "@/utils/axios";
+import { ehDesktop } from "@/utils/desktop";
 
 // Estado dos conectores no backend (ts/api, módulo src/conectores).
 // O catálogo continua estático no front (src/app/data/conectores.ts);
@@ -72,7 +73,8 @@ const OAUTH_BASE: Record<string, string> = {
 
 /**
  * URL de autorização OAuth do conector — o navegador deve ser redirecionado
- * para ela. Falha com 503 se o servidor não tem as credenciais do provedor
+ * para ela. No Oracle Desktop o pedido leva `origem=desktop`: a autorização
+ * acontece no navegador do sistema e a API devolve o usuário ao app. Falha com 503 se o servidor não tem as credenciais do provedor
  * (SLACK_*, GOOGLE_*, MICROSOFT_*).
  */
 export async function getOauthAuthorizeUrlApi(
@@ -82,7 +84,9 @@ export async function getOauthAuthorizeUrlApi(
   if (!base) {
     throw new Error(`Conector "${connectorId}" não tem fluxo OAuth.`);
   }
-  const { data } = await axios.get<{ url: string }>(`${base}/autorizar`);
+  const { data } = await axios.get<{ url: string }>(`${base}/autorizar`, {
+    params: ehDesktop() ? { origem: "desktop" } : undefined,
+  });
   return data.url;
 }
 

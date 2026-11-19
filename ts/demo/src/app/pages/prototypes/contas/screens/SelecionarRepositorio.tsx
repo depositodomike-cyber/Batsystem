@@ -32,6 +32,7 @@ import {
   useUsuario,
 } from "../model/context";
 import { rotuloPapel } from "../model/regras";
+import { tokenArmazenado } from "@/utils/sessaoLocal";
 
 const MOTIVO_COMPARTILHAMENTO =
   "Em breve — compartilhar repositórios entre usuários e times ainda não foi liberado.";
@@ -54,7 +55,7 @@ export default function SelecionarRepositorio() {
   const abrir = async (repositorioId: string) => {
     despachar({ tipo: "contexto/abrirRepositorio", payload: { repositorioId } });
 
-    const token = window.localStorage.getItem("authToken");
+    const token = tokenArmazenado();
     const jaTemJwtReal =
       isAuthenticated &&
       !!token &&

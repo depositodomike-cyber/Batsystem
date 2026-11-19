@@ -5,6 +5,7 @@
 
 import type { MemoryItem } from "@/app/data/memoria";
 import { chaveConta, escopoConta } from "@/utils/escopoConta";
+import { tokenArmazenado } from "@/utils/sessaoLocal";
 
 const CHAVE_PREFIXO = "oracle:memorias:v1";
 
@@ -18,7 +19,7 @@ function chave(escopo: string): string {
 
 export function tokenEhPrototipo(): boolean {
   try {
-    return (localStorage.getItem("authToken") ?? "").endsWith(".prototype");
+    return (tokenArmazenado() ?? "").endsWith(".prototype");
   } catch {
     return true;
   }

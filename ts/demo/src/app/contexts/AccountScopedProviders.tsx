@@ -16,6 +16,7 @@ import { IaModalsHostProvider } from "@/app/contexts/ia-modals/Provider";
 import { AssistenteHostProvider } from "@/app/contexts/assistente/Provider";
 import { applyAppearancePrefs } from "@/utils/oraclePrefs";
 import { CaixaTelegramSync } from "@/app/pages/ceo/telegram/CaixaTelegramSync";
+import { OfertaImportacao } from "@/app/pages/ceo/oracle-desktop/OfertaImportacao";
 
 /**
  * Providers com dados de conta. Remontam quando o usuário muda (login/logout
@@ -54,6 +55,7 @@ export function AccountScopedProviders({ children }: { children: ReactNode }) {
               <CommentsProvider>
                 <ConnectorsProvider>
                   <CaixaTelegramSync />
+                  <OfertaImportacao />
                   <MemoryProvider>
                     <DocumentoUploadProvider>
                       <AssistenteHostProvider>

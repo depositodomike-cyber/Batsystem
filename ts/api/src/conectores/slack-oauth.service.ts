@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CryptoService } from '@/ai/crypto';
 import { OauthStateService } from './oauth-state.service';
+import { RETORNO_DESKTOP, type OrigemOauth } from './oauth-retorno';
 
 /**
  * Scopes de bot — o app agindo como ele mesmo: publicar mensagens e ler os
@@ -113,7 +114,14 @@ export class SlackOauthService {
     return `${base}/oracle/conectores`;
   }
 
-  buildAuthorizeUrl(empresaId: string): string {
+  /** Destino do retorno conforme quem iniciou o fluxo (web ou app desktop). */
+  frontRetorno(state: string | undefined): string {
+    return this.state.origemDe(state) === 'desktop'
+      ? RETORNO_DESKTOP
+      : this.frontConectoresUrl;
+  }
+
+  buildAuthorizeUrl(empresaId: string, origem?: OrigemOauth): string {
     if (!this.isConfigured) {
       throw new ServiceUnavailableException(
         'Integração com o Slack ainda não configurada no servidor ' +
@@ -125,7 +133,7 @@ export class SlackOauthService {
       scope: SLACK_SCOPES,
       user_scope: SLACK_USER_SCOPES,
       redirect_uri: this.redirectUrl,
-      state: this.state.sign(empresaId, 'slack'),
+      state: this.state.sign(empresaId, 'slack', undefined, undefined, origem),
     });
     // Enquanto o app do Slack não está distribuído publicamente, ele só pode
     // ser instalado no workspace onde foi criado — se o navegador estiver em

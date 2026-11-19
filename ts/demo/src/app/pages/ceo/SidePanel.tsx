@@ -26,6 +26,7 @@ import type {
   SquadDocument,
 } from "@/app/contexts/documents/context";
 import { MarkdownView } from "./MarkdownView";
+import { abrirEmJanelaPropria } from "@/utils/abrirPrevia";
 
 // ----------------------------------------------------------------------
 
@@ -399,9 +400,10 @@ export function DocumentPreviewModal({
  */
 function AttachmentView({ attachment: a }: { attachment: DocumentAttachment }) {
   const abrir = () => {
-    const url = URL.createObjectURL(dataUrlToBlob(a.dataUrl, a.mime));
-    window.open(url, "_blank", "noopener,noreferrer");
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    // Web: nova aba (blob). Desktop: janela de prévia isolada.
+    void abrirEmJanelaPropria(dataUrlToBlob(a.dataUrl, a.mime), { titulo: a.name }).catch(
+      () => undefined,
+    );
   };
 
   const baixar = () => {

@@ -1,5 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 import axios from "./axios";
+import { gravarToken } from "./sessaoLocal";
 
 const isTokenValid = (authToken: string): boolean => {
   try {
@@ -19,12 +20,13 @@ const isTokenValid = (authToken: string): boolean => {
 
 const setSession = (authToken?: string | null): void => {
   if (typeof authToken === "string" && authToken.trim() !== "") {
-    // Store token in local storage and set authorization header for axios
-    localStorage.setItem("authToken", authToken);
+    // Guarda o token (localStorage na web, cofre do SO no desktop) e
+    // define o header do axios.
+    gravarToken(authToken);
     axios.defaults.headers.common.Authorization = `Bearer ${authToken}`;
   } else {
-    // Remove token from local storage and delete authorization header from axios
-    localStorage.removeItem("authToken");
+    // Apaga o token guardado e remove o header do axios.
+    gravarToken(null);
     delete axios.defaults.headers.common.Authorization;
   }
 };

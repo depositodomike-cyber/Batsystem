@@ -7,6 +7,7 @@ import {
   CircleStackIcon,
   CpuChipIcon,
   KeyIcon,
+  WindowIcon,
   ShareIcon,
   SparklesIcon,
   SpeakerWaveIcon,
@@ -99,6 +100,15 @@ export const SECOES = [
     titulo: "Repositório",
     icon: CircleStackIcon,
     feature: "settingsMemory",
+  },
+  // App desktop: no navegador exporta os dados locais; no app, importa (e
+  // reúne as preferências do desktop).
+  {
+    id: "oracle-desktop",
+    grupo: "geral",
+    titulo: "Oracle Desktop",
+    icon: WindowIcon,
+    feature: null,
   },
   // --------------------------------------------------------------- IA
   // Regras fica AQUI, e não em Geral: são as orientações que a IA segue em toda

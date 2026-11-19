@@ -41,6 +41,8 @@ import {
   useEtapasLab,
   type PassoLab,
 } from "./lab";
+import { abrirEmJanelaPropria, escaparHtml } from "@/utils/abrirPrevia";
+import { ehDesktop } from "@/utils/desktop";
 
 // ----------------------------------------------------------------------
 // Análise de conteúdo — página do Lab (era janela). Arquivo/link, objetivo,
@@ -303,16 +305,25 @@ export default function AnalisePagina() {
 
   const imprimir = () => {
     if (!result || !resultRef.current) return;
-    const w = window.open("", "_blank", "width=900,height=700");
-    if (!w) return;
-    w.document.write(
-      `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${result.titulo}</title>` +
+    const titulo = escaparHtml(result.titulo);
+    const documento =
+      `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${titulo}</title>` +
         `<style>body{font-family:Inter,system-ui,Arial,sans-serif;max-width:820px;margin:32px auto;padding:0 24px;color:#1f2937;line-height:1.55}` +
         `h1{font-size:22px}h2{font-size:17px;border-top:1px solid #eee;padding-top:14px;margin-top:22px}h3{font-size:15px}` +
         `table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;font-size:13px}` +
         `th{background:#f8fafc}code{background:#f1f5f9;padding:1px 4px;border-radius:4px}blockquote{border-left:3px solid #ddd;margin:0;padding-left:12px;color:#555}</style>` +
-        `</head><body><h1>${result.titulo}</h1>${resultRef.current.innerHTML}</body></html>`,
-    );
+        `</head><body><h1>${titulo}</h1>${resultRef.current.innerHTML}</body></html>`;
+    // Oracle Desktop: imprime numa janela de prévia isolada, sem `opener`.
+    if (ehDesktop()) {
+      void abrirEmJanelaPropria(new Blob([documento], { type: "text/html" }), {
+        titulo: result.titulo,
+        imprimir: true,
+      }).catch(() => toast("Não foi possível imprimir"));
+      return;
+    }
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) return;
+    w.document.write(documento);
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 300);

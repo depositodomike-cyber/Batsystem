@@ -44,6 +44,7 @@ import {
   useEtapasLab,
   type PassoLab,
 } from "./lab";
+import { abrirEmJanelaPropria } from "@/utils/abrirPrevia";
 
 // ----------------------------------------------------------------------
 // Criar Carrossel — página do Lab (era janela). Etapas de briefing; a IA gera o
@@ -320,8 +321,9 @@ export default function CarrosselPagina() {
     const nome =
       c.titulo.replace(/[^\p{L}\p{N}\-_ ]/gu, "").slice(0, 60) || "carrossel";
     const blob = new Blob([html], { type: "text/html" });
+    // Web: nova aba (blob). Desktop: janela de prévia isolada (HTML gerado por IA).
+    void abrirEmJanelaPropria(blob, { titulo: `${c.titulo} — Oracle` }).catch(() => undefined);
     const url = URL.createObjectURL(blob);
-    window.open(url, "_blank", "noopener,noreferrer");
     const a = document.createElement("a");
     a.href = url;
     a.download = `${nome}.html`;

@@ -10,6 +10,7 @@ import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CryptoService } from '@/ai/crypto';
 import { OauthStateService } from './oauth-state.service';
+import { RETORNO_DESKTOP, type OrigemOauth } from './oauth-retorno';
 import { chaveConexao, ehPessoal, titularDe } from './titular';
 
 /** Família do conector — cada controller só aceita os provedores da sua. */
@@ -244,12 +245,20 @@ export class OauthProviderService {
     return `${base}/oracle/conectores`;
   }
 
+  /** Destino do retorno conforme quem iniciou o fluxo (web ou app desktop). */
+  frontRetorno(state: string | undefined): string {
+    return this.state.origemDe(state) === 'desktop'
+      ? RETORNO_DESKTOP
+      : this.frontConectoresUrl;
+  }
+
   /** URL de autorização. A conta autorizada será de `usuarioId` (conector pessoal). */
   buildAuthorizeUrl(
     empresaId: string,
     usuarioId: string,
     providerId: string,
     kind: ProviderKind,
+    origem?: OrigemOauth,
   ): string {
     const provider = this.requireProvider(providerId, kind);
     const pkce = provider.pkce ? novoPkce() : null;
@@ -258,7 +267,7 @@ export class OauthProviderService {
       client_id: this.clientId(provider),
       scope: provider.scopes,
       redirect_uri: this.redirectUrl(provider),
-      state: this.state.sign(empresaId, provider.id, pkce?.verifier, usuarioId),
+      state: this.state.sign(empresaId, provider.id, pkce?.verifier, usuarioId, origem),
       ...(pkce
         ? { code_challenge: pkce.challenge, code_challenge_method: 'S256' }
         : {}),

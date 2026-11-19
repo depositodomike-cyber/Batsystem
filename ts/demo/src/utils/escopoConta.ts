@@ -11,6 +11,8 @@
  *   3. "anon" — sem sessão
  */
 
+import { tokenArmazenado } from "./sessaoLocal";
+
 type JwtClaims = {
   empresaId?: string;
   email?: string;
@@ -19,7 +21,7 @@ type JwtClaims = {
 
 function claimsDoToken(): JwtClaims | null {
   try {
-    const token = localStorage.getItem("authToken");
+    const token = tokenArmazenado();
     if (!token) return null;
     const parte = token.split(".")[1];
     if (!parte) return null;

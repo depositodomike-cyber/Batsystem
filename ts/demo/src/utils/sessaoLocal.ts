@@ -13,8 +13,11 @@
  * em vez de deixar vazar o "Unauthorized" cru do Nest.
  *
  * Módulo sem imports de propósito: é consumido tanto pelo interceptor do axios
- * quanto pelo contexto de auth, e um import cruzado criaria ciclo.
+ * quanto pelo contexto de auth, e um import cruzado criaria ciclo. A única
+ * exceção é `./desktop`, que também não importa nada.
  */
+
+import { ponteDesktop, type SessaoDesktop } from "./desktop";
 
 export const PROTOTYPE_TOKEN_SUFFIX = ".prototype";
 
@@ -28,12 +31,63 @@ export const PROTOTYPE_TOKEN_SUFFIX = ".prototype";
  * levava 401. Lendo o storage a cada requisição, essa corrida não existe.
  */
 export function tokenArmazenado(): string | null {
+  const desktop = sessaoDesktop();
+  if (desktop) {
+    migrarTokenLegadoParaDesktop(desktop);
+    const t = desktop.obter();
+    return t && t.trim() !== "" ? t : null;
+  }
   try {
-    const t = window.localStorage.getItem("authToken");
+    const t = window.localStorage.getItem(CHAVE_TOKEN);
     return t && t.trim() !== "" ? t : null;
   } catch {
     // localStorage pode lançar (modo privado, cookies bloqueados).
     return null;
+  }
+}
+
+/**
+ * Grava (ou apaga, com null) o token da sessão.
+ *
+ * No navegador vai para o localStorage, como sempre. No Oracle Desktop vai para
+ * o armazenamento cifrado do sistema operacional (Electron safeStorage, via
+ * preload) e nunca fica em claro no perfil.
+ */
+export function gravarToken(token: string | null): void {
+  const desktop = sessaoDesktop();
+  if (desktop) {
+    desktop.salvar(token && token.trim() !== "" ? token : null);
+    return;
+  }
+  try {
+    if (token && token.trim() !== "") {
+      window.localStorage.setItem(CHAVE_TOKEN, token);
+    } else {
+      window.localStorage.removeItem(CHAVE_TOKEN);
+    }
+  } catch {
+    // localStorage indisponível: a sessão fica só nesta aba.
+  }
+}
+
+const CHAVE_TOKEN = "authToken";
+
+function sessaoDesktop(): SessaoDesktop | null {
+  return ponteDesktop()?.sessao ?? null;
+}
+
+/**
+ * Um token deixado no localStorage do perfil desktop (ex.: versão anterior)
+ * passa para o armazenamento cifrado e sai do localStorage.
+ */
+function migrarTokenLegadoParaDesktop(desktop: SessaoDesktop): void {
+  try {
+    const legado = window.localStorage.getItem(CHAVE_TOKEN);
+    if (legado === null) return;
+    if (legado.trim() !== "" && !desktop.obter()) desktop.salvar(legado);
+    window.localStorage.removeItem(CHAVE_TOKEN);
+  } catch {
+    // Sem localStorage não há legado a migrar.
   }
 }
 

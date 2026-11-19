@@ -1,4 +1,5 @@
 import { JWT_HOST_API } from "@/configs/auth";
+import { tokenArmazenado } from "@/utils/sessaoLocal";
 
 export interface AiChatTurn {
   role: "user" | "assistant";
@@ -25,7 +26,7 @@ export async function streamSquadChat(
   onDelta: (chunk: string) => void,
   signal?: AbortSignal,
 ): Promise<{ conversaId: string | null }> {
-  const token = localStorage.getItem("authToken");
+  const token = tokenArmazenado();
   const res = await fetch(`${JWT_HOST_API}/ai/chat/stream`, {
     method: "POST",
     headers: {

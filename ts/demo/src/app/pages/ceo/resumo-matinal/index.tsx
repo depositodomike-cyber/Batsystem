@@ -89,6 +89,9 @@ function mensagemErro(err: unknown): string {
 }
 
 // Reconhecimento de fala (mesma API do ditado do PromptBar).
+import { ehDesktop } from "@/utils/desktop";
+import { ReconhecimentoGravado } from "@/utils/ditadoGravado";
+
 type Reconhecedor = {
   lang: string;
   interimResults: boolean;
@@ -272,7 +275,10 @@ export default function ResumoMatinal() {
       return;
     }
     const w = window as unknown as { SpeechRecognition?: new () => Reconhecedor; webkitSpeechRecognition?: new () => Reconhecedor };
-    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    // Oracle Desktop: o Web Speech não funciona no Electron; grava e transcreve na API.
+    const Ctor: (new () => Reconhecedor) | undefined = ehDesktop()
+      ? (ReconhecimentoGravado as unknown as new () => Reconhecedor)
+      : (w.SpeechRecognition ?? w.webkitSpeechRecognition);
     if (!Ctor) {
       toast.error("Este navegador não reconhece fala. Use o Chrome ou o Edge, ou digite a pergunta.");
       return;

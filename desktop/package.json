@@ -1,0 +1,119 @@
+{
+  "name": "oracle-desktop",
+  "productName": "Oracle",
+  "version": "0.1.2",
+  "description": "Oracle Desktop — camada Electron sobre o Oracle (ts/demo + ts/api).",
+  "private": true,
+  "main": "dist/main/app.js",
+  "scripts": {
+    "build:ts": "tsc -p tsconfig.json",
+    "build:renderer": "npm --prefix ../ts/demo run build",
+    "start": "npm run build:ts && electron .",
+    "dev": "npm run build:ts && electron . --oracle-dev",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.test.json && node --require ./test/electron-falso.cjs --test \"dist-test/test/**/*.test.js\"",
+    "dist": "node scripts/build.mjs",
+    "release": "node scripts/build.mjs --publicar",
+    "publicar": "node scripts/publicar-release.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/pg": "8.15.6",
+    "electron": "45.2.2",
+    "electron-builder": "26.18.1",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@embedded-postgres/windows-x64": "16.15.0-beta.19",
+    "electron-updater": "6.8.12",
+    "pg": "8.23.1"
+  },
+  "author": "Oracle",
+  "build": {
+    "appId": "com.oracle.desktop",
+    "productName": "Oracle",
+    "directories": {
+      "output": "release",
+      "buildResources": "recursos"
+    },
+    "files": [
+      "dist/main/**/*.js",
+      "dist/preload/**/*.js",
+      "runtime/**/*",
+      "package.json",
+      {
+        "from": "build/renderer",
+        "to": "renderer"
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/@embedded-postgres/**"
+    ],
+    "extraResources": [
+      {
+        "from": "build/api",
+        "to": "api",
+        "filter": [
+          "**/*",
+          "!**/*.map",
+          "!**/*.d.ts"
+        ]
+      },
+      {
+        "from": "build/agente",
+        "to": "agente"
+      },
+      {
+        "from": "recursos",
+        "to": "recursos",
+        "filter": [
+          "*.png",
+          "*.ico"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "recursos/icon.ico",
+      "executableName": "Oracle"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Oracle",
+      "uninstallDisplayName": "Oracle",
+      "deleteAppDataOnUninstall": false,
+      "include": "recursos/instalador.nsh",
+      "artifactName": "Oracle-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "depositodomike-cyber",
+        "repo": "Batsystem",
+        "releaseType": "release"
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "afterPack": "scripts/apos-empacotar.cjs"
+  }
+}

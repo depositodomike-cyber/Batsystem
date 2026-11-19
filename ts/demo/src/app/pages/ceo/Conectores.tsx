@@ -52,6 +52,7 @@ import {
 import { isConnectorTemporarilyDisabled } from "@/app/data/temporarilyDisabledFeatures";
 import { BotaoImportarDoDrive } from "./drive/ImportarDoDrive";
 import { TelegramSection } from "./telegram/TelegramSection";
+import { ponteDesktop } from "@/utils/desktop";
 
 // ----------------------------------------------------------------------
 
@@ -200,7 +201,18 @@ export default function Conectores({ embutido = false }: { embutido?: boolean })
     }
     if (c.oauth && !isConnected(c.id)) {
       getOauthAuthorizeUrlApi(c.id)
-        .then((url) => {
+        .then(async (url) => {
+          // Oracle Desktop: o Google recusa login em janela embutida, então o
+          // consentimento abre no navegador do sistema e volta ao app pelo
+          // protocolo oracle-desktop:// (a página recarrega com o resultado).
+          const desktop = ponteDesktop();
+          if (desktop) {
+            if (!(await desktop.abrirExterno(url))) {
+              throw new Error("Não foi possível abrir o navegador.");
+            }
+            toast(`Conclua a autorização do ${c.name} no navegador.`);
+            return;
+          }
           window.location.href = url;
         })
         .catch((err) => toast.error(oauthErrMessage(err)));

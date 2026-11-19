@@ -18,7 +18,7 @@ import {
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
-import { oauthRetorno } from './oauth-retorno';
+import { oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Fluxo OAuth e leitura do conector Slack.
@@ -45,8 +45,13 @@ export class SlackController {
 
   @Get('autorizar')
   @UseGuards(JwtAuthGuard)
-  authorize(@CurrentUser() user: AuthenticatedUser): { url: string } {
-    return { url: this.slackOauth.buildAuthorizeUrl(user.empresaId) };
+  authorize(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('origem') origem?: string,
+  ): { url: string } {
+    return {
+      url: this.slackOauth.buildAuthorizeUrl(user.empresaId, origemOauth(origem)),
+    };
   }
 
   /**
@@ -88,7 +93,7 @@ export class SlackController {
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const front = this.slackOauth.frontConectoresUrl;
+    const front = this.slackOauth.frontRetorno(state);
     // Usuário negou na tela do Slack (ou o Slack reportou erro).
     if (error || !code || !state) {
       res.redirect(

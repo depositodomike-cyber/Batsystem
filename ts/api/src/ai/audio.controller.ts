@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Logger,
   Post,
@@ -8,6 +9,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { AiService } from './ai.service';
 import { ChaveOpenAiService } from './audio/chave-openai';
 import { transcreverAudioOpenAI } from './audio/transcrever';
@@ -132,5 +134,45 @@ export class AudioController {
     });
 
     return { titulo, resumo, transcricao, salvo, memoriaId, insightsGerados: gerados.length };
+  }
+
+  /**
+   * POST /ai/audio/transcrever (multipart 'audio', campo opcional 'idioma')
+   * → { texto }. SÓ transcreve: não resume, não salva e não gera insights.
+   *
+   * É o ditado por voz do Oracle Desktop: o reconhecimento de fala do
+   * navegador (Web Speech) não existe no Electron, então o app grava o trecho
+   * falado e o transcreve aqui, com a mesma chave OpenAI de /ai/audio.
+   */
+  @Post('audio/transcrever')
+  // Ditado custa transcrição paga: limite próprio, abaixo do global (GD-13).
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @UseInterceptors(FileInterceptor('audio', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async transcrever(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() audio: UploadedFileLike | undefined,
+    @Body('idioma') idioma?: string,
+  ): Promise<{ texto: string }> {
+    if (!audio || audio.size === 0) throw new BadRequestException('Envie o áudio gravado.');
+    const key = await this.resolveOpenAiKey(user.empresaId);
+    if (!key) {
+      throw new BadRequestException(
+        'O ditado usa a transcrição da OpenAI. Conecte a OpenAI em Conexões (Texto, Imagem ou Vídeo) ou defina OPENAI_API_KEY no servidor.',
+      );
+    }
+    const lingua = idioma === 'en' || idioma === 'pt' ? idioma : undefined;
+    try {
+      const texto = await transcreverAudioOpenAI(
+        key,
+        audio.buffer,
+        audio.originalname || 'ditado.webm',
+        lingua,
+      );
+      return { texto };
+    } catch (err) {
+      // A mensagem do provedor pode citar parte da chave: fica só no log (GD-13).
+      this.logger.warn(`Falha na transcrição do ditado: ${err instanceof Error ? err.message : String(err)}`);
+      throw new BadRequestException('Não foi possível transcrever o áudio. Tente de novo em instantes.');
+    }
   }
 }

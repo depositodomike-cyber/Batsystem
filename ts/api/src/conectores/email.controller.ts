@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { AcessoConectores } from './acesso-conectores';
-import { oauthRetorno } from './oauth-retorno';
+import { oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Fluxo OAuth dos conectores de e-mail (`gmail`, `outlook`).
@@ -45,10 +45,17 @@ export class EmailController {
   async authorize(
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
+    @Query('origem') origem?: string,
   ): Promise<{ url: string }> {
     await this.acesso.exigirPodeAlterar(user, provedor);
     return {
-      url: this.emailOauth.buildAuthorizeUrl(user.empresaId, user.id, provedor, 'email'),
+      url: this.emailOauth.buildAuthorizeUrl(
+        user.empresaId,
+        user.id,
+        provedor,
+        'email',
+        origemOauth(origem),
+      ),
     };
   }
 
@@ -109,7 +116,7 @@ export class EmailController {
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const front = this.emailOauth.frontConectoresUrl;
+    const front = this.emailOauth.frontRetorno(state);
     // Usuário negou na tela do provedor (ou o provedor reportou erro).
     if (error || !code || !state) {
       res.redirect(

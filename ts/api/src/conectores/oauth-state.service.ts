@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { CryptoService } from '@/ai/crypto';
+import type { OrigemOauth } from './oauth-retorno';
 
 /** Validade do `state` anti-CSRF: o usuário tem 10 min para autorizar. */
 const STATE_TTL_MS = 10 * 60 * 1000;
@@ -16,6 +17,8 @@ export interface OauthState {
    * callback chega sem JWT e é por aqui que sabe de quem é a conta.
    */
   usuarioId?: string;
+  /** Quem pediu a autorização: ausente = navegador (web); 'desktop' = Oracle Desktop. */
+  origem?: OrigemOauth;
 }
 
 /**
@@ -46,6 +49,7 @@ export class OauthStateService {
     connectorId: string,
     codeVerifier?: string,
     usuarioId?: string,
+    origem?: OrigemOauth,
   ): string {
     const payload = Buffer.from(
       JSON.stringify({
@@ -55,6 +59,7 @@ export class OauthStateService {
         ...(codeVerifier ? { v: this.crypto.encrypt(codeVerifier) } : {}),
         // Vai dentro do payload assinado: o HMAC impede trocar o dono.
         ...(usuarioId ? { u: usuarioId } : {}),
+        ...(origem === 'desktop' ? { o: 'desktop' } : {}),
       }),
     ).toString('base64url');
     return `${payload}.${this.mac(payload)}`;
@@ -71,7 +76,14 @@ export class OauthStateService {
     if (a.length !== b.length || !timingSafeEqual(a, b)) {
       throw new BadRequestException('Autorização inválida (state adulterado).');
     }
-    let parsed: { e?: string; c?: string; x?: number; v?: string; u?: string };
+    let parsed: {
+      e?: string;
+      c?: string;
+      x?: number;
+      v?: string;
+      u?: string;
+      o?: string;
+    };
     try {
       parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
     } catch {
@@ -95,7 +107,30 @@ export class OauthStateService {
       connectorId: parsed.c ?? '',
       codeVerifier,
       ...(parsed.u ? { usuarioId: parsed.u } : {}),
+      ...(parsed.o === 'desktop' ? { origem: 'desktop' as const } : {}),
     };
+  }
+
+  /**
+   * Origem gravada num `state` de assinatura válida, mesmo expirado — só para
+   * decidir PARA ONDE devolver o usuário (web ou app desktop). Nunca autoriza
+   * nada: o callback continua passando por `verify`.
+   */
+  origemDe(state: string | undefined): OrigemOauth | undefined {
+    if (!state) return undefined;
+    const [payload, mac] = state.split('.');
+    if (!payload || !mac) return undefined;
+    const a = Buffer.from(mac);
+    const b = Buffer.from(this.mac(payload));
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return undefined;
+    try {
+      const p = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+        o?: string;
+      };
+      return p.o === 'desktop' ? 'desktop' : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private mac(payload: string): string {

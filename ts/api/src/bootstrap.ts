@@ -9,6 +9,9 @@ import {
   middlewareCorrelacao,
 } from './common/correlacao';
 
+/** Origem da interface no Oracle Desktop (esquema próprio do Electron). */
+export const ORIGEM_DESKTOP = 'oracle-app://app';
+
 /**
  * Configuração compartilhada entre o bootstrap local (`main.ts`) e o
  * entrypoint serverless da Vercel (`api/index.js`). Mantém CORS, body
@@ -93,6 +96,11 @@ export function configureApp(app: INestApplication): void {
 
   const origemPermitida = (origem: string): boolean => {
     if (origins.includes(origem)) return true;
+    // Oracle Desktop (Electron): a interface é servida pelo esquema próprio
+    // `oracle-app://app` (desktop/src/main/protocolo.ts), sem porta HTTP. Só o
+    // app que registrou o esquema produz essa origem num navegador.
+    // Só fora da Vercel: um deploy na nuvem não atende o app desktop (GD-15).
+    if (origem === ORIGEM_DESKTOP && !process.env.VERCEL) return true;
     if (permitirLocalhost && ehLocalhost(origem)) return true;
     return (
       sufixoVercel !== '' &&

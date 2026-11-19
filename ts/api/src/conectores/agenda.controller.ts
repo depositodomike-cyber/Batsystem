@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { CurrentUser } from '@/common/current-user.decorator';
 import type { AuthenticatedUser } from '@/auth/jwt.strategy';
 import { AcessoConectores } from './acesso-conectores';
-import { oauthRetorno } from './oauth-retorno';
+import { oauthRetorno, origemOauth } from './oauth-retorno';
 
 /**
  * Fluxo OAuth dos conectores de agenda (`google-calendar`). Rotas espelhadas
@@ -46,10 +46,17 @@ export class AgendaController {
   async authorize(
     @CurrentUser() user: AuthenticatedUser,
     @Param('provedor') provedor: string,
+    @Query('origem') origem?: string,
   ): Promise<{ url: string }> {
     await this.acesso.exigirPodeAlterar(user, provedor);
     return {
-      url: this.oauth.buildAuthorizeUrl(user.empresaId, user.id, provedor, 'agenda'),
+      url: this.oauth.buildAuthorizeUrl(
+        user.empresaId,
+        user.id,
+        provedor,
+        'agenda',
+        origemOauth(origem),
+      ),
     };
   }
 
@@ -105,7 +112,7 @@ export class AgendaController {
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const front = this.oauth.frontConectoresUrl;
+    const front = this.oauth.frontRetorno(state);
     // Usuário negou na tela do provedor (ou o provedor reportou erro).
     if (error || !code || !state) {
       res.redirect(

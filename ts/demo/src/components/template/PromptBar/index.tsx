@@ -34,6 +34,9 @@ import {
   pedirBriefing,
 } from "@/app/pages/ceo/resumo-matinal/sessao";
 
+import { ehDesktop } from "@/utils/desktop";
+import { ReconhecimentoGravado } from "@/utils/ditadoGravado";
+
 // ----------------------------------------------------------------------
 
 const ACEITA_ANEXO = ".txt,.md,.csv,.json,.log,.markdown,text/*";
@@ -212,7 +215,10 @@ export function PromptBar() {
       SpeechRecognition?: SpeechRecognitionCtor;
       webkitSpeechRecognition?: SpeechRecognitionCtor;
     };
-    const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+    // Oracle Desktop: o Web Speech não funciona no Electron; grava e transcreve na API.
+    const Ctor: SpeechRecognitionCtor | undefined = ehDesktop()
+      ? (ReconhecimentoGravado as unknown as SpeechRecognitionCtor)
+      : w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!Ctor) {
       toast.error("Ditado por voz não é suportado neste navegador.");
       return;

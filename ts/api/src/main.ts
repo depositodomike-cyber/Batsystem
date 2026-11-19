@@ -10,8 +10,10 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3001);
   // 0.0.0.0 é exigido por plataformas de container (Railway/Render) para
-  // expor a porta; localmente é equivalente a localhost.
-  await app.listen(port, '0.0.0.0');
+  // expor a porta; localmente é equivalente a localhost. O Oracle Desktop
+  // passa HOST=127.0.0.1: a API embutida não fica acessível pela rede.
+  const host = config.get<string>('HOST', '0.0.0.0');
+  await app.listen(port, host);
   console.log(`🚀 Oracle API rodando em http://localhost:${port}`);
 }
 
